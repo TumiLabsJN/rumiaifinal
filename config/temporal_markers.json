@@ -1,0 +1,47 @@
+{
+  "enable_temporal_markers": true,
+  "rollout_percentage": 100.0,
+  "format_options": {
+    "include_density": true,
+    "include_emotions": true,
+    "include_gestures": true,
+    "include_objects": true,
+    "include_cta": true,
+    "compact_mode": false
+  },
+  "rollout_schedule": {
+    "phase_1": {
+      "start_date": "2024-01-01",
+      "percentage": 10.0,
+      "description": "Initial testing with 10% of videos"
+    },
+    "phase_2": {
+      "start_date": "2024-01-15",
+      "percentage": 50.0,
+      "description": "Expand to 50% after initial validation"
+    },
+    "phase_3": {
+      "start_date": "2024-02-01",
+      "percentage": 100.0,
+      "description": "Full rollout to all videos"
+    }
+  },
+  "prompt_specific_settings": {
+    "hook_analysis": {
+      "enable": true,
+      "compact_mode": false
+    },
+    "engagement_tactics": {
+      "enable": true,
+      "compact_mode": false
+    },
+    "creative_density": {
+      "enable": true,
+      "compact_mode": true
+    },
+    "emotional_journey": {
+      "enable": true,
+      "compact_mode": false
+    }
+  }
+}

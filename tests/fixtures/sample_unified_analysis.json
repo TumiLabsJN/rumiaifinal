@@ -1,0 +1,196 @@
+{
+  "video_id": "test_fixture_123",
+  "video_metadata": {
+    "video_id": "test_fixture_123",
+    "url": "https://www.tiktok.com/@user/video/test_fixture_123",
+    "download_url": "https://v16-webapp.tiktok.com/test_fixture.mp4",
+    "duration": 45.67,
+    "description": "Test fixture video for automated testing #test #rumiai",
+    "author": "testuser",
+    "created_at": "2024-01-15T10:30:00Z",
+    "stats": {
+      "plays": 12345,
+      "likes": 1234,
+      "comments": 123,
+      "shares": 45
+    }
+  },
+  "timeline": {
+    "duration": 45.67,
+    "events": [
+      {
+        "timestamp": {
+          "seconds": 0.0,
+          "formatted": "00:00:00"
+        },
+        "event_type": "start",
+        "description": "Video begins",
+        "source": "system",
+        "confidence": 1.0,
+        "metadata": {}
+      },
+      {
+        "timestamp": {
+          "seconds": 5.5,
+          "formatted": "00:00:05"
+        },
+        "event_type": "scene_change",
+        "description": "Transition from intro to main content",
+        "source": "scene_detection",
+        "confidence": 0.92,
+        "metadata": {
+          "transition_type": "cut",
+          "scene_id": 2
+        }
+      },
+      {
+        "timestamp": {
+          "seconds": 10.3,
+          "formatted": "00:00:10"
+        },
+        "event_type": "speech",
+        "description": "Speaker begins talking",
+        "source": "speech_recognition",
+        "confidence": 0.95,
+        "metadata": {
+          "text": "Welcome to this test video",
+          "language": "en",
+          "speaker_id": 1
+        }
+      },
+      {
+        "timestamp": {
+          "seconds": 15.0,
+          "formatted": "00:00:15"
+        },
+        "event_type": "emotion",
+        "description": "Happy emotion detected",
+        "source": "emotion_recognition",
+        "confidence": 0.88,
+        "metadata": {
+          "emotion": "happy",
+          "intensity": 0.75
+        }
+      },
+      {
+        "timestamp": {
+          "seconds": 25.5,
+          "formatted": "00:00:25"
+        },
+        "event_type": "object",
+        "description": "Product placement detected",
+        "source": "object_detection",
+        "confidence": 0.94,
+        "metadata": {
+          "object_class": "smartphone",
+          "bounding_box": [100, 200, 300, 400]
+        }
+      },
+      {
+        "timestamp": {
+          "seconds": 35.0,
+          "formatted": "00:00:35"
+        },
+        "event_type": "music",
+        "description": "Background music starts",
+        "source": "audio_analysis",
+        "confidence": 0.91,
+        "metadata": {
+          "genre": "electronic",
+          "tempo": 128,
+          "key": "C minor"
+        }
+      },
+      {
+        "timestamp": {
+          "seconds": 45.67,
+          "formatted": "00:00:45"
+        },
+        "event_type": "end",
+        "description": "Video ends",
+        "source": "system",
+        "confidence": 1.0,
+        "metadata": {}
+      }
+    ]
+  },
+  "ml_results": {
+    "scene_detection": {
+      "model_name": "scene_detection",
+      "success": true,
+      "data": {
+        "scenes": [
+          {
+            "start": 0.0,
+            "end": 5.5,
+            "scene_id": 1,
+            "description": "Introduction"
+          },
+          {
+            "start": 5.5,
+            "end": 45.67,
+            "scene_id": 2,
+            "description": "Main content"
+          }
+        ],
+        "total_scenes": 2,
+        "average_scene_duration": 22.84
+      },
+      "processing_time": 1.23,
+      "metadata": {
+        "model_version": "1.0.0",
+        "confidence_threshold": 0.8
+      }
+    },
+    "speech_recognition": {
+      "model_name": "speech_recognition",
+      "success": true,
+      "data": {
+        "transcripts": [
+          {
+            "timestamp": 10.3,
+            "duration": 3.2,
+            "text": "Welcome to this test video",
+            "confidence": 0.95,
+            "speaker_id": 1
+          }
+        ],
+        "language": "en",
+        "total_speech_duration": 3.2
+      },
+      "processing_time": 2.45,
+      "metadata": {
+        "model_version": "whisper-large-v3",
+        "language_confidence": 0.98
+      }
+    },
+    "emotion_recognition": {
+      "model_name": "emotion_recognition",
+      "success": true,
+      "data": {
+        "emotions": [
+          {
+            "timestamp": 15.0,
+            "emotion": "happy",
+            "confidence": 0.88,
+            "face_id": 1
+          }
+        ],
+        "dominant_emotion": "happy",
+        "emotion_timeline": {
+          "happy": 0.6,
+          "neutral": 0.3,
+          "surprised": 0.1
+        }
+      },
+      "processing_time": 1.67,
+      "metadata": {
+        "model_version": "fer-2024",
+        "faces_detected": 1
+      }
+    }
+  },
+  "temporal_markers": null,
+  "created_at": "2024-07-08T10:00:00Z",
+  "version": "2.0.0"
+}

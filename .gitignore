@@ -1,0 +1,82 @@
+# 🧠 Analysis outputs
+insights/
+unified_analysis/
+frame_outputs/
+object_detection_outputs/
+creative_analysis_outputs/
+human_analysis_outputs/
+enhanced_human_analysis_outputs/
+scene_detection_outputs/
+comprehensive_analysis_outputs/
+audio_analysis_outputs/
+speech_transcriptions/
+local_analysis_outputs/
+analysis_results/
+prompts_outputs/
+*.pdf
+
+# 🎥 Media files
+videos/
+temp/
+downloads/
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.wav
+*.mp3
+*.jpg
+*.png
+*.jpeg
+
+# 📜 Claude prompt templates (exclude if not versioning inputs)
+prompt_templates/*.txt
+
+# 🛠️ Generated artifacts
+__pycache__/
+*.py[cod]
+*.pyd
+*.pkl
+*.joblib
+*.log
+*.tmp
+*.cache
+.ipynb_checkpoints/
+*.h5
+*.model
+
+# 🧪 Local config & secrets
+.env
+.env.*
+!.env.example
+local_config/
+secrets/
+*.sqlite3
+*.db
+
+# 📦 Dependencies (but keep lockfiles!)
+node_modules/
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# 💻 System files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.bak
+*~
+
+# 🔧 IDE configs
+.vscode/
+.idea/
+*.sublime-*
+
+# 📊 Test coverage
+htmlcov/
+.coverage
+.pytest_cache/
