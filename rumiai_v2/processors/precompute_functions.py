@@ -108,6 +108,7 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
         'gestureTimeline': {},
         'expressionTimeline': {},
         'sceneTimeline': {},
+        'sceneChangeTimeline': {},  # Add this for scene pacing
         'personTimeline': {},
         'cameraDistanceTimeline': {}
     }
@@ -156,16 +157,23 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
     # Extract scene changes from timeline entries
     timeline_entries = timeline_data.get('entries', [])
     scenes = []
+    scene_changes = []
     current_scene_start = 0
     
     for entry in timeline_entries:
         if entry.get('entry_type') == 'scene_change':
-            # Extract seconds from start time string (e.g., "3s" -> 3)
+            # Extract seconds from start time string (e.g., "3s" -> 3, "1.5s" -> 1.5)
             start_str = entry.get('start', '0s')
             if isinstance(start_str, str) and start_str.endswith('s'):
-                start_seconds = int(start_str[:-1])
+                try:
+                    start_seconds = float(start_str[:-1])
+                except ValueError:
+                    start_seconds = 0
             else:
                 start_seconds = 0
+            
+            # Add to scene changes list
+            scene_changes.append(start_seconds)
             
             scenes.append({
                 'start': current_scene_start,
@@ -183,13 +191,49 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
     
     # Convert scenes to timeline format
     for i, scene in enumerate(scenes):
-        start = int(scene['start'])
-        end = int(scene['end'])
-        timestamp = f"{start}-{end}s"
+        start = scene['start']
+        end = scene['end']
+        # Keep integer format for display
+        timestamp = f"{int(start)}-{int(end)}s"
         timelines['sceneTimeline'][timestamp] = {
             'scene_number': i + 1,
             'duration': end - start
         }
+    
+    # Also create sceneChangeTimeline expected by compute_scene_pacing_metrics
+    # Use the format expected by parse_timestamp_to_seconds: "X-Ys"
+    # Group scene changes by integer second to avoid overwriting
+    scene_changes_by_second = {}
+    for i, change_time in enumerate(scene_changes):
+        second = int(change_time)
+        if second not in scene_changes_by_second:
+            scene_changes_by_second[second] = []
+        scene_changes_by_second[second].append({
+            'index': i + 1,
+            'actual_time': change_time
+        })
+    
+    # Create timeline entries, handling multiple changes per second
+    for second, changes in scene_changes_by_second.items():
+        if len(changes) == 1:
+            # Single change in this second
+            timestamp = f"{second}-{second}s"
+            timelines['sceneChangeTimeline'][timestamp] = {
+                'type': 'scene_change',
+                'scene_index': changes[0]['index'],
+                'actual_time': changes[0]['actual_time']
+            }
+        else:
+            # Multiple changes in same second - create sub-second ranges
+            for j, change in enumerate(changes):
+                # Create unique timestamp by adding small offset
+                timestamp = f"{second}-{second}.{j}s"
+                timelines['sceneChangeTimeline'][timestamp] = {
+                    'type': 'scene_change',
+                    'scene_index': change['index'],
+                    'actual_time': change['actual_time'],
+                    'multiple_in_second': True
+                }
     
     # Extract MediaPipe data
     mediapipe_data = ml_data.get('mediapipe', {}).get('data', {})
@@ -329,7 +373,19 @@ def compute_scene_pacing_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any
     timelines = _extract_timelines_from_analysis(analysis_dict)
     video_duration = analysis_dict.get('timeline', {}).get('duration', 0)
     
-    return compute_scene_pacing_metrics(timelines, video_duration)
+    # Extract the specific timelines needed
+    scene_timeline = timelines.get('sceneChangeTimeline', {})
+    object_timeline = timelines.get('objectTimeline', {})
+    camera_distance_timeline = timelines.get('cameraDistanceTimeline', {})
+    video_id = analysis_dict.get('video_id', None)
+    
+    return compute_scene_pacing_metrics(
+        scene_timeline=scene_timeline,
+        video_duration=video_duration,
+        object_timeline=object_timeline,
+        camera_distance_timeline=camera_distance_timeline,
+        video_id=video_id
+    )
 
 
 # Create a mapping of compute function names to their wrapper implementations

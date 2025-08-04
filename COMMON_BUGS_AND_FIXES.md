@@ -307,6 +307,117 @@ Example output structure:
 ### Problem
 Validators reject valid responses due to overly strict or incorrect validation logic.
 
+## 9. ML Data Integration Disconnects
+
+### Problem
+ML preprocessing correctly detects data (e.g., 62 scenes), but this data doesn't reach Claude prompts, causing Claude to see incorrect values (e.g., only 1 scene). This happens when there's a mismatch between how ML data is stored and how precompute functions expect to receive it.
+
+### Example
+```python
+# ML Pipeline detects and saves 62 scenes:
+# scene_detection_outputs/VIDEO_ID/VIDEO_ID_scenes.json
+{
+  "scenes": [...62 scene objects...],
+  "scene_changes": [...61 timestamps...],
+  "total_scenes": 62
+}
+
+# Timeline builder adds scene_change entries to UnifiedAnalysis
+# But precompute function expects different format:
+def compute_scene_pacing_metrics(scene_change_timeline, ...):
+    # Expects: {"0-1s": {...}, "1-2s": {...}}
+    # But gets: None or empty dict
+    
+# Result: Claude sees totalScenes: 1 instead of 62
+```
+
+### Root Causes
+1. **Missing data transformation**: The `_extract_timelines_from_analysis` function doesn't create the expected timeline format
+2. **Format mismatches**: ML data uses one format (list of timestamps), but precompute functions expect another (dict with "X-Ys" keys)
+3. **Data loss**: Multiple events in same second get overwritten when converting to integer-based keys
+
+### Fix Applied
+```python
+# In precompute_functions.py - _extract_timelines_from_analysis():
+
+# Added scene change timeline creation:
+if 'scene_detection' in analysis_data:
+    scene_data = analysis_data['scene_detection']
+    if isinstance(scene_data, dict) and 'scene_changes' in scene_data:
+        scene_timeline = {}
+        for timestamp in scene_data['scene_changes']:
+            # Handle both float and string timestamps
+            if isinstance(timestamp, (int, float)):
+                time_key = f"{int(timestamp)}-{int(timestamp)+1}s"
+            else:
+                # Parse string format if needed
+                time_val = float(timestamp.replace('s', ''))
+                time_key = f"{int(time_val)}-{int(time_val)+1}s"
+            
+            # Handle multiple changes in same second
+            if time_key not in scene_timeline:
+                scene_timeline[time_key] = []
+            
+            scene_timeline[time_key].append({
+                'timestamp': timestamp,
+                'type': 'scene_change'
+            })
+        
+        timelines['sceneChangeTimeline'] = scene_timeline
+```
+
+### How to Check for Similar Issues
+
+1. **Compare ML output to Claude input**:
+```python
+# Check what ML detected
+ml_data = load_json(f"scene_detection_outputs/{video_id}/{video_id}_scenes.json")
+print(f"ML detected: {ml_data['total_scenes']} scenes")
+
+# Check what Claude receives
+prompt_data = context.ml_data
+print(f"Claude sees: {prompt_data.get('total_scenes', 0)} scenes")
+```
+
+2. **Trace data flow**:
+- ML Pipeline → JSON files in detection outputs
+- Timeline Builder → UnifiedAnalysis timeline entries
+- Precompute Functions → Formatted data for prompts
+- ML Data Extractor → Context for Claude
+
+3. **Look for these patterns**:
+- Functions expecting specific timeline formats (e.g., `speechTimeline`, `objectTimeline`)
+- Data stored as lists but needed as dicts
+- Timestamp format conversions losing precision
+- Missing data transformation steps
+
+### Investigation of Other Prompt Types
+After investigating, the other prompt types are working correctly because the timeline extraction was already implemented for them:
+
+1. **Speech Analysis**: ✓ Working
+   - `speechTimeline` is created from Whisper segments
+   - Empty results correctly reflect no speech detected
+
+2. **Visual Overlays**: ✓ Working  
+   - `objectTimeline` is created from YOLO detections
+   - `textOverlayTimeline` is created from OCR data
+   - Empty results correctly reflect no objects/text detected
+
+3. **Person Framing**: ✓ Working
+   - `personTimeline` is created from MediaPipe poses
+   - `expressionTimeline` is created from MediaPipe faces
+   - Functions correctly handle empty data
+
+4. **Scene Pacing**: ✗ Was Broken (Fixed)
+   - `sceneChangeTimeline` was missing in the extraction function
+   - Now correctly creates timeline from scene detection data
+
+### Prevention
+1. **Ensure data format consistency** between ML outputs and precompute inputs
+2. **Add logging** at integration points to catch mismatches early
+3. **Test with real ML data** not just mock data
+4. **Document expected formats** for each timeline type
+
 ### Examples
 ```python
 # Validator rejects response because it's checking for generic names
