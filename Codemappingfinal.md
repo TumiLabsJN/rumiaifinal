@@ -1,5 +1,25 @@
 # Code Mapping for RumiAI Final - Complete Dependency Table
 
+## CRITICAL SYSTEM STATUS (Updated 2025-08-04)
+
+### 🔴 CRITICAL ISSUES
+1. **ML Pipeline Non-Functional**: All ML services (`ml_services.py`) return empty placeholder data
+2. **Missing Core Component**: `whisper_transcribe.py` doesn't exist, breaking speech analysis
+3. **Wasted API Costs**: Claude API calls process empty data, generating meaningless analysis
+4. **Working Alternatives Unused**: Functional ML implementations exist in `local_analysis/` and root directory but aren't integrated
+
+### ✅ WORKING COMPONENTS
+- Scene detection (62 scenes detected correctly)
+- Claude API integration and 6-block validation
+- Apify video scraping and downloading
+- Prompt templates and precompute functions
+
+### 🔧 IMMEDIATE ACTIONS REQUIRED
+1. Replace `ml_services.py` placeholder code with working implementations from `detect_tiktok_creative_elements.py`
+2. Implement `whisper_transcribe.py` or integrate existing transcription
+3. Add data quality validation to prevent processing empty ML data
+4. Connect working ML scripts from `local_analysis/` to main pipeline
+
 ## Table of Contents
 1. [Main Entry Points](#main-entry-points)
 2. [Core Python Modules](#core-python-modules)
@@ -25,7 +45,7 @@
 | `settings.py` | `rumiai_v2/config/` | Settings configuration class. Loads environment variables and provides defaults. | Environment variables, .env file | Settings object with API keys, feature flags | < 1KB | All services during initialization | Once per run | **High** — missing API keys fail | None | python-dotenv | Must have CLAUDE_API_KEY, APIFY_API_TOKEN |
 | `apify_client.py` | `rumiai_v2/api/` | Apify API client for TikTok video scraping and downloading | TikTok URL, API token | Video metadata dict, downloaded video path | Video file: 5-100MB | `rumiai_runner.py` | Once per video | **High** — scraping failure blocks pipeline | Apify API | aiohttp, requests | Actor ID: GdWCkxBtKWOsKjdch |
 | `claude_client.py` | `rumiai_v2/api/` | Claude API client wrapper. Handles model selection and pricing. | Prompt text, model selection | Claude response text | 1-10KB per response | `rumiai_runner.py` | 7 times per video (7 prompts) | **High** — API failures block analysis | Anthropic API | anthropic SDK | Models: haiku, sonnet |
-| `ml_services.py` | `rumiai_v2/api/` | ML services wrapper for YOLO, Whisper, MediaPipe, OCR, scene detection | Video file path | ML analysis results dict | 1-50MB depending on video | `video_analyzer.py` | Once per ML type per video | **Medium** — ML failures provide empty data | Individual ML scripts | subprocess, ffmpeg | Many services return empty results |
+| `ml_services.py` | `rumiai_v2/api/` | ML services wrapper for YOLO, Whisper, MediaPipe, OCR, scene detection | Video file path | ML analysis results dict | 1-50MB depending on video | `video_analyzer.py` | Once per ML type per video | **CRITICAL** — ALL ML services return empty placeholder data | Individual ML scripts | subprocess, ffmpeg | **BROKEN: Returns empty results making analysis meaningless** |
 | `video_analyzer.py` | `rumiai_v2/processors/` | ML analysis orchestration. Runs all ML services in parallel. | Video file path | UnifiedAnalysis object | 1-10MB | `rumiai_runner.py` | Once per video | **Medium** — handles ML failures gracefully | All ML services | asyncio, concurrent.futures | Saves to respective output dirs |
 | `timeline_builder.py` | `rumiai_v2/processors/` | Combines ML outputs into unified timeline with entries | UnifiedAnalysis object | Timeline object with entries | 100KB-1MB | `rumiai_runner.py` | Once per video | **Low** — robust error handling | ML validators | None | Entry types: object, speech, gesture, etc |
 | `temporal_markers.py` | `rumiai_v2/processors/` | Generates time-based markers for key video events | UnifiedAnalysis object | Temporal markers dict | 10-100KB | `rumiai_runner.py` | Once per video | **Low** — non-critical feature | None | None | Identifies patterns and highlights |
@@ -41,7 +61,7 @@
 
 | **File Name** | **Directory** | **Description** | **Data In** | **Data Out** | **Output Size (est)** | **Called By** | **How Often** | **Risk** | **Dep. Services** | **Dep. 3rd Party** | **Notes** |
 |---------------|---------------|-----------------|-------------|--------------|----------------------|---------------|---------------|----------|-------------------|-------------------|-----------|
-| `whisper_transcribe.py` | `(MISSING)` | Speech transcription using OpenAI Whisper | Video/audio file path | Transcript with segments | 1-50KB | `ml_services.py` | Once per video | **High** — missing file | None | openai-whisper | Referenced but doesn't exist |
+| `whisper_transcribe.py` | `(MISSING)` | Speech transcription using OpenAI Whisper | Video/audio file path | Transcript with segments | 1-50KB | `ml_services.py` | Once per video | **CRITICAL** — missing file blocks speech analysis | None | openai-whisper | **MISSING: Core dependency not implemented** |
 | `scene_detection.py` | `local_analysis/` | Scene detection using PySceneDetect | Video file path | Scene list with timestamps | 5-20KB | Used standalone | Once per video | **Low** — has implementation | None | scenedetect[opencv] | Working implementation exists |
 | `enhanced_human_analyzer.py` | `local_analysis/` | MediaPipe human pose and gesture analysis | Video file path | Pose/gesture data | 10-100KB | Used standalone | Once per video | **Low** — complete implementation | None | mediapipe | Could replace empty MediaPipe service |
 | `object_tracking.py` | `local_analysis/` | YOLOv8 object detection with DeepSort tracking | Video file path | Object detections with tracking | 50-500KB | Used standalone | Once per video | **Low** — working code | None | ultralytics, deep-sort-realtime | Could replace empty YOLO service |

@@ -1,0 +1,400 @@
+{
+  "video_info": {
+    "video_id": "example_001",
+    "url": "https://tiktok.com/@user/video/123",
+    "duration_seconds": 30,
+    "recording_date": "2025-01-15",
+    "validator_name": "Your Name"
+  },
+  
+  "metadata_observations": {
+    "caption": {
+      "full_text": "Copy the full caption text here including emojis 🔥",
+      "has_emojis": true,
+      "emoji_count": 3,
+      "caption_length": "long|medium|short",
+      "caption_length_guide": "short: <50 chars, medium: 50-150 chars, long: >150 chars",
+      "language": "english|spanish|mixed|other"
+    },
+    "hashtags": {
+      "list": ["#fyp", "#tutorial", "#skincare"],
+      "count": 3,
+      "types": {
+        "all_hashtags_here": ["List all hashtags - let validation system categorize them"],
+        "optional_categorization": {
+          "looks_branded": ["Any obvious company/product names"],
+          "looks_specific": ["Tags with specific topics/communities"],
+          "looks_general": ["Very broad/common words"]
+        },
+        "categorization_note": "Don't worry about perfect categorization - just list all hashtags you see"
+      }
+    },
+    "cta_elements": {
+      "has_cta": true,
+      "cta_location": "caption|video|both",
+      "cta_text": "Link in bio",
+      "cta_type": "website|follow|like|share|buy",
+      "urgency_words": ["now", "today", "limited"]
+    },
+    "engagement_visible": {
+      "likes_shown": "1.2M",
+      "comments_shown": "5.2K",
+      "shares_shown": "892"
+    }
+  },
+  
+  "timestamped_observations": [
+    {
+      "timestamp": "0:00",
+      "timestamp_note": "This is a single moment observation, not a range. Use specific timestamps like 0:00, 0:05, 0:10",
+      "description": "Video opens with...",
+      "elements_visible": {
+        "people": {
+          "count": 1,
+          "positions": ["center"],
+          "facing": "camera|away|side",
+          "shot_type": "close-up|medium|wide|extreme-close",
+          "body_visible": "face|upper-body|full-body"
+        },
+        "objects": {
+          "items": ["phone", "product bottle"],
+          "positions": ["held in hand", "on table"],
+          "focus": "primary|background"
+        },
+        "text_overlays": {
+          "texts": ["3 TIPS FOR CLEAR SKIN"],
+          "position": "top|center|bottom",
+          "style": "static|animated|typewriter|pop-in",
+          "size": "large|medium|small",
+          "colors": ["white", "yellow"]
+        },
+        "stickers": {
+          "types": ["emoji", "gif", "arrow"],
+          "specific": ["fire emoji", "pointing finger"],
+          "animated": true
+        },
+        "filters_effects": {
+          "filter_type": "beauty|color|distortion|none",
+          "transitions": "cut|fade|swipe|zoom",
+          "special_effects": ["sparkles", "blur background"]
+        }
+      },
+      "audio_elements": {
+        "speech": {
+          "speaking": true,
+          "speaker": "main person|voiceover|other",
+          "words": "Hey everyone, today I'm going to...",
+          "tone": "excited|calm|serious|funny",
+          "speed": "fast|normal|slow"
+        },
+        "music": {
+          "present": true,
+          "genre": "pop|electronic|hiphop|acoustic",
+          "tempo": "fast|medium|slow",
+          "volume": "loud|moderate|background"
+        },
+        "sound_effects": ["whoosh", "ding", "pop"]
+      },
+      "emotional_indicators": {
+        "facial_expression": "smiling|neutral|surprised|serious",
+        "body_language": "open|closed|energetic|relaxed",
+        "gesture": "pointing|waving|demonstrating|none",
+        "energy_level": "high|medium|low"
+      }
+    },
+    {
+      "timestamp": "0:05",
+      "description": "First tip appears with product demo",
+      "elements_visible": {
+        "people": {
+          "count": 1,
+          "positions": ["left side"],
+          "facing": "camera",
+          "shot_type": "medium",
+          "body_visible": "upper-body"
+        },
+        "objects": {
+          "items": ["skincare bottle", "cotton pad"],
+          "positions": ["in hand", "being applied"],
+          "focus": "primary"
+        },
+        "text_overlays": {
+          "texts": ["TIP #1", "Use gentle cleanser"],
+          "position": "top|bottom",
+          "style": "animated",
+          "size": "large|medium",
+          "colors": ["pink", "white"]
+        },
+        "stickers": {
+          "types": ["number", "arrow"],
+          "specific": ["1️⃣", "down arrow"],
+          "animated": false
+        }
+      }
+    },
+    {
+      "timestamp": "0:10",
+      "description": "Scene change to before/after comparison",
+      "scene_change": {
+        "transition_type": "cut|fade|swipe|morph",
+        "speed": "instant|fast|slow"
+      },
+      "elements_visible": "..."
+    },
+    {
+      "timestamp": "0:15",
+      "description": "Second tip with hand gestures",
+      "elements_visible": "..."
+    },
+    {
+      "timestamp": "0:20",
+      "description": "Third tip with multiple text overlays",
+      "elements_visible": "..."
+    },
+    {
+      "timestamp": "0:25",
+      "description": "CTA section begins",
+      "elements_visible": {
+        "text_overlays": {
+          "texts": ["FOLLOW FOR MORE", "50% OFF CODE: SAVE50"],
+          "position": "center|bottom",
+          "style": "animated",
+          "size": "large",
+          "colors": ["red", "yellow"]
+        }
+      }
+    },
+    {
+      "timestamp": "0:28",
+      "description": "Final frame with all CTAs",
+      "elements_visible": "..."
+    }
+  ],
+  
+  "section_analysis": [
+    {
+      "section_name": "Hook",
+      "time_range": "0:00-0:05",
+      "purpose": "grab attention|introduce topic|create curiosity",
+      "purpose_guide": "Choose ONE primary purpose. grab attention: shocking/surprising opener, introduce topic: states what video is about, create curiosity: teases without revealing",
+      "purpose_example": "grab attention",
+      "scene_count": 3,
+      "dominant_elements": ["person speaking", "text overlay", "quick cuts"],
+      "pacing": "fast|medium|slow",
+      "hook_strategy": "question|shocking statement|preview|story"
+    },
+    {
+      "section_name": "Main Content",
+      "time_range": "0:05-0:22",
+      "purpose": "deliver value|educate|entertain",
+      "scene_count": 8,
+      "content_structure": "list|story|tutorial|comparison",
+      "dominant_elements": ["demonstrations", "text tips", "product shots"],
+      "pacing": "steady",
+      "information_density": "high|medium|low"
+    },
+    {
+      "section_name": "CTA/Outro",
+      "time_range": "0:22-0:30",
+      "purpose": "drive action|recap|tease next video",
+      "scene_count": 2,
+      "cta_elements": ["follow button", "discount code", "link reminder"],
+      "urgency_level": "high|medium|low",
+      "pacing": "fast"
+    }
+  ],
+  
+  "continuous_tracking": {
+    "people_tracking": [
+      {
+        "person_id": "main_speaker",
+        "appears_at": ["0:00-0:08", "0:12-0:20", "0:25-0:30"],
+        "total_screen_time": 21,
+        "positions": ["center", "left", "center"],
+        "activities": ["speaking", "demonstrating", "gesturing"],
+        "clothing": "white t-shirt",
+        "distinguishing_features": "glasses"
+      },
+      {
+        "person_id": "background_person",
+        "appears_at": ["0:15-0:18"],
+        "total_screen_time": 3,
+        "positions": ["background right"],
+        "activities": ["walking by"],
+        "role": "unintentional|extra|demonstrator"
+      }
+    ],
+    "object_tracking": [
+      {
+        "object": "skincare bottle",
+        "appears_at": ["0:05-0:12", "0:20-0:22"],
+        "total_screen_time": 9,
+        "positions": ["hand", "table", "hand"],
+        "prominence": "featured|visible|background"
+      },
+      {
+        "object": "phone",
+        "appears_at": ["0:00-0:03"],
+        "total_screen_time": 3,
+        "positions": ["hand"],
+        "used_for": "showing something"
+      }
+    ],
+    "text_persistence": [
+      {
+        "text": "3 TIPS",
+        "appears_at": ["0:00-0:05"],
+        "duration": 5,
+        "returns": false
+      },
+      {
+        "text": "FOLLOW FOR MORE",
+        "appears_at": ["0:25-0:30"],
+        "duration": 5,
+        "returns": false
+      }
+    ],
+    "sticker_tracking": [
+      {
+        "sticker": "fire emoji",
+        "appears_at": ["0:02", "0:08", "0:15"],
+        "total_appearances": 3,
+        "context": "emphasis"
+      },
+      {
+        "sticker": "arrow pointing down",
+        "appears_at": ["0:25-0:30"],
+        "duration": 5,
+        "purpose": "directing to caption"
+      }
+    ]
+  },
+  
+  "speech_analysis": {
+    "speech_segments": [
+      {
+        "time": "0:00-0:05",
+        "transcript": "Hey everyone! Today I'm sharing my top 3 skincare tips that transformed my skin",
+        "speaker": "main person",
+        "delivery": "enthusiastic",
+        "speed": "fast"
+      },
+      {
+        "time": "0:05-0:10",
+        "transcript": "First tip - always use a gentle cleanser. Never use harsh soaps that strip your skin",
+        "speaker": "main person",
+        "delivery": "informative",
+        "speed": "normal"
+      },
+      {
+        "time": "0:10-0:15",
+        "transcript": "Second tip is crucial - moisturize even if you have oily skin",
+        "speaker": "main person",
+        "delivery": "emphatic",
+        "speed": "normal",
+        "emphasis_words": ["crucial", "even"]
+      },
+      {
+        "time": "0:15-0:20",
+        "transcript": "And my secret tip number three - use SPF every single day, yes even indoors",
+        "speaker": "main person",
+        "delivery": "conversational",
+        "speed": "normal"
+      },
+      {
+        "time": "0:25-0:28",
+        "transcript": "Follow for more tips and use code SAVE50 for half off",
+        "speaker": "main person",
+        "delivery": "urgent",
+        "speed": "fast"
+      }
+    ],
+    "speech_patterns": {
+      "filler_words": ["um", "uh", "like"],
+      "repeated_phrases": ["you guys", "make sure"],
+      "speech_coverage": "80%",
+      "silence_periods": ["0:20-0:25"],
+      "voiceover_vs_direct": "direct"
+    }
+  },
+  
+  "scene_analysis": {
+    "scene_changes": [
+      {"time": "0:03", "type": "cut", "from": "face close-up", "to": "medium shot"},
+      {"time": "0:05", "type": "cut", "from": "medium shot", "to": "product close-up"},
+      {"time": "0:08", "type": "fade", "from": "product demo", "to": "face shot"},
+      {"time": "0:10", "type": "swipe", "from": "tip 1", "to": "tip 2"},
+      {"time": "0:15", "type": "cut", "from": "tip 2", "to": "tip 3"},
+      {"time": "0:20", "type": "zoom out", "from": "product", "to": "wide shot"},
+      {"time": "0:25", "type": "cut", "from": "demonstration", "to": "cta screen"}
+    ],
+    "scene_rhythm": {
+      "cuts_per_5_seconds": [3, 2, 2, 1, 1, 2],
+      "longest_shot": {"duration": 5, "location": "0:20-0:25"},
+      "shortest_shot": {"duration": 1, "location": "0:02-0:03"},
+      "rhythm_pattern": "front-loaded|even|back-loaded|variable"
+    }
+  },
+  
+  "emotional_progression": {
+    "emotional_beats": [
+      {"time": "0:00", "emotion": "excited", "intensity": "high"},
+      {"time": "0:05", "emotion": "informative", "intensity": "medium"},
+      {"time": "0:10", "emotion": "serious", "intensity": "medium"},
+      {"time": "0:15", "emotion": "friendly", "intensity": "medium"},
+      {"time": "0:20", "emotion": "confident", "intensity": "high"},
+      {"time": "0:25", "emotion": "urgent", "intensity": "high"}
+    ],
+    "overall_journey": "excitement -> education -> urgency",
+    "emotional_consistency": "varied|stable|chaotic"
+  },
+  
+  "visual_complexity": {
+    "density_moments": [
+      {"time": "0:00-0:05", "element_count": 4, "complexity": "high"},
+      {"time": "0:05-0:10", "element_count": 3, "complexity": "medium"},
+      {"time": "0:10-0:15", "element_count": 2, "complexity": "low"},
+      {"time": "0:15-0:20", "element_count": 3, "complexity": "medium"},
+      {"time": "0:20-0:25", "element_count": 2, "complexity": "low"},
+      {"time": "0:25-0:30", "element_count": 5, "complexity": "high"}
+    ],
+    "overlay_styles": {
+      "text_animation_types": ["pop-in", "typewriter", "fade"],
+      "color_scheme": "consistent|varied|chaotic",
+      "design_quality": "professional|amateur|mixed"
+    }
+  },
+  
+  "quality_indicators": {
+    "video_quality": {
+      "resolution": "high|medium|low",
+      "lighting": "professional|good|poor",
+      "stability": "stable|slightly_shaky|very_shaky",
+      "framing": "well-composed|acceptable|poor"
+    },
+    "audio_quality": {
+      "clarity": "crystal|good|muffled",
+      "background_noise": "none|minimal|significant",
+      "music_balance": "well-mixed|too_loud|too_quiet"
+    },
+    "editing_quality": {
+      "transitions": "smooth|acceptable|jarring",
+      "timing": "perfect|good|off",
+      "consistency": "consistent|mostly_consistent|inconsistent"
+    }
+  },
+  
+  "special_techniques": {
+    "hooks_used": ["question", "shocking statement", "preview"],
+    "retention_tactics": ["progress bar", "countdown", "cliffhanger"],
+    "engagement_tricks": ["ask for comments", "controversial statement", "poll"],
+    "production_techniques": ["match cut", "speed ramping", "split screen", "green screen"]
+  },
+  
+  "validation_notes": {
+    "confident_observations": "List things you're 100% sure about",
+    "uncertain_elements": "List things you're not sure about",
+    "missed_elements": "Things too fast or unclear to capture",
+    "additional_notes": "Any other observations"
+  }
+}
