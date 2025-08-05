@@ -1,290 +1,145 @@
 """
-ML services interface for RumiAI v2.
-
-This module provides a unified interface to various ML services.
+ML Services API - Delegates to Unified ML Services
+Maintains backward compatibility while using unified frame extraction
+Each method runs ONLY its specific service, not all services
 """
-import subprocess
-import json
+
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, List
-import asyncio
-import os
-
-from ..core.exceptions import MLAnalysisError
+from typing import Dict, Any
+from .ml_services_unified import UnifiedMLServices
 
 logger = logging.getLogger(__name__)
 
-
 class MLServices:
     """
-    Interface to ML analysis services.
-    
-    In production, this would call actual ML services.
-    For now, it interfaces with existing Python scripts.
+    ML Services wrapper that uses unified frame extraction
+    Maintains API compatibility with existing code
     """
     
     def __init__(self):
-        self.venv_path = Path("venv/bin/activate")
-        self.python_path = Path("venv/bin/python")
-    
+        self.unified_services = UnifiedMLServices()
+        self._video_id_cache = {}  # Map video_path to video_id
+        
+    def _get_video_id(self, video_path: Path) -> str:
+        """Generate or retrieve video ID from path"""
+        video_str = str(video_path)
+        if video_str not in self._video_id_cache:
+            # Extract video ID from path or generate one
+            if video_path.stem.isdigit():
+                video_id = video_path.stem
+            else:
+                import hashlib
+                video_id = hashlib.md5(video_str.encode()).hexdigest()[:12]
+            self._video_id_cache[video_str] = video_id
+        return self._video_id_cache[video_str]
+        
+    async def run_all_ml_services(self, video_path: Path, output_dir: Path) -> Dict[str, Any]:
+        """
+        Run all ML services on video using unified frame extraction
+        This is the only method that runs everything at once
+        """
+        video_id = self._get_video_id(video_path)
+        return await self.unified_services.analyze_video(video_path, video_id, output_dir)
+        
     async def run_yolo_detection(self, video_path: Path, output_dir: Path) -> Dict[str, Any]:
-        """Run YOLO object detection on video."""
-        logger.info(f"Running YOLO detection on {video_path}")
+        """Run ONLY YOLO object detection"""
+        video_id = self._get_video_id(video_path)
         
-        # Ensure output directory exists
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        # In production, this would call the YOLO service
-        # For now, check if output already exists
-        output_file = output_dir / f"{video_path.stem}_yolo_detections.json"
-        
-        if output_file.exists():
-            logger.info(f"YOLO output already exists: {output_file}")
-            with open(output_file, 'r') as f:
-                return json.load(f)
-        
-        # Simulate YOLO processing
-        logger.warning("YOLO service not implemented - returning empty results")
-        return {
-            'objectAnnotations': [],
-            'metadata': {
-                'model': 'YOLOv8',
-                'processed': False
-            }
-        }
-    
-    async def run_whisper_transcription(self, video_path: Path, output_dir: Path) -> Dict[str, Any]:
-        """Run Whisper speech transcription on video."""
-        logger.info(f"Running Whisper transcription on {video_path}")
-        
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / f"{video_path.stem}_whisper.json"
-        
-        if output_file.exists():
-            logger.info(f"Whisper output already exists: {output_file}")
-            with open(output_file, 'r') as f:
-                return json.load(f)
-        
-        # Try to run actual Whisper if available
-        try:
-            result = await self._run_python_script(
-                "whisper_transcribe.py",
-                ["--video", str(video_path), "--output", str(output_file)]
-            )
-            
-            if output_file.exists():
-                with open(output_file, 'r') as f:
-                    return json.load(f)
-        except Exception as e:
-            logger.warning(f"Whisper transcription failed: {e}")
-        
-        # Return empty transcription
-        return {
-            'segments': [],
-            'text': '',
-            'language': 'unknown'
-        }
-    
-    async def run_mediapipe_analysis(self, video_path: Path, output_dir: Path) -> Dict[str, Any]:
-        """Run MediaPipe human analysis on video."""
-        logger.info(f"Running MediaPipe analysis on {video_path}")
-        
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / f"{video_path.stem}_human_analysis.json"
-        
-        if output_file.exists():
-            logger.info(f"MediaPipe output already exists: {output_file}")
-            with open(output_file, 'r') as f:
-                return json.load(f)
-        
-        # Return default human analysis
-        return {
-            'presence_percentage': 0.0,
-            'frames_with_people': 0,
-            'poses': [],
-            'faces': [],
-            'hands': []
-        }
-    
-    async def run_ocr_detection(self, video_path: Path, output_dir: Path) -> Dict[str, Any]:
-        """Run OCR text detection on video."""
-        logger.info(f"Running OCR detection on {video_path}")
-        
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / f"{video_path.stem}_creative_analysis.json"
-        
-        if output_file.exists():
-            logger.info(f"OCR output already exists: {output_file}")
-            with open(output_file, 'r') as f:
-                return json.load(f)
-        
-        # Return empty OCR results
-        return {
-            'textAnnotations': [],
-            'stickers': [],
-            'metadata': {
-                'frames_analyzed': 0
-            }
-        }
-    
-    async def run_scene_detection(self, video_path: Path, output_dir: Path) -> Dict[str, Any]:
-        """Run scene detection on video."""
-        logger.info(f"Running scene detection on {video_path}")
-        
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / f"{video_path.stem}_scenes.json"
-        
-        if output_file.exists():
-            logger.info(f"Scene detection output already exists: {output_file}")
-            with open(output_file, 'r') as f:
-                return json.load(f)
-        
-        # Try to run PySceneDetect if available
-        try:
-            from scenedetect import open_video, SceneManager
-            from scenedetect.detectors import ContentDetector
-            
-            # Open video
-            video = open_video(str(video_path))
-            scene_manager = SceneManager()
-            scene_manager.add_detector(ContentDetector())
-            
-            # Detect scenes
-            scene_manager.detect_scenes(video)
-            scene_list = scene_manager.get_scene_list()
-            
-            # Convert to our format
-            scenes = []
-            scene_changes = []
-            
-            for i, (start_time, end_time) in enumerate(scene_list):
-                start_seconds = start_time.get_seconds()
-                end_seconds = end_time.get_seconds()
-                
-                scenes.append({
-                    'start_time': start_seconds,
-                    'end_time': end_seconds,
-                    'duration': end_seconds - start_seconds,
-                    'scene_index': i
-                })
-                
-                if i > 0:  # Skip first scene start at 0
-                    scene_changes.append(start_seconds)
-            
-            result = {
-                'scenes': scenes,
-                'scene_changes': scene_changes,
-                'total_scenes': len(scenes)
-            }
-            
-            # Save result
-            with open(output_file, 'w') as f:
-                json.dump(result, f, indent=2)
-            
-            logger.info(f"Detected {len(scenes)} scenes")
-            return result
-            
-        except ImportError:
-            logger.warning("PySceneDetect not available")
-        except Exception as e:
-            logger.error(f"Scene detection failed: {e}")
-        
-        # Return default scene data
-        return {
-            'scenes': [{
-                'start_time': 0,
-                'end_time': 60,
-                'duration': 60
-            }],
-            'scene_changes': [],
-            'total_scenes': 1
-        }
-    
-    async def extract_frames(self, video_path: Path, output_dir: Path, 
-                           sample_rate: float = 1.0) -> List[Path]:
-        """
-        Extract frames from video.
-        
-        Args:
-            video_path: Path to video file
-            output_dir: Directory to save frames
-            sample_rate: Frames per second to extract
-            
-        Returns:
-            List of paths to extracted frames
-        """
-        logger.info(f"Extracting frames from {video_path} at {sample_rate} fps")
-        
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Check if frames already extracted
-        existing_frames = list(output_dir.glob("frame_*.jpg"))
-        if existing_frames:
-            logger.info(f"Frames already extracted: {len(existing_frames)} frames")
-            return sorted(existing_frames)
-        
-        try:
-            # Use ffmpeg to extract frames
-            cmd = [
-                'ffmpeg',
-                '-i', str(video_path),
-                '-vf', f'fps={sample_rate}',
-                '-q:v', '2',  # Quality
-                str(output_dir / 'frame_%04d.jpg'),
-                '-y'  # Overwrite
-            ]
-            
-            # Run ffmpeg
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True
-            )
-            
-            if result.returncode != 0:
-                logger.error(f"FFmpeg error: {result.stderr}")
-                raise MLAnalysisError('ffmpeg', f"Frame extraction failed: {result.stderr}")
-            
-            # Get extracted frames
-            frames = sorted(output_dir.glob("frame_*.jpg"))
-            logger.info(f"Extracted {len(frames)} frames")
-            
-            return frames
-            
-        except FileNotFoundError:
-            logger.error("FFmpeg not found - cannot extract frames")
-            raise MLAnalysisError('ffmpeg', "FFmpeg not installed")
-    
-    async def _run_python_script(self, script_name: str, args: List[str]) -> Dict[str, Any]:
-        """Run a Python script in the virtual environment."""
-        # Build command
-        if self.venv_path.exists():
-            # Use venv Python
-            cmd = [str(self.python_path), script_name] + args
-        else:
-            # Use system Python
-            cmd = ['python', script_name] + args
-        
-        logger.info(f"Running: {' '.join(cmd)}")
-        
-        # Run script
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            env={**os.environ, 'PYTHONUNBUFFERED': '1'}
+        # Extract frames (will use cache if available)
+        frame_data = await self.unified_services.frame_manager.extract_frames(
+            video_path, video_id
         )
         
-        stdout, stderr = await process.communicate()
+        if not frame_data.get('success') or not frame_data.get('frames'):
+            return self.unified_services._empty_yolo_result()
         
-        if process.returncode != 0:
-            error_msg = stderr.decode() if stderr else "Unknown error"
-            raise MLAnalysisError(script_name, f"Script failed: {error_msg}")
+        # Run ONLY YOLO on the frames
+        return await self.unified_services._run_yolo_on_frames(
+            frame_data['frames'], 
+            video_id, 
+            output_dir
+        )
         
-        # Parse JSON output
+    async def run_whisper_transcription(self, video_path: Path, output_dir: Path) -> Dict[str, Any]:
+        """Run ONLY Whisper transcription"""
+        video_id = self._get_video_id(video_path)
+        
+        # Whisper doesn't need frames, run directly
+        return await self.unified_services._run_whisper_on_video(
+            video_path, video_id, output_dir
+        )
+        
+    async def run_mediapipe_analysis(self, video_path: Path, output_dir: Path) -> Dict[str, Any]:
+        """Run ONLY MediaPipe analysis"""
+        video_id = self._get_video_id(video_path)
+        
+        # Extract frames (will use cache if available)
+        frame_data = await self.unified_services.frame_manager.extract_frames(
+            video_path, video_id
+        )
+        
+        if not frame_data.get('success') or not frame_data.get('frames'):
+            return self.unified_services._empty_mediapipe_result()
+        
+        # Run ONLY MediaPipe on the frames
+        return await self.unified_services._run_mediapipe_on_frames(
+            frame_data['frames'],
+            video_id,
+            output_dir
+        )
+        
+    async def run_ocr_analysis(self, video_path: Path, output_dir: Path) -> Dict[str, Any]:
+        """Run ONLY OCR analysis"""
+        video_id = self._get_video_id(video_path)
+        
+        # Extract frames (will use cache if available)
+        frame_data = await self.unified_services.frame_manager.extract_frames(
+            video_path, video_id
+        )
+        
+        if not frame_data.get('success') or not frame_data.get('frames'):
+            return self.unified_services._empty_ocr_result()
+        
+        # Run ONLY OCR on the frames
+        return await self.unified_services._run_ocr_on_frames(
+            frame_data['frames'],
+            video_id,
+            output_dir
+        )
+        
+    async def run_scene_detection(self, video_path: Path, output_dir: Path) -> Dict[str, Any]:
+        """Run scene detection (existing implementation)"""
+        # Scene detection continues to work independently
+        # This is already working in the current system
+        from scenedetect import detect, ContentDetector
+        
         try:
-            return json.loads(stdout.decode())
-        except json.JSONDecodeError:
-            logger.warning(f"Script output not valid JSON: {stdout.decode()[:200]}")
-            return {}
+            scenes = detect(str(video_path), ContentDetector())
+            
+            scene_list = []
+            for i, (start, end) in enumerate(scenes):
+                scene_list.append({
+                    'scene_number': i + 1,
+                    'start_time': start.get_seconds(),
+                    'end_time': end.get_seconds(),
+                    'duration': (end - start).get_seconds()
+                })
+                
+            return {
+                'scenes': scene_list,
+                'total_scenes': len(scene_list),
+                'metadata': {'processed': True}
+            }
+            
+        except Exception as e:
+            logger.error(f"Scene detection failed: {e}")
+            return {
+                'scenes': [],
+                'total_scenes': 0,
+                'metadata': {'processed': False, 'error': str(e)}
+            }
+            
+    async def cleanup(self):
+        """Clean up resources"""
+        await self.unified_services.cleanup()

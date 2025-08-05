@@ -89,11 +89,11 @@ class UnifiedAnalysis:
                 errors[model_name] = result.error
         return errors
     
-    def to_dict(self, legacy_mode: bool = True) -> Dict[str, Any]:
+    def to_dict(self, legacy_mode: bool = False) -> Dict[str, Any]:
         """
         Convert to dictionary for JSON serialization.
         
-        CRITICAL: This format must match what existing code expects.
+        Uses clean ml_data structure, no legacy fields by default.
         """
         # Build the unified analysis structure expected by prompts
         result = {
@@ -111,22 +111,7 @@ class UnifiedAnalysis:
             'processing_metadata': self.processing_metadata
         }
         
-        # Add ML results in expected format
-        if 'yolo' in self.ml_results and self.ml_results['yolo'].success:
-            result['objectDetection'] = self.ml_results['yolo'].data
-        
-        if 'mediapipe' in self.ml_results and self.ml_results['mediapipe'].success:
-            result['humanAnalysis'] = self.ml_results['mediapipe'].data
-        
-        if 'ocr' in self.ml_results and self.ml_results['ocr'].success:
-            result['creativeAnalysis'] = self.ml_results['ocr'].data
-        
-        if 'scene_detection' in self.ml_results and self.ml_results['scene_detection'].success:
-            result['sceneDetection'] = self.ml_results['scene_detection'].data
-        
-        if 'whisper' in self.ml_results and self.ml_results['whisper'].success:
-            result['speechTranscription'] = self.ml_results['whisper'].data
-        
+        # Add temporal markers if present
         if self.temporal_markers:
             result['temporalMarkers'] = self.temporal_markers
         
@@ -138,9 +123,26 @@ class UnifiedAnalysis:
         result['textTimeline'] = self.timeline.to_prompt_format('text')
         result['objectTimeline'] = self.timeline.to_prompt_format('object')
         
+        # Add ml_data field that precompute functions expect
+        # This provides a clean, consistent interface for ML data access
+        required_models = ['yolo', 'whisper', 'mediapipe', 'ocr', 'scene_detection']
+        
+        # Log any unexpected services (validation)
+        for service in self.ml_results:
+            if service not in required_models:
+                logger.warning(f"Unexpected ML service in results: {service}")
+        
+        # Create ml_data with all expected services
+        result['ml_data'] = {}
+        for service in required_models:
+            if service in self.ml_results and self.ml_results[service].success:
+                result['ml_data'][service] = self.ml_results[service].data
+            else:
+                result['ml_data'][service] = {}
+        
         return result
     
-    def save_to_file(self, file_path: str, legacy_mode: bool = True) -> None:
+    def save_to_file(self, file_path: str, legacy_mode: bool = False) -> None:
         """Save unified analysis to JSON file."""
         import tempfile
         import shutil

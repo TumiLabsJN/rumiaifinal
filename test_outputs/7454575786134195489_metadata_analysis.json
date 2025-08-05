@@ -1,0 +1,78 @@
+{
+  "CoreMetrics": {
+    "captionLength": 0,
+    "wordCount": 0,
+    "hashtagCount": 0,
+    "emojiCount": 0,
+    "mentionCount": 0,
+    "linkPresent": false,
+    "videoDuration": 72.8,
+    "publishHour": 0,
+    "publishDayOfWeek": 0,
+    "viewCount": 0,
+    "likeCount": 0,
+    "commentCount": 0,
+    "shareCount": 0,
+    "engagementRate": 0.0,
+    "confidence": 1.0
+  },
+  "Dynamics": {
+    "hashtagStrategy": "minimal",
+    "captionStyle": "minimal",
+    "emojiDensity": 0.0,
+    "mentionDensity": 0.0,
+    "readabilityScore": 0.0,
+    "sentimentPolarity": 0.0,
+    "sentimentCategory": "neutral",
+    "urgencyLevel": "none",
+    "viralPotentialScore": 0.0,
+    "confidence": 1.0
+  },
+  "Interactions": {
+    "hashtagCounts": {
+      "nicheCount": 0,
+      "genericCount": 0
+    },
+    "engagementAlignment": {
+      "likesToViewsRatio": 0.0,
+      "commentsToViewsRatio": 0.0,
+      "sharesToViewsRatio": 0.0,
+      "aboveAverageEngagement": false
+    },
+    "creatorContext": {
+      "username": "",
+      "verified": false
+    },
+    "confidence": 1.0
+  },
+  "KeyEvents": {
+    "hashtags": [],
+    "emojis": [],
+    "hooks": [],
+    "callToActions": [],
+    "confidence": 1.0
+  },
+  "Patterns": {
+    "linguisticMarkers": {
+      "questionCount": 0,
+      "exclamationCount": 0,
+      "capsLockWords": 0,
+      "personalPronounCount": 0
+    },
+    "hashtagPatterns": {
+      "leadWithGeneric": false,
+      "allCaps": false
+    },
+    "confidence": 1.0
+  },
+  "Quality": {
+    "captionPresent": false,
+    "hashtagsPresent": false,
+    "statsAvailable": true,
+    "publishTimeAvailable": true,
+    "creatorDataAvailable": true,
+    "captionQuality": "low",
+    "hashtagQuality": "low",
+    "overallConfidence": 0.95
+  }
+}

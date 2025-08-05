@@ -1,0 +1,113 @@
+{
+  "first_5_seconds": {
+    "density_progression": [
+      4,
+      0,
+      0,
+      0,
+      1
+    ],
+    "text_moments": [],
+    "emotion_sequence": [
+      "neutral",
+      "neutral",
+      "neutral",
+      "neutral",
+      "neutral"
+    ],
+    "gesture_moments": [],
+    "object_appearances": [],
+    "speech_segments": [],
+    "scene_changes": [
+      0.0,
+      0.8333333333333334
+    ]
+  },
+  "cta_window": {
+    "time_range": "61-72s",
+    "cta_appearances": [],
+    "gesture_sync": {
+      "gesture_count": 0,
+      "speech_count": 0,
+      "sync_ratio": 0
+    },
+    "object_focus": [],
+    "speech_emphasis": {
+      "speech_duration": 0,
+      "word_count": 0,
+      "words_per_second": 0,
+      "segment_count": 0
+    },
+    "text_overlays": []
+  },
+  "peak_moments": [
+    {
+      "timestamp": 33.0,
+      "intensity": 6.0,
+      "events": [
+        "scene"
+      ]
+    },
+    {
+      "timestamp": 61.0,
+      "intensity": 6.0,
+      "events": [
+        "scene",
+        "pose"
+      ]
+    },
+    {
+      "timestamp": 5.0,
+      "intensity": 5.0,
+      "events": [
+        "scene",
+        "face"
+      ]
+    },
+    {
+      "timestamp": 55.0,
+      "intensity": 5.0,
+      "events": [
+        "scene",
+        "pose"
+      ]
+    },
+    {
+      "timestamp": 63.0,
+      "intensity": 5.0,
+      "events": [
+        "scene",
+        "pose"
+      ]
+    }
+  ],
+  "engagement_curve": [
+    0.3,
+    0.45,
+    0.45,
+    0.15,
+    0.15,
+    0.15,
+    0.45,
+    0.3,
+    0.15,
+    0.15,
+    0.15,
+    0.45,
+    0.3,
+    0.3,
+    0.15
+  ],
+  "metadata": {
+    "video_id": "7454575786134195489",
+    "duration": 72.0,
+    "generated_at": "2025-08-04T20:41:37.728073",
+    "ml_data_available": {
+      "yolo": true,
+      "whisper": true,
+      "ocr": false,
+      "mediapipe": true,
+      "scene": true
+    }
+  }
+}

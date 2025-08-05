@@ -1,0 +1,109 @@
+{
+  "CoreMetrics": {
+    "totalTextOverlays": 10,
+    "uniqueTexts": 7,
+    "avgTextsPerSecond": 0.14,
+    "timeToFirstText": 2.1,
+    "avgTextDisplayDuration": 4.5,
+    "totalStickers": 12,
+    "uniqueStickers": 6,
+    "textStickerRatio": 0.83,
+    "overlayDensity": 0.4,
+    "visualComplexityScore": 3.7,
+    "confidence": 0.9
+  },
+  "Dynamics": {
+    "overlayTimeline": [
+      {
+        "timestamp": "0-3s",
+        "overlayCount": 1,
+        "type": "text",
+        "density": "low"
+      },
+      {
+        "timestamp": "3-6s",
+        "overlayCount": 3,
+        "type": "sticker",
+        "density": "moderate"
+      },
+      {
+        "timestamp": "6-9s",
+        "overlayCount": 2,
+        "type": "text",
+        "density": "moderate"
+      },
+      {
+        "timestamp": "9-12s",
+        "overlayCount": 4,
+        "type": "mixed",
+        "density": "high"
+      }
+    ],
+    "appearancePattern": "burst",
+    "densityProgression": "building",
+    "animationIntensity": 0.7,
+    "visualPacing": "moderate",
+    "confidence": 0.8
+  },
+  "Interactions": {
+    "textSpeechSync": 0.6,
+    "overlayGestureCoordination": 0.4,
+    "visualEmphasisAlignment": 0.7,
+    "multiLayerComplexity": "moderate",
+    "readingFlowScore": 0.8,
+    "confidence": 0.7
+  },
+  "KeyEvents": {
+    "impactfulOverlays": [
+      {
+        "timestamp": "10s",
+        "text": "Unbelievable!",
+        "impact": "high",
+        "reason": "climax"
+      }
+    ],
+    "overlayBursts": [
+      {
+        "timestamp": "8-10s",
+        "count": 3,
+        "purpose": "information_dump"
+      }
+    ],
+    "keyTextMoments": [
+      {
+        "timestamp": 1,
+        "text": "Get ready",
+        "function": "hook"
+      }
+    ],
+    "stickerHighlights": [
+      {
+        "timestamp": 4,
+        "sticker": "explosion",
+        "purpose": "emphasis"
+      }
+    ],
+    "confidence": 0.8
+  },
+  "Patterns": {
+    "overlayStrategy": "moderate",
+    "textStyle": "mixed",
+    "communicationApproach": "reinforcing",
+    "visualTechniques": [
+      "text_animation",
+      "color_coding"
+    ],
+    "productionQuality": "professional",
+    "confidence": 0.9
+  },
+  "Quality": {
+    "textDetectionAccuracy": 0.85,
+    "stickerRecognitionRate": 0.9,
+    "overlayDataCompleteness": 0.8,
+    "readabilityIssues": [
+      "text_too_fast"
+    ],
+    "visualAccessibility": "medium",
+    "overallConfidence": 0.8
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "CoreMetrics": {
+    "totalSpeechSegments": 0,
+    "speechDuration": 0.0,
+    "speechRate": 0.0,
+    "wordsPerMinute": 0.0,
+    "uniqueSpeakers": 0,
+    "primarySpeakerDominance": 0.0,
+    "avgConfidence": 0.0,
+    "speechClarityScore": 0.0,
+    "pauseCount": 0,
+    "avgPauseDuration": 0.0,
+    "confidence": 0.0
+  },
+  "Dynamics": {
+    "speechPacingCurve": [],
+    "pacingVariation": 0.0,
+    "speechRhythm": "steady",
+    "pausePattern": "natural",
+    "emphasisMoments": [],
+    "confidence": 0.0
+  },
+  "Interactions": {
+    "speechGestureSync": 0.0,
+    "speechExpressionAlignment": 0.0,
+    "verbalVisualCoherence": 0.0,
+    "multimodalEmphasis": [],
+    "conversationalDynamics": "monologue",
+    "confidence": 0.0
+  },
+  "KeyEvents": {
+    "keyPhrases": [],
+    "speechClimax": {
+      "timestamp": 0,
+      "text": "",
+      "intensity": 0.0
+    },
+    "silentMoments": [],
+    "transitionPhrases": [],
+    "confidence": 0.0
+  },
+  "Patterns": {
+    "deliveryStyle": "conversational",
+    "speechTechniques": [],
+    "toneCategory": "informative",
+    "linguisticComplexity": "simple",
+    "engagementStrategy": "explanation",
+    "confidence": 0.0
+  },
+  "Quality": {
+    "transcriptionConfidence": 0.0,
+    "audioQuality": "clear",
+    "speechDataCompleteness": 0.0,
+    "analysisLimitations": [],
+    "overallConfidence": 0.0
+  }
+}

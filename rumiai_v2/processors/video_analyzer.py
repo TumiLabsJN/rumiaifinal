@@ -227,7 +227,7 @@ class VideoAnalyzer:
             
             # Run actual OCR detection
             logger.info(f"Running OCR on {video_path}")
-            data = await self.ml_services.run_ocr_detection(video_path, output_dir)
+            data = await self.ml_services.run_ocr_analysis(video_path, output_dir)
             
             # Save the output
             output_dir.mkdir(parents=True, exist_ok=True)

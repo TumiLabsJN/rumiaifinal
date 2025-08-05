@@ -1,0 +1,340 @@
+{
+  "video_id": "7454575786134195489",
+  "timestamp": "2025-08-05T15:56:33.603992",
+  "success": false,
+  "metrics": {
+    "frame_extraction_time": 0,
+    "ml_processing_time": {
+      "total": 0.0018150806427001953,
+      "yolo": 0,
+      "mediapipe": 0,
+      "ocr": 0,
+      "whisper": 0,
+      "scene": 0
+    },
+    "claude_processing_time": {
+      "creative_density": 7.5028886795043945,
+      "emotional_journey": 7.9739296436309814,
+      "person_framing": 5.488500356674194,
+      "scene_pacing": 7.747553586959839,
+      "speech_analysis": 4.414649724960327,
+      "visual_overlay_analysis": 5.773003101348877,
+      "metadata_analysis": 6.095442056655884
+    },
+    "total_time": 45.019986152648926,
+    "memory_peak_mb": 425.08984375,
+    "memory_start_mb": 413.74609375,
+    "cache_hits": 0,
+    "cache_misses": 0,
+    "json_sizes_kb": {
+      "creative_density": 4.265625,
+      "emotional_journey": 3.685546875,
+      "person_framing": 3.0,
+      "scene_pacing": 3.265625,
+      "speech_analysis": 3.2080078125,
+      "visual_overlay_analysis": 3.3154296875,
+      "metadata_analysis": 3.3525390625
+    },
+    "token_counts": {
+      "creative_density": {
+        "input": 2637,
+        "output": 0
+      },
+      "emotional_journey": {
+        "input": 2299,
+        "output": 0
+      },
+      "person_framing": {
+        "input": 1823,
+        "output": 0
+      },
+      "scene_pacing": {
+        "input": 2270,
+        "output": 0
+      },
+      "speech_analysis": {
+        "input": 1633,
+        "output": 0
+      },
+      "visual_overlay_analysis": {
+        "input": 1928,
+        "output": 0
+      },
+      "metadata_analysis": {
+        "input": 1875,
+        "output": 0
+      }
+    },
+    "api_costs": {
+      "creative_density": 0.00182525,
+      "emotional_journey": 0.0015447500000000001,
+      "person_framing": 0.00126075,
+      "scene_pacing": 0.0016605,
+      "speech_analysis": 0.0009592499999999999,
+      "visual_overlay_analysis": 0.0012890000000000002,
+      "metadata_analysis": 0.0011767499999999998
+    },
+    "total_cost": 0.00971625,
+    "timeouts": {
+      "frame_extraction": false,
+      "whisper": false,
+      "yolo": false,
+      "mediapipe": false,
+      "ocr": false,
+      "scene": false,
+      "claude_calls": {}
+    }
+  },
+  "validation": {
+    "ml_data_present": true,
+    "ml_data_populated": {
+      "yolo": true,
+      "mediapipe": true,
+      "ocr": false,
+      "whisper": false,
+      "scene_detection": true
+    },
+    "claude_outputs": {
+      "creative_density": true,
+      "emotional_journey": true,
+      "person_framing": false,
+      "scene_pacing": true,
+      "speech_analysis": true,
+      "visual_overlay_analysis": true,
+      "metadata_analysis": true
+    },
+    "block_validation": {
+      "creative_density": {
+        "densityCoreMetrics": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "densityDynamics": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "densityInteractions": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "densityKeyEvents": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "densityPatterns": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "densityQuality": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        }
+      },
+      "emotional_journey": {
+        "emotionalCoreMetrics": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "emotionalDynamics": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "emotionalInteractions": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "emotionalKeyEvents": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "emotionalPatterns": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "emotionalQuality": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        }
+      },
+      "scene_pacing": {
+        "scenePacingCoreMetrics": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "scenePacingDynamics": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "scenePacingInteractions": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "scenePacingKeyEvents": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "scenePacingPatterns": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "scenePacingQuality": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        }
+      },
+      "speech_analysis": {
+        "speechCoreMetrics": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "speechDynamics": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "speechInteractions": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "speechKeyEvents": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "speechPatterns": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "speechQuality": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        }
+      },
+      "visual_overlay_analysis": {
+        "overlaysCoreMetrics": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "overlaysDynamics": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "overlaysInteractions": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "overlaysKeyEvents": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "overlaysPatterns": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "overlaysQuality": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        }
+      },
+      "metadata_analysis": {
+        "metadataCoreMetrics": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "metadataDynamics": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "metadataInteractions": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "metadataKeyEvents": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "metadataPatterns": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        },
+        "metadataQuality": {
+          "present": false,
+          "issues": [
+            "Block missing"
+          ]
+        }
+      }
+    },
+    "errors": [
+      "person_framing: Missing required blocks: CoreMetrics, Dynamics, Interactions, KeyEvents, Patterns, Quality, Unexpected block: personFramingCoreMetrics, Unexpected block: personFramingDynamics, Unexpected block: personFramingInteractions, Unexpected block: personFramingKeyEvents, Unexpected block: personFramingPatterns, Unexpected block: personFramingQuality"
+    ]
+  }
+}

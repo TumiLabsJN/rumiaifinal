@@ -15,6 +15,95 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Format extraction helpers for compatibility with both old and new formats
+
+def extract_yolo_data(ml_data):
+    """Extract YOLO data from either old or new format"""
+    yolo_data = ml_data.get('yolo', {})
+    
+    # Handle new format
+    if 'objectAnnotations' in yolo_data:
+        return yolo_data['objectAnnotations']
+    
+    # Legacy format fallback
+    if 'detections' in yolo_data:
+        return yolo_data['detections']
+    
+    # Check nested data structure
+    if 'data' in yolo_data and 'objectAnnotations' in yolo_data['data']:
+        return yolo_data['data']['objectAnnotations']
+    
+    return []
+
+def extract_mediapipe_data(ml_data):
+    """Extract MediaPipe data from either format"""
+    mp_data = ml_data.get('mediapipe', {})
+    
+    # Direct access
+    if 'poses' in mp_data:
+        return {
+            'poses': mp_data.get('poses', []),
+            'faces': mp_data.get('faces', []),
+            'hands': mp_data.get('hands', []),
+            'gestures': mp_data.get('gestures', []),
+            'presence_percentage': mp_data.get('presence_percentage', 0),
+            'frames_with_people': mp_data.get('frames_with_people', 0)
+        }
+    
+    # Nested access
+    if 'data' in mp_data:
+        data = mp_data['data']
+        return {
+            'poses': data.get('poses', []),
+            'faces': data.get('faces', []),
+            'hands': data.get('hands', []),
+            'gestures': data.get('gestures', []),
+            'presence_percentage': data.get('presence_percentage', 0),
+            'frames_with_people': data.get('frames_with_people', 0)
+        }
+    
+    return {
+        'poses': [], 'faces': [], 'hands': [], 'gestures': [],
+        'presence_percentage': 0, 'frames_with_people': 0
+    }
+
+def extract_whisper_data(ml_data):
+    """Extract Whisper data from either format"""
+    whisper_data = ml_data.get('whisper', {})
+    
+    if 'segments' in whisper_data:
+        return whisper_data
+    
+    if 'data' in whisper_data and 'segments' in whisper_data['data']:
+        return whisper_data['data']
+    
+    return {'text': '', 'segments': [], 'language': 'unknown'}
+
+def extract_ocr_data(ml_data):
+    """Extract OCR data from either format"""
+    ocr_data = ml_data.get('ocr', {})
+    
+    if 'textAnnotations' in ocr_data:
+        return ocr_data
+    
+    if 'data' in ocr_data and 'textAnnotations' in ocr_data['data']:
+        return ocr_data['data']
+    
+    return {'textAnnotations': [], 'stickers': []}
+
+# Update compute functions to use these extractors
+# Example for creative density:
+def compute_creative_density_wrapper(analysis_data):
+    """Wrapper with format compatibility"""
+    # Extract data using helpers
+    yolo_objects = extract_yolo_data(analysis_data)
+    mediapipe_data = extract_mediapipe_data(analysis_data)
+    ocr_data = extract_ocr_data(analysis_data)
+    whisper_data = extract_whisper_data(analysis_data)
+    
+    # Continue with existing logic...
+    # (rest of the function remains the same)
+
 
 def parse_timestamp_to_seconds(timestamp: str) -> Optional[int]:
     """Convert timestamp like '0-1s' to start second"""

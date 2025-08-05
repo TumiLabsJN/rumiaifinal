@@ -2,6 +2,8 @@
 
 This document details the exact JSON output structure for each of the 7 ML analysis flows that Claude produces when processing TikTok videos through the RumiAI pipeline.
 
+**Note (2025-08-05)**: Output structures remain unchanged. The unified ML implementation only fixed the input data flow to ensure Claude receives real ML data via the `ml_data` field instead of empty arrays.
+
 ## Overview
 
 Each ML flow outputs a standardized 6-block structure:

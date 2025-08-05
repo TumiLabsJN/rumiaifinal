@@ -1,0 +1,146 @@
+{
+  "CoreMetrics": {
+    "uniqueEmotions": 5,
+    "emotionTransitions": 10,
+    "dominantEmotion": "happy",
+    "emotionalDiversity": 0.8,
+    "gestureEmotionAlignment": 0.75,
+    "audioEmotionAlignment": 0.7,
+    "captionSentiment": "positive",
+    "emotionalIntensity": 0.8,
+    "confidence": 0.85
+  },
+  "Dynamics": {
+    "emotionProgression": [
+      {
+        "timestamp": "0-2s",
+        "emotion": "neutral",
+        "intensity": 0.5
+      },
+      {
+        "timestamp": "2-5s",
+        "emotion": "happy",
+        "intensity": 0.8
+      },
+      {
+        "timestamp": "5-8s",
+        "emotion": "surprise",
+        "intensity": 0.9
+      },
+      {
+        "timestamp": "8-12s",
+        "emotion": "joy",
+        "intensity": 0.95
+      },
+      {
+        "timestamp": "12-20s",
+        "emotion": "satisfaction",
+        "intensity": 0.8
+      },
+      {
+        "timestamp": "20-28s",
+        "emotion": "calm",
+        "intensity": 0.7
+      }
+    ],
+    "transitionSmoothness": 0.75,
+    "emotionalArc": "rollercoaster",
+    "peakEmotionMoments": [
+      {
+        "timestamp": "5s",
+        "emotion": "surprise",
+        "intensity": 0.9
+      },
+      {
+        "timestamp": "8s",
+        "emotion": "joy",
+        "intensity": 0.95
+      }
+    ],
+    "stabilityScore": 0.7,
+    "tempoEmotionSync": 0.8,
+    "confidence": 0.9
+  },
+  "Interactions": {
+    "gestureReinforcement": 0.8,
+    "audioMoodCongruence": 0.75,
+    "captionEmotionAlignment": 0.85,
+    "multimodalCoherence": 0.8,
+    "emotionalContrastMoments": [
+      {
+        "timestamp": "3s",
+        "conflict": "happy_face_sad_music"
+      }
+    ],
+    "confidence": 0.8
+  },
+  "KeyEvents": {
+    "emotionalPeaks": [
+      {
+        "timestamp": "5s",
+        "emotion": "surprise",
+        "trigger": "reveal"
+      },
+      {
+        "timestamp": "8s",
+        "emotion": "joy",
+        "trigger": "climax"
+      }
+    ],
+    "transitionPoints": [
+      {
+        "timestamp": "2s",
+        "from": "neutral",
+        "to": "happy",
+        "trigger": "music_change"
+      },
+      {
+        "timestamp": "5s",
+        "from": "happy",
+        "to": "surprise",
+        "trigger": "unexpected_event"
+      },
+      {
+        "timestamp": "8s",
+        "from": "surprise",
+        "to": "joy",
+        "trigger": "resolution"
+      }
+    ],
+    "climaxMoment": {
+      "timestamp": "8s",
+      "emotion": "joy",
+      "intensity": 0.95
+    },
+    "resolutionMoment": {
+      "timestamp": "28s",
+      "emotion": "satisfaction",
+      "closure": true
+    },
+    "confidence": 0.9
+  },
+  "Patterns": {
+    "journeyArchetype": "transformation",
+    "emotionalTechniques": [
+      "anticipation_build",
+      "contrast",
+      "repetition"
+    ],
+    "pacingStrategy": "quick_shifts",
+    "engagementHooks": [
+      "curiosity",
+      "empathy",
+      "excitement"
+    ],
+    "viewerJourneyMap": "engaged_throughout",
+    "confidence": 0.85
+  },
+  "Quality": {
+    "detectionConfidence": 0.9,
+    "timelineCoverage": 0.95,
+    "emotionalDataCompleteness": 0.85,
+    "analysisReliability": "high",
+    "missingDataPoints": [],
+    "overallConfidence": 0.9
+  }
+}
