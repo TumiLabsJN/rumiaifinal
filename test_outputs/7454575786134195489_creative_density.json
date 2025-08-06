@@ -3,17 +3,17 @@
     "avgDensity": 5.67,
     "maxDensity": 16,
     "minDensity": 2,
-    "stdDeviation": 4.12,
+    "stdDeviation": 4.31,
     "totalElements": 85,
     "elementsPerSecond": 1.17,
     "elementCounts": {
       "text": 0,
       "sticker": 0,
       "effect": 30,
-      "transition": 20,
-      "object": 35
+      "transition": 25,
+      "object": 30
     },
-    "sceneChangeCount": 3,
+    "sceneChangeCount": 5,
     "timelineCoverage": 0.95,
     "confidence": 0.87
   },
@@ -22,72 +22,72 @@
       {
         "second": 0,
         "density": 5,
-        "primaryElement": "object"
+        "primaryElement": "effect"
       },
       {
         "second": 1,
         "density": 9,
-        "primaryElement": "effect"
+        "primaryElement": "transition"
       },
       {
         "second": 2,
         "density": 6,
-        "primaryElement": "transition"
+        "primaryElement": "object"
       },
       {
         "second": 3,
         "density": 2,
-        "primaryElement": "object"
+        "primaryElement": "effect"
       },
       {
         "second": 4,
         "density": 2,
-        "primaryElement": "object"
+        "primaryElement": "transition"
       },
       {
         "second": 5,
         "density": 4,
-        "primaryElement": "effect"
+        "primaryElement": "object"
       },
       {
         "second": 6,
         "density": 7,
-        "primaryElement": "transition"
+        "primaryElement": "effect"
       },
       {
         "second": 7,
         "density": 4,
-        "primaryElement": "object"
+        "primaryElement": "transition"
       },
       {
         "second": 8,
         "density": 3,
-        "primaryElement": "effect"
+        "primaryElement": "object"
       },
       {
         "second": 9,
         "density": 4,
-        "primaryElement": "object"
+        "primaryElement": "effect"
       },
       {
         "second": 10,
         "density": 8,
-        "primaryElement": "effect"
+        "primaryElement": "transition"
       },
       {
         "second": 11,
         "density": 12,
-        "primaryElement": "transition"
+        "primaryElement": "object"
       },
       {
         "second": 12,
         "density": 16,
-        "primaryElement": "object"
+        "primaryElement": "effect"
       },
       {
         "second": 13,
         "density": 5,
-        "primaryElement": "effect"
+        "primaryElement": "transition"
       },
       {
         "second": 14,
@@ -95,7 +95,7 @@
         "primaryElement": "object"
       }
     ],
-    "volatility": 0.73,
+    "volatility": 0.76,
     "accelerationPattern": "oscillating",
     "densityProgression": "erratic",
     "emptySeconds": [
@@ -110,16 +110,16 @@
       {
         "timestamp": "11-12s",
         "elements": [
+          "effect",
           "transition",
-          "object",
-          "effect"
+          "object"
         ],
         "syncType": "reinforcing"
       }
     ],
     "elementCooccurrence": {
       "effect_transition": 12,
-      "effect_object": 18,
+      "effect_object": 15,
       "transition_object": 10
     },
     "dominantCombination": "effect_object",
@@ -133,9 +133,9 @@
         "totalElements": 16,
         "surpriseScore": 0.92,
         "elementBreakdown": {
-          "effect": 4,
-          "transition": 4,
-          "object": 8
+          "effect": 6,
+          "transition": 5,
+          "object": 5
         }
       }
     ],
@@ -150,8 +150,8 @@
       {
         "timestamp": 12,
         "from": "moderate",
-        "to": "dense",
-        "magnitude": 0.82
+        "to": "high",
+        "magnitude": 0.75
       }
     ],
     "confidence": 0.84
@@ -170,21 +170,21 @@
     "cognitiveLoadCategory": "challenging",
     "mlTags": [
       "multi_modal",
-      "object_heavy"
+      "effect_heavy"
     ],
-    "confidence": 0.76
+    "confidence": 0.82
   },
   "Quality": {
-    "dataCompleteness": 0.92,
+    "dataCompleteness": 0.95,
     "detectionReliability": {
-      "textOverlay": 0.85,
-      "sticker": 0.9,
-      "effect": 0.82,
+      "textOverlay": 0.8,
+      "sticker": 0.85,
+      "effect": 0.9,
       "transition": 0.88,
-      "sceneChange": 0.91,
-      "object": 0.84,
+      "sceneChange": 0.9,
+      "object": 0.87,
       "gesture": 0.75
     },
-    "overallConfidence": 0.84
+    "overallConfidence": 0.88
   }
 }

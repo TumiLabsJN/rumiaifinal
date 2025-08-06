@@ -1,89 +1,95 @@
 {
   "CoreMetrics": {
-    "totalTextOverlays": 10,
-    "uniqueTexts": 7,
-    "avgTextsPerSecond": 0.14,
-    "timeToFirstText": 2.1,
-    "avgTextDisplayDuration": 4.5,
-    "totalStickers": 12,
-    "uniqueStickers": 6,
-    "textStickerRatio": 0.83,
-    "overlayDensity": 0.4,
-    "visualComplexityScore": 3.7,
-    "confidence": 0.9
+    "totalTextOverlays": 15,
+    "uniqueTexts": 12,
+    "avgTextsPerSecond": 0.21,
+    "timeToFirstText": 1.5,
+    "avgTextDisplayDuration": 2.8,
+    "totalStickers": 8,
+    "uniqueStickers": 5,
+    "textStickerRatio": 1.88,
+    "overlayDensity": 0.42,
+    "visualComplexityScore": 4.1,
+    "confidence": 0.87
   },
   "Dynamics": {
     "overlayTimeline": [
       {
         "timestamp": "0-3s",
-        "overlayCount": 1,
+        "overlayCount": 2,
         "type": "text",
         "density": "low"
       },
       {
         "timestamp": "3-6s",
         "overlayCount": 3,
-        "type": "sticker",
-        "density": "moderate"
-      },
-      {
-        "timestamp": "6-9s",
-        "overlayCount": 2,
         "type": "text",
         "density": "moderate"
       },
       {
-        "timestamp": "9-12s",
+        "timestamp": "6-9s",
         "overlayCount": 4,
         "type": "mixed",
         "density": "high"
+      },
+      {
+        "timestamp": "9-12s",
+        "overlayCount": 2,
+        "type": "sticker",
+        "density": "moderate"
+      },
+      {
+        "timestamp": "12-15s",
+        "overlayCount": 1,
+        "type": "text",
+        "density": "low"
       }
     ],
     "appearancePattern": "burst",
     "densityProgression": "building",
-    "animationIntensity": 0.7,
+    "animationIntensity": 0.6,
     "visualPacing": "moderate",
-    "confidence": 0.8
+    "confidence": 0.81
   },
   "Interactions": {
-    "textSpeechSync": 0.6,
-    "overlayGestureCoordination": 0.4,
-    "visualEmphasisAlignment": 0.7,
+    "textSpeechSync": 0.73,
+    "overlayGestureCoordination": 0.58,
+    "visualEmphasisAlignment": 0.82,
     "multiLayerComplexity": "moderate",
-    "readingFlowScore": 0.8,
-    "confidence": 0.7
+    "readingFlowScore": 0.69,
+    "confidence": 0.79
   },
   "KeyEvents": {
     "impactfulOverlays": [
       {
-        "timestamp": "10s",
-        "text": "Unbelievable!",
+        "timestamp": "15s",
+        "text": "Game Changer",
         "impact": "high",
         "reason": "climax"
       }
     ],
     "overlayBursts": [
       {
-        "timestamp": "8-10s",
-        "count": 3,
+        "timestamp": "6-9s",
+        "count": 4,
         "purpose": "information_dump"
       }
     ],
     "keyTextMoments": [
       {
-        "timestamp": 1,
-        "text": "Get ready",
+        "timestamp": 0,
+        "text": "Wait for it",
         "function": "hook"
       }
     ],
     "stickerHighlights": [
       {
-        "timestamp": 4,
-        "sticker": "explosion",
+        "timestamp": 9,
+        "sticker": "fire",
         "purpose": "emphasis"
       }
     ],
-    "confidence": 0.8
+    "confidence": 0.84
   },
   "Patterns": {
     "overlayStrategy": "moderate",
@@ -91,19 +97,19 @@
     "communicationApproach": "reinforcing",
     "visualTechniques": [
       "text_animation",
-      "color_coding"
+      "emoji_emphasis"
     ],
     "productionQuality": "professional",
-    "confidence": 0.9
+    "confidence": 0.88
   },
   "Quality": {
-    "textDetectionAccuracy": 0.85,
-    "stickerRecognitionRate": 0.9,
-    "overlayDataCompleteness": 0.8,
+    "textDetectionAccuracy": 0.91,
+    "stickerRecognitionRate": 0.85,
+    "overlayDataCompleteness": 0.92,
     "readabilityIssues": [
       "text_too_fast"
     ],
     "visualAccessibility": "medium",
-    "overallConfidence": 0.8
+    "overallConfidence": 0.86
   }
 }

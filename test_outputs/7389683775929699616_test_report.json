@@ -1,11 +1,11 @@
 {
-  "video_id": "7454575786134195489",
-  "timestamp": "2025-08-06T14:14:06.550749",
+  "video_id": "7389683775929699616",
+  "timestamp": "2025-08-05T19:45:56.371561",
   "success": true,
   "metrics": {
     "frame_extraction_time": 0,
     "ml_processing_time": {
-      "total": 0.0038869380950927734,
+      "total": 4.232734680175781,
       "yolo": 0,
       "mediapipe": 0,
       "ocr": 0,
@@ -13,51 +13,51 @@
       "scene": 0
     },
     "claude_processing_time": {
-      "creative_density": 7.66409158706665,
-      "emotional_journey": 7.585617542266846,
-      "person_framing": 4.940078258514404,
-      "scene_pacing": 8.911128044128418,
-      "speech_analysis": 4.339596271514893,
-      "visual_overlay_analysis": 5.411277770996094,
-      "metadata_analysis": 5.4982874393463135
+      "creative_density": 9.154429912567139,
+      "emotional_journey": 9.476094961166382,
+      "person_framing": 4.498284101486206,
+      "scene_pacing": 6.629751205444336,
+      "speech_analysis": 7.688973665237427,
+      "visual_overlay_analysis": 5.289556264877319,
+      "metadata_analysis": 5.273128032684326
     },
-    "total_time": 44.40844750404358,
-    "memory_peak_mb": 97.3359375,
-    "memory_start_mb": 79.6640625,
+    "total_time": 52.27135348320007,
+    "memory_peak_mb": 928.12109375,
+    "memory_start_mb": 414.01953125,
     "cache_hits": 0,
     "cache_misses": 0,
     "json_sizes_kb": {
-      "creative_density": 4.265625,
-      "emotional_journey": 3.685546875,
-      "person_framing": 2.96484375,
+      "creative_density": 4.2724609375,
+      "emotional_journey": 3.775390625,
+      "person_framing": 2.9638671875,
       "scene_pacing": 3.265625,
-      "speech_analysis": 3.2080078125,
+      "speech_analysis": 4.048828125,
       "visual_overlay_analysis": 3.3154296875,
       "metadata_analysis": 3.3525390625
     },
     "token_counts": {
       "creative_density": {
-        "input": 2637,
+        "input": 2731,
         "output": 0
       },
       "emotional_journey": {
-        "input": 2354,
+        "input": 2448,
         "output": 0
       },
       "person_framing": {
-        "input": 1729,
+        "input": 1641,
         "output": 0
       },
       "scene_pacing": {
-        "input": 2270,
+        "input": 2192,
         "output": 0
       },
       "speech_analysis": {
-        "input": 1675,
+        "input": 2429,
         "output": 0
       },
       "visual_overlay_analysis": {
-        "input": 1959,
+        "input": 1846,
         "output": 0
       },
       "metadata_analysis": {
@@ -66,15 +66,15 @@
       }
     },
     "api_costs": {
-      "creative_density": 0.00182525,
-      "emotional_journey": 0.0016135000000000001,
-      "person_framing": 0.0011492499999999999,
-      "scene_pacing": 0.0016605,
-      "speech_analysis": 0.00101175,
-      "visual_overlay_analysis": 0.00132775,
+      "creative_density": 0.00193975,
+      "emotional_journey": 0.0017079999999999999,
+      "person_framing": 0.00103925,
+      "scene_pacing": 0.0015630000000000002,
+      "speech_analysis": 0.0016502500000000002,
+      "visual_overlay_analysis": 0.0011865,
       "metadata_analysis": 0.0011767499999999998
     },
-    "total_cost": 0.009764750000000003,
+    "total_cost": 0.010263500000000002,
     "timeouts": {
       "frame_extraction": false,
       "whisper": false,
@@ -88,10 +88,10 @@
   "validation": {
     "ml_data_present": true,
     "ml_data_populated": {
-      "yolo": true,
-      "mediapipe": true,
-      "ocr": true,
-      "whisper": false,
+      "yolo": false,
+      "mediapipe": false,
+      "ocr": false,
+      "whisper": true,
       "scene_detection": true
     },
     "claude_outputs": {

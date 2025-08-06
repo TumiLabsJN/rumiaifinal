@@ -6,7 +6,7 @@
     "emojiCount": 0,
     "mentionCount": 0,
     "linkPresent": false,
-    "videoDuration": 72.8,
+    "videoDuration": 77.5,
     "publishHour": 0,
     "publishDayOfWeek": 0,
     "viewCount": 0,
@@ -14,7 +14,7 @@
     "commentCount": 0,
     "shareCount": 0,
     "engagementRate": 0.0,
-    "confidence": 0.95
+    "confidence": 1.0
   },
   "Dynamics": {
     "hashtagStrategy": "minimal",
@@ -26,7 +26,7 @@
     "sentimentCategory": "neutral",
     "urgencyLevel": "none",
     "viralPotentialScore": 0.0,
-    "confidence": 0.95
+    "confidence": 1.0
   },
   "Interactions": {
     "hashtagCounts": {
@@ -43,14 +43,14 @@
       "username": "",
       "verified": false
     },
-    "confidence": 0.95
+    "confidence": 1.0
   },
   "KeyEvents": {
     "hashtags": [],
     "emojis": [],
     "hooks": [],
     "callToActions": [],
-    "confidence": 0.95
+    "confidence": 1.0
   },
   "Patterns": {
     "linguisticMarkers": {
@@ -63,16 +63,16 @@
       "leadWithGeneric": false,
       "allCaps": false
     },
-    "confidence": 0.95
+    "confidence": 1.0
   },
   "Quality": {
     "captionPresent": false,
     "hashtagsPresent": false,
     "statsAvailable": true,
     "publishTimeAvailable": true,
-    "creatorDataAvailable": false,
+    "creatorDataAvailable": true,
     "captionQuality": "low",
     "hashtagQuality": "low",
-    "overallConfidence": 0.95
+    "overallConfidence": 1.0
   }
 }

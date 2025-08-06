@@ -13,7 +13,13 @@
     "confidence": 0.0
   },
   "Dynamics": {
-    "speechPacingCurve": [],
+    "speechPacingCurve": [
+      {
+        "timestamp": "0-5s",
+        "wordsPerSecond": 0.0,
+        "intensity": "moderate"
+      }
+    ],
     "pacingVariation": 0.0,
     "speechRhythm": "steady",
     "pausePattern": "natural",

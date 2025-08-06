@@ -1,1 +1,94 @@
-{}
+{
+  "CoreMetrics": {
+    "personPresenceRate": 0.172,
+    "avgPersonCount": 1.25,
+    "maxSimultaneousPeople": 2,
+    "dominantFraming": "medium",
+    "framingChanges": 3,
+    "personScreenCoverage": 0.35,
+    "positionStability": 0.7,
+    "gestureClarity": 0.65,
+    "faceVisibilityRate": 0.0,
+    "bodyVisibilityRate": 0.8,
+    "overallFramingQuality": 0.6,
+    "confidence": 0.85
+  },
+  "Dynamics": {
+    "framingProgression": [
+      {
+        "timestamp": "0-5s",
+        "distance": "medium",
+        "coverage": 0.35
+      }
+    ],
+    "movementPattern": "gradual",
+    "zoomTrend": "stable",
+    "stabilityTimeline": [
+      {
+        "second": 0,
+        "stability": 0.9
+      }
+    ],
+    "framingTransitions": [
+      {
+        "timestamp": 5,
+        "from": "medium",
+        "to": "close"
+      }
+    ],
+    "confidence": 0.8
+  },
+  "Interactions": {
+    "gestureFramingSync": 0.7,
+    "expressionVisibility": 0.3,
+    "multiPersonCoordination": 0.5,
+    "actionSpaceUtilization": 0.6,
+    "framingPurposeAlignment": 0.7,
+    "confidence": 0.75
+  },
+  "KeyEvents": {
+    "framingHighlights": [
+      {
+        "timestamp": "5-8s",
+        "type": "close_up_emotion",
+        "impact": "high"
+      }
+    ],
+    "criticalFramingMoments": [
+      {
+        "timestamp": 10,
+        "event": "person_exit",
+        "framing": "wide"
+      }
+    ],
+    "optimalFramingPeriods": [
+      {
+        "start": 5,
+        "end": 15,
+        "reason": "gesture_clarity"
+      }
+    ],
+    "confidence": 0.8
+  },
+  "Patterns": {
+    "framingStrategy": "observational",
+    "visualNarrative": "multi_person",
+    "technicalExecution": "casual",
+    "engagementTechniques": [
+      "gesture_emphasis",
+      "emotional_close_ups"
+    ],
+    "productionValue": "medium",
+    "confidence": 0.7
+  },
+  "Quality": {
+    "detectionReliability": 0.8,
+    "trackingConsistency": 0.7,
+    "framingDataCompleteness": 0.85,
+    "analysisLimitations": [
+      "occlusion_periods",
+      "motion_blur"
+    ],
+    "overallConfidence": 0.75
+  }
+}

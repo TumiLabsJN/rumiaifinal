@@ -1,0 +1,2082 @@
+{
+  "video_id": "7389683775929699616",
+  "metadata": {
+    "video_id": "7389683775929699616",
+    "duration": 77.46666666666667,
+    "width": 1920,
+    "height": 1080,
+    "fps": 30.0
+  },
+  "duration": 77.46666666666667,
+  "pipeline_status": {
+    "yolo": true,
+    "mediapipe": true,
+    "ocr": true,
+    "scene": true,
+    "whisper": true,
+    "temporal": false
+  },
+  "processing_metadata": {
+    "timeline_entries": 142,
+    "entry_types": {
+      "speech": 21,
+      "scene": 61,
+      "scene_change": 60
+    },
+    "duration": 77.46666666666667
+  },
+  "timeline": {
+    "video_id": "7389683775929699616",
+    "duration": 77.46666666666667,
+    "entry_count": 142,
+    "entries": [
+      {
+        "start": 0.0,
+        "entry_type": "speech",
+        "data": {
+          "text": "11 things people learn too late in life.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 3.2800000000000002
+      },
+      {
+        "start": 0.0,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 0,
+          "duration": 0.7333333333333333
+        },
+        "end": 0.7333333333333333
+      },
+      {
+        "start": 0.7333333333333333,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 0
+        }
+      },
+      {
+        "start": 0.7333333333333333,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 1,
+          "duration": 2.433333333333333
+        },
+        "end": 3.1666666666666665
+      },
+      {
+        "start": 3.1666666666666665,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 1
+        }
+      },
+      {
+        "start": 3.1666666666666665,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 2,
+          "duration": 0.9666666666666672
+        },
+        "end": 4.133333333333334
+      },
+      {
+        "start": 3.2800000000000002,
+        "entry_type": "speech",
+        "data": {
+          "text": "One, the less you say, the more your words will matter.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 6.8
+      },
+      {
+        "start": 4.133333333333334,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 2
+        }
+      },
+      {
+        "start": 4.133333333333334,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 3,
+          "duration": 0.5666666666666664
+        },
+        "end": 4.7
+      },
+      {
+        "start": 4.7,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 3
+        }
+      },
+      {
+        "start": 4.7,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 4,
+          "duration": 1.0
+        },
+        "end": 5.7
+      },
+      {
+        "start": 5.7,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 4
+        }
+      },
+      {
+        "start": 5.7,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 5,
+          "duration": 0.8999999999999995
+        },
+        "end": 6.6
+      },
+      {
+        "start": 6.6,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 5
+        }
+      },
+      {
+        "start": 6.6,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 6,
+          "duration": 0.9333333333333336
+        },
+        "end": 7.533333333333333
+      },
+      {
+        "start": 6.8,
+        "entry_type": "speech",
+        "data": {
+          "text": "Two, don't take everything personally.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 9.36
+      },
+      {
+        "start": 7.533333333333333,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 6
+        }
+      },
+      {
+        "start": 7.533333333333333,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 7,
+          "duration": 1.0999999999999996
+        },
+        "end": 8.633333333333333
+      },
+      {
+        "start": 8.633333333333333,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 7
+        }
+      },
+      {
+        "start": 8.633333333333333,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 8,
+          "duration": 0.6666666666666679
+        },
+        "end": 9.3
+      },
+      {
+        "start": 9.3,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 8
+        }
+      },
+      {
+        "start": 9.3,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 9,
+          "duration": 0.5999999999999996
+        },
+        "end": 9.9
+      },
+      {
+        "start": 9.36,
+        "entry_type": "speech",
+        "data": {
+          "text": "Not everyone thinks about you as much as you do.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 12.56
+      },
+      {
+        "start": 9.9,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 9
+        }
+      },
+      {
+        "start": 9.9,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 10,
+          "duration": 1.0
+        },
+        "end": 10.9
+      },
+      {
+        "start": 10.9,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 10
+        }
+      },
+      {
+        "start": 10.9,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 11,
+          "duration": 1.3333333333333321
+        },
+        "end": 12.233333333333333
+      },
+      {
+        "start": 12.233333333333333,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 11
+        }
+      },
+      {
+        "start": 12.233333333333333,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 12,
+          "duration": 1.1000000000000014
+        },
+        "end": 13.333333333333334
+      },
+      {
+        "start": 12.56,
+        "entry_type": "speech",
+        "data": {
+          "text": "Three, when you focus on problems, you'll have more problems.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 17.28
+      },
+      {
+        "start": 13.333333333333334,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 12
+        }
+      },
+      {
+        "start": 13.333333333333334,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 13,
+          "duration": 1.799999999999999
+        },
+        "end": 15.133333333333333
+      },
+      {
+        "start": 15.133333333333333,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 13
+        }
+      },
+      {
+        "start": 15.133333333333333,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 14,
+          "duration": 0.8666666666666671
+        },
+        "end": 16.0
+      },
+      {
+        "start": 16.0,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 14
+        }
+      },
+      {
+        "start": 16.0,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 15,
+          "duration": 1.2666666666666657
+        },
+        "end": 17.266666666666666
+      },
+      {
+        "start": 17.266666666666666,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 15
+        }
+      },
+      {
+        "start": 17.266666666666666,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 16,
+          "duration": 3.9666666666666686
+        },
+        "end": 21.233333333333334
+      },
+      {
+        "start": 17.28,
+        "entry_type": "speech",
+        "data": {
+          "text": "When you focus on possibilities, you'll have more opportunities.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 21.92
+      },
+      {
+        "start": 21.233333333333334,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 16
+        }
+      },
+      {
+        "start": 21.233333333333334,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 17,
+          "duration": 1.0
+        },
+        "end": 22.233333333333334
+      },
+      {
+        "start": 21.92,
+        "entry_type": "speech",
+        "data": {
+          "text": "Four, no matter how much it hurts now,",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 25.04
+      },
+      {
+        "start": 22.233333333333334,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 17
+        }
+      },
+      {
+        "start": 22.233333333333334,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 18,
+          "duration": 0.8666666666666671
+        },
+        "end": 23.1
+      },
+      {
+        "start": 23.1,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 18
+        }
+      },
+      {
+        "start": 23.1,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 19,
+          "duration": 0.6999999999999993
+        },
+        "end": 23.8
+      },
+      {
+        "start": 23.8,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 19
+        }
+      },
+      {
+        "start": 23.8,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 20,
+          "duration": 1.966666666666665
+        },
+        "end": 25.766666666666666
+      },
+      {
+        "start": 25.04,
+        "entry_type": "speech",
+        "data": {
+          "text": "someday you will look back and realize your struggle changed your life for the better.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 29.92
+      },
+      {
+        "start": 25.766666666666666,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 20
+        }
+      },
+      {
+        "start": 25.766666666666666,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 21,
+          "duration": 1.1999999999999993
+        },
+        "end": 26.966666666666665
+      },
+      {
+        "start": 26.966666666666665,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 21
+        }
+      },
+      {
+        "start": 26.966666666666665,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 22,
+          "duration": 0.7000000000000028
+        },
+        "end": 27.666666666666668
+      },
+      {
+        "start": 27.666666666666668,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 22
+        }
+      },
+      {
+        "start": 27.666666666666668,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 23,
+          "duration": 1.0
+        },
+        "end": 28.666666666666668
+      },
+      {
+        "start": 28.666666666666668,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 23
+        }
+      },
+      {
+        "start": 28.666666666666668,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 24,
+          "duration": 0.7666666666666657
+        },
+        "end": 29.433333333333334
+      },
+      {
+        "start": 29.433333333333334,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 24
+        }
+      },
+      {
+        "start": 29.433333333333334,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 25,
+          "duration": 1.7333333333333343
+        },
+        "end": 31.166666666666668
+      },
+      {
+        "start": 30.16,
+        "entry_type": "speech",
+        "data": {
+          "text": "Five, you meet people for a reason, either you need them to change your life",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 34.32
+      },
+      {
+        "start": 31.166666666666668,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 25
+        }
+      },
+      {
+        "start": 31.166666666666668,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 26,
+          "duration": 1.0999999999999979
+        },
+        "end": 32.266666666666666
+      },
+      {
+        "start": 32.266666666666666,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 26
+        }
+      },
+      {
+        "start": 32.266666666666666,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 27,
+          "duration": 2.2333333333333343
+        },
+        "end": 34.5
+      },
+      {
+        "start": 34.32,
+        "entry_type": "speech",
+        "data": {
+          "text": "or you're the one that will change theirs.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 37.36
+      },
+      {
+        "start": 34.5,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 27
+        }
+      },
+      {
+        "start": 34.5,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 28,
+          "duration": 1.2333333333333343
+        },
+        "end": 35.733333333333334
+      },
+      {
+        "start": 35.733333333333334,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 28
+        }
+      },
+      {
+        "start": 35.733333333333334,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 29,
+          "duration": 3.2666666666666657
+        },
+        "end": 39.0
+      },
+      {
+        "start": 37.36,
+        "entry_type": "speech",
+        "data": {
+          "text": "Six, never be afraid to try something new.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 40.72
+      },
+      {
+        "start": 39.0,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 29
+        }
+      },
+      {
+        "start": 39.0,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 30,
+          "duration": 0.6333333333333329
+        },
+        "end": 39.63333333333333
+      },
+      {
+        "start": 39.63333333333333,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 30
+        }
+      },
+      {
+        "start": 39.63333333333333,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 31,
+          "duration": 1.5333333333333314
+        },
+        "end": 41.166666666666664
+      },
+      {
+        "start": 40.72,
+        "entry_type": "speech",
+        "data": {
+          "text": "Life gets boring when you stay within the limits of what you already know.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 45.120000000000005
+      },
+      {
+        "start": 41.166666666666664,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 31
+        }
+      },
+      {
+        "start": 41.166666666666664,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 32,
+          "duration": 0.5333333333333385
+        },
+        "end": 41.7
+      },
+      {
+        "start": 41.7,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 32
+        }
+      },
+      {
+        "start": 41.7,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 33,
+          "duration": 3.1999999999999957
+        },
+        "end": 44.9
+      },
+      {
+        "start": 44.9,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 33
+        }
+      },
+      {
+        "start": 44.9,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 34,
+          "duration": 0.7333333333333343
+        },
+        "end": 45.63333333333333
+      },
+      {
+        "start": 45.120000000000005,
+        "entry_type": "speech",
+        "data": {
+          "text": "Seven, you will never truly know the value of a moment",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 48.56
+      },
+      {
+        "start": 45.63333333333333,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 34
+        }
+      },
+      {
+        "start": 45.63333333333333,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 35,
+          "duration": 1.3999999999999986
+        },
+        "end": 47.03333333333333
+      },
+      {
+        "start": 47.03333333333333,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 35
+        }
+      },
+      {
+        "start": 47.03333333333333,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 36,
+          "duration": 0.6333333333333329
+        },
+        "end": 47.666666666666664
+      },
+      {
+        "start": 47.666666666666664,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 36
+        }
+      },
+      {
+        "start": 47.666666666666664,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 37,
+          "duration": 1.2333333333333343
+        },
+        "end": 48.9
+      },
+      {
+        "start": 48.56,
+        "entry_type": "speech",
+        "data": {
+          "text": "until it becomes a memory.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 51.92
+      },
+      {
+        "start": 48.9,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 37
+        }
+      },
+      {
+        "start": 48.9,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 38,
+          "duration": 1.6000000000000014
+        },
+        "end": 50.5
+      },
+      {
+        "start": 50.5,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 38
+        }
+      },
+      {
+        "start": 50.5,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 39,
+          "duration": 1.8999999999999986
+        },
+        "end": 52.4
+      },
+      {
+        "start": 51.92,
+        "entry_type": "speech",
+        "data": {
+          "text": "Eight, once you begin to take note of the things you are grateful for,",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 55.92
+      },
+      {
+        "start": 52.4,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 39
+        }
+      },
+      {
+        "start": 52.4,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 40,
+          "duration": 1.8333333333333357
+        },
+        "end": 54.233333333333334
+      },
+      {
+        "start": 54.233333333333334,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 40
+        }
+      },
+      {
+        "start": 54.233333333333334,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 41,
+          "duration": 0.6000000000000014
+        },
+        "end": 54.833333333333336
+      },
+      {
+        "start": 54.833333333333336,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 41
+        }
+      },
+      {
+        "start": 54.833333333333336,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 42,
+          "duration": 0.8333333333333286
+        },
+        "end": 55.666666666666664
+      },
+      {
+        "start": 55.666666666666664,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 42
+        }
+      },
+      {
+        "start": 55.666666666666664,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 43,
+          "duration": 1.8333333333333357
+        },
+        "end": 57.5
+      },
+      {
+        "start": 55.92,
+        "entry_type": "speech",
+        "data": {
+          "text": "you begin to lose sight of the things that you lack.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 59.36
+      },
+      {
+        "start": 57.5,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 43
+        }
+      },
+      {
+        "start": 57.5,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 44,
+          "duration": 0.7999999999999972
+        },
+        "end": 58.3
+      },
+      {
+        "start": 58.3,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 44
+        }
+      },
+      {
+        "start": 58.3,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 45,
+          "duration": 4.666666666666671
+        },
+        "end": 62.96666666666667
+      },
+      {
+        "start": 59.44,
+        "entry_type": "speech",
+        "data": {
+          "text": "Nine, if you do not have control over your mouth,",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 62.72
+      },
+      {
+        "start": 62.72,
+        "entry_type": "speech",
+        "data": {
+          "text": "you do not have control over your future.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 65.52
+      },
+      {
+        "start": 62.96666666666667,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 45
+        }
+      },
+      {
+        "start": 62.96666666666667,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 46,
+          "duration": 0.6666666666666643
+        },
+        "end": 63.63333333333333
+      },
+      {
+        "start": 63.63333333333333,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 46
+        }
+      },
+      {
+        "start": 63.63333333333333,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 47,
+          "duration": 0.8000000000000043
+        },
+        "end": 64.43333333333334
+      },
+      {
+        "start": 64.43333333333334,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 47
+        }
+      },
+      {
+        "start": 64.43333333333334,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 48,
+          "duration": 0.6333333333333258
+        },
+        "end": 65.06666666666666
+      },
+      {
+        "start": 65.06666666666666,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 48
+        }
+      },
+      {
+        "start": 65.06666666666666,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 49,
+          "duration": 0.5333333333333314
+        },
+        "end": 65.6
+      },
+      {
+        "start": 65.52,
+        "entry_type": "speech",
+        "data": {
+          "text": "Ten, life is a mirror and will reflect back to the thinker what he thinks into it.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 71.2
+      },
+      {
+        "start": 65.6,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 49
+        }
+      },
+      {
+        "start": 65.6,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 50,
+          "duration": 1.3000000000000114
+        },
+        "end": 66.9
+      },
+      {
+        "start": 66.9,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 50
+        }
+      },
+      {
+        "start": 66.9,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 51,
+          "duration": 0.5999999999999943
+        },
+        "end": 67.5
+      },
+      {
+        "start": 67.5,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 51
+        }
+      },
+      {
+        "start": 67.5,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 52,
+          "duration": 0.9000000000000057
+        },
+        "end": 68.4
+      },
+      {
+        "start": 68.4,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 52
+        }
+      },
+      {
+        "start": 68.4,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 53,
+          "duration": 0.6333333333333258
+        },
+        "end": 69.03333333333333
+      },
+      {
+        "start": 69.03333333333333,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 53
+        }
+      },
+      {
+        "start": 69.03333333333333,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 54,
+          "duration": 1.2999999999999972
+        },
+        "end": 70.33333333333333
+      },
+      {
+        "start": 70.33333333333333,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 54
+        }
+      },
+      {
+        "start": 70.33333333333333,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 55,
+          "duration": 1.2333333333333343
+        },
+        "end": 71.56666666666666
+      },
+      {
+        "start": 71.2,
+        "entry_type": "speech",
+        "data": {
+          "text": "You level. The only person you have to face in the morning is yourself.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 75.36
+      },
+      {
+        "start": 71.56666666666666,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 55
+        }
+      },
+      {
+        "start": 71.56666666666666,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 56,
+          "duration": 1.1666666666666714
+        },
+        "end": 72.73333333333333
+      },
+      {
+        "start": 72.73333333333333,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 56
+        }
+      },
+      {
+        "start": 72.73333333333333,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 57,
+          "duration": 1.2999999999999972
+        },
+        "end": 74.03333333333333
+      },
+      {
+        "start": 74.03333333333333,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 57
+        }
+      },
+      {
+        "start": 74.03333333333333,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 58,
+          "duration": 0.5666666666666629
+        },
+        "end": 74.6
+      },
+      {
+        "start": 74.6,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 58
+        }
+      },
+      {
+        "start": 74.6,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 59,
+          "duration": 0.9000000000000057
+        },
+        "end": 75.5
+      },
+      {
+        "start": 75.36,
+        "entry_type": "speech",
+        "data": {
+          "text": "Be unbeatable.",
+          "confidence": 0,
+          "language": "en",
+          "words": []
+        },
+        "end": 77.03999999999999
+      },
+      {
+        "start": 75.5,
+        "entry_type": "scene_change",
+        "data": {
+          "transition_type": "cut",
+          "scene_index": 59
+        }
+      },
+      {
+        "start": 75.5,
+        "entry_type": "scene",
+        "data": {
+          "scene_index": 60,
+          "duration": 1.9666666666666686
+        },
+        "end": 77.46666666666667
+      }
+    ]
+  },
+  "speechTimeline": {
+    "0s": [
+      {
+        "text": "11 things people learn too late in life.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "3s": [
+      {
+        "text": "One, the less you say, the more your words will matter.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "6s": [
+      {
+        "text": "Two, don't take everything personally.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "9s": [
+      {
+        "text": "Not everyone thinks about you as much as you do.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "12s": [
+      {
+        "text": "Three, when you focus on problems, you'll have more problems.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "17s": [
+      {
+        "text": "When you focus on possibilities, you'll have more opportunities.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "21s": [
+      {
+        "text": "Four, no matter how much it hurts now,",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "25s": [
+      {
+        "text": "someday you will look back and realize your struggle changed your life for the better.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "30s": [
+      {
+        "text": "Five, you meet people for a reason, either you need them to change your life",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "34s": [
+      {
+        "text": "or you're the one that will change theirs.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "37s": [
+      {
+        "text": "Six, never be afraid to try something new.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "40s": [
+      {
+        "text": "Life gets boring when you stay within the limits of what you already know.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "45s": [
+      {
+        "text": "Seven, you will never truly know the value of a moment",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "48s": [
+      {
+        "text": "until it becomes a memory.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "51s": [
+      {
+        "text": "Eight, once you begin to take note of the things you are grateful for,",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "55s": [
+      {
+        "text": "you begin to lose sight of the things that you lack.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "59s": [
+      {
+        "text": "Nine, if you do not have control over your mouth,",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "62s": [
+      {
+        "text": "you do not have control over your future.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "65s": [
+      {
+        "text": "Ten, life is a mirror and will reflect back to the thinker what he thinks into it.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "71s": [
+      {
+        "text": "You level. The only person you have to face in the morning is yourself.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ],
+    "75s": [
+      {
+        "text": "Be unbeatable.",
+        "confidence": 0,
+        "language": "en",
+        "words": []
+      }
+    ]
+  },
+  "textTimeline": {},
+  "objectTimeline": {},
+  "ml_data": {
+    "yolo": {
+      "objectAnnotations": [],
+      "metadata": {
+        "model": "YOLOv8",
+        "processed": false
+      }
+    },
+    "whisper": {
+      "text": "11 things people learn too late in life. One, the less you say, the more your words will matter. Two, don't take everything personally. Not everyone thinks about you as much as you do. Three, when you focus on problems, you'll have more problems. When you focus on possibilities, you'll have more opportunities. Four, no matter how much it hurts now, someday you will look back and realize your struggle changed your life for the better. Five, you meet people for a reason, either you need them to change your life or you're the one that will change theirs. Six, never be afraid to try something new. Life gets boring when you stay within the limits of what you already know. Seven, you will never truly know the value of a moment until it becomes a memory. Eight, once you begin to take note of the things you are grateful for, you begin to lose sight of the things that you lack. Nine, if you do not have control over your mouth, you do not have control over your future. Ten, life is a mirror and will reflect back to the thinker what he thinks into it. You level. The only person you have to face in the morning is yourself. Be unbeatable.",
+      "segments": [
+        {
+          "id": 0,
+          "start": 0.0,
+          "end": 3.2800000000000002,
+          "text": "11 things people learn too late in life.",
+          "words": []
+        },
+        {
+          "id": 1,
+          "start": 3.2800000000000002,
+          "end": 6.8,
+          "text": "One, the less you say, the more your words will matter.",
+          "words": []
+        },
+        {
+          "id": 2,
+          "start": 6.8,
+          "end": 9.36,
+          "text": "Two, don't take everything personally.",
+          "words": []
+        },
+        {
+          "id": 3,
+          "start": 9.36,
+          "end": 12.56,
+          "text": "Not everyone thinks about you as much as you do.",
+          "words": []
+        },
+        {
+          "id": 4,
+          "start": 12.56,
+          "end": 17.28,
+          "text": "Three, when you focus on problems, you'll have more problems.",
+          "words": []
+        },
+        {
+          "id": 5,
+          "start": 17.28,
+          "end": 21.92,
+          "text": "When you focus on possibilities, you'll have more opportunities.",
+          "words": []
+        },
+        {
+          "id": 6,
+          "start": 21.92,
+          "end": 25.04,
+          "text": "Four, no matter how much it hurts now,",
+          "words": []
+        },
+        {
+          "id": 7,
+          "start": 25.04,
+          "end": 29.92,
+          "text": "someday you will look back and realize your struggle changed your life for the better.",
+          "words": []
+        },
+        {
+          "id": 8,
+          "start": 30.16,
+          "end": 34.32,
+          "text": "Five, you meet people for a reason, either you need them to change your life",
+          "words": []
+        },
+        {
+          "id": 9,
+          "start": 34.32,
+          "end": 37.36,
+          "text": "or you're the one that will change theirs.",
+          "words": []
+        },
+        {
+          "id": 10,
+          "start": 37.36,
+          "end": 40.72,
+          "text": "Six, never be afraid to try something new.",
+          "words": []
+        },
+        {
+          "id": 11,
+          "start": 40.72,
+          "end": 45.120000000000005,
+          "text": "Life gets boring when you stay within the limits of what you already know.",
+          "words": []
+        },
+        {
+          "id": 12,
+          "start": 45.120000000000005,
+          "end": 48.56,
+          "text": "Seven, you will never truly know the value of a moment",
+          "words": []
+        },
+        {
+          "id": 13,
+          "start": 48.56,
+          "end": 51.92,
+          "text": "until it becomes a memory.",
+          "words": []
+        },
+        {
+          "id": 14,
+          "start": 51.92,
+          "end": 55.92,
+          "text": "Eight, once you begin to take note of the things you are grateful for,",
+          "words": []
+        },
+        {
+          "id": 15,
+          "start": 55.92,
+          "end": 59.36,
+          "text": "you begin to lose sight of the things that you lack.",
+          "words": []
+        },
+        {
+          "id": 16,
+          "start": 59.44,
+          "end": 62.72,
+          "text": "Nine, if you do not have control over your mouth,",
+          "words": []
+        },
+        {
+          "id": 17,
+          "start": 62.72,
+          "end": 65.52,
+          "text": "you do not have control over your future.",
+          "words": []
+        },
+        {
+          "id": 18,
+          "start": 65.52,
+          "end": 71.2,
+          "text": "Ten, life is a mirror and will reflect back to the thinker what he thinks into it.",
+          "words": []
+        },
+        {
+          "id": 19,
+          "start": 71.2,
+          "end": 75.36,
+          "text": "You level. The only person you have to face in the morning is yourself.",
+          "words": []
+        },
+        {
+          "id": 20,
+          "start": 75.36,
+          "end": 77.03999999999999,
+          "text": "Be unbeatable.",
+          "words": []
+        }
+      ],
+      "language": "en",
+      "duration": 0.0,
+      "metadata": {
+        "model": "base",
+        "processed": true,
+        "success": true
+      }
+    },
+    "mediapipe": {
+      "presence_percentage": 0.0,
+      "frames_with_people": 0,
+      "poses": [],
+      "faces": [],
+      "hands": []
+    },
+    "ocr": {
+      "textAnnotations": [],
+      "stickers": [],
+      "metadata": {
+        "frames_analyzed": 0
+      }
+    },
+    "scene_detection": {
+      "scenes": [
+        {
+          "start_time": 0.0,
+          "end_time": 0.7333333333333333,
+          "duration": 0.7333333333333333,
+          "scene_index": 0
+        },
+        {
+          "start_time": 0.7333333333333333,
+          "end_time": 3.1666666666666665,
+          "duration": 2.433333333333333,
+          "scene_index": 1
+        },
+        {
+          "start_time": 3.1666666666666665,
+          "end_time": 4.133333333333334,
+          "duration": 0.9666666666666672,
+          "scene_index": 2
+        },
+        {
+          "start_time": 4.133333333333334,
+          "end_time": 4.7,
+          "duration": 0.5666666666666664,
+          "scene_index": 3
+        },
+        {
+          "start_time": 4.7,
+          "end_time": 5.7,
+          "duration": 1.0,
+          "scene_index": 4
+        },
+        {
+          "start_time": 5.7,
+          "end_time": 6.6,
+          "duration": 0.8999999999999995,
+          "scene_index": 5
+        },
+        {
+          "start_time": 6.6,
+          "end_time": 7.533333333333333,
+          "duration": 0.9333333333333336,
+          "scene_index": 6
+        },
+        {
+          "start_time": 7.533333333333333,
+          "end_time": 8.633333333333333,
+          "duration": 1.0999999999999996,
+          "scene_index": 7
+        },
+        {
+          "start_time": 8.633333333333333,
+          "end_time": 9.3,
+          "duration": 0.6666666666666679,
+          "scene_index": 8
+        },
+        {
+          "start_time": 9.3,
+          "end_time": 9.9,
+          "duration": 0.5999999999999996,
+          "scene_index": 9
+        },
+        {
+          "start_time": 9.9,
+          "end_time": 10.9,
+          "duration": 1.0,
+          "scene_index": 10
+        },
+        {
+          "start_time": 10.9,
+          "end_time": 12.233333333333333,
+          "duration": 1.3333333333333321,
+          "scene_index": 11
+        },
+        {
+          "start_time": 12.233333333333333,
+          "end_time": 13.333333333333334,
+          "duration": 1.1000000000000014,
+          "scene_index": 12
+        },
+        {
+          "start_time": 13.333333333333334,
+          "end_time": 15.133333333333333,
+          "duration": 1.799999999999999,
+          "scene_index": 13
+        },
+        {
+          "start_time": 15.133333333333333,
+          "end_time": 16.0,
+          "duration": 0.8666666666666671,
+          "scene_index": 14
+        },
+        {
+          "start_time": 16.0,
+          "end_time": 17.266666666666666,
+          "duration": 1.2666666666666657,
+          "scene_index": 15
+        },
+        {
+          "start_time": 17.266666666666666,
+          "end_time": 21.233333333333334,
+          "duration": 3.9666666666666686,
+          "scene_index": 16
+        },
+        {
+          "start_time": 21.233333333333334,
+          "end_time": 22.233333333333334,
+          "duration": 1.0,
+          "scene_index": 17
+        },
+        {
+          "start_time": 22.233333333333334,
+          "end_time": 23.1,
+          "duration": 0.8666666666666671,
+          "scene_index": 18
+        },
+        {
+          "start_time": 23.1,
+          "end_time": 23.8,
+          "duration": 0.6999999999999993,
+          "scene_index": 19
+        },
+        {
+          "start_time": 23.8,
+          "end_time": 25.766666666666666,
+          "duration": 1.966666666666665,
+          "scene_index": 20
+        },
+        {
+          "start_time": 25.766666666666666,
+          "end_time": 26.966666666666665,
+          "duration": 1.1999999999999993,
+          "scene_index": 21
+        },
+        {
+          "start_time": 26.966666666666665,
+          "end_time": 27.666666666666668,
+          "duration": 0.7000000000000028,
+          "scene_index": 22
+        },
+        {
+          "start_time": 27.666666666666668,
+          "end_time": 28.666666666666668,
+          "duration": 1.0,
+          "scene_index": 23
+        },
+        {
+          "start_time": 28.666666666666668,
+          "end_time": 29.433333333333334,
+          "duration": 0.7666666666666657,
+          "scene_index": 24
+        },
+        {
+          "start_time": 29.433333333333334,
+          "end_time": 31.166666666666668,
+          "duration": 1.7333333333333343,
+          "scene_index": 25
+        },
+        {
+          "start_time": 31.166666666666668,
+          "end_time": 32.266666666666666,
+          "duration": 1.0999999999999979,
+          "scene_index": 26
+        },
+        {
+          "start_time": 32.266666666666666,
+          "end_time": 34.5,
+          "duration": 2.2333333333333343,
+          "scene_index": 27
+        },
+        {
+          "start_time": 34.5,
+          "end_time": 35.733333333333334,
+          "duration": 1.2333333333333343,
+          "scene_index": 28
+        },
+        {
+          "start_time": 35.733333333333334,
+          "end_time": 39.0,
+          "duration": 3.2666666666666657,
+          "scene_index": 29
+        },
+        {
+          "start_time": 39.0,
+          "end_time": 39.63333333333333,
+          "duration": 0.6333333333333329,
+          "scene_index": 30
+        },
+        {
+          "start_time": 39.63333333333333,
+          "end_time": 41.166666666666664,
+          "duration": 1.5333333333333314,
+          "scene_index": 31
+        },
+        {
+          "start_time": 41.166666666666664,
+          "end_time": 41.7,
+          "duration": 0.5333333333333385,
+          "scene_index": 32
+        },
+        {
+          "start_time": 41.7,
+          "end_time": 44.9,
+          "duration": 3.1999999999999957,
+          "scene_index": 33
+        },
+        {
+          "start_time": 44.9,
+          "end_time": 45.63333333333333,
+          "duration": 0.7333333333333343,
+          "scene_index": 34
+        },
+        {
+          "start_time": 45.63333333333333,
+          "end_time": 47.03333333333333,
+          "duration": 1.3999999999999986,
+          "scene_index": 35
+        },
+        {
+          "start_time": 47.03333333333333,
+          "end_time": 47.666666666666664,
+          "duration": 0.6333333333333329,
+          "scene_index": 36
+        },
+        {
+          "start_time": 47.666666666666664,
+          "end_time": 48.9,
+          "duration": 1.2333333333333343,
+          "scene_index": 37
+        },
+        {
+          "start_time": 48.9,
+          "end_time": 50.5,
+          "duration": 1.6000000000000014,
+          "scene_index": 38
+        },
+        {
+          "start_time": 50.5,
+          "end_time": 52.4,
+          "duration": 1.8999999999999986,
+          "scene_index": 39
+        },
+        {
+          "start_time": 52.4,
+          "end_time": 54.233333333333334,
+          "duration": 1.8333333333333357,
+          "scene_index": 40
+        },
+        {
+          "start_time": 54.233333333333334,
+          "end_time": 54.833333333333336,
+          "duration": 0.6000000000000014,
+          "scene_index": 41
+        },
+        {
+          "start_time": 54.833333333333336,
+          "end_time": 55.666666666666664,
+          "duration": 0.8333333333333286,
+          "scene_index": 42
+        },
+        {
+          "start_time": 55.666666666666664,
+          "end_time": 57.5,
+          "duration": 1.8333333333333357,
+          "scene_index": 43
+        },
+        {
+          "start_time": 57.5,
+          "end_time": 58.3,
+          "duration": 0.7999999999999972,
+          "scene_index": 44
+        },
+        {
+          "start_time": 58.3,
+          "end_time": 62.96666666666667,
+          "duration": 4.666666666666671,
+          "scene_index": 45
+        },
+        {
+          "start_time": 62.96666666666667,
+          "end_time": 63.63333333333333,
+          "duration": 0.6666666666666643,
+          "scene_index": 46
+        },
+        {
+          "start_time": 63.63333333333333,
+          "end_time": 64.43333333333334,
+          "duration": 0.8000000000000043,
+          "scene_index": 47
+        },
+        {
+          "start_time": 64.43333333333334,
+          "end_time": 65.06666666666666,
+          "duration": 0.6333333333333258,
+          "scene_index": 48
+        },
+        {
+          "start_time": 65.06666666666666,
+          "end_time": 65.6,
+          "duration": 0.5333333333333314,
+          "scene_index": 49
+        },
+        {
+          "start_time": 65.6,
+          "end_time": 66.9,
+          "duration": 1.3000000000000114,
+          "scene_index": 50
+        },
+        {
+          "start_time": 66.9,
+          "end_time": 67.5,
+          "duration": 0.5999999999999943,
+          "scene_index": 51
+        },
+        {
+          "start_time": 67.5,
+          "end_time": 68.4,
+          "duration": 0.9000000000000057,
+          "scene_index": 52
+        },
+        {
+          "start_time": 68.4,
+          "end_time": 69.03333333333333,
+          "duration": 0.6333333333333258,
+          "scene_index": 53
+        },
+        {
+          "start_time": 69.03333333333333,
+          "end_time": 70.33333333333333,
+          "duration": 1.2999999999999972,
+          "scene_index": 54
+        },
+        {
+          "start_time": 70.33333333333333,
+          "end_time": 71.56666666666666,
+          "duration": 1.2333333333333343,
+          "scene_index": 55
+        },
+        {
+          "start_time": 71.56666666666666,
+          "end_time": 72.73333333333333,
+          "duration": 1.1666666666666714,
+          "scene_index": 56
+        },
+        {
+          "start_time": 72.73333333333333,
+          "end_time": 74.03333333333333,
+          "duration": 1.2999999999999972,
+          "scene_index": 57
+        },
+        {
+          "start_time": 74.03333333333333,
+          "end_time": 74.6,
+          "duration": 0.5666666666666629,
+          "scene_index": 58
+        },
+        {
+          "start_time": 74.6,
+          "end_time": 75.5,
+          "duration": 0.9000000000000057,
+          "scene_index": 59
+        },
+        {
+          "start_time": 75.5,
+          "end_time": 77.46666666666667,
+          "duration": 1.9666666666666686,
+          "scene_index": 60
+        }
+      ],
+      "scene_changes": [
+        0.7333333333333333,
+        3.1666666666666665,
+        4.133333333333334,
+        4.7,
+        5.7,
+        6.6,
+        7.533333333333333,
+        8.633333333333333,
+        9.3,
+        9.9,
+        10.9,
+        12.233333333333333,
+        13.333333333333334,
+        15.133333333333333,
+        16.0,
+        17.266666666666666,
+        21.233333333333334,
+        22.233333333333334,
+        23.1,
+        23.8,
+        25.766666666666666,
+        26.966666666666665,
+        27.666666666666668,
+        28.666666666666668,
+        29.433333333333334,
+        31.166666666666668,
+        32.266666666666666,
+        34.5,
+        35.733333333333334,
+        39.0,
+        39.63333333333333,
+        41.166666666666664,
+        41.7,
+        44.9,
+        45.63333333333333,
+        47.03333333333333,
+        47.666666666666664,
+        48.9,
+        50.5,
+        52.4,
+        54.233333333333334,
+        54.833333333333336,
+        55.666666666666664,
+        57.5,
+        58.3,
+        62.96666666666667,
+        63.63333333333333,
+        64.43333333333334,
+        65.06666666666666,
+        65.6,
+        66.9,
+        67.5,
+        68.4,
+        69.03333333333333,
+        70.33333333333333,
+        71.56666666666666,
+        72.73333333333333,
+        74.03333333333333,
+        74.6,
+        75.5
+      ],
+      "total_scenes": 61
+    }
+  }
+}

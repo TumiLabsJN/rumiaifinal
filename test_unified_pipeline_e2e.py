@@ -16,6 +16,10 @@ from datetime import datetime
 from typing import Dict, Any, List, Tuple
 import logging
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 # Add rumiai_v2 to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

@@ -1,72 +1,57 @@
 {
   "CoreMetrics": {
-    "totalScenes": 28,
-    "sceneChangeRate": 0.37,
-    "avgSceneDuration": 2.7,
-    "minSceneDuration": 0.5,
-    "maxSceneDuration": 7.2,
-    "sceneDurationVariance": 2.25,
-    "quickCutsCount": 18,
-    "longTakesCount": 2,
-    "sceneRhythmScore": 0.72,
-    "pacingConsistency": 0.65,
-    "videoDuration": 72.8,
-    "confidence": 0.85
+    "totalScenes": 61,
+    "sceneChangeRate": 0.775,
+    "avgSceneDuration": 1.3,
+    "minSceneDuration": 0.2,
+    "maxSceneDuration": 5.0,
+    "sceneDurationVariance": 1.72,
+    "quickCutsCount": 38,
+    "longTakesCount": 4,
+    "sceneRhythmScore": 0.6,
+    "pacingConsistency": 0.4,
+    "videoDuration": 77.5,
+    "confidence": 0.8
   },
   "Dynamics": {
     "pacingCurve": [
       {
         "second": 0,
-        "cutsPerSecond": 0.3,
+        "cutsPerSecond": 0.4,
         "intensity": "moderate"
-      },
-      {
-        "second": 10,
-        "cutsPerSecond": 0.5,
-        "intensity": "high"
       },
       {
         "second": 20,
-        "cutsPerSecond": 0.4,
-        "intensity": "moderate"
-      },
-      {
-        "second": 30,
-        "cutsPerSecond": 0.2,
-        "intensity": "low"
+        "cutsPerSecond": 0.7,
+        "intensity": "high"
       },
       {
         "second": 40,
-        "cutsPerSecond": 0.4,
+        "cutsPerSecond": 0.5,
         "intensity": "moderate"
-      },
-      {
-        "second": 50,
-        "cutsPerSecond": 0.6,
-        "intensity": "high"
       },
       {
         "second": 60,
         "cutsPerSecond": 0.3,
-        "intensity": "moderate"
+        "intensity": "low"
       }
     ],
     "accelerationPattern": "variable",
-    "rhythmRegularity": 0.68,
+    "rhythmRegularity": 0.7,
     "pacingMomentum": "accelerating",
     "dynamicRange": 0.4,
-    "confidence": 0.8
+    "confidence": 0.7
   },
   "Interactions": {
-    "contentPacingAlignment": 0.75,
+    "contentPacingAlignment": 0.6,
     "emotionalPacingSync": 0.7,
-    "narrativeFlowScore": 0.82,
+    "narrativeFlowScore": 0.5,
     "viewerAdaptationCurve": "engaging",
     "pacingContrastMoments": [
       {
         "timestamp": 15,
         "shift": "fast_to_slow",
-        "impact": 0.7
+        "impact": 0.8
       },
       {
         "timestamp": 45,
@@ -74,17 +59,17 @@
         "impact": 0.6
       }
     ],
-    "confidence": 0.75
+    "confidence": 0.7
   },
   "KeyEvents": {
     "pacingPeaks": [
       {
         "timestamp": "10-12s",
-        "cutsPerSecond": 0.6,
+        "cutsPerSecond": 0.8,
         "intensity": "high"
       },
       {
-        "timestamp": "50-52s",
+        "timestamp": "30-32s",
         "cutsPerSecond": 0.7,
         "intensity": "high"
       }
@@ -92,12 +77,12 @@
     "pacingValleys": [
       {
         "timestamp": "20-25s",
-        "sceneDuration": 4.5,
+        "sceneDuration": 5.0,
         "type": "long_take"
       },
       {
-        "timestamp": "35-40s",
-        "sceneDuration": 6.2,
+        "timestamp": "50-55s",
+        "sceneDuration": 4.5,
         "type": "long_take"
       }
     ],
@@ -119,12 +104,12 @@
       {
         "timestamp": 18,
         "expectedDuration": 2.5,
-        "actualDuration": 4.8
+        "actualDuration": 0.8
       },
       {
-        "timestamp": 35,
+        "timestamp": 52,
         "expectedDuration": 3.0,
-        "actualDuration": 6.2
+        "actualDuration": 4.5
       }
     ],
     "confidence": 0.8
@@ -139,16 +124,16 @@
       "jump_cut",
       "cross_cut"
     ],
-    "confidence": 0.75
+    "confidence": 0.7
   },
   "Quality": {
     "sceneDetectionAccuracy": 0.9,
-    "transitionAnalysisReliability": 0.85,
-    "pacingDataCompleteness": 0.8,
+    "transitionAnalysisReliability": 0.8,
+    "pacingDataCompleteness": 0.9,
     "technicalQuality": "professional",
     "analysisLimitations": [
       "motion_blur_periods"
     ],
-    "overallConfidence": 0.85
+    "overallConfidence": 0.8
   }
 }

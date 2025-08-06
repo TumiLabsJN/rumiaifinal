@@ -1,52 +1,34 @@
 """
-Safe Whisper transcription with async support and timeout protection
+Whisper transcription service using Whisper.cpp
+Fast, reliable CPU-based transcription without Python/PyTorch issues
 """
 
-import asyncio
 import logging
-import whisper
 from pathlib import Path
 from typing import Dict, Any, Optional
+
+from .audio_utils import extract_audio_simple
+from .whisper_cpp_service import WhisperCppTranscriber
 
 logger = logging.getLogger(__name__)
 
 class WhisperTranscriber:
-    """Async-native Whisper transcription with singleton model management"""
+    """Whisper transcription using Whisper.cpp backend"""
     
-    _instance = None
-    _model = None
-    _model_size = None
+    def __init__(self):
+        # Direct instantiation - no singleton needed
+        self.transcriber = WhisperCppTranscriber()
     
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-    
-    async def load_model(self, model_size: str = "base"):
-        """Load model once, reuse for all transcriptions"""
-        if self._model is None or self._model_size != model_size:
-            logger.info(f"Loading Whisper model: {model_size}")
-            try:
-                # Load model asynchronously
-                self._model = await asyncio.to_thread(
-                    whisper.load_model, model_size
-                )
-                self._model_size = model_size
-                logger.info(f"Whisper model loaded successfully")
-            except Exception as e:
-                logger.error(f"Failed to load Whisper model: {e}")
-                raise
-        return self._model
-    
-    async def transcribe(self, video_path: Path, 
+    async def transcribe(self, 
+                        video_path: Path,
                         timeout: int = 600,
                         language: Optional[str] = None) -> Dict[str, Any]:
         """
-        Transcribe video with timeout protection
+        Transcribe video using Whisper.cpp
         
         Args:
             video_path: Path to video file
-            timeout: Maximum time in seconds (default 10 minutes)
+            timeout: Maximum time in seconds (used for compatibility, not enforced)
             language: Optional language hint
             
         Returns:
@@ -54,71 +36,64 @@ class WhisperTranscriber:
         """
         if not video_path.exists():
             logger.error(f"Video file not found: {video_path}")
-            return self._empty_result()
+            return self._empty_result(error=f"Video file not found: {video_path}")
         
+        temp_audio = None
         try:
-            # Ensure model is loaded
-            model = await self.load_model()
+            # Extract audio to WAV (required for transcription)
+            logger.info(f"Extracting audio from {video_path}")
+            temp_audio = await extract_audio_simple(video_path)
             
-            # Run transcription with timeout
-            async with asyncio.timeout(timeout):
-                logger.info(f"Starting transcription of {video_path}")
-                
-                result = await asyncio.to_thread(
-                    model.transcribe,
-                    str(video_path),
-                    language=language,
-                    word_timestamps=True,
-                    fp16=False  # Avoid FP16 issues on CPU
-                )
-                
-                # Format segments
-                segments = []
-                for seg in result.get('segments', []):
-                    segment = {
-                        'id': seg.get('id', 0),
-                        'start': float(seg.get('start', 0)),
-                        'end': float(seg.get('end', 0)),
-                        'text': str(seg.get('text', '')).strip(),
-                        'words': seg.get('words', [])
-                    }
-                    segments.append(segment)
-                
-                return {
-                    'text': str(result.get('text', '')).strip(),
-                    'segments': segments,
-                    'language': str(result.get('language', 'unknown')),
-                    'duration': float(result.get('duration', 0)),
-                    'metadata': {
-                        'model': self._model_size,
-                        'processed': True
-                    }
-                }
+            # Transcribe using Whisper.cpp
+            logger.info(f"Transcribing audio with Whisper.cpp")
+            result = await self.transcriber.transcribe(
+                temp_audio,
+                language=language
+            )
             
-        except asyncio.TimeoutError:
-            logger.error(f"Transcription timed out after {timeout}s for {video_path}")
-            return self._empty_result(error=f"Timeout after {timeout}s")
+            # Add metadata
+            result['metadata'] = {
+                'model': 'whisper.cpp-base',
+                'processed': True,
+                'success': True,
+                'backend': 'whisper.cpp'
+            }
+            
+            return result
             
         except Exception as e:
             logger.error(f"Transcription failed for {video_path}: {e}")
             return self._empty_result(error=str(e))
+        
+        finally:
+            # Clean up temporary audio file
+            if temp_audio and temp_audio.exists():
+                try:
+                    temp_audio.unlink()
+                    logger.debug(f"Cleaned up temporary audio file: {temp_audio}")
+                except Exception as e:
+                    logger.warning(f"Failed to clean up temp audio file: {e}")
     
     def _empty_result(self, error: Optional[str] = None) -> Dict[str, Any]:
-        """Return empty result structure"""
+        """Return empty result with proper error state"""
         result = {
             'text': '',
             'segments': [],
             'language': 'unknown',
             'duration': 0,
             'metadata': {
-                'model': self._model_size or 'base',
-                'processed': False
+                'model': 'whisper.cpp-base',
+                'processed': False,
+                'success': False,
+                'backend': 'whisper.cpp'
             }
         }
         if error:
-            result['error'] = error
+            result['metadata']['error'] = error
         return result
+    
+    # No model loading methods needed - Whisper.cpp handles everything
 
 def get_transcriber() -> WhisperTranscriber:
-    """Get singleton transcriber instance"""
+    """Get transcriber instance"""
     return WhisperTranscriber()

@@ -1,0 +1,93 @@
+{
+  "CoreMetrics": {
+    "totalTextOverlays": 0,
+    "uniqueTexts": 0,
+    "avgTextsPerSecond": 0.0,
+    "timeToFirstText": 0.0,
+    "avgTextDisplayDuration": 0.0,
+    "totalStickers": 0,
+    "uniqueStickers": 0,
+    "textStickerRatio": 0.0,
+    "overlayDensity": 0.0,
+    "visualComplexityScore": 0.0,
+    "confidence": 0.0
+  },
+  "Dynamics": {
+    "overlayTimeline": [
+      {
+        "timestamp": "0-3s",
+        "overlayCount": 0,
+        "type": "text",
+        "density": "low"
+      }
+    ],
+    "appearancePattern": "gradual",
+    "densityProgression": "even",
+    "animationIntensity": 0.0,
+    "visualPacing": "moderate",
+    "confidence": 0.0
+  },
+  "Interactions": {
+    "textSpeechSync": 0.0,
+    "overlayGestureCoordination": 0.0,
+    "visualEmphasisAlignment": 0.0,
+    "multiLayerComplexity": "simple",
+    "readingFlowScore": 0.0,
+    "confidence": 0.0
+  },
+  "KeyEvents": {
+    "impactfulOverlays": [
+      {
+        "timestamp": "5s",
+        "text": "Mind = Blown",
+        "impact": "high",
+        "reason": "climax"
+      }
+    ],
+    "overlayBursts": [
+      {
+        "timestamp": "10-12s",
+        "count": 0,
+        "purpose": "information_dump"
+      }
+    ],
+    "keyTextMoments": [
+      {
+        "timestamp": 0,
+        "text": "Wait for it",
+        "function": "hook"
+      }
+    ],
+    "stickerHighlights": [
+      {
+        "timestamp": 3,
+        "sticker": "fire",
+        "purpose": "emphasis"
+      }
+    ],
+    "confidence": 0.0
+  },
+  "Patterns": {
+    "overlayStrategy": "minimal",
+    "textStyle": "clean",
+    "communicationApproach": "reinforcing",
+    "visualTechniques": [
+      "text_animation",
+      "emoji_emphasis",
+      "color_coding"
+    ],
+    "productionQuality": "professional",
+    "confidence": 0.0
+  },
+  "Quality": {
+    "textDetectionAccuracy": 0.0,
+    "stickerRecognitionRate": 0.0,
+    "overlayDataCompleteness": 0.0,
+    "readabilityIssues": [
+      "text_too_fast",
+      "overlapping_elements"
+    ],
+    "visualAccessibility": "medium",
+    "overallConfidence": 0.0
+  }
+}

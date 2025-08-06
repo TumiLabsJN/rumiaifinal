@@ -13,6 +13,8 @@ import numpy as np
 
 from ..processors.unified_frame_manager import get_frame_manager, FrameData
 from .whisper_transcribe_safe import get_transcriber
+from .audio_utils import extract_audio_simple
+from ..ml_services.audio_energy_service import get_audio_energy_service
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,8 @@ class UnifiedMLServices:
             'yolo': asyncio.Lock(),
             'mediapipe': asyncio.Lock(),
             'ocr': asyncio.Lock(),
-            'whisper': asyncio.Lock()
+            'whisper': asyncio.Lock(),
+            'audio_energy': asyncio.Lock()
         }
         
     async def _ensure_model_loaded(self, model_name: str):
@@ -53,6 +56,8 @@ class UnifiedMLServices:
                 self._models['ocr'] = await self._load_ocr_model()
             elif model_name == 'whisper':
                 self._models['whisper'] = get_transcriber()
+            elif model_name == 'audio_energy':
+                self._models['audio_energy'] = get_audio_energy_service()
             
             logger.info(f"{model_name} model loaded successfully")
         
@@ -170,8 +175,8 @@ class UnifiedMLServices:
                 300, "OCR"  # 5 minutes
             ),
             run_with_timeout(
-                self._run_whisper_on_video(video_path, video_id, output_dir),
-                600, "Whisper"  # 10 minutes for audio
+                self._run_audio_services(video_path, video_id, output_dir),
+                600, "Audio Services"  # 10 minutes for audio extraction + processing
             ),
             return_exceptions=True
         )
@@ -180,13 +185,20 @@ class UnifiedMLServices:
         yolo_result = results[0] if results[0] and not isinstance(results[0], Exception) else self._empty_yolo_result()
         mediapipe_result = results[1] if results[1] and not isinstance(results[1], Exception) else self._empty_mediapipe_result()
         ocr_result = results[2] if results[2] and not isinstance(results[2], Exception) else self._empty_ocr_result()
-        whisper_result = results[3] if results[3] and not isinstance(results[3], Exception) else self._empty_whisper_result()
+        
+        # Audio services returns a tuple (whisper_result, energy_result)
+        if results[3] and not isinstance(results[3], Exception):
+            whisper_result, energy_result = results[3]
+        else:
+            whisper_result = self._empty_whisper_result()
+            energy_result = self._empty_audio_energy_result()
         
         return {
             'yolo': yolo_result,
             'mediapipe': mediapipe_result,
             'ocr': ocr_result,
             'whisper': whisper_result,
+            'audio_energy': energy_result,
             'metadata': {
                 'video_id': video_id,
                 'duration': metadata.duration if metadata else 0,
@@ -448,6 +460,67 @@ class UnifiedMLServices:
             json.dump(result, f, indent=2)
             
         return result
+    
+    async def _run_audio_services(self,
+                                 video_path: Path,
+                                 video_id: str,
+                                 output_dir: Path) -> tuple[Dict[str, Any], Dict[str, Any]]:
+        """Run Whisper and Audio Energy services on shared audio file"""
+        # Extract audio once for both services
+        logger.info(f"Extracting audio for {video_id}")
+        temp_audio = None
+        
+        try:
+            temp_audio = await extract_audio_simple(video_path)
+            
+            # Load both services
+            transcriber = await self._ensure_model_loaded('whisper')
+            energy_service = await self._ensure_model_loaded('audio_energy')
+            
+            if not transcriber:
+                logger.warning("Whisper model not available")
+                whisper_result = self._empty_whisper_result()
+            else:
+                # Transcribe using the extracted audio directly
+                logger.info(f"Running Whisper transcription on {video_id}")
+                whisper_result = await transcriber.transcriber.transcribe(
+                    temp_audio,
+                    timeout=600
+                )
+                whisper_result['metadata'] = {
+                    'model': 'whisper.cpp-base',
+                    'processed': True,
+                    'success': True,
+                    'backend': 'whisper.cpp'
+                }
+                
+                # Save Whisper results
+                output_file = output_dir / f"{video_id}_whisper.json"
+                output_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(output_file, 'w') as f:
+                    json.dump(whisper_result, f, indent=2)
+            
+            if not energy_service:
+                logger.warning("Audio energy service not available")
+                energy_result = self._empty_audio_energy_result()
+            else:
+                # Analyze energy using the same audio file
+                logger.info(f"Running audio energy analysis on {video_id}")
+                energy_result = await energy_service.analyze(temp_audio)
+                
+                # Save energy results
+                await energy_service.save_results(energy_result, video_id, output_dir)
+            
+            return whisper_result, energy_result
+            
+        finally:
+            # Clean up temporary audio file after BOTH services complete
+            if temp_audio and temp_audio.exists():
+                try:
+                    temp_audio.unlink()
+                    logger.debug(f"Cleaned up temporary audio file: {temp_audio}")
+                except Exception as e:
+                    logger.warning(f"Failed to clean up temp audio: {e}")
         
     def _empty_results(self) -> Dict[str, Any]:
         """Return empty results for all services"""
@@ -456,6 +529,7 @@ class UnifiedMLServices:
             'mediapipe': self._empty_mediapipe_result(),
             'ocr': self._empty_ocr_result(),
             'whisper': self._empty_whisper_result(),
+            'audio_energy': self._empty_audio_energy_result(),
             'metadata': {'processed': False, 'error': 'Frame extraction failed'}
         }
         
@@ -493,6 +567,16 @@ class UnifiedMLServices:
             'segments': [],
             'language': 'unknown',
             'duration': 0,
+            'metadata': {'processed': False}
+        }
+    
+    def _empty_audio_energy_result(self) -> Dict[str, Any]:
+        """Empty Audio Energy result"""
+        return {
+            'energy_level_windows': {},
+            'energy_variance': 0.0,
+            'climax_timestamp': 0.0,
+            'burst_pattern': 'unknown',
             'metadata': {'processed': False}
         }
         

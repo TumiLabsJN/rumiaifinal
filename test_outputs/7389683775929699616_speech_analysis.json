@@ -1,0 +1,150 @@
+{
+  "CoreMetrics": {
+    "totalSpeechSegments": 21,
+    "speechDuration": 76.7,
+    "speechRate": 2.78,
+    "wordsPerMinute": 166.6,
+    "uniqueSpeakers": 1,
+    "primarySpeakerDominance": 1.0,
+    "avgConfidence": 0.95,
+    "speechClarityScore": 0.92,
+    "pauseCount": 20,
+    "avgPauseDuration": 0.35,
+    "confidence": 0.97
+  },
+  "Dynamics": {
+    "speechPacingCurve": [
+      {
+        "timestamp": "0-5s",
+        "wordsPerSecond": 2.5,
+        "intensity": "moderate"
+      },
+      {
+        "timestamp": "5-10s",
+        "wordsPerSecond": 3.1,
+        "intensity": "moderate"
+      },
+      {
+        "timestamp": "10-15s",
+        "wordsPerSecond": 2.9,
+        "intensity": "moderate"
+      },
+      {
+        "timestamp": "15-20s",
+        "wordsPerSecond": 2.6,
+        "intensity": "moderate"
+      },
+      {
+        "timestamp": "20-25s",
+        "wordsPerSecond": 2.2,
+        "intensity": "moderate"
+      },
+      {
+        "timestamp": "25-30s",
+        "wordsPerSecond": 2.7,
+        "intensity": "moderate"
+      },
+      {
+        "timestamp": "30-35s",
+        "wordsPerSecond": 2.4,
+        "intensity": "moderate"
+      }
+    ],
+    "pacingVariation": 0.3,
+    "speechRhythm": "steady",
+    "pausePattern": "natural",
+    "emphasisMoments": [
+      {
+        "timestamp": 3.5,
+        "word": "matter",
+        "emphasisType": "volume"
+      },
+      {
+        "timestamp": 12.0,
+        "word": "think",
+        "emphasisType": "pitch"
+      },
+      {
+        "timestamp": 17.0,
+        "word": "possibilities",
+        "emphasisType": "volume"
+      }
+    ],
+    "confidence": 0.95
+  },
+  "Interactions": {
+    "speechGestureSync": 0.85,
+    "speechExpressionAlignment": 0.88,
+    "verbalVisualCoherence": 0.87,
+    "multimodalEmphasis": [
+      {
+        "timestamp": 25.5,
+        "speech": "changed",
+        "gesture": "open_palm",
+        "alignment": 0.9
+      },
+      {
+        "timestamp": 34.0,
+        "speech": "change",
+        "gesture": "point",
+        "alignment": 0.8
+      }
+    ],
+    "conversationalDynamics": "monologue",
+    "confidence": 0.92
+  },
+  "KeyEvents": {
+    "keyPhrases": [
+      {
+        "timestamp": 0.5,
+        "phrase": "11 things people learn too late in life",
+        "significance": "hook"
+      },
+      {
+        "timestamp": 21.5,
+        "phrase": "no matter how much it hurts now",
+        "significance": "pivot"
+      }
+    ],
+    "speechClimax": {
+      "timestamp": 25.5,
+      "text": "your struggle changed your life for the better",
+      "intensity": 0.9
+    },
+    "silentMoments": [
+      {
+        "start": 29.9,
+        "end": 30.2,
+        "duration": 0.3,
+        "purpose": "transition"
+      }
+    ],
+    "transitionPhrases": [
+      {
+        "timestamp": 21.5,
+        "phrase": "no matter how much it hurts now",
+        "function": "pivot"
+      }
+    ],
+    "confidence": 0.93
+  },
+  "Patterns": {
+    "deliveryStyle": "instructional",
+    "speechTechniques": [
+      "direct_address",
+      "rhetorical_questions",
+      "repetition"
+    ],
+    "toneCategory": "informative",
+    "linguisticComplexity": "moderate",
+    "engagementStrategy": "explanation",
+    "confidence": 0.92
+  },
+  "Quality": {
+    "transcriptionConfidence": 0.95,
+    "audioQuality": "clear",
+    "speechDataCompleteness": 0.98,
+    "analysisLimitations": [],
+    "overallConfidence": 0.95
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "CoreMetrics": {
+    "personPresenceRate": 0.0,
+    "avgPersonCount": 0.0,
+    "maxSimultaneousPeople": 0,
+    "dominantFraming": "wide",
+    "framingChanges": 0,
+    "personScreenCoverage": 0.0,
+    "positionStability": 0.0,
+    "gestureClarity": 0.0,
+    "faceVisibilityRate": 0.0,
+    "bodyVisibilityRate": 0.0,
+    "overallFramingQuality": 0.0,
+    "confidence": 0.0
+  },
+  "Dynamics": {
+    "framingProgression": [
+      {
+        "timestamp": "0-5s",
+        "distance": "wide",
+        "coverage": 0.0
+      }
+    ],
+    "movementPattern": "static",
+    "zoomTrend": "stable",
+    "stabilityTimeline": [
+      {
+        "second": 0,
+        "stability": 0.0
+      }
+    ],
+    "framingTransitions": [],
+    "confidence": 0.0
+  },
+  "Interactions": {
+    "gestureFramingSync": 0.0,
+    "expressionVisibility": 0.0,
+    "multiPersonCoordination": 0.0,
+    "actionSpaceUtilization": 0.0,
+    "framingPurposeAlignment": 0.0,
+    "confidence": 0.0
+  },
+  "KeyEvents": {
+    "framingHighlights": [],
+    "criticalFramingMoments": [],
+    "optimalFramingPeriods": [],
+    "confidence": 0.0
+  },
+  "Patterns": {
+    "framingStrategy": "observational",
+    "visualNarrative": "environment_aware",
+    "technicalExecution": "casual",
+    "engagementTechniques": [],
+    "productionValue": "low",
+    "confidence": 0.0
+  },
+  "Quality": {
+    "detectionReliability": 0.0,
+    "trackingConsistency": 0.0,
+    "framingDataCompleteness": 0.0,
+    "analysisLimitations": [
+      "occlusion_periods",
+      "motion_blur"
+    ],
+    "overallConfidence": 0.0
+  }
+}
