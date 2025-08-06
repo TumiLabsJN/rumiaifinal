@@ -1,0 +1,289 @@
+{
+  "first_5_seconds": {
+    "density_progression": [
+      10,
+      5,
+      9,
+      9,
+      10
+    ],
+    "text_moments": [
+      {
+        "timestamp": "0s",
+        "text": "if you want",
+        "duration": 1.1,
+        "position": "right"
+      },
+      {
+        "timestamp": "0s",
+        "text": "your medicine cabinet",
+        "duration": 2.1,
+        "position": "right"
+      },
+      {
+        "timestamp": "1s",
+        "text": "to look",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "2s",
+        "text": "like this",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "2s",
+        "text": "then you're",
+        "duration": 1.1,
+        "position": "right"
+      },
+      {
+        "timestamp": "3s",
+        "text": "save this video",
+        "duration": 1.5,
+        "position": "right"
+      },
+      {
+        "timestamp": "4s",
+        "text": "because",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "4s",
+        "text": "to tell you",
+        "duration": 1.0999999999999996,
+        "position": "right"
+      },
+      {
+        "timestamp": "5s",
+        "text": "where I get",
+        "duration": 1.0999999999999996,
+        "position": "right"
+      }
+    ],
+    "emotion_sequence": [
+      "neutral",
+      "neutral",
+      "neutral",
+      "neutral",
+      "neutral"
+    ],
+    "gesture_moments": [],
+    "object_appearances": [],
+    "speech_segments": [
+      {
+        "start": "0s",
+        "end": "2s",
+        "text": "If you want your medicine cabinet to look like thi..."
+      },
+      {
+        "start": "2s",
+        "end": "3s",
+        "text": "then you're gonna wanna save this video"
+      },
+      {
+        "start": "3s",
+        "end": "4s",
+        "text": "because I'm about to tell you"
+      },
+      {
+        "start": "4s",
+        "end": "7s",
+        "text": "where I get all of my medicinal plants, herbs, and..."
+      }
+    ],
+    "scene_changes": [
+      0.0,
+      3.5
+    ]
+  },
+  "cta_window": {
+    "time_range": "67-79s",
+    "cta_appearances": [
+      {
+        "timestamp": "69s",
+        "keyword": "buy",
+        "context": "or local farmers, and i always buy organic.",
+        "type": "speech"
+      },
+      {
+        "timestamp": "71s",
+        "keyword": "buy",
+        "context": "buy organic",
+        "type": "text"
+      },
+      {
+        "timestamp": "73s",
+        "keyword": "like",
+        "context": "i like storing them in these airtight glass jars",
+        "type": "speech"
+      }
+    ],
+    "gesture_sync": {
+      "gesture_count": 0,
+      "speech_count": 8,
+      "sync_ratio": 0.0
+    },
+    "object_focus": [],
+    "speech_emphasis": {
+      "speech_duration": 14.519999999999996,
+      "word_count": 55,
+      "words_per_second": 3.787878787878789,
+      "segment_count": 8
+    },
+    "text_overlays": [
+      {
+        "timestamp": "70s",
+        "text": "or local farmers",
+        "duration": 1.5999999999999943,
+        "position": "right"
+      },
+      {
+        "timestamp": "70s",
+        "text": "and | always",
+        "duration": 1.2000000000000028,
+        "position": "right"
+      },
+      {
+        "timestamp": "71s",
+        "text": "and",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "71s",
+        "text": "buy organic",
+        "duration": 1.0999999999999943,
+        "position": "right"
+      },
+      {
+        "timestamp": "72s",
+        "text": "to maximize",
+        "duration": 1.0999999999999943,
+        "position": "right"
+      },
+      {
+        "timestamp": "72s",
+        "text": "their shelf life",
+        "duration": 1.5999999999999943,
+        "position": "right"
+      },
+      {
+        "timestamp": "73s",
+        "text": "storing them",
+        "duration": 1.2000000000000028,
+        "position": "right"
+      },
+      {
+        "timestamp": "74s",
+        "text": "in these",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "74s",
+        "text": "airtight",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "75s",
+        "text": "glass jars_",
+        "duration": 1.0999999999999943,
+        "position": "right"
+      }
+    ]
+  },
+  "peak_moments": [
+    {
+      "timestamp": 5.0,
+      "intensity": 16.0,
+      "events": [
+        "scene",
+        "text: to tell you",
+        "speech",
+        "text: where I get",
+        "pose",
+        "face"
+      ]
+    },
+    {
+      "timestamp": 7.0,
+      "intensity": 12.5,
+      "events": [
+        "speech",
+        "scene",
+        "text: medicinal plants",
+        "text: herbs",
+        "pose"
+      ]
+    },
+    {
+      "timestamp": 36.0,
+      "intensity": 11.5,
+      "events": [
+        "scene",
+        "speech",
+        "text: in digestion",
+        "pose",
+        "face"
+      ]
+    },
+    {
+      "timestamp": 29.0,
+      "intensity": 10.5,
+      "events": [
+        "speech",
+        "text: that's associated",
+        "scene",
+        "text: or asthma",
+        "pose",
+        "face"
+      ]
+    },
+    {
+      "timestamp": 33.0,
+      "intensity": 10.0,
+      "events": [
+        "scene",
+        "text: which is known for",
+        "text: on stress",
+        "speech",
+        "pose",
+        "face"
+      ]
+    }
+  ],
+  "engagement_curve": [
+    1.0,
+    1.0,
+    0.65,
+    0.6,
+    0.5,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    0.85,
+    0.45,
+    0.7,
+    0.95,
+    1.0,
+    1.0
+  ],
+  "metadata": {
+    "video_id": "7280654844715666731",
+    "duration": 79.0,
+    "generated_at": "2025-08-06T19:19:00.033519",
+    "ml_data_available": {
+      "yolo": true,
+      "whisper": true,
+      "ocr": true,
+      "mediapipe": true,
+      "scene": true
+    }
+  }
+}

@@ -409,7 +409,13 @@ class UnifiedMLServices:
                         if text_clean not in seen_texts:
                             seen_texts.add(text_clean)
                             
-                            bbox_list = [[float(pt[0]), float(pt[1])] for pt in bbox]
+                            # Convert polygon bbox to flat format [x, y, width, height]
+                            if bbox and len(bbox) >= 4:
+                                xs = [float(pt[0]) for pt in bbox]
+                                ys = [float(pt[1]) for pt in bbox]
+                                bbox_list = [min(xs), min(ys), max(xs)-min(xs), max(ys)-min(ys)]
+                            else:
+                                bbox_list = [0, 0, 0, 0]  # Fallback for invalid bbox
                             
                             text_annotations.append({
                                 'text': text_clean,
