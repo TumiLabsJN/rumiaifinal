@@ -24,12 +24,162 @@
 #### Production Solution - FEAT (Facial Expression Analysis Toolkit)
 **Superior accuracy (87% vs 65%), Action Unit based detection**
 
+#### Installation Requirements
+
+##### System Dependencies
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y python3-opencv ffmpeg
+
+# macOS
+brew install opencv ffmpeg
+```
+
+##### Python Dependencies
+```bash
+# Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or
+venv\Scripts\activate  # Windows
+
+# Install with specific CUDA version (if using GPU)
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118  # CUDA 11.8
+
+# Install FEAT and dependencies
+pip install py-feat==0.6.0
+pip install opencv-python-headless==4.8.0
+pip install scikit-learn pandas scipy
+
+# For development/testing
+pip install pytest pytest-asyncio
+```
+
+##### First Run Setup
 ```python
-# Installation
-pip install py-feat torch torchvision
+"""
+On first run, FEAT will automatically download required models:
+- RetinaFace face detection (~100MB)
+- Landmark detection (~5MB)  
+- Emotion classification (~200MB)
+- Action Unit models (~50MB)
+
+Total download: ~355MB
+Storage location: ~/.feat/models/
+"""
+
+# Pre-download models during setup (optional)
+from feat import Detector
+print("Downloading FEAT models...")
+detector = Detector(device='cpu')  # Downloads models
+print("Models downloaded successfully!")
+```
+
+##### Verification Script
+```python
+# verify_feat_installation.py
+import sys
+
+def verify_feat_installation():
+    """Verify FEAT and dependencies are correctly installed"""
+    
+    print("Checking dependencies...")
+    
+    # Check PyTorch
+    try:
+        import torch
+        print(f"✓ PyTorch {torch.__version__}")
+        print(f"  CUDA available: {torch.cuda.is_available()}")
+        if torch.cuda.is_available():
+            print(f"  CUDA version: {torch.version.cuda}")
+    except ImportError:
+        print("✗ PyTorch not installed")
+        return False
+    
+    # Check OpenCV
+    try:
+        import cv2
+        print(f"✓ OpenCV {cv2.__version__}")
+    except ImportError:
+        print("✗ OpenCV not installed")
+        return False
+    
+    # Check FEAT
+    try:
+        from feat import Detector
+        print("✓ FEAT installed")
+        
+        # Try initializing detector
+        print("Initializing FEAT detector (will download models if needed)...")
+        detector = Detector(device='cpu')  # Use CPU for testing
+        print("✓ FEAT detector initialized successfully")
+        
+    except ImportError:
+        print("✗ FEAT not installed")
+        return False
+    except Exception as e:
+        print(f"✗ FEAT initialization failed: {e}")
+        return False
+    
+    # Check other dependencies
+    deps = ['sklearn', 'pandas', 'scipy']
+    for dep in deps:
+        try:
+            __import__(dep)
+            print(f"✓ {dep} installed")
+        except ImportError:
+            print(f"✗ {dep} not installed")
+    
+    return True
+
+if __name__ == "__main__":
+    if verify_feat_installation():
+        print("\n✅ All dependencies verified!")
+    else:
+        print("\n❌ Some dependencies missing")
+        sys.exit(1)
+```
+
+##### Docker Alternative (Recommended for Production)
+```dockerfile
+# Dockerfile for consistent environment
+FROM pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime
+
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Pre-download FEAT models during build
+RUN python -c "from feat import Detector; d = Detector(device='cpu')"
+
+# Copy application code
+COPY . /app
+WORKDIR /app
+```
+
+```python
+# requirements.txt
+py-feat==0.6.0
+torch==2.0.0
+torchvision==0.15.0
+opencv-python-headless==4.8.0
+scikit-learn==1.3.0
+pandas==2.0.0
+scipy==1.10.0
+numpy==1.24.0
+```
 
 # Implementation location: /home/jorge/rumiaifinal/rumiai_v2/ml_services/emotion_detection_service.py
-```
 
 ```python
 """
@@ -90,15 +240,6 @@ class EmotionDetectionService:
             'neutral': 'neutral'
         }
         
-        # Action Unit to emotion mapping for validation
-        self.au_emotion_map = {
-            'joy': [6, 12],  # AU6 (cheek raiser) + AU12 (lip corner puller)
-            'sadness': [1, 4, 15],  # AU1 (inner brow raiser) + AU4 (brow lowerer) + AU15 (lip corner depressor)
-            'anger': [4, 5, 7, 23],  # AU4 + AU5 (upper lid raiser) + AU7 (lid tightener) + AU23 (lip tightener)
-            'fear': [1, 2, 4, 5, 20],  # AU1 + AU2 (outer brow raiser) + AU4 + AU5 + AU20 (lip stretcher)
-            'surprise': [1, 2, 5, 26],  # AU1 + AU2 + AU5 + AU26 (jaw drop)
-            'disgust': [9, 10],  # AU9 (nose wrinkler) + AU10 (upper lip raiser)
-        }
         
         logger.info(f"FEAT emotion detector initialized (Device: {device})")
     
@@ -122,7 +263,7 @@ class EmotionDetectionService:
                                    timestamps: List[float]) -> Dict[str, Any]:
         """
         Detect emotions in batch of frames using FEAT
-        Processes in batches for GPU efficiency
+        Handles videos with no people gracefully (B-roll, text, animation)
         
         Args:
             frames: List of frame arrays (BGR format)
@@ -130,6 +271,7 @@ class EmotionDetectionService:
             
         Returns:
             Emotion detection results with AUs and confidence scores
+            Always returns structured data - never crashes for videos without people
         """
         results = {
             'emotions': [],
@@ -138,7 +280,13 @@ class EmotionDetectionService:
             'dominant_emotion': None,
             'emotion_transitions': [],
             'confidence_scores': [],
-            'au_activations': {}
+            'au_activations': {},
+            'processing_stats': {
+                'total_frames': len(frames),
+                'successful_frames': 0,
+                'no_face_frames': 0,
+                'video_type': 'unknown'
+            }
         }
         
         emotion_counts = {}
@@ -159,134 +307,178 @@ class EmotionDetectionService:
                 
                 # Process each detection
                 for j, detection in enumerate(detections):
-                    if detection is not None:
-                        timestamp = batch_timestamps[j]
-                        
-                        # Store raw detection with AUs
-                        results['emotions'].append({
-                            'timestamp': timestamp,
-                            'emotion': detection['emotion'],
-                            'confidence': detection['confidence'],
-                            'all_scores': detection['emotion_scores'],
-                            'action_units': detection['action_units'],
-                            'au_intensities': detection['au_intensities']
-                        })
-                        
-                        # Store Action Units
-                        results['action_units'].append({
-                            'timestamp': timestamp,
-                            'aus': detection['action_units'],
-                            'intensities': detection['au_intensities']
-                        })
-                        
-                        # Build timeline
+                    timestamp = batch_timestamps[j]
+                    
+                    if detection.get('no_face'):
+                        # No face detected in this frame (normal for B-roll, text, etc.)
+                        results['processing_stats']['no_face_frames'] += 1
                         time_key = f"{int(timestamp)}-{int(timestamp)+1}s"
-                        results['timeline'][time_key] = detection
-                        
-                        # Track transitions
-                        if prev_emotion and prev_emotion != detection['emotion']:
-                            results['emotion_transitions'].append({
-                                'timestamp': timestamp,
-                                'from': prev_emotion,
-                                'to': detection['emotion'],
-                                'au_change': self._compute_au_change(
-                                    results['action_units'][-2] if len(results['action_units']) > 1 else None,
-                                    detection['action_units']
-                                )
-                            })
-                        prev_emotion = detection['emotion']
-                        
-                        # Count for dominant emotion
-                        emotion = detection['emotion']
-                        emotion_counts[emotion] = emotion_counts.get(emotion, 0) + 1
-                        
-                        # Track confidence
-                        results['confidence_scores'].append(detection['confidence'])
-                        
-                        # Track AU activations
-                        for au in detection['action_units']:
-                            if au not in results['au_activations']:
-                                results['au_activations'][au] = 0
-                            results['au_activations'][au] += 1
+                        results['timeline'][time_key] = {'no_face': True}
+                        continue
+                    
+                    # Valid emotion detection
+                    results['processing_stats']['successful_frames'] += 1
+                    
+                    # Store raw detection with AUs
+                    results['emotions'].append({
+                        'timestamp': timestamp,
+                        'emotion': detection['emotion'],
+                        'confidence': detection['confidence'],
+                        'all_scores': detection['emotion_scores'],
+                        'action_units': detection['action_units'],
+                        'au_intensities': detection['au_intensities']
+                    })
+                    
+                    # Store Action Units
+                    results['action_units'].append({
+                        'timestamp': timestamp,
+                        'aus': detection['action_units'],
+                        'intensities': detection['au_intensities']
+                    })
+                    
+                    # Build timeline
+                    time_key = f"{int(timestamp)}-{int(timestamp)+1}s"
+                    results['timeline'][time_key] = detection
+                    
+                    # Track transitions
+                    if prev_emotion and prev_emotion != detection['emotion']:
+                        results['emotion_transitions'].append({
+                            'timestamp': timestamp,
+                            'from': prev_emotion,
+                            'to': detection['emotion']
+                        })
+                    prev_emotion = detection['emotion']
+                    
+                    # Count for dominant emotion
+                    emotion = detection['emotion']
+                    emotion_counts[emotion] = emotion_counts.get(emotion, 0) + 1
+                    
+                    # Track confidence
+                    results['confidence_scores'].append(detection['confidence'])
+                    
+                    # Track AU activations
+                    for au in detection['action_units']:
+                        if au not in results['au_activations']:
+                            results['au_activations'][au] = 0
+                        results['au_activations'][au] += 1
                         
             except Exception as e:
-                logger.warning(f"FEAT detection failed for batch at {batch_timestamps[0]}: {e}")
-                continue
+                # FEAT crashed - this is a bug, let it fail fast
+                logger.error(f"FEAT detection crashed at batch {batch_timestamps[0]}: {e}")
+                raise  # Re-raise the exception to fail fast
         
-        # Calculate dominant emotion
-        if emotion_counts:
-            results['dominant_emotion'] = max(emotion_counts, key=emotion_counts.get)
+        # Determine video type based on processing results
+        total_frames = len(frames)
+        success_rate = results['processing_stats']['successful_frames'] / total_frames if total_frames > 0 else 0
+        no_face_rate = results['processing_stats']['no_face_frames'] / total_frames if total_frames > 0 else 0
         
-        # Calculate metrics including AU-based validation
-        results['metrics'] = {
-            'unique_emotions': len(set(emotion_counts.keys())),
-            'transition_count': len(results['emotion_transitions']),
-            'avg_confidence': np.mean(results['confidence_scores']) if results['confidence_scores'] else 0,
-            'emotion_diversity': self._calculate_diversity(emotion_counts),
-            'detection_rate': len(results['emotions']) / len(frames) if frames else 0,
-            'au_validation_score': self._validate_emotions_with_aus(results),
-            'most_active_aus': sorted(results['au_activations'].items(), key=lambda x: x[1], reverse=True)[:5]
-        }
+        if no_face_rate > 0.8:  # 80%+ frames have no faces
+            results['processing_stats']['video_type'] = 'no_people'
+            results['dominant_emotion'] = None
+            results['metrics'] = {
+                'video_type': 'no_people',
+                'detection_rate': 0.0,
+                'suitable_for_emotion_analysis': False,
+                'reason': 'No faces detected in video (B-roll, text, animation)',
+                'processing_stats': results['processing_stats']
+            }
+            return results  # Valid outcome - not an error
+        
+        else:
+            # Normal video with people detected
+            results['processing_stats']['video_type'] = 'people_detected'
+            
+            # Calculate dominant emotion
+            if emotion_counts:
+                results['dominant_emotion'] = max(emotion_counts, key=emotion_counts.get)
+            
+            # Calculate metrics (trust FEAT's internal AU-emotion correlation)
+            results['metrics'] = {
+                'video_type': 'people_detected',
+                'unique_emotions': len(set(emotion_counts.keys())),
+                'transition_count': len(results['emotion_transitions']),
+                'avg_confidence': np.mean(results['confidence_scores']) if results['confidence_scores'] else 0,
+                'emotion_diversity': self._calculate_diversity(emotion_counts),
+                'detection_rate': success_rate,
+                'suitable_for_emotion_analysis': True,
+                'most_active_aus': sorted(results['au_activations'].items(), key=lambda x: x[1], reverse=True)[:5],
+                'processing_stats': results['processing_stats']
+            }
         
         return results
     
-    def _detect_batch(self, frames: List[np.ndarray]) -> List[Optional[Dict]]:
+    def _detect_batch(self, frames: List[np.ndarray]) -> List[Dict]:
         """
         Detect emotions in batch using FEAT (synchronous)
         
         Returns list of detections for each frame
+        If FEAT crashes, let it fail fast - this indicates a bug to fix
         """
         # Convert frames to FEAT format (RGB)
         rgb_frames = [cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) for frame in frames]
         
-        # Run FEAT detection
+        # Run FEAT detection - if this crashes, let it crash (fail fast)
         predictions = self.detector.detect_image(rgb_frames)
         
         results = []
         for i in range(len(frames)):
-            if predictions is not None and i < len(predictions):
-                pred = predictions.iloc[i]
-                
-                # Check if face was detected
-                if pred['FaceScore'] > 0.5:
-                    # Extract emotions (FEAT provides 7 emotions)
-                    emotion_scores = {
-                        'anger': float(pred['anger']),
-                        'disgust': float(pred['disgust']),
-                        'fear': float(pred['fear']),
-                        'happiness': float(pred['happiness']),
-                        'sadness': float(pred['sadness']),
-                        'surprise': float(pred['surprise']),
-                        'neutral': float(pred['neutral'])
-                    }
-                    
-                    # Get dominant emotion
-                    dominant_emotion = max(emotion_scores, key=emotion_scores.get)
-                    mapped_emotion = self.emotion_mapping.get(dominant_emotion, 'neutral')
-                    
-                    # Extract Action Units (FEAT provides 20 AUs)
-                    action_units = []
-                    au_intensities = {}
-                    for au_col in [col for col in pred.index if col.startswith('AU') and col[2:].isdigit()]:
-                        au_num = int(au_col[2:])
-                        au_intensity = float(pred[au_col])
-                        if au_intensity > 0.5:  # AU is active
-                            action_units.append(au_num)
-                            au_intensities[au_num] = au_intensity
-                    
-                    results.append({
-                        'emotion': mapped_emotion,
-                        'confidence': emotion_scores[dominant_emotion],
-                        'emotion_scores': {self.emotion_mapping.get(k, k): v for k, v in emotion_scores.items()},
-                        'action_units': action_units,
-                        'au_intensities': au_intensities,
-                        'face_bbox': [pred['FaceRectX'], pred['FaceRectY'], 
-                                     pred['FaceRectWidth'], pred['FaceRectHeight']]
-                    })
-                else:
-                    results.append(None)
+            # FEAT returns multiple faces if detected
+            frame_predictions = predictions[predictions['frame'] == i] if 'frame' in predictions.columns else predictions.iloc[i:i+1]
+            
+            if len(frame_predictions) == 0 or frame_predictions.iloc[0]['FaceScore'] <= 0.5:
+                # No face detected
+                results.append({'no_face': True, 'face_score': 0.0})
+                continue
+            
+            # Multiple faces: pick the largest one (duets, groups, etc.)
+            if len(frame_predictions) > 1:
+                # Calculate face areas and pick largest
+                face_areas = (frame_predictions['FaceRectWidth'] * frame_predictions['FaceRectHeight'])
+                largest_idx = face_areas.idxmax()
+                pred = frame_predictions.loc[largest_idx]
+                logger.debug(f"Frame {i}: Multiple faces detected ({len(frame_predictions)}), using largest")
             else:
-                results.append(None)
+                pred = frame_predictions.iloc[0]
+            
+            # Check if selected face meets minimum threshold
+            if pred['FaceScore'] > 0.5:
+                # Extract emotions (FEAT provides 7 emotions)
+                emotion_scores = {
+                    'anger': float(pred['anger']),
+                    'disgust': float(pred['disgust']),
+                    'fear': float(pred['fear']),
+                    'happiness': float(pred['happiness']),
+                    'sadness': float(pred['sadness']),
+                    'surprise': float(pred['surprise']),
+                    'neutral': float(pred['neutral'])
+                }
+                
+                # Get dominant emotion
+                dominant_emotion = max(emotion_scores, key=emotion_scores.get)
+                mapped_emotion = self.emotion_mapping.get(dominant_emotion, 'neutral')
+                
+                # Extract Action Units (FEAT provides 20 AUs)
+                action_units = []
+                au_intensities = {}
+                for au_col in [col for col in pred.index if col.startswith('AU') and col[2:].isdigit()]:
+                    au_num = int(au_col[2:])
+                    au_intensity = float(pred[au_col])
+                    if au_intensity > 0.5:  # AU is active
+                        action_units.append(au_num)
+                        au_intensities[au_num] = au_intensity
+                
+                results.append({
+                    'emotion': mapped_emotion,
+                    'confidence': emotion_scores[dominant_emotion],
+                    'emotion_scores': {self.emotion_mapping.get(k, k): v for k, v in emotion_scores.items()},
+                    'action_units': action_units,
+                    'au_intensities': au_intensities,
+                    'face_bbox': [pred['FaceRectX'], pred['FaceRectY'], 
+                                 pred['FaceRectWidth'], pred['FaceRectHeight']]
+                })
+            else:
+                # No face detected - this is normal for many videos
+                results.append({'no_face': True, 'face_score': float(pred['FaceScore'])})
         
         return results
     
@@ -304,47 +496,6 @@ class EmotionDetectionService:
         
         return entropy / max_entropy if max_entropy > 0 else 0
     
-    def _compute_au_change(self, prev_aus: Optional[Dict], curr_aus: List[int]) -> float:
-        """Compute change in Action Units between frames"""
-        if not prev_aus or not prev_aus.get('aus'):
-            return 1.0
-        
-        prev_set = set(prev_aus['aus'])
-        curr_set = set(curr_aus)
-        
-        # Jaccard distance
-        intersection = len(prev_set & curr_set)
-        union = len(prev_set | curr_set)
-        
-        return 1.0 - (intersection / union) if union > 0 else 0.0
-    
-    def _validate_emotions_with_aus(self, results: Dict) -> float:
-        """
-        Validate detected emotions using Action Units
-        Higher score means emotions align well with expected AUs
-        """
-        if not results['emotions']:
-            return 0.0
-        
-        validation_scores = []
-        
-        for emotion_data in results['emotions']:
-            emotion = emotion_data['emotion']
-            detected_aus = set(emotion_data['action_units'])
-            
-            # Get expected AUs for this emotion
-            expected_aus = set(self.au_emotion_map.get(emotion, []))
-            
-            if expected_aus:
-                # Calculate overlap between detected and expected AUs
-                overlap = len(detected_aus & expected_aus)
-                score = overlap / len(expected_aus)
-                validation_scores.append(score)
-            else:
-                # Neutral doesn't have specific AUs
-                validation_scores.append(0.5)
-        
-        return np.mean(validation_scores) if validation_scores else 0.0
     
     async def analyze_emotional_journey(self, 
                                        frames: List[np.ndarray],
@@ -1139,14 +1290,18 @@ async def test_emotion_detection():
         cap = cv2.VideoCapture(str(video_path))
         fps = cap.get(cv2.CAP_PROP_FPS)
         
+        # Determine sample rate based on video duration
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        duration = total_frames / fps
+        sample_rate = detector.get_adaptive_sample_rate(duration)
+        
         frame_count = 0
-        sample_rate = 3  # Match FEAT's optimal sample rate
-        while frame_count < 90:  # Test first 30 seconds at 3 FPS
+        while frame_count < total_frames:
             ret, frame = cap.read()
             if not ret:
                 break
                 
-            if frame_count % int(fps / sample_rate) == 0:  # Sample at 3 FPS
+            if frame_count % int(fps / sample_rate) == 0:  # Sample at adaptive rate
                 test_frames.append(frame)
                 timestamps.append(frame_count / fps)
             
@@ -1160,7 +1315,6 @@ async def test_emotion_detection():
         print(f"✅ Detected {results['emotionalCoreMetrics']['uniqueEmotions']} unique emotions")
         print(f"✅ Dominant emotion: {results['emotionalCoreMetrics']['dominantEmotion']}")
         print(f"✅ Confidence: {results['emotionalCoreMetrics']['avgConfidence']:.2f}")
-        print(f"✅ AU Validation Score: {results['raw_emotions']['metrics']['au_validation_score']:.2f}")
         print(f"✅ Most Active AUs: {results['raw_emotions']['metrics']['most_active_aus'][:3]}")
         print(f"✅ Transitions: {results['emotionalCoreMetrics']['emotionTransitions']}")
         
@@ -1324,15 +1478,29 @@ if __name__ == "__main__":
 ### Fallback Strategy
 
 ```python
-# Add graceful degradation for FEAT
+# Add graceful degradation for FEAT with dependency checking
 class EmotionDetectionService:
-    def __init__(self, gpu=True, sample_rate=3, fallback_mode=False):
+    def __init__(self, gpu=True, fallback_mode=False):
         self.fallback_mode = fallback_mode
-        self.sample_rate = sample_rate
+        self.missing_deps = []
+        
         if not fallback_mode:
+            # Check dependencies first
+            if not self._check_dependencies():
+                logger.warning(f"Missing dependencies: {', '.join(self.missing_deps)}")
+                self.fallback_mode = True
+                return
+                
             try:
                 from feat import Detector
                 device = 'cuda' if gpu and torch.cuda.is_available() else 'cpu'
+                
+                # Check if models exist
+                import os
+                model_path = os.path.expanduser('~/.feat/models')
+                if not os.path.exists(model_path):
+                    logger.info("First run: Downloading FEAT models (~355MB)...")
+                
                 self.detector = Detector(
                     face_model='retinaface',
                     emotion_model='resmasknet',
@@ -1340,21 +1508,60 @@ class EmotionDetectionService:
                     device=device
                 )
                 self.device = device
-            except Exception as e:
-                logger.warning(f"FEAT failed to load, using fallback: {e}")
+            except ImportError as e:
+                logger.warning(f"FEAT not installed: {e}")
                 self.fallback_mode = True
+            except Exception as e:
+                logger.warning(f"FEAT initialization failed: {e}")
+                self.fallback_mode = True
+    
+    def _check_dependencies(self) -> bool:
+        """Check if all required dependencies are installed"""
+        required = {
+            'torch': 'PyTorch',
+            'cv2': 'OpenCV',
+            'sklearn': 'scikit-learn',
+            'pandas': 'pandas',
+            'feat': 'py-feat'
+        }
+        
+        for module, name in required.items():
+            try:
+                __import__(module)
+            except ImportError:
+                self.missing_deps.append(name)
+        
+        return len(self.missing_deps) == 0
     
     async def detect_emotions_batch(self, frames, timestamps):
         if self.fallback_mode:
-            # Return structured empty data, not fake data
+            # Return structured data for videos without FEAT capability
             return {
                 'emotions': [],
                 'action_units': [],
-                'metrics': {
-                    'detection_failed': True,
-                    'fallback_reason': 'FEAT not available'
+                'timeline': {},
+                'dominant_emotion': None,
+                'emotion_transitions': [],
+                'confidence_scores': [],
+                'au_activations': {},
+                'processing_stats': {
+                    'total_frames': len(frames),
+                    'successful_frames': 0,
+                    'no_face_frames': 0,
+                    'video_type': 'feat_unavailable'
                 },
-                'confidence': 0.0
+                'metrics': {
+                    'video_type': 'feat_unavailable',
+                    'detection_rate': 0.0,
+                    'suitable_for_emotion_analysis': False,
+                    'reason': f'FEAT dependencies missing: {", ".join(self.missing_deps) if self.missing_deps else "Unknown error"}',
+                    'processing_stats': {
+                        'total_frames': len(frames),
+                        'successful_frames': 0,
+                        'no_face_frames': 0,
+                        'video_type': 'feat_unavailable'
+                    }
+                }
             }
         # ... normal FEAT detection
 ```
@@ -1376,13 +1583,13 @@ The FEAT implementation advantages:
 - **Action Unit detection** for emotion validation
 - **Hybrid approach** combining AUs and direct emotion classification
 - **Production-ready** with batch processing and GPU optimization
-- **Smart sampling** at 3 FPS for optimal speed/accuracy balance
+- **Adaptive sampling** (0.5-2 FPS based on video duration)
 - **Compatible** with existing pipeline structure
 - **Testable** with included validation scripts
 
-Processing time for 60-second video:
-- **FEAT emotion detection**: ~27 seconds (including overhead)
-- **Visual effects detection**: ~3 seconds
-- **Total pipeline**: ~40 seconds with all services
+Processing time (consistent across video lengths):
+- **FEAT emotion detection**: 15-30 seconds (adaptive sampling)
+- **Visual effects detection**: 2-3 seconds
+- **Total pipeline**: 25-40 seconds with all services
 
 Total implementation time: **3-4 days** including testing and integration.

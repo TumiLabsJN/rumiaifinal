@@ -401,8 +401,8 @@ class UnifiedMLServices:
                 hsv = cv2.cvtColor(image_array, cv2.COLOR_BGR2HSV)
                 saturation = hsv[:, :, 1]
                 
-                # Threshold for high saturation (stickers/graphics)
-                _, binary = cv2.threshold(saturation, 180, 255, cv2.THRESH_BINARY)
+                # Threshold for high saturation (stickers/graphics) - LOWERED from 180 to 120
+                _, binary = cv2.threshold(saturation, 120, 255, cv2.THRESH_BINARY)
                 
                 # Find contours
                 contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -410,12 +410,12 @@ class UnifiedMLServices:
                 stickers = []
                 for contour in contours[:5]:  # Limit to 5 per frame for performance
                     area = cv2.contourArea(contour)
-                    if 500 < area < 5000:  # Sticker size range
+                    if 200 < area < 15000:  # Sticker size range - WIDENED from 500-5000 to 200-15000
                         x, y, w, h = cv2.boundingRect(contour)
                         aspect_ratio = w / h if h > 0 else 0
                         
-                        # Classify as sticker if roughly square
-                        if 0.8 < aspect_ratio < 1.2:
+                        # Classify as sticker with relaxed shape constraints - WIDENED from 0.8-1.2 to 0.3-3.0
+                        if 0.3 < aspect_ratio < 3.0:
                             stickers.append({
                                 'bbox': [int(x), int(y), int(w), int(h)],
                                 'confidence': 0.7,

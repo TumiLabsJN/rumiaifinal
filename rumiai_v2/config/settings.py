@@ -57,6 +57,7 @@ class Settings:
         self.temporal_markers_enabled = os.getenv('RUMIAI_TEMPORAL_MARKERS', 'true').lower() == 'true'
         self.strict_mode = os.getenv('RUMIAI_STRICT_MODE', 'false').lower() == 'true'
         self.cleanup_video = os.getenv('RUMIAI_CLEANUP_VIDEO', 'false').lower() == 'true'
+        self.use_python_only_processing = os.getenv('USE_PYTHON_ONLY_PROCESSING', 'false').lower() == 'true'
         
         # ML Enhancement Feature Flags
         self.use_ml_precompute = os.getenv('USE_ML_PRECOMPUTE', 'false').lower() == 'true'

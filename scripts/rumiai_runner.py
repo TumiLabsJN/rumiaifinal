@@ -463,56 +463,89 @@ class RumiAIRunner:
             print(f"🎬 Running {prompt_type.value} for video {analysis.video_id}")
             
             try:
-                # Get precompute function
-                compute_func = get_compute_function(compute_name)
-                if not compute_func:
-                    logger.warning(f"No compute function found for {compute_name}, falling back to legacy")
-                    # Fall back to legacy extraction
-                    context = self.ml_extractor.extract_for_prompt(analysis, prompt_type)
-                    prompt_text = self.prompt_builder.build_prompt(context)
-                else:
+                # Check if we should use Python-only processing (fail-fast mode)
+                if self.settings.use_python_only_processing:
+                    # Python-only mode: NO fallbacks, precompute must work or fail
+                    compute_func = get_compute_function(compute_name)
+                    if not compute_func:
+                        raise RuntimeError(f"Python-only mode requires precompute function for {compute_name}, but none found")
+                    
                     # Run precompute function
-                    print(f"🔧 Running precompute for {compute_name}...")
+                    print(f"🔧 Python-only: Running precompute for {compute_name}...")
                     precomputed_metrics = compute_func(analysis.to_dict())
                     
-                    # Build context for prompt
-                    context = {
-                        'video_id': analysis.video_id,
-                        'video_duration': video_duration,
-                        'precomputed_metrics': precomputed_metrics,
-                        'prompt_type': prompt_type.value
-                    }
+                    if not precomputed_metrics:
+                        raise RuntimeError(f"Python-only mode: precompute function for {compute_name} returned empty/None result")
                     
-                    # Format prompt using new manager
-                    prompt_text = self.prompt_manager.format_prompt(compute_name, context)
-                
-                # Validate prompt size
-                is_valid, size_kb = self.prompt_manager.validate_prompt_size(prompt_text)
-                print(f"📏 Payload size: {size_kb}KB")
-                
-                if not is_valid:
-                    raise ValueError(f"Prompt too large: {size_kb}KB")
-                
-                # Calculate dynamic timeout based on size
-                base_timeout = self.settings.prompt_timeouts.get(prompt_type.value, 60)
-                size_factor = max(1, size_kb / 50)  # Scale timeout for larger prompts
-                dynamic_timeout = int(base_timeout * size_factor)
-                
-                # Use Sonnet if feature flag is enabled
-                model = "claude-3-5-sonnet-20241022" if self.settings.use_claude_sonnet else self.settings.claude_model
-                
-                # Send to Claude
-                self.metrics.start_timer(f'prompt_{prompt_type.value}')
-                result = self.claude.send_prompt(
-                    prompt_text,
-                    {
-                        'video_id': analysis.video_id,
-                        'prompt_type': prompt_type.value,
-                        'model': model
-                    },
-                    timeout=dynamic_timeout
-                )
-                prompt_time = self.metrics.stop_timer(f'prompt_{prompt_type.value}')
+                    # Skip Claude entirely - use Python-computed metrics
+                    logger.info(f"Python-only mode: Using precomputed metrics for {prompt_type.value}")
+                    print(f"⚡ Python-only mode: Bypassing Claude for {prompt_type.value}")
+                    
+                    # Import PromptResult if needed
+                    from rumiai_v2.core.models import PromptResult
+                    
+                    # Create result object with precomputed data
+                    result = PromptResult(
+                        prompt_type=prompt_type,
+                        success=True,
+                        response=json.dumps(precomputed_metrics),  # JSON string for compatibility
+                        processing_time=0.001,  # Near-instant
+                        tokens_used=0,          # No tokens!
+                        estimated_cost=0.0      # Free!
+                    )
+                    prompt_time = 0.001
+                else:
+                    # Legacy mode: Try precompute first, fallback to legacy extraction
+                    compute_func = get_compute_function(compute_name)
+                    if not compute_func:
+                        logger.warning(f"No compute function found for {compute_name}, falling back to legacy")
+                        # Fall back to legacy extraction
+                        context = self.ml_extractor.extract_for_prompt(analysis, prompt_type)
+                        prompt_text = self.prompt_builder.build_prompt(context)
+                        precomputed_metrics = None
+                    else:
+                        # Run precompute function
+                        print(f"🔧 Running precompute for {compute_name}...")
+                        precomputed_metrics = compute_func(analysis.to_dict())
+                        
+                        # Build context for prompt
+                        context = {
+                            'video_id': analysis.video_id,
+                            'video_duration': video_duration,
+                            'precomputed_metrics': precomputed_metrics,
+                            'prompt_type': prompt_type.value
+                        }
+                        
+                        # Format prompt using new manager
+                        prompt_text = self.prompt_manager.format_prompt(compute_name, context)
+                    
+                    # Validate prompt size (only in legacy mode)
+                    is_valid, size_kb = self.prompt_manager.validate_prompt_size(prompt_text)
+                    print(f"📏 Payload size: {size_kb}KB")
+                    
+                    if not is_valid:
+                        raise ValueError(f"Prompt too large: {size_kb}KB")
+                    
+                    # Calculate dynamic timeout based on size
+                    base_timeout = self.settings.prompt_timeouts.get(prompt_type.value, 60)
+                    size_factor = max(1, size_kb / 50)  # Scale timeout for larger prompts
+                    dynamic_timeout = int(base_timeout * size_factor)
+                    
+                    # Use Sonnet if feature flag is enabled
+                    model = "claude-3-5-sonnet-20241022" if self.settings.use_claude_sonnet else self.settings.claude_model
+                    
+                    # Send to Claude
+                    self.metrics.start_timer(f'prompt_{prompt_type.value}')
+                    result = self.claude.send_prompt(
+                        prompt_text,
+                        {
+                            'video_id': analysis.video_id,
+                            'prompt_type': prompt_type.value,
+                            'model': model
+                        },
+                        timeout=dynamic_timeout
+                    )
+                    prompt_time = self.metrics.stop_timer(f'prompt_{prompt_type.value}')
                 
                 # Handle 6-block output format validation
                 if result.success and self.settings.output_format_version == 'v2':

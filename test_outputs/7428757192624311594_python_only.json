@@ -1,0 +1,462 @@
+{
+  "densityCoreMetrics": {
+    "avgDensity": 0.0,
+    "maxDensity": 0.0,
+    "minDensity": 0.0,
+    "stdDeviation": 0.0,
+    "totalElements": 0,
+    "elementsPerSecond": 0.0,
+    "elementCounts": {
+      "text": 0,
+      "sticker": 0,
+      "effect": 0,
+      "transition": 0,
+      "object": 0,
+      "gesture": 0,
+      "expression": 0
+    },
+    "sceneChangeCount": 0,
+    "timelineCoverage": 0.0,
+    "confidence": 0.95
+  },
+  "densityDynamics": {
+    "densityCurve": [
+      {
+        "second": 0,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 1,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 2,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 3,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 4,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 5,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 6,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 7,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 8,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 9,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 10,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 11,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 12,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 13,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 14,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 15,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 16,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 17,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 18,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 19,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 20,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 21,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 22,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 23,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 24,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 25,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 26,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 27,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 28,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 29,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 30,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 31,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 32,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 33,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 34,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 35,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 36,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 37,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 38,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 39,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 40,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 41,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 42,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 43,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 44,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 45,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 46,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 47,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 48,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 49,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 50,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 51,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 52,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 53,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 54,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 55,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 56,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 57,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 58,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 59,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 60,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 61,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 62,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 63,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 64,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 65,
+        "density": 0,
+        "primaryElement": "none"
+      }
+    ],
+    "volatility": 0.0,
+    "accelerationPattern": "even",
+    "densityProgression": "stable",
+    "emptySeconds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49
+    ],
+    "confidence": 0.95
+  },
+  "densityInteractions": {
+    "multiModalPeaks": [],
+    "elementCooccurrence": {},
+    "dominantCombination": "none",
+    "coordinationScore": 0.0,
+    "confidence": 0.9
+  },
+  "densityKeyEvents": {
+    "peakMoments": [],
+    "deadZones": [
+      {
+        "start": 0,
+        "end": 66,
+        "duration": 66
+      }
+    ],
+    "densityShifts": [],
+    "confidence": 0.95
+  },
+  "densityPatterns": {
+    "structuralFlags": {
+      "strongOpeningHook": false,
+      "crescendoPattern": false,
+      "frontLoaded": false,
+      "consistentPacing": false,
+      "finalCallToAction": false,
+      "rhythmicPattern": false
+    },
+    "densityClassification": "sparse",
+    "pacingStyle": "even",
+    "cognitiveLoadCategory": "minimal",
+    "mlTags": [
+      "density_computed",
+      "avg_0.0"
+    ],
+    "confidence": 0.85
+  },
+  "densityQuality": {
+    "dataCompleteness": 0.95,
+    "detectionReliability": {
+      "textOverlay": 0.95,
+      "sticker": 0.92,
+      "effect": 0.0,
+      "transition": 0.85,
+      "sceneChange": 0.85,
+      "object": 0.88,
+      "gesture": 0.87
+    },
+    "overallConfidence": 0.9
+  }
+}

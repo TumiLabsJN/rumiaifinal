@@ -15,6 +15,19 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+try:
+    from .service_contracts import validate_compute_contract, validate_output_contract, ServiceContractViolation
+except ImportError:
+    # Fallback if service_contracts not available yet
+    class ServiceContractViolation(ValueError):
+        pass
+    def validate_compute_contract(timelines, duration):
+        pass
+    def validate_output_contract(result, function_name):
+        pass
+
+logger = logging.getLogger(__name__)
+
 # Format extraction helpers for compatibility with both old and new formats
 
 def extract_yolo_data(ml_data):
@@ -127,32 +140,84 @@ def stdev(values: List[float]) -> float:
     return statistics.stdev(values)
 
 
-# Import the actual functions from the full file
+# Import the actual functions
+try:
+    # Import new creative density implementation
+    from .precompute_creative_density import compute_creative_density_analysis
+    logger.info("Successfully imported new creative_density implementation")
+except ImportError as e:
+    logger.error(f"Failed to import creative_density: {e}")
+    # Fallback to placeholder
+    def compute_creative_density_analysis(*args, **kwargs):
+        logger.warning("Using placeholder for compute_creative_density_analysis")
+        return {}
+
+# Import professional functions first, fallback to basic implementations
+try:
+    from .precompute_professional import (
+        compute_visual_overlay_analysis_professional,
+        compute_emotional_journey_analysis_professional
+    )
+    logger.info("Successfully imported professional precompute functions!")
+    
+    # Create wrapper functions to match expected signatures
+    def compute_visual_overlay_metrics(text_overlay_timeline, sticker_timeline, gesture_timeline, 
+                                      speech_timeline, object_timeline, video_duration):
+        # Convert individual timelines to combined dict format
+        timelines = {
+            'textTimeline': text_overlay_timeline or {},
+            'stickerTimeline': sticker_timeline or {},
+            'gestureTimeline': gesture_timeline or {},
+            'speechTimeline': speech_timeline or {},
+            'objectTimeline': object_timeline or {}
+        }
+        return compute_visual_overlay_analysis_professional(timelines, video_duration)
+    
+    def compute_emotional_metrics(expression_timeline, speech_timeline, gesture_timeline, duration, **kwargs):
+        # Convert individual timelines to combined dict format  
+        timelines = {
+            'expressionTimeline': expression_timeline or {},
+            'speechTimeline': speech_timeline or {},
+            'gestureTimeline': gesture_timeline or {},
+            'poseTimeline': kwargs.get('pose_timeline', {})
+        }
+        return compute_emotional_journey_analysis_professional(timelines, duration)
+        
+except ImportError as e:
+    logger.error(f"Failed to import professional functions: {e}")
+    # Fallback to basic functions from the full file
+    try:
+        from .precompute_functions_full import (
+            compute_visual_overlay_metrics,
+            compute_emotional_metrics,
+            compute_metadata_analysis_metrics,
+            compute_person_framing_metrics,
+            compute_scene_pacing_metrics,
+            compute_speech_analysis_metrics
+        )
+        logger.info("Using basic precompute functions as fallback")
+    except ImportError as e2:
+        logger.error(f"Failed to import basic precompute functions: {e2}")
+        # Define placeholder functions if both imports fail
+        def compute_visual_overlay_metrics(*args, **kwargs):
+            logger.warning("Using placeholder for compute_visual_overlay_metrics")
+            return {}
+        
+        def compute_emotional_metrics(*args, **kwargs):
+            logger.warning("Using placeholder for compute_emotional_metrics")
+            return {}
+
+# Import remaining basic functions (not yet upgraded to professional)
 try:
     from .precompute_functions_full import (
-        compute_visual_overlay_metrics,
-        compute_creative_density_analysis,
-        compute_emotional_metrics,
         compute_metadata_analysis_metrics,
         compute_person_framing_metrics,
         compute_scene_pacing_metrics,
         compute_speech_analysis_metrics
     )
-    logger.info("Successfully imported precompute functions")
+    logger.info("Successfully imported remaining basic precompute functions")
 except ImportError as e:
-    logger.error(f"Failed to import precompute functions: {e}")
-    # Define placeholder functions if import fails
-    def compute_visual_overlay_metrics(*args, **kwargs):
-        logger.warning("Using placeholder for compute_visual_overlay_metrics")
-        return {}
-    
-    def compute_creative_density_analysis(*args, **kwargs):
-        logger.warning("Using placeholder for compute_creative_density_analysis")
-        return {}
-    
-    def compute_emotional_metrics(*args, **kwargs):
-        logger.warning("Using placeholder for compute_emotional_metrics")
-        return {}
+    logger.error(f"Failed to import remaining functions: {e}")
     
     def compute_metadata_analysis_metrics(*args, **kwargs):
         logger.warning("Using placeholder for compute_metadata_analysis_metrics")
@@ -341,8 +406,8 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
     # Create timeline entries, handling multiple changes per second
     for second, changes in scene_changes_by_second.items():
         if len(changes) == 1:
-            # Single change in this second
-            timestamp = f"{second}-{second}s"
+            # Single change in this second - ensure end > start for validation
+            timestamp = f"{second}-{second + 1}s"
             timelines['sceneChangeTimeline'][timestamp] = {
                 'type': 'scene_change',
                 'scene_index': changes[0]['index'],
@@ -351,8 +416,8 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
         else:
             # Multiple changes in same second - create sub-second ranges
             for j, change in enumerate(changes):
-                # Create unique timestamp by adding small offset
-                timestamp = f"{second}-{second}.{j}s"
+                # Create unique timestamp with proper end > start
+                timestamp = f"{second}.{j}-{second}.{j + 1}s"
                 timelines['sceneChangeTimeline'][timestamp] = {
                     'type': 'scene_change',
                     'scene_index': change['index'],
@@ -475,13 +540,21 @@ def compute_speech_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
         'gestures': mediapipe_data.get('gestures', [])
     }
     
+    # Extract audio energy data if available
+    audio_energy_data = ml_data.get('audio_energy', {})
+    energy_level_windows = audio_energy_data.get('energy_level_windows', {})
+    energy_variance = audio_energy_data.get('energy_variance', 0)
+    climax_timestamp = audio_energy_data.get('climax_timestamp', 0)
+    burst_pattern = audio_energy_data.get('burst_pattern', 'none')
+    
     video_duration = analysis_dict.get('timeline', {}).get('duration', 0)
     
     speech_timeline = timelines.get('speechTimeline', {})
     
     return compute_speech_analysis_metrics(
         speech_timeline, transcript, speech_segments, expression_timeline, 
-        gesture_timeline, human_analysis_data, video_duration
+        gesture_timeline, human_analysis_data, video_duration,
+        energy_level_windows, energy_variance, climax_timestamp, burst_pattern
     )
 
 

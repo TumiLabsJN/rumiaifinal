@@ -1,0 +1,195 @@
+{
+  "densityCoreMetrics": {
+    "avgDensity": 1.5,
+    "maxDensity": 4.0,
+    "minDensity": 0.0,
+    "stdDeviation": 1.4317821063276353,
+    "totalElements": 15,
+    "elementsPerSecond": 1.5,
+    "elementCounts": {
+      "text": 3,
+      "sticker": 0,
+      "effect": 0,
+      "transition": 2,
+      "object": 6,
+      "gesture": 2,
+      "expression": 2
+    },
+    "sceneChangeCount": 2,
+    "timelineCoverage": 0.7,
+    "confidence": 0.95
+  },
+  "densityDynamics": {
+    "densityCurve": [
+      {
+        "second": 0,
+        "density": 4,
+        "primaryElement": "object"
+      },
+      {
+        "second": 1,
+        "density": 4,
+        "primaryElement": "object"
+      },
+      {
+        "second": 2,
+        "density": 2,
+        "primaryElement": "text"
+      },
+      {
+        "second": 3,
+        "density": 2,
+        "primaryElement": "object"
+      },
+      {
+        "second": 4,
+        "density": 1,
+        "primaryElement": "gesture"
+      },
+      {
+        "second": 5,
+        "density": 1,
+        "primaryElement": "text"
+      },
+      {
+        "second": 6,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 7,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 8,
+        "density": 1,
+        "primaryElement": "scene_change"
+      },
+      {
+        "second": 9,
+        "density": 0,
+        "primaryElement": "none"
+      }
+    ],
+    "volatility": 0.9538854805647138,
+    "accelerationPattern": "front_loaded",
+    "densityProgression": "stable",
+    "emptySeconds": [
+      6,
+      7,
+      9
+    ],
+    "confidence": 0.95
+  },
+  "densityInteractions": {
+    "multiModalPeaks": [
+      {
+        "timestamp": "0-1s",
+        "elements": [
+          "text",
+          "object",
+          "expression"
+        ],
+        "syncType": "complementary"
+      }
+    ],
+    "elementCooccurrence": {
+      "object_text": 1,
+      "expression_text": 2,
+      "expression_object": 1,
+      "gesture_object": 1,
+      "object_transition": 1
+    },
+    "dominantCombination": "expression_text",
+    "coordinationScore": 0.1,
+    "confidence": 0.9
+  },
+  "densityKeyEvents": {
+    "peakMoments": [
+      {
+        "timestamp": "0-1s",
+        "totalElements": 4,
+        "surpriseScore": 1.7448570783786181,
+        "elementBreakdown": {
+          "text": 1,
+          "sticker": 0,
+          "effect": 0,
+          "transition": 0,
+          "scene_change": 0
+        }
+      },
+      {
+        "timestamp": "1-2s",
+        "totalElements": 4,
+        "surpriseScore": 1.7448570783786181,
+        "elementBreakdown": {
+          "text": 0,
+          "sticker": 0,
+          "effect": 0,
+          "transition": 0,
+          "scene_change": 0
+        }
+      }
+    ],
+    "deadZones": [
+      {
+        "start": 6,
+        "end": 8,
+        "duration": 2
+      }
+    ],
+    "densityShifts": [
+      {
+        "timestamp": 6,
+        "from": "low",
+        "to": "none",
+        "magnitude": 0.9990009990009991
+      },
+      {
+        "timestamp": 8,
+        "from": "none",
+        "to": "low",
+        "magnitude": 0.9990009990009991
+      },
+      {
+        "timestamp": 9,
+        "from": "low",
+        "to": "none",
+        "magnitude": 0.9990009990009991
+      }
+    ],
+    "confidence": 0.95
+  },
+  "densityPatterns": {
+    "structuralFlags": {
+      "strongOpeningHook": true,
+      "crescendoPattern": false,
+      "frontLoaded": true,
+      "consistentPacing": false,
+      "finalCallToAction": false,
+      "rhythmicPattern": false
+    },
+    "densityClassification": "moderate",
+    "pacingStyle": "front_loaded",
+    "cognitiveLoadCategory": "minimal",
+    "mlTags": [
+      "density_computed",
+      "avg_1.5"
+    ],
+    "confidence": 0.85
+  },
+  "densityQuality": {
+    "dataCompleteness": 0.95,
+    "detectionReliability": {
+      "textOverlay": 0.95,
+      "sticker": 0.92,
+      "effect": 0.0,
+      "transition": 0.85,
+      "sceneChange": 0.85,
+      "object": 0.88,
+      "gesture": 0.87
+    },
+    "overallConfidence": 0.9
+  }
+}

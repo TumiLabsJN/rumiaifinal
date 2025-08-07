@@ -1,0 +1,237 @@
+{
+  "first_5_seconds": {
+    "density_progression": [
+      10,
+      10,
+      6,
+      6,
+      8
+    ],
+    "text_moments": [
+      {
+        "timestamp": "0s",
+        "text": "Giceng Five",
+        "duration": 1.1,
+        "position": "right"
+      },
+      {
+        "timestamp": "0s",
+        "text": "Giseng Five",
+        "duration": 1.1,
+        "position": "right"
+      },
+      {
+        "timestamp": "0s",
+        "text": "Treasuetea",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "0s",
+        "text": "Treasueted",
+        "duration": 0.9999999999999999,
+        "position": "right"
+      },
+      {
+        "timestamp": "1s",
+        "text": "Ginseng Five",
+        "duration": 1.2,
+        "position": "right"
+      },
+      {
+        "timestamp": "1s",
+        "text": "Treasureted",
+        "duration": 1.1000000000000003,
+        "position": "right"
+      },
+      {
+        "timestamp": "1s",
+        "text": "(C)",
+        "duration": 1.0000000000000002,
+        "position": "right"
+      },
+      {
+        "timestamp": "1s",
+        "text": "Treasure tea",
+        "duration": 1.2000000000000004,
+        "position": "right"
+      },
+      {
+        "timestamp": "2s",
+        "text": "Treasure ted",
+        "duration": 1.2000000000000002,
+        "position": "right"
+      },
+      {
+        "timestamp": "2s",
+        "text": "Treasire ted",
+        "duration": 1.2000000000000002,
+        "position": "right"
+      }
+    ],
+    "emotion_sequence": [
+      "neutral",
+      "neutral",
+      "neutral",
+      "neutral",
+      "neutral"
+    ],
+    "gesture_moments": [],
+    "object_appearances": [],
+    "speech_segments": [
+      {
+        "start": "0s",
+        "end": "4s",
+        "text": "Want to get bigger? Take two a day. Want to get ev..."
+      },
+      {
+        "start": "4s",
+        "end": "6s",
+        "text": "Don't go overboard for shooting. I recognize you."
+      }
+    ],
+    "scene_changes": [
+      0.0
+    ]
+  },
+  "cta_window": {
+    "time_range": "25-30s",
+    "cta_appearances": [
+      {
+        "timestamp": "27s",
+        "keyword": "click",
+        "context": "clickonthe",
+        "type": "text"
+      },
+      {
+        "timestamp": "27s",
+        "keyword": "click",
+        "context": "click ontke",
+        "type": "text"
+      },
+      {
+        "timestamp": "29s",
+        "keyword": "click",
+        "context": "clickontke",
+        "type": "text"
+      }
+    ],
+    "gesture_sync": {
+      "gesture_count": 0,
+      "speech_count": 2,
+      "sync_ratio": 0.0
+    },
+    "object_focus": [],
+    "speech_emphasis": {
+      "speech_duration": 6.400000000000002,
+      "word_count": 26,
+      "words_per_second": 4.062499999999998,
+      "segment_count": 2
+    },
+    "text_overlays": [
+      {
+        "timestamp": "24s",
+        "text": "Ging",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "26s",
+        "text": "cabelows",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "27s",
+        "text": "Clickonthe",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "27s",
+        "text": "cabelow",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "27s",
+        "text": "gellow =",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "27s",
+        "text": "Nature $ Five",
+        "duration": 1.3000000000000007,
+        "position": "right"
+      },
+      {
+        "timestamp": "27s",
+        "text": "Brewed t0",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "27s",
+        "text": "Net",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "27s",
+        "text": "Content:] 20g",
+        "duration": 1.3000000000000007,
+        "position": "right"
+      },
+      {
+        "timestamp": "27s",
+        "text": "ca below",
+        "duration": 1.0,
+        "position": "right"
+      }
+    ]
+  },
+  "peak_moments": [
+    {
+      "timestamp": 27.0,
+      "intensity": 61.5,
+      "events": [
+        "scene",
+        "speech",
+        "text: Clickonthe",
+        "text: cabelow",
+        "text: gellow ="
+      ]
+    },
+    {
+      "timestamp": 11.0,
+      "intensity": 21.5,
+      "events": [
+        "scene",
+        "speech",
+        "text: Ginseng Fvc"
+      ]
+    }
+  ],
+  "engagement_curve": [
+    1.0,
+    0.7,
+    1.0,
+    1.0,
+    0.6,
+    1.0,
+    0.0
+  ],
+  "metadata": {
+    "video_id": "7515849242703973662",
+    "duration": 30.0,
+    "generated_at": "2025-08-07T21:00:28.038066",
+    "ml_data_available": {
+      "yolo": true,
+      "whisper": true,
+      "ocr": true,
+      "mediapipe": true,
+      "scene": true
+    }
+  }
+}

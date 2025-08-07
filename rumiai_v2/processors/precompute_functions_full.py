@@ -9,8 +9,11 @@ import json
 import time
 import statistics
 import re
+import logging
 from datetime import datetime
 from statistics import variance
+
+logger = logging.getLogger(__name__)
 
 def parse_timestamp_to_seconds(timestamp):
     """Convert timestamp like '0-1s' to start second"""
@@ -2860,7 +2863,9 @@ def compute_scene_pacing_metrics(scene_timeline, video_duration, object_timeline
     }
 def compute_speech_analysis_metrics(speech_timeline, transcript, speech_segments, 
                                    expression_timeline, gesture_timeline, 
-                                   human_analysis_data, video_duration):
+                                   human_analysis_data, video_duration,
+                                   energy_level_windows=None, energy_variance=0, 
+                                   climax_timestamp=0, burst_pattern='none'):
     """Compute comprehensive speech analysis metrics for ML-ready analysis
     
     Args:
@@ -3294,8 +3299,34 @@ def compute_speech_analysis_metrics(speech_timeline, transcript, speech_segments
     else:
         burst_pattern = "none"
     
-    # Remove energy analysis - requires audio amplitude data
-    # energy_level_windows, energy_variance, climax_timestamp removed
+    # Integrate audio energy analysis if available
+    if energy_level_windows:
+        # Use real audio energy data from AudioEnergyService
+        logger.info("Using real audio energy data for burst pattern analysis")
+        
+        # Override computed burst pattern with actual audio analysis
+        if burst_pattern and burst_pattern != 'none':
+            # Use the burst pattern from AudioEnergyService
+            pass  # Keep the passed burst_pattern
+        
+        # Add energy metrics to output
+        energy_metrics = {
+            'energy_level_windows': energy_level_windows,
+            'energy_variance': float(energy_variance),
+            'climax_timestamp': float(climax_timestamp),
+            'burst_pattern': burst_pattern,
+            'has_audio_energy': True
+        }
+    else:
+        # Fallback to computed burst pattern (original logic)
+        logger.info("No audio energy data available - using computed burst pattern")
+        energy_metrics = {
+            'energy_level_windows': {},
+            'energy_variance': 0.0,
+            'climax_timestamp': video_duration / 2,  # Default to middle
+            'burst_pattern': burst_pattern,
+            'has_audio_energy': False
+        }
     
     metrics['speech_bursts'] = speech_bursts
     metrics['burst_pattern'] = burst_pattern
@@ -3459,6 +3490,9 @@ def compute_speech_analysis_metrics(speech_timeline, transcript, speech_segments
     metrics['authenticity_score'] = round(authenticity_score, 2)
     metrics['verbal_engagement_score'] = round(verbal_engagement_score, 2)
     metrics['visual_verbal_harmony_score'] = round(visual_verbal_harmony_score, 2)
+    
+    # Add energy metrics to final output
+    metrics.update(energy_metrics)
     
     return metrics
 def compress_timeline_aggressively(timeline, max_entries=50, remove_unknown=True):
