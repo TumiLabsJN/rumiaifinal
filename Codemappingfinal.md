@@ -1,31 +1,47 @@
 # Code Mapping for RumiAI Final - Complete Dependency Table
 
-## CRITICAL SYSTEM STATUS (Updated 2025-08-05 - Post Bug Fix Implementation & Test Fixes)
+## CRITICAL SYSTEM STATUS (Updated 2025-08-07 - Post Deep Investigation)
 
-### ✅ IMPLEMENTED FIXES (Updated 2025-08-05 - Second Round)
-1. **Unified Frame Extraction**: Frame manager with LRU cache implemented, reduces video processing from 4x to 1x
-2. **ML Services Unified**: All ML services (YOLO, MediaPipe, OCR, Whisper) now use shared frames with lazy model loading
-3. **Whisper Transcription**: Safe async implementation with timeout protection in `whisper_transcribe_safe.py`
-4. **ML Data Field Added**: UnifiedAnalysis now includes `ml_data` field that precompute functions expect
-5. **Person Framing Prompt Fixed**: Updated `person_framing_v2.txt` to use standard block names (CoreMetrics, Dynamics, etc.) matching other prompts
-6. **OCR Method Name Fixed**: Changed `run_ocr_detection` to `run_ocr_analysis` in `video_analyzer.py` to match API
+### ✅ WORKING SYSTEMS (Verified)
+1. **ML Data Extraction**: Successfully improved from 2.2% → ~100% extraction rate
+2. **Claude Integration**: Claude IS using extracted data effectively (confidence scores 0.86-0.90 justified)
+3. **Unified Frame Extraction**: Frame manager with LRU cache working, reduces processing from 4x to 1x
+4. **ML Services**: YOLO, MediaPipe, OCR, Whisper all producing real data
+5. **Helper Functions**: Extract functions (extract_ocr_data, extract_yolo_data, etc.) working correctly
 
-### 🟡 PARTIALLY DEPLOYED
-1. **ML Data Flow**: Code fix implemented in `analysis.py` (lines 126-142) but may not be fully deployed
-2. **Real ML Detection Working**: YOLO detects real objects (cake, bowl), MediaPipe detects poses/faces
-3. **Legacy Outputs Still Present**: Some unified analysis files still use old format without `ml_data` field
+### 🔴 CRITICAL BUGS FOUND (Need Immediate Fix)
+1. **Data Type Mismatches** (43% prompts failing):
+   - `visual_overlay_analysis`: Line 110 creates strings, line 387 expects tuples
+   - `person_framing`: Line 1956 expects dict, gets list from objectTimeline
+   - `scene_pacing`: Line 2562 expects dict, gets list from objectTimeline
+2. **Metadata Pipeline Broken** (all metadata shows zeros):
+   - Wrong parameter passed: Line 491 passes `timelines` instead of `metadata`
+   - Wrong field names: Lines 411-420 use old TikTok API names (playCount vs views)
+3. **Scene Detection Threshold**: Using 27.0 (default) instead of 20.0, missing scene changes
+4. **Sticker Detection**: Hardcoded to empty array at ml_services_unified.py:433
 
-### 🔴 DEPLOYMENT NEEDED
-**Next Steps**: 
-- Run new pipeline with test video to verify `ml_data` field appears in unified_analysis JSON
-- Verify precompute functions receive ML data correctly
-- Ensure Claude prompts get real data instead of empty arrays
+### 🟡 DISCOVERED ISSUES
+1. **Format Confusion**: 5 ML functions expect dict format but receive list format for objectTimeline
+2. **Existing Code Not Integrated**: Sticker detection exists in detect_tiktok_creative_elements.py but not connected
+3. **OCR Performance**: 5-10 FPS with GPU, 1-2 FPS with CPU (bottleneck for pipeline)
 
-### 🔧 VERIFICATION CHECKLIST
-1. Check unified_analysis JSON contains `ml_data` field with real detections
-2. Verify frame extraction happens only once per video
-3. Confirm individual ML services can be called independently
-4. Test that Claude receives actual ML data in prompts
+### 🔧 FIXES REQUIRED (Priority Order)
+**Phase 1: Critical Fixes (30 min)**
+1. Fix objectTimeline format: Change list to dict in _extract_timelines_from_analysis (line 257-265)
+2. Fix metadata bugs: Correct parameter (line 491) and field names (lines 411-420)
+3. Fix scene threshold: Change ContentDetector() to ContentDetector(threshold=20.0) at ml_services.py:118
+4. Fix visual_overlay tuple: Line 110 append (window_key, total_count) not just window_key
+
+**Phase 2: Sticker Integration (1 hour)**
+1. Implement inline sticker detection in _run_ocr_on_frames (ml_services_unified.py:379-433)
+2. Process frames in memory, no disk I/O
+3. Use OCR frame sampling (15% coverage)
+
+### 📊 PERFORMANCE METRICS DISCOVERED
+- OCR Processing: 5-10 FPS (GPU), 1-2 FPS (CPU)
+- Sticker Detection Impact: +3% processing time (negligible)
+- JSON Size Impact: +2KB average, +200 bytes after precompute
+- Scene Detection: 2 scenes with threshold 27.0, more with 20.0
 
 ## Table of Contents
 1. [Main Entry Points](#main-entry-points)

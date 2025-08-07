@@ -91,18 +91,7 @@ def extract_ocr_data(ml_data):
     
     return {'textAnnotations': [], 'stickers': []}
 
-# Update compute functions to use these extractors
-# Example for creative density:
-def compute_creative_density_wrapper(analysis_data):
-    """Wrapper with format compatibility"""
-    # Extract data using helpers
-    yolo_objects = extract_yolo_data(analysis_data)
-    mediapipe_data = extract_mediapipe_data(analysis_data)
-    ocr_data = extract_ocr_data(analysis_data)
-    whisper_data = extract_whisper_data(analysis_data)
-    
-    # Continue with existing logic...
-    # (rest of the function remains the same)
+# Helper functions above handle format extraction defensively
 
 
 def parse_timestamp_to_seconds(timestamp: str) -> Optional[int]:
@@ -184,9 +173,13 @@ except ImportError as e:
 
 # Helper functions to extract data from unified analysis
 def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract timeline data from unified analysis"""
+    """Extract timeline data from unified analysis with validation"""
     timeline_data = analysis_dict.get('timeline', {})
     ml_data = analysis_dict.get('ml_data', {})
+    
+    # Track extraction metrics
+    video_id = analysis_dict.get('video_id', 'unknown')
+    logger.info(f"Starting timeline extraction for video {video_id}")
     
     # Build timelines dictionary expected by compute functions
     timelines = {
@@ -202,46 +195,74 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
         'cameraDistanceTimeline': {}
     }
     
-    # Extract text overlays from OCR data
-    ocr_data = ml_data.get('ocr', {}).get('data', {})
-    if 'text_overlays' in ocr_data:
-        for overlay in ocr_data['text_overlays']:
-            timestamp = overlay.get('timestamp', '0-1s')
-            timelines['textOverlayTimeline'][timestamp] = {
-                'text': overlay.get('text', ''),
-                'position': overlay.get('position', 'center'),
-                'size': overlay.get('size', 'medium')
-            }
+    # Use helper for robust OCR extraction (handles multiple formats)
+    ocr_data = extract_ocr_data(ml_data)
     
-    # Extract stickers
-    if 'stickers' in ocr_data:
-        for sticker in ocr_data['stickers']:
-            timestamp = sticker.get('timestamp', '0-1s')
-            timelines['stickerTimeline'][timestamp] = sticker
+    # Transform text annotations to timeline format
+    for annotation in ocr_data.get('textAnnotations', []):
+        timestamp = annotation.get('timestamp', 0)
+        start = int(timestamp)
+        end = start + 1
+        timestamp_key = f"{start}-{end}s"
+        
+        # Calculate position from bbox
+        bbox = annotation.get('bbox', [0, 0, 0, 0])
+        y_pos = bbox[1] if len(bbox) > 1 else 0
+        
+        if y_pos > 400:  # Bottom third (subtitles)
+            position = 'bottom'
+        elif y_pos < 200:  # Top third
+            position = 'top'
+        else:
+            position = 'center'
+        
+        timelines['textOverlayTimeline'][timestamp_key] = {
+            'text': annotation.get('text', ''),
+            'position': position,
+            'size': 'medium',
+            'confidence': annotation.get('confidence', 0.9)
+        }
     
-    # Extract speech from whisper data
-    whisper_data = ml_data.get('whisper', {}).get('data', {})
-    if 'segments' in whisper_data:
-        for segment in whisper_data['segments']:
-            start = int(segment.get('start', 0))
-            end = int(segment.get('end', start + 1))
-            timestamp = f"{start}-{end}s"
-            timelines['speechTimeline'][timestamp] = {
-                'text': segment.get('text', ''),
-                'confidence': segment.get('confidence', 0.9)
-            }
+    # Handle stickers
+    for sticker in ocr_data.get('stickers', []):
+        timestamp = sticker.get('timestamp', 0)
+        timestamp_key = f"{int(timestamp)}-{int(timestamp)+1}s"
+        timelines['stickerTimeline'][timestamp_key] = sticker
     
-    # Extract objects from YOLO data
-    yolo_data = ml_data.get('yolo', {}).get('data', {})
-    if 'detections' in yolo_data:
-        for detection in yolo_data['detections']:
-            timestamp = detection.get('timestamp', '0-1s')
-            if timestamp not in timelines['objectTimeline']:
-                timelines['objectTimeline'][timestamp] = []
-            timelines['objectTimeline'][timestamp].append({
-                'class': detection.get('class', 'unknown'),
-                'confidence': detection.get('confidence', 0.5)
-            })
+    # Use helper for robust Whisper extraction
+    whisper_data = extract_whisper_data(ml_data)
+    
+    # Transform segments to timeline format
+    for segment in whisper_data.get('segments', []):
+        start = int(segment.get('start', 0))
+        end = int(segment.get('end', start + 1))
+        timestamp = f"{start}-{end}s"
+        timelines['speechTimeline'][timestamp] = {
+            'text': segment.get('text', ''),
+            'confidence': segment.get('confidence', 0.9),
+            'start_time': segment.get('start', 0),
+            'end_time': segment.get('end', 0)
+        }
+    
+    # Use helper for robust YOLO extraction
+    yolo_objects = extract_yolo_data(ml_data)
+    
+    # Transform objects to timeline format
+    for obj in yolo_objects:
+        timestamp = obj.get('timestamp', 0)
+        start = int(timestamp)
+        end = start + 1
+        timestamp_key = f"{start}-{end}s"
+        
+        if timestamp_key not in timelines['objectTimeline']:
+            timelines['objectTimeline'][timestamp_key] = []
+        
+        timelines['objectTimeline'][timestamp_key].append({
+            'class': obj.get('className', 'unknown'),  # Note: className not class
+            'confidence': obj.get('confidence', 0.5),
+            'trackId': obj.get('trackId', ''),
+            'bbox': obj.get('bbox', [])
+        })
     
     # Extract scene changes from timeline entries
     timeline_entries = timeline_data.get('entries', [])
@@ -324,22 +345,60 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
                     'multiple_in_second': True
                 }
     
-    # Extract MediaPipe data
-    mediapipe_data = ml_data.get('mediapipe', {}).get('data', {})
-    if 'poses' in mediapipe_data:
-        for pose in mediapipe_data['poses']:
-            timestamp = pose.get('timestamp', '0-1s')
-            timelines['personTimeline'][timestamp] = pose
+    # Use helper for robust MediaPipe extraction
+    mediapipe_data = extract_mediapipe_data(ml_data)
     
-    if 'gestures' in mediapipe_data:
-        for gesture in mediapipe_data['gestures']:
-            timestamp = gesture.get('timestamp', '0-1s')
-            timelines['gestureTimeline'][timestamp] = gesture
+    # Transform poses to timeline
+    for pose in mediapipe_data.get('poses', []):
+        timestamp = pose.get('timestamp', 0)
+        timestamp_key = f"{int(timestamp)}-{int(timestamp)+1}s"
+        timelines['personTimeline'][timestamp_key] = {
+            'detected': True,
+            'confidence': pose.get('confidence', 0.8)
+        }
     
-    if 'faces' in mediapipe_data:
-        for face in mediapipe_data['faces']:
-            timestamp = face.get('timestamp', '0-1s')
-            timelines['expressionTimeline'][timestamp] = face
+    # Transform gestures to timeline
+    for gesture in mediapipe_data.get('gestures', []):
+        timestamp = gesture.get('timestamp', 0)
+        timestamp_key = f"{int(timestamp)}-{int(timestamp)+1}s"
+        timelines['gestureTimeline'][timestamp_key] = gesture
+    
+    # Transform faces to expression timeline
+    for face in mediapipe_data.get('faces', []):
+        timestamp = face.get('timestamp', 0)
+        timestamp_key = f"{int(timestamp)}-{int(timestamp)+1}s"
+        timelines['expressionTimeline'][timestamp_key] = {
+            'confidence': face.get('confidence', 0.7)
+        }
+    
+    # Log extraction results for validation
+    extraction_summary = {
+        'video_id': video_id,
+        'text_overlays': len(timelines['textOverlayTimeline']),
+        'stickers': len(timelines['stickerTimeline']),
+        'speech_segments': len(timelines['speechTimeline']),
+        'object_timestamps': len(timelines['objectTimeline']),
+        'scene_changes': len(timelines['sceneChangeTimeline']),
+        'poses': len(timelines['personTimeline']),
+        'gestures': len(timelines['gestureTimeline']),
+        'expressions': len(timelines['expressionTimeline'])
+    }
+    
+    # Check for potential extraction failures
+    ocr_available = len(ml_data.get('ocr', {}).get('textAnnotations', []))
+    yolo_available = len(ml_data.get('yolo', {}).get('objectAnnotations', []))
+    whisper_available = len(ml_data.get('whisper', {}).get('segments', []))
+    
+    if ocr_available > 0 and extraction_summary['text_overlays'] == 0:
+        logger.warning(f"OCR extraction may have failed: {ocr_available} annotations available but 0 extracted")
+    
+    if yolo_available > 0 and extraction_summary['object_timestamps'] == 0:
+        logger.warning(f"YOLO extraction may have failed: {yolo_available} objects available but 0 in timeline")
+    
+    if whisper_available > 0 and extraction_summary['speech_segments'] == 0:
+        logger.warning(f"Whisper extraction may have failed: {whisper_available} segments available but 0 extracted")
+    
+    logger.info(f"Timeline extraction complete: {extraction_summary}")
     
     return timelines
 
@@ -381,7 +440,10 @@ def compute_emotional_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
 
 def compute_speech_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     """Wrapper for speech analysis computation"""
-    whisper_data = analysis_dict.get('ml_data', {}).get('whisper', {}).get('data', {})
+    ml_data = analysis_dict.get('ml_data', {})
+    
+    # Use helpers for robust extraction
+    whisper_data = extract_whisper_data(ml_data)
     transcript = whisper_data.get('text', '')
     speech_segments = whisper_data.get('segments', [])
     
@@ -389,8 +451,8 @@ def compute_speech_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     expression_timeline = timelines.get('expressionTimeline', {})
     gesture_timeline = timelines.get('gestureTimeline', {})
     
-    # Extract human analysis data
-    mediapipe_data = analysis_dict.get('ml_data', {}).get('mediapipe', {}).get('data', {})
+    # Use helper for MediaPipe data extraction
+    mediapipe_data = extract_mediapipe_data(ml_data)
     human_analysis_data = {
         'faces': mediapipe_data.get('faces', []),
         'poses': mediapipe_data.get('poses', []),

@@ -1,16 +1,22 @@
 # TikTok ML Pipeline Overview
 
-## System Status (Updated 2025-08-05 - Tested & Verified)
-**✅ COMPLETE**: Unified ML implementation tested end-to-end
+## System Status (Updated 2025-08-07 - Post Deep Investigation)
+**🟡 PARTIALLY WORKING**: ML extraction successful but critical bugs found
+- ✅ ML data extraction improved (2.2% → ~100%) - VERIFIED
+- ✅ Claude uses data effectively (0.86-0.90 confidence justified) - VERIFIED
 - ✅ Unified frame extraction working (4x → 1x reduction) - VERIFIED
-- ✅ ML services detect real objects (YOLO, MediaPipe working; OCR fixed) - VERIFIED
-- ✅ MLAnalysisResult.data extracted via ml_data field - VERIFIED IN TEST
-- ✅ All 7 Claude prompts receive ML data and return valid responses - VERIFIED
-- ✅ Person framing now uses standard block names - FIXED
-- ✅ OCR method name corrected in video_analyzer.py - FIXED
+- ❌ 3/7 prompts failing due to data format mismatches - NEEDS FIX
+- ❌ Metadata pipeline broken (wrong params, field names) - NEEDS FIX
+- ❌ Scene detection threshold too high (27.0 vs 20.0) - NEEDS FIX
+- ❌ Sticker detection hardcoded to empty - NEEDS INTEGRATION
 
 ## Data Flow
-Raw Video → Unified Frame Extraction → ML Processing (Working) → MLAnalysisResult → ml_data field → Unified Analysis → Precompute Functions → Claude Analysis → ML Features
+Raw Video → Unified Frame Extraction → ML Processing (Working) → MLAnalysisResult → ml_data field → Unified Analysis → Precompute Functions (3 FAILING) → Claude Analysis → ML Features
+
+## Critical Format Issues Found
+- **objectTimeline**: Creates list format but functions expect dict with 'objects' key
+- **Metadata**: Wrong field names (playCount vs views, diggCount vs likes)
+- **Scene Detection**: Threshold 27.0 missing changes (needs 20.0)
 
 ## Unified ML Architecture (IMPLEMENTED 2025-08-05)
 
@@ -63,15 +69,15 @@ Each flow outputs 6 standardized blocks:
 
 ## Data Dependencies
 
-| Flow | Required Timelines |
-|------|-------------------|
-| Creative Density | textOverlay, sticker, gesture, object, expression, sceneChange, effect, transition |
-| Emotional Journey | expression, gesture, audioRatio + caption |
-| Person Framing | object, cameraDistance, gesture, expression |
-| Scene Pacing | sceneChange |
-| Speech Analysis | speech, expression, gesture |
-| Visual Overlay | textOverlay, sticker, gesture, speech, object |
-| Metadata | static_metadata, metadata_summary |
+| Flow | Required Timelines | Status |
+|------|-------------------|--------|
+| Creative Density | textOverlay, sticker, gesture, object, expression, sceneChange, effect, transition | ✅ Working |
+| Emotional Journey | expression, gesture, audioRatio + caption | ✅ Working |
+| Person Framing | object, cameraDistance, gesture, expression | ❌ FAILING - list/dict mismatch |
+| Scene Pacing | sceneChange | ❌ FAILING - list/dict mismatch |
+| Speech Analysis | speech, expression, gesture | ✅ Working |
+| Visual Overlay | textOverlay, sticker, gesture, speech, object | ❌ FAILING - tuple unpacking error |
+| Metadata | static_metadata, metadata_summary | ✅ Working but all zeros (bugs)
 
 ## Confidence Scoring
 - Each block includes a confidence score (0.0-1.0)
@@ -141,7 +147,7 @@ for service in required_models:
       "stickerTimeline": {
         "2-3s": {
           "frame": 3,
-          "stickers": [{"type": "emoji_heart", "confidence": 0.95}]
+          "stickers": []  // CURRENTLY HARDCODED EMPTY - needs fix
         }
       },
       "effectTimeline": {

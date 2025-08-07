@@ -1,20 +1,22 @@
 # RumiAI ML Data Processing Pipeline - Complete Documentation
 
-## Executive Summary
+## Executive Summary (Updated 2025-08-07)
 
-The RumiAI pipeline processes TikTok videos through multiple ML services, transforms the results into timeline format, and sends them to Claude AI for analysis. While ML services successfully detect features (1,284+ elements per video), a critical data extraction bug prevents this data from reaching Claude.
+The RumiAI pipeline successfully extracts ML data (2.2% → ~100% improvement achieved) and Claude effectively uses this data (0.86-0.90 confidence scores). However, investigation revealed critical bugs causing 43% of prompts to fail.
 
-### Current Status
-- ✅ **ML Services**: Correctly detect all features (OCR, YOLO, Whisper, MediaPipe)
-- ✅ **Data Storage**: UnifiedAnalysis properly stores ML results
-- ❌ **Data Extraction**: `_extract_timelines_from_analysis` uses wrong keys and paths
-- ⚠️ **Helper Functions**: Exist but unused, leading to technical debt
-- 📊 **Impact**: Claude receives empty data, generates 0.25 confidence responses
+### Current Status After Investigation
+- ✅ **ML Extraction**: Fixed - now extracting ~100% of ML data
+- ✅ **Claude Performance**: Verified - uses data effectively, not generic responses
+- ❌ **Data Format Issues**: 3 prompts fail due to list/dict mismatches
+- ❌ **Metadata Pipeline**: Broken - wrong parameters and field names
+- ❌ **Scene Detection**: Threshold too high (27.0 vs 20.0)
+- ❌ **Sticker Detection**: Hardcoded empty array
 
-### Critical Discovery
-The codebase contains TWO approaches to data extraction:
-1. Helper functions (`extract_ocr_data`, etc.) that handle multiple formats correctly
-2. `_extract_timelines_from_analysis` with hardcoded wrong keys (currently used)
+### Root Causes Discovered
+1. **objectTimeline** creates list format but functions expect dict with 'objects' key
+2. **Metadata** uses wrong field names (playCount vs views, diggCount vs likes)
+3. **Visual overlay** creates strings but expects tuples for burst_windows
+4. **Scene detection** uses insensitive threshold missing changes
 
 ---
 
@@ -50,25 +52,23 @@ Video Input (.mp4)
     ↓
 [7] Precompute Functions Layer
     ├── Wrapper functions (compute_*_wrapper)
-    ├── _extract_timelines_from_analysis [BROKEN HERE]
-    └── Compute functions (compute_*_analysis)
+    ├── _extract_timelines_from_analysis [PARTIALLY FIXED - format issues remain]
+    └── Compute functions (compute_*_analysis) [3/7 FAILING]
     ↓
 [8] Claude Prompts
     └── 7 analysis types × 6 blocks each
 ```
 
-### Key Discovery: Duplicate Functions
-```python
-# Line 96: DEAD CODE - incomplete wrapper with helpers
-def compute_creative_density_wrapper(analysis_data):
-    yolo_objects = extract_yolo_data(analysis_data)  # Wrong input!
-    # "Continue with existing logic..." - NEVER IMPLEMENTED
+### Key Discoveries from Investigation
 
-# Line 366: ACTUAL USED CODE - complete wrapper
-def compute_creative_density_wrapper(analysis_dict):
-    timelines = _extract_timelines_from_analysis(analysis_dict)
-    return compute_creative_density_analysis(timelines, duration)
-```
+1. **Helper Functions Work**: `extract_ocr_data`, `extract_yolo_data` etc. successfully extract data
+2. **Format Mismatch**: Timeline extraction creates wrong formats:
+   - Creates: `[{"class": "person", "confidence": 0.92}]` (list)
+   - Expected: `{"objects": {"person": 1}}` (dict)
+3. **Metadata Bugs**: Three specific issues:
+   - Line 491: Passes `timelines` instead of `metadata`
+   - Lines 411-420: Uses old field names
+   - Function expects nested structure that doesn't exist
 
 ---
 
@@ -132,6 +132,15 @@ def compute_creative_density_wrapper(analysis_dict):
 }
 ```
 
+**Scene Detection**: 
+```python
+# Currently using threshold=27.0 (default)
+scenes = detect(str(video_path), ContentDetector())  # Misses many scenes
+
+# Should use threshold=20.0 for better sensitivity
+scenes = detect(str(video_path), ContentDetector(threshold=20.0, min_scene_len=10))
+```
+
 ### 2. UnifiedAnalysis Layer (`analysis.py`)
 
 **Purpose**: Aggregate ML results and create ml_data field
@@ -188,24 +197,24 @@ def to_dict(self) -> Dict[str, Any]:
 def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     ml_data = analysis_dict.get('ml_data', {})
     
-    # ❌ OCR: Wrong path and key (lines 206-214)
-    ocr_data = ml_data.get('ocr', {}).get('data', {})  # Extra .get('data')!
-    if 'text_overlays' in ocr_data:  # Wrong key! Should be 'textAnnotations'
-        # Never executes - 0 text overlays extracted
+    # ✅ FIXED: Now using helper functions
+    ocr_data = extract_ocr_data(ml_data)  # Helper handles format variations
+    for annotation in ocr_data.get('textAnnotations', []):  # Correct key
+        # Successfully extracts 54 text annotations
     
-    # ❌ YOLO: Wrong path and key (lines 235-244)
-    yolo_data = ml_data.get('yolo', {}).get('data', {})  # Extra .get('data')!
-    if 'detections' in yolo_data:  # Wrong key! Should be 'objectAnnotations'
-        # Never executes - 0 objects extracted
+    # ✅ FIXED: Using helper for YOLO
+    yolo_data = extract_yolo_data(ml_data)
+    for detection in yolo_data.get('objectAnnotations', []):  # Correct key
+        # Successfully extracts 1169 objects
     
-    # ❌ Whisper: Wrong path (lines 223-232)
-    whisper_data = ml_data.get('whisper', {}).get('data', {})  # Extra .get('data')!
-    if 'segments' in whisper_data:  # Right key but wrong path
-        # Never executes - 0 segments extracted
+    # ❌ PROBLEM FOUND: Creates wrong format
+    timelines['objectTimeline'][timestamp_key] = []  # Creates list
+    # But compute functions expect:
+    # timelines['objectTimeline'][timestamp_key] = {'objects': {'person': 1}}
     
-    # ✅ Scene Changes: WORKS! (lines 247-280)
-    timeline_entries = timeline_data.get('entries', [])  # Different path
-    # Successfully extracts 28 scene changes
+    # ✅ Scene Changes: Already working
+    timeline_entries = timeline_data.get('entries', [])
+    # Successfully extracts scene changes
 ```
 
 #### Existing Helper Functions (lines 20-93)
@@ -272,9 +281,10 @@ def compute_visual_overlay_wrapper(analysis_dict):
         '1-2s': {...}
     },
     'objectTimeline': {
-        '0-1s': [
-            {'class': 'person', 'confidence': 0.85}
-        ]
+        '0-1s': {  # MUST be dict, not list!
+            'objects': {'person': 1, 'bottle': 2},
+            'total_objects': 3
+        }
     },
     'speechTimeline': {
         '0-3s': {
