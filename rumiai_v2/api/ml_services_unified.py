@@ -380,7 +380,10 @@ class UnifiedMLServices:
                                 frames: List[FrameData],
                                 video_id: str,
                                 output_dir: Path) -> Dict[str, Any]:
-        """Run OCR on pre-extracted frames"""
+        """Run OCR on pre-extracted frames WITH inline sticker detection"""
+        import cv2
+        import numpy as np
+        
         reader = await self._ensure_model_loaded('ocr')
         if not reader:
             logger.warning("OCR model not available")
@@ -390,9 +393,44 @@ class UnifiedMLServices:
         ocr_frames = self.frame_manager.get_frames_for_service(frames, 'ocr')
         logger.info(f"Running OCR on {len(ocr_frames)} frames")
         
-        # Process frames
+        # Add inline sticker detection function
+        def detect_stickers_inline(image_array):
+            """Fast HSV-based sticker detection (3-5ms per frame)"""
+            try:
+                # Convert to HSV for color detection
+                hsv = cv2.cvtColor(image_array, cv2.COLOR_BGR2HSV)
+                saturation = hsv[:, :, 1]
+                
+                # Threshold for high saturation (stickers/graphics)
+                _, binary = cv2.threshold(saturation, 180, 255, cv2.THRESH_BINARY)
+                
+                # Find contours
+                contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                
+                stickers = []
+                for contour in contours[:5]:  # Limit to 5 per frame for performance
+                    area = cv2.contourArea(contour)
+                    if 500 < area < 5000:  # Sticker size range
+                        x, y, w, h = cv2.boundingRect(contour)
+                        aspect_ratio = w / h if h > 0 else 0
+                        
+                        # Classify as sticker if roughly square
+                        if 0.8 < aspect_ratio < 1.2:
+                            stickers.append({
+                                'bbox': [int(x), int(y), int(w), int(h)],
+                                'confidence': 0.7,
+                                'type': 'sticker'
+                            })
+                return stickers
+            except Exception as e:
+                logger.debug(f"Sticker detection failed: {e}")
+                return []
+        
+        # Process OCR and stickers on same frames
         text_annotations = []
+        sticker_detections = []
         seen_texts = set()
+        seen_stickers = set()  # Deduplicate stickers
         
         for frame_data in ocr_frames:
             try:
@@ -424,16 +462,28 @@ class UnifiedMLServices:
                                 'bbox': bbox_list,
                                 'frame_number': frame_data.frame_number
                             })
+                
+                # ADD: Inline sticker detection (adds ~3-5ms)
+                frame_stickers = detect_stickers_inline(frame_data.image)
+                for sticker in frame_stickers:
+                    # Create unique key for deduplication
+                    sticker_key = f"{sticker['bbox'][0]}_{sticker['bbox'][1]}"
+                    if sticker_key not in seen_stickers:
+                        seen_stickers.add(sticker_key)
+                        sticker['timestamp'] = frame_data.timestamp
+                        sticker['frame_number'] = frame_data.frame_number
+                        sticker_detections.append(sticker)
                             
             except Exception as e:
-                logger.warning(f"OCR failed on frame {frame_data.frame_number}: {e}")
+                logger.warning(f"Frame processing failed on frame {frame_data.frame_number}: {e}")
         
         result = {
             'textAnnotations': text_annotations,
-            'stickers': [],  # Would need sticker detection
+            'stickers': sticker_detections,  # NOW POPULATED!
             'metadata': {
                 'frames_analyzed': len(ocr_frames),
                 'unique_texts': len(seen_texts),
+                'stickers_detected': len(sticker_detections),  # ADD THIS
                 'processed': True
             }
         }

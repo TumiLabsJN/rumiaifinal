@@ -107,7 +107,7 @@ def compute_visual_overlay_metrics(text_overlay_timeline, sticker_timeline, gest
         }
         
         if total_count >= 3:
-            burst_windows.append(window_key)
+            burst_windows.append((window_key, total_count))  # Store as tuple with count
     
     # Calculate breathing room ratio
     seconds_with_overlays = set()

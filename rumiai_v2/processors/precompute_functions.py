@@ -255,10 +255,25 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
         timestamp_key = f"{start}-{end}s"
         
         if timestamp_key not in timelines['objectTimeline']:
-            timelines['objectTimeline'][timestamp_key] = []
+            timelines['objectTimeline'][timestamp_key] = {
+                'objects': {},
+                'total_objects': 0,
+                'confidence_details': []
+            }
         
-        timelines['objectTimeline'][timestamp_key].append({
-            'class': obj.get('className', 'unknown'),  # Note: className not class
+        # Count objects by class
+        obj_class = obj.get('className', 'unknown')
+        entry = timelines['objectTimeline'][timestamp_key]
+        
+        if obj_class not in entry['objects']:
+            entry['objects'][obj_class] = 0
+        
+        entry['objects'][obj_class] += 1
+        entry['total_objects'] += 1
+        
+        # Preserve full details for reference
+        entry['confidence_details'].append({
+            'class': obj_class,
             'confidence': obj.get('confidence', 0.5),
             'trackId': obj.get('trackId', ''),
             'bbox': obj.get('bbox', [])
@@ -408,16 +423,16 @@ def _extract_metadata_summary(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     metadata = analysis_dict.get('metadata', {})
     
     return {
-        'title': metadata.get('text', ''),
-        'description': metadata.get('text', ''),
-        'views': metadata.get('playCount', 0),
-        'likes': metadata.get('diggCount', 0),
-        'comments': metadata.get('commentCount', 0),
-        'shares': metadata.get('shareCount', 0),
+        'title': metadata.get('title', metadata.get('description', '')[:50]),  # Use first 50 chars of description as title
+        'description': metadata.get('description', ''),
+        'views': metadata.get('views', 0),
+        'likes': metadata.get('likes', 0),
+        'comments': metadata.get('comments', 0),
+        'shares': metadata.get('shares', 0),
         'hashtags': [tag.get('name', '') for tag in metadata.get('hashtags', [])],
         'mentions': metadata.get('mentions', []),
-        'music': metadata.get('musicMeta', {}).get('musicName', ''),
-        'author': metadata.get('authorMeta', {}).get('nickName', '')
+        'music': metadata.get('music', {}).get('musicName', ''),
+        'author': metadata.get('author', {}).get('nickName', metadata.get('username', ''))
     }
 
 
@@ -432,10 +447,11 @@ def compute_creative_density_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str,
 def compute_emotional_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     """Wrapper for emotional metrics computation"""
     timelines = _extract_timelines_from_analysis(analysis_dict)
+    expression_timeline = timelines.get('expressionTimeline', {})  # Get the correct timeline
     speech_timeline = timelines.get('speechTimeline', {})
     gesture_timeline = timelines.get('gestureTimeline', {})
     duration = analysis_dict.get('timeline', {}).get('duration', 0)
-    return compute_emotional_metrics(timelines, speech_timeline, gesture_timeline, duration)
+    return compute_emotional_metrics(expression_timeline, speech_timeline, gesture_timeline, duration)
 
 
 def compute_speech_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -488,11 +504,11 @@ def compute_visual_overlay_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, A
 
 def compute_metadata_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     """Wrapper for metadata analysis computation"""
-    timelines = _extract_timelines_from_analysis(analysis_dict)
+    static_metadata = analysis_dict.get('metadata', {})  # Get actual metadata
     metadata_summary = _extract_metadata_summary(analysis_dict)
     video_duration = analysis_dict.get('timeline', {}).get('duration', 0)
     
-    return compute_metadata_analysis_metrics(timelines, metadata_summary, video_duration)
+    return compute_metadata_analysis_metrics(static_metadata, metadata_summary, video_duration)
 
 
 def compute_person_framing_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
