@@ -41,7 +41,8 @@ class VideoAnalyzer:
             'whisper': self._run_whisper,
             'mediapipe': self._run_mediapipe,
             'ocr': self._run_ocr,
-            'scene_detection': self._run_scene_detection
+            'scene_detection': self._run_scene_detection,
+            'audio_energy': self._run_audio_energy
         }
         
         # Run analyses in parallel
@@ -291,6 +292,68 @@ class VideoAnalyzer:
             return MLAnalysisResult(
                 model_name='scene_detection',
                 model_version='pyscenedetect-0.6',
+                success=False,
+                error=str(e)
+            )
+    
+    async def _run_audio_energy(self, video_id: str, video_path: Path) -> MLAnalysisResult:
+        """Run audio energy analysis using librosa."""
+        try:
+            # Check if output already exists
+            output_dir = Path(f"audio_energy_outputs/{video_id}")
+            output_path = output_dir / f"{video_id}_energy.json"
+            
+            if output_path.exists():
+                logger.info(f"Using existing audio energy output: {output_path}")
+                with open(output_path, 'r') as f:
+                    data = json.load(f)
+                
+                return MLAnalysisResult(
+                    model_name='audio_energy',
+                    model_version='librosa-0.11',
+                    success=True,
+                    data=data,
+                    processing_time=0.0
+                )
+            
+            # Extract audio from video first
+            audio_path = Path(f"temp/{video_id}_audio.wav")
+            if not audio_path.exists():
+                logger.info(f"Extracting audio from {video_path}")
+                import subprocess
+                cmd = [
+                    'ffmpeg', '-i', str(video_path),
+                    '-vn', '-acodec', 'pcm_s16le',
+                    '-ar', '16000', '-ac', '1',
+                    str(audio_path), '-y'
+                ]
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                if result.returncode != 0:
+                    raise Exception(f"Audio extraction failed: {result.stderr}")
+            
+            # Run audio energy analysis
+            from rumiai_v2.ml_services.audio_energy_service import AudioEnergyService
+            service = AudioEnergyService()
+            data = await service.analyze(audio_path)
+            
+            # Save results
+            output_dir.mkdir(parents=True, exist_ok=True)
+            with open(output_path, 'w') as f:
+                json.dump(data, f, indent=2)
+            
+            return MLAnalysisResult(
+                model_name='audio_energy',
+                model_version='librosa-0.11',
+                success=True,
+                data=data,
+                processing_time=data.get('metadata', {}).get('processing_time', 0.0)
+            )
+            
+        except Exception as e:
+            logger.error(f"Audio energy analysis failed: {e}")
+            return MLAnalysisResult(
+                model_name='audio_energy',
+                model_version='librosa-0.11',
                 success=False,
                 error=str(e)
             )

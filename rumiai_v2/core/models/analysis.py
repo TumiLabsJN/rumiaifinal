@@ -67,7 +67,7 @@ class UnifiedAnalysis:
     
     def is_complete(self) -> bool:
         """Check if all required analyses are complete."""
-        required_models = ['yolo', 'whisper', 'mediapipe', 'ocr', 'scene_detection']
+        required_models = ['yolo', 'whisper', 'mediapipe', 'ocr', 'scene_detection', 'audio_energy']
         return all(
             model in self.ml_results and self.ml_results[model].success
             for model in required_models
@@ -75,7 +75,7 @@ class UnifiedAnalysis:
     
     def get_completion_status(self) -> Dict[str, bool]:
         """Get detailed completion status for each model."""
-        required_models = ['yolo', 'whisper', 'mediapipe', 'ocr', 'scene_detection']
+        required_models = ['yolo', 'whisper', 'mediapipe', 'ocr', 'scene_detection', 'audio_energy']
         return {
             model: (model in self.ml_results and self.ml_results[model].success)
             for model in required_models
@@ -125,7 +125,7 @@ class UnifiedAnalysis:
         
         # Add ml_data field that precompute functions expect
         # This provides a clean, consistent interface for ML data access
-        required_models = ['yolo', 'whisper', 'mediapipe', 'ocr', 'scene_detection']
+        required_models = ['yolo', 'whisper', 'mediapipe', 'ocr', 'scene_detection', 'audio_energy']
         
         # Log any unexpected services (validation)
         for service in self.ml_results:

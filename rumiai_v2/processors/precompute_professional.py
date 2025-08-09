@@ -52,8 +52,12 @@ def compute_visual_overlay_analysis_professional(timelines: Dict[str, Any], dura
     
     # 1. VISUAL OVERLAY CORE METRICS
     total_text_overlays = len(text_overlay_timeline)
+    total_stickers = len(sticker_timeline)
+    total_overlays = total_text_overlays + total_stickers  # Include stickers!
+    
     unique_texts = set()
     text_appearances = []
+    sticker_appearances = []
     
     for timestamp, data in text_overlay_timeline.items():
         text = data.get('text', '')
@@ -65,10 +69,21 @@ def compute_visual_overlay_analysis_professional(timelines: Dict[str, Any], dura
             except:
                 pass
     
-    # Core overlay metrics
-    overlay_density = total_text_overlays / duration if duration > 0 else 0
-    unique_overlay_ratio = len(unique_texts) / total_text_overlays if total_text_overlays > 0 else 0
-    time_to_first_overlay = min([t[0] for t in text_appearances]) if text_appearances else duration
+    # Process stickers
+    for timestamp, sticker_data in sticker_timeline.items():
+        try:
+            start_sec = float(timestamp.split('-')[0])
+            sticker_appearances.append((start_sec, 'sticker'))
+        except:
+            pass
+    
+    # Combine all overlay appearances for timing calculations
+    all_appearances = text_appearances + sticker_appearances
+    
+    # Core overlay metrics (now including stickers)
+    overlay_density = total_overlays / duration if duration > 0 else 0
+    unique_overlay_ratio = len(unique_texts) / total_overlays if total_overlays > 0 else 0
+    time_to_first_overlay = min([t[0] for t in all_appearances]) if all_appearances else duration
     
     # Calculate average display duration
     display_durations = []
@@ -84,10 +99,12 @@ def compute_visual_overlay_analysis_professional(timelines: Dict[str, Any], dura
             pass
     
     avg_overlay_duration = mean(display_durations)
-    overlay_frequency = total_text_overlays / (duration / 60) if duration > 0 else 0  # per minute
+    overlay_frequency = total_overlays / (duration / 60) if duration > 0 else 0  # per minute (includes stickers)
     
     visual_overlay_core_metrics = {
-        "totalOverlays": total_text_overlays,
+        "totalOverlays": total_overlays,  # Now includes stickers
+        "totalTextOverlays": total_text_overlays,
+        "totalStickers": total_stickers,
         "uniqueOverlayCount": len(unique_texts),
         "overlayDensity": round(overlay_density, 3),
         "uniqueOverlayRatio": round(unique_overlay_ratio, 3),
@@ -295,12 +312,62 @@ def compute_visual_overlay_analysis_professional(timelines: Dict[str, Any], dura
         "visualOverlayQuality": visual_overlay_quality
     }
 
-def compute_emotional_journey_analysis_professional(timelines: Dict[str, Any], duration: float) -> Dict[str, Any]:
+def compute_emotional_journey_analysis_professional(timelines: Dict[str, Any], duration: float, frames: Optional[List] = None, timestamps: Optional[List] = None) -> Dict[str, Any]:
     """
-    Professional emotional journey analysis matching Claude's 6-block CoreBlocks format
+    Professional emotional journey analysis with FEAT integration
+    Called during precompute phase in Python-only flow
     """
+    import os
     
-    # Extract relevant timelines
+    # If frames provided and Python-only mode, run FEAT emotion detection
+    if frames is not None and timestamps is not None and os.getenv('USE_PYTHON_ONLY_PROCESSING') == 'true':
+        try:
+            import asyncio
+            from ..ml_services.emotion_detection_service import get_emotion_detector
+            
+            # Run FEAT emotion detection
+            detector = get_emotion_detector()
+            
+            # Convert to proper format if needed
+            import numpy as np
+            if frames and len(frames) > 0:
+                # Ensure frames are numpy arrays
+                if not isinstance(frames[0], np.ndarray):
+                    logger.warning("Frames not in numpy array format, skipping FEAT")
+                else:
+                    logger.info(f"Running FEAT on {len(frames)} frames for emotional journey")
+                    
+                    # Run FEAT detection synchronously (we're in a sync context)
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        emotion_data = loop.run_until_complete(
+                            detector.detect_emotions_batch(frames, timestamps)
+                        )
+                        
+                        # Build expression timeline from FEAT results
+                        expression_timeline = {}
+                        for emotion_entry in emotion_data['emotions']:
+                            time_key = f"{int(emotion_entry['timestamp'])}-{int(emotion_entry['timestamp'])+1}s"
+                            expression_timeline[time_key] = {
+                                'emotion': emotion_entry['emotion'],
+                                'confidence': emotion_entry['confidence']
+                            }
+                        
+                        # Update timelines with FEAT results
+                        timelines['expressionTimeline'] = expression_timeline
+                        logger.info(f"FEAT detected emotions in {len(expression_timeline)} time windows")
+                        
+                    finally:
+                        loop.close()
+                        
+        except ImportError:
+            logger.warning("FEAT not available, using existing expression timeline")
+        except Exception as e:
+            logger.error(f"FEAT emotion detection failed: {e}")
+            # Continue with existing timeline - don't fail the entire analysis
+    
+    # Extract relevant timelines (now potentially updated with FEAT data)
     expression_timeline = timelines.get('expressionTimeline', {})
     gesture_timeline = timelines.get('gestureTimeline', {})
     speech_timeline = timelines.get('speechTimeline', {})

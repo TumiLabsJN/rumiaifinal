@@ -1,0 +1,108 @@
+{
+  "video_id": "7280654844715666731",
+  "timestamp": "2025-08-08T16:23:14.403593",
+  "test_level": "FULL PASS",
+  "test_status": "\u2705 Production Ready",
+  "success_level": "7/7 (100.0%)",
+  "total_time_seconds": 0.049971580505371094,
+  "memory_usage_mb": 97.3515625,
+  "cost": 0.0,
+  "summary": {
+    "total_functions_tested": 7,
+    "successful": 7,
+    "failed": 0,
+    "success_rate": 100.0
+  },
+  "ml_data_validation": {
+    "valid": true,
+    "details": {
+      "yolo_objects": 1169,
+      "yolo": "populated",
+      "mediapipe_poses": 141,
+      "mediapipe_faces": 67,
+      "mediapipe": "populated",
+      "ocr_texts": 54,
+      "ocr": "populated",
+      "whisper_words": 290,
+      "whisper": "populated",
+      "scene_detection_scenes": 28,
+      "scene_detection": "populated"
+    }
+  },
+  "contract_validations": {
+    "creative_density": {
+      "status": "\u274c FAIL",
+      "contract_met": false,
+      "violations": [
+        "Missing ML dependency: objectTimeline",
+        "Missing ML dependency: textOverlayTimeline"
+      ]
+    },
+    "emotional_journey": {
+      "status": "\u274c FAIL",
+      "contract_met": false,
+      "violations": [
+        "Missing ML dependency: expression_timeline"
+      ]
+    },
+    "person_framing": {
+      "status": "\u274c FAIL",
+      "contract_met": false,
+      "violations": [
+        "Missing ML dependency: pose_timeline",
+        "Missing ML dependency: face_timeline"
+      ]
+    },
+    "scene_pacing": {
+      "status": "\u274c FAIL",
+      "contract_met": false,
+      "violations": [
+        "Missing ML dependency: scene_timeline"
+      ]
+    },
+    "speech_analysis": {
+      "status": "\u274c FAIL",
+      "contract_met": false,
+      "violations": [
+        "Missing ML dependency: speech_timeline"
+      ]
+    },
+    "visual_overlay_analysis": {
+      "status": "\u274c FAIL",
+      "contract_met": false,
+      "violations": [
+        "Missing ML dependency: textOverlayTimeline",
+        "Missing required field: overlaysCoreMetrics",
+        "Missing required field: overlaysDynamics",
+        "Missing required field: overlaysInteractions",
+        "Missing required field: overlaysKeyEvents",
+        "Missing required field: overlaysPatterns",
+        "Missing required field: overlaysQuality"
+      ]
+    },
+    "metadata_analysis": {
+      "status": "\u2705 PASS",
+      "contract_met": true,
+      "violations": []
+    }
+  },
+  "compute_function_results": {
+    "successful": [
+      "creative_density",
+      "emotional_journey",
+      "person_framing",
+      "scene_pacing",
+      "speech_analysis",
+      "visual_overlay_analysis",
+      "metadata_analysis"
+    ],
+    "failed": {}
+  },
+  "recommendations": [
+    "creative_density: Missing ML dependency: objectTimeline",
+    "creative_density: Missing ML dependency: textOverlayTimeline",
+    "emotional_journey: Missing ML dependency: expression_timeline",
+    "person_framing: Missing ML dependency: pose_timeline",
+    "person_framing: Missing ML dependency: face_timeline"
+  ]
+}

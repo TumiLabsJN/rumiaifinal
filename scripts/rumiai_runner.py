@@ -39,6 +39,22 @@ from rumiai_v2.validators import ResponseValidator
 # Configure logging
 logger = Logger.setup('rumiai_v2', level=os.getenv('LOG_LEVEL', 'INFO'))
 
+# FAIL-FAST: Validate ML dependencies before anything else
+try:
+    from rumiai_v2.core.ml_dependency_validator import MLDependencyValidator
+    MLDependencyValidator.validate_all()
+    logger.info("✅ ML dependencies validated")
+except Exception as e:
+    logger.error(f"❌ ML dependency validation failed: {e}")
+    if os.getenv('USE_PYTHON_ONLY_PROCESSING') == 'true':
+        # In Python-only mode, ML dependencies are CRITICAL
+        print(f"\n{'='*60}", file=sys.stderr)
+        print("CRITICAL ERROR: ML Dependencies Missing", file=sys.stderr)
+        print("="*60, file=sys.stderr)
+        print(str(e), file=sys.stderr)
+        print("="*60, file=sys.stderr)
+        sys.exit(1)
+
 
 class RumiAIRunner:
     """
@@ -488,7 +504,8 @@ class RumiAIRunner:
                     result = PromptResult(
                         prompt_type=prompt_type,
                         success=True,
-                        response=json.dumps(precomputed_metrics),  # JSON string for compatibility
+                        response=json.dumps(precomputed_metrics, indent=2),  # Formatted string for backward compatibility
+                        parsed_response=precomputed_metrics,  # Actual dict for ML training
                         processing_time=0.001,  # Near-instant
                         tokens_used=0,          # No tokens!
                         estimated_cost=0.0      # Free!
@@ -564,7 +581,7 @@ class RumiAIRunner:
                         # Convert to legacy format if output format is v1
                         if self.settings.output_format_version == 'v1':
                             legacy_response = self.output_adapter.convert_6block_to_legacy(parsed_data, prompt_type.value)
-                            result.response = json.dumps(legacy_response)
+                            result.response = json.dumps(legacy_response, indent=2)
                     else:
                         # Try to extract structure from text if JSON parsing failed
                         extracted = ResponseValidator.extract_text_blocks(result.response)
@@ -636,13 +653,18 @@ class RumiAIRunner:
         timestamp = time.strftime('%Y%m%d_%H%M%S')
         result_path = prompt_dir / f"{prompt_name}_result_{timestamp}.txt"
         complete_path = prompt_dir / f"{prompt_name}_complete_{timestamp}.json"
+        ml_path = prompt_dir / f"{prompt_name}_ml_{timestamp}.json"
         
         if result.success:
-            # Save response text
+            # Save response text (for backward compatibility)
             with open(result_path, 'w') as f:
                 f.write(result.response)
+            
+            # Save ML-friendly structured data if available
+            if result.parsed_response:
+                self.insights_handler.save_json(ml_path, result.parsed_response, indent=2)
         
-        # Save complete data
+        # Save complete data (includes both response string and parsed_response)
         self.insights_handler.save_json(complete_path, result.to_dict())
     
     def _generate_report(self, analysis, prompt_results: Dict[str, Any]) -> Dict[str, Any]:

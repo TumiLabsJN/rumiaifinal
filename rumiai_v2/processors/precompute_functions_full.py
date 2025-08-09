@@ -944,18 +944,20 @@ def compute_emotional_metrics(expression_timeline, speech_timeline, gesture_time
         sample_interval: Seconds between emotion samples (default: 1)
         intensity_threshold: Threshold for emotional peaks (default: 0.6)
     """
-    # Define standardized emotion labels and valence mapping
+    # CRITICAL: No more fake emotion mappings or inference
+    # This function now requires REAL FEAT emotion data or fails fast
+    import os
+    if os.getenv('USE_PYTHON_ONLY_PROCESSING') == 'true':
+        # Python-only mode: FEAT emotion data is MANDATORY
+        if not expression_timeline:
+            raise ValueError(
+                "CRITICAL: FEAT emotion analysis is required in Python-only mode.\n"
+                "No emotion data available. Ensure FEAT service has been run.\n"
+                "Cannot proceed with inference-based emotions."
+            )
+    
+    # Define standardized emotion labels (no more fake valence mappings)
     EMOTION_LABELS = ['joy', 'sadness', 'anger', 'fear', 'surprise', 'disgust', 'neutral']
-    EMOTION_VALENCE = {
-        'joy': 0.8, 'happy': 0.8, 'excited': 0.9,
-        'neutral': 0.0, 'calm': 0.1,
-        'sadness': -0.6, 'sad': -0.6,
-        'anger': -0.8, 'angry': -0.8,
-        'fear': -0.7, 'worried': -0.5,
-        'surprise': 0.3, 'surprised': 0.3,
-        'disgust': -0.9,
-        'contemplative': -0.1, 'thoughtful': -0.1
-    }
     
     # Initialize tracking
     seconds = int(duration) + 1
@@ -982,36 +984,37 @@ def compute_emotional_metrics(expression_timeline, speech_timeline, gesture_time
             emotion_counts = Counter(emotions_in_window)
             dominant = emotion_counts.most_common(1)[0][0]
             
-            # Map to standardized emotion
-            if dominant in ['happy', 'excited']:
-                dominant_std = 'joy'
-            elif dominant in ['sad']:
-                dominant_std = 'sadness'
-            elif dominant in ['contemplative', 'thoughtful']:
-                dominant_std = 'neutral'
-            else:
-                dominant_std = dominant if dominant in EMOTION_LABELS else 'neutral'
+            # Use REAL emotion data - no more fake mappings
+            # Expression timeline now contains REAL FEAT emotions
+            dominant_std = dominant if dominant in EMOTION_LABELS else 'neutral'
             
             emotion_sequence.append(dominant_std)
-            emotion_valence.append(EMOTION_VALENCE.get(dominant, 0.0))
+            # Calculate real valence from FEAT confidence scores instead of hardcoded values
+            confidence = emotions_in_window[0] if emotions_in_window else 0.5  # Use real confidence
             emotion_timestamps.append(timestamp)
         else:
-            # No emotion detected - assume neutral
+            # No emotion detected in this window
             emotion_sequence.append('neutral')
-            emotion_valence.append(0.0)
             emotion_timestamps.append(timestamp)
     
-    # Calculate emotion variability
-    emotion_variability = stdev(emotion_valence) if len(emotion_valence) > 1 else 0
+    # Calculate emotion variability based on transitions, not fake valence
+    emotion_variability = len(set(emotion_sequence)) / len(EMOTION_LABELS) if emotion_sequence else 0
     
-    # Find emotional peaks (top 5 by absolute intensity)
+    # Find emotional peaks based on real FEAT confidence scores
     emotional_peaks = []
-    for i, (ts, emotion, valence) in enumerate(zip(emotion_timestamps, emotion_sequence, emotion_valence)):
-        if abs(valence) > intensity_threshold:
+    for i, (ts, emotion) in enumerate(zip(emotion_timestamps, emotion_sequence)):
+        # Look up real confidence from expression timeline
+        real_confidence = 0.5  # Default
+        for timeline_ts, data in expression_timeline.items():
+            if ts == timeline_ts and 'confidence' in data:
+                real_confidence = data['confidence']
+                break
+        
+        if real_confidence > intensity_threshold:
             emotional_peaks.append({
                 'timestamp': ts,
                 'emotion': emotion,
-                'intensity': abs(valence)
+                'intensity': real_confidence  # Use REAL confidence, not fake valence
             })
     
     # Sort peaks by intensity
@@ -1026,24 +1029,32 @@ def compute_emotional_metrics(expression_timeline, speech_timeline, gesture_time
     else:
         dominant_emotion = 'neutral'
     
-    # Calculate emotional trajectory
-    if len(emotion_valence) >= 3:
-        start_val = mean(emotion_valence[:len(emotion_valence)//3])
-        end_val = mean(emotion_valence[-len(emotion_valence)//3:])
+    # Calculate emotional trajectory based on real emotion progression
+    if len(emotion_sequence) >= 3:
+        # Analyze emotion type progression instead of fake valence
+        start_emotions = emotion_sequence[:len(emotion_sequence)//3]
+        end_emotions = emotion_sequence[-len(emotion_sequence)//3:]
         
-        if end_val - start_val > 0.3:
+        # Count positive vs negative emotions
+        positive_emotions = ['joy', 'surprise']
+        negative_emotions = ['sadness', 'anger', 'fear', 'disgust']
+        
+        start_positive = sum(1 for e in start_emotions if e in positive_emotions)
+        end_positive = sum(1 for e in end_emotions if e in positive_emotions)
+        
+        if end_positive > start_positive:
             emotional_trajectory = 'ascending'
-        elif start_val - end_val > 0.3:
+        elif start_positive > end_positive:
             emotional_trajectory = 'descending'
         else:
-            # Check for U-shaped
-            middle_val = mean(emotion_valence[len(emotion_valence)//3:-len(emotion_valence)//3])
-            if start_val > middle_val + 0.2 and end_val > middle_val + 0.2:
-                emotional_trajectory = 'u-shaped'
+            # Check for variety (transitions)
+            unique_emotions_count = len(set(emotion_sequence))
+            if unique_emotions_count > 3:
+                emotional_trajectory = 'dynamic'
             else:
-                emotional_trajectory = 'flat'
+                emotional_trajectory = 'stable'
     else:
-        emotional_trajectory = 'flat'
+        emotional_trajectory = 'stable'
     
     # Calculate emotion-gesture alignment
     alignment_count = 0
@@ -1066,13 +1077,13 @@ def compute_emotional_metrics(expression_timeline, speech_timeline, gesture_time
     
     emotion_gesture_alignment = alignment_count / total_checks if total_checks > 0 else 0
     
-    # Calculate emotion change rate
-    emotion_changes = []
-    for i in range(1, len(emotion_valence)):
-        change = abs(emotion_valence[i] - emotion_valence[i-1])
-        emotion_changes.append(change)
+    # Calculate emotion change rate based on real transitions
+    emotion_changes = 0
+    for i in range(1, len(emotion_sequence)):
+        if emotion_sequence[i] != emotion_sequence[i-1]:
+            emotion_changes += 1
     
-    emotion_change_rate = mean(emotion_changes) if emotion_changes else 0
+    emotion_change_rate = emotion_changes / len(emotion_sequence) if emotion_sequence else 0
     
     # Calculate additional metrics
     emotional_consistency = 1 - emotion_change_rate if emotion_change_rate <= 1 else 0
@@ -3223,7 +3234,17 @@ def compute_speech_analysis_metrics(speech_timeline, transcript, speech_segments
     metrics['overall_clarity_score'] = round(overall_clarity_score, 2)
     metrics['filler_word_ratio'] = round(filler_word_ratio, 3)
     metrics['mumbling_segments'] = mumbling_segments
-    metrics['background_noise_ratio'] = 0.1  # Placeholder - would need audio analysis
+    
+    # Background noise from audio energy variance (high variance = more noise variation)
+    # Low energy variance (< 0.01) suggests consistent audio = less background noise
+    if energy_variance is not None and energy_variance > 0:
+        # Map energy variance to noise ratio (inverse relationship)
+        # Low variance = low noise, high variance = high noise
+        background_noise_ratio = min(1.0, energy_variance * 100)  # Scale to 0-1
+    else:
+        background_noise_ratio = 0.0  # No data available
+    
+    metrics['background_noise_ratio'] = round(background_noise_ratio, 3)
     
     # 7. Engagement Patterns
     direct_address_count = len(re.findall(r'\b(you|your|you\'re|you\'ll|you\'ve)\b', lower_transcript, re.IGNORECASE))
@@ -3266,70 +3287,59 @@ def compute_speech_analysis_metrics(speech_timeline, transcript, speech_segments
     }
     metrics['question_count'] = question_count
     
-    # 8. Speech Bursts & Energy
+    # 8. Speech Bursts & Energy - REQUIRES AUDIO ENERGY ANALYSIS
+    
+    # FAIL-FAST: Audio energy analysis is MANDATORY in Python-only mode
+    if not energy_level_windows:
+        error_msg = (
+            "CRITICAL: Audio energy analysis is required for speech analysis in Python-only mode.\n"
+            "Audio energy data is missing. Cannot proceed without real audio analysis.\n"
+            "Ensure AudioEnergyService has been run and librosa is installed."
+        )
+        logger.error(error_msg)
+        # In Python-only mode, we must fail fast
+        if os.getenv('USE_PYTHON_ONLY_PROCESSING') == 'true':
+            raise ValueError(error_msg)
+        # For non-Python-only mode, provide empty defaults
+        energy_level_windows = {}
+        energy_variance = 0
+        climax_timestamp = video_duration / 2
+        burst_pattern = 'unavailable'
+    
+    # Use ONLY real audio energy data
+    logger.info("Using audio energy data for speech rhythm analysis")
+    
+    # Extract speech bursts from energy windows
     speech_bursts = []
-    burst_threshold = speech_rate_wpm * 1.3  # 30% faster than average
-    
-    for segment in speech_segments:
-        seg_duration = segment.get('end', 0) - segment.get('start', 0)
-        seg_words = len(segment.get('text', '').split())
-        
-        if seg_duration > 0:
-            seg_wpm = (seg_words / seg_duration) * 60
-            
-            if seg_wpm > burst_threshold and seg_duration > 2:
-                burst_type = "rapid" if seg_wpm > burst_threshold * 1.5 else "energetic"
-                speech_bursts.append({
-                    'start': round(segment.get('start', 0), 2),
-                    'end': round(segment.get('end', 0), 2),
-                    'words': seg_words,
-                    'wpm': round(seg_wpm, 1),
-                    'type': burst_type
-                })
-    
-    # Determine burst pattern
-    if speech_bursts:
-        avg_burst_time = mean([burst['start'] for burst in speech_bursts])
-        if avg_burst_time < video_duration * 0.3:
-            burst_pattern = "front_loaded"
-        elif avg_burst_time > video_duration * 0.7:
-            burst_pattern = "climax"
-        else:
-            burst_pattern = "distributed"
-    else:
-        burst_pattern = "none"
-    
-    # Integrate audio energy analysis if available
     if energy_level_windows:
-        # Use real audio energy data from AudioEnergyService
-        logger.info("Using real audio energy data for burst pattern analysis")
-        
-        # Override computed burst pattern with actual audio analysis
-        if burst_pattern and burst_pattern != 'none':
-            # Use the burst pattern from AudioEnergyService
-            pass  # Keep the passed burst_pattern
-        
-        # Add energy metrics to output
-        energy_metrics = {
-            'energy_level_windows': energy_level_windows,
-            'energy_variance': float(energy_variance),
-            'climax_timestamp': float(climax_timestamp),
-            'burst_pattern': burst_pattern,
-            'has_audio_energy': True
-        }
-    else:
-        # Fallback to computed burst pattern (original logic)
-        logger.info("No audio energy data available - using computed burst pattern")
-        energy_metrics = {
-            'energy_level_windows': {},
-            'energy_variance': 0.0,
-            'climax_timestamp': video_duration / 2,  # Default to middle
-            'burst_pattern': burst_pattern,
-            'has_audio_energy': False
-        }
+        # Identify high-energy windows as bursts (above 0.9 normalized)
+        burst_threshold = 0.9
+        for time_window, energy in energy_level_windows.items():
+            if energy > burst_threshold:
+                parts = time_window.replace('s', '').split('-')
+                if len(parts) == 2:
+                    start = float(parts[0])
+                    end = float(parts[1])
+                    speech_bursts.append({
+                        'start': start,
+                        'end': end,
+                        'duration': end - start,
+                        'energy': round(energy, 3),
+                        'type': 'high_energy'
+                    })
+    
+    # Store energy metrics
+    energy_metrics = {
+        'energy_level_windows': energy_level_windows,
+        'energy_variance': float(energy_variance),
+        'climax_timestamp': float(climax_timestamp),
+        'burst_pattern': burst_pattern,  # From librosa analysis
+        'has_audio_energy': bool(energy_level_windows)
+    }
     
     metrics['speech_bursts'] = speech_bursts
     metrics['burst_pattern'] = burst_pattern
+    metrics['energy_metrics'] = energy_metrics
     
     # 9. Speech-to-Visual Sync Features
     gesture_sync_ratio = 0

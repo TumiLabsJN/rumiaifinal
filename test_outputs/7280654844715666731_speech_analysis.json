@@ -1,0 +1,67 @@
+{
+  "speechCoreMetrics": {
+    "totalWords": 290,
+    "speechDensity": 3.63,
+    "wordsPerMinute": 218.5,
+    "vocabularyDiversity": 0.62,
+    "silenceRatio": 0.0,
+    "speechCoverage": 1.0,
+    "avgSegmentDuration": 1.9,
+    "uniqueWords": 180,
+    "confidence": 0.85
+  },
+  "speechDynamics": {
+    "wpmProgression": [
+      240.0,
+      240.0,
+      240.0,
+      240.0,
+      240.0,
+      180.0,
+      180.0,
+      180.0,
+      240.0,
+      180.0
+    ],
+    "silencePeriods": [],
+    "speechBursts": [],
+    "pacingVariation": 0,
+    "temporalAlignment": {
+      "gesture_emphasis_moments": [],
+      "expression_peaks_during_speech": [],
+      "lip_sync_quality": 0.8,
+      "body_language_congruence": 0
+    }
+  },
+  "speechInteractions": {
+    "speechGestureSync": 0,
+    "speechEmotionAlignment": 0,
+    "speechTextOverlap": 0,
+    "multiModalCoherence": 0
+  },
+  "speechKeyEvents": {
+    "longestSegment": {
+      "duration": 3.2,
+      "timestamp": "0-5s",
+      "words": 0
+    },
+    "climaxMoment": {
+      "timestamp": 39.95,
+      "intensity": 0
+    },
+    "silentMoments": []
+  },
+  "speechPatterns": {
+    "repetitionRate": 0,
+    "emphasisTechniques": [],
+    "narrativeStyle": "conversational",
+    "verbalHooks": []
+  },
+  "speechQuality": {
+    "clarity": 0.8,
+    "engagement": 0.7,
+    "emotionalRange": 0.5,
+    "deliveryStyle": "natural",
+    "overallScore": 0.75
+  }
+}

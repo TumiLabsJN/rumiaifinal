@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-End-to-End Test for Unified ML Pipeline
-Tests the complete flow: Frame Extraction → ML Processing → ml_data → Claude Analysis
+End-to-End Test for Python-Only ML Pipeline
+Tests the complete flow: Frame Extraction → ML Processing → Python Compute Functions → Professional 6-Block Output
+No Claude API dependency - $0.00 cost processing
 """
 
 import asyncio
@@ -13,7 +14,7 @@ import os
 import sys
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Optional
 import logging
 
 # Load environment variables from .env file
@@ -26,13 +27,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from rumiai_v2.api.ml_services import MLServices
 from rumiai_v2.processors.video_analyzer import VideoAnalyzer
 from rumiai_v2.processors.timeline_builder import TimelineBuilder
-from rumiai_v2.processors.ml_data_extractor import MLDataExtractor
-from rumiai_v2.processors.prompt_builder import PromptBuilder
 from rumiai_v2.processors.precompute_functions import get_compute_function
-from rumiai_v2.api.claude_client import ClaudeClient
 from rumiai_v2.validators.response_validator import ResponseValidator
 from rumiai_v2.core.models.prompt import PromptType
-from rumiai_v2.prompts.prompt_manager import PromptManager
 from rumiai_v2.config.settings import Settings
 
 logging.basicConfig(level=logging.INFO)

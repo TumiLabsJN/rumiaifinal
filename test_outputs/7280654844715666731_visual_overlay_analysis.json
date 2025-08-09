@@ -1,0 +1,178 @@
+{
+  "visualOverlayCoreMetrics": {
+    "totalOverlays": 39,
+    "uniqueOverlayCount": 39,
+    "overlayDensity": 0.488,
+    "uniqueOverlayRatio": 1.0,
+    "timeToFirstOverlay": 0.0,
+    "avgOverlayDuration": 1.0,
+    "overlayFrequency": 29.29,
+    "confidence": 0.92
+  },
+  "visualOverlayDynamics": {
+    "overlayProgression": [
+      {
+        "timestamp": "0-8s",
+        "overlayCount": 8,
+        "density": 1.0
+      },
+      {
+        "timestamp": "8-16s",
+        "overlayCount": 2,
+        "density": 0.25
+      },
+      {
+        "timestamp": "16-24s",
+        "overlayCount": 0,
+        "density": 0.0
+      },
+      {
+        "timestamp": "24-32s",
+        "overlayCount": 6,
+        "density": 0.75
+      },
+      {
+        "timestamp": "32-40s",
+        "overlayCount": 8,
+        "density": 1.0
+      },
+      {
+        "timestamp": "40-48s",
+        "overlayCount": 6,
+        "density": 0.75
+      },
+      {
+        "timestamp": "48-56s",
+        "overlayCount": 0,
+        "density": 0.0
+      },
+      {
+        "timestamp": "56-64s",
+        "overlayCount": 0,
+        "density": 0.0
+      },
+      {
+        "timestamp": "64-72s",
+        "overlayCount": 2,
+        "density": 0.25
+      },
+      {
+        "timestamp": "72-80s",
+        "overlayCount": 7,
+        "density": 0.875
+      }
+    ],
+    "rhythmConsistency": -1.221,
+    "overlayAcceleration": "decelerating",
+    "temporalDistribution": "front_loaded",
+    "burstPatterns": 35,
+    "confidence": 0.88
+  },
+  "visualOverlayInteractions": {
+    "overlaySpeechAlignment": 0.974,
+    "overlayGestureSync": 0.0,
+    "multimodalReinforcementCount": 38,
+    "multimodalMoments": [
+      {
+        "timestamp": "0s",
+        "textContent": "your medicine cabinet",
+        "hasSpeech": true,
+        "hasGesture": false
+      },
+      {
+        "timestamp": "1s",
+        "textContent": "to look",
+        "hasSpeech": true,
+        "hasGesture": false
+      },
+      {
+        "timestamp": "2s",
+        "textContent": "then you're",
+        "hasSpeech": true,
+        "hasGesture": false
+      },
+      {
+        "timestamp": "3s",
+        "textContent": "save this video",
+        "hasSpeech": true,
+        "hasGesture": false
+      },
+      {
+        "timestamp": "4s",
+        "textContent": "to tell you",
+        "hasSpeech": true,
+        "hasGesture": false
+      }
+    ],
+    "crossModalCoherence": 0.487,
+    "confidence": 0.85
+  },
+  "visualOverlayKeyEvents": {
+    "overlayPeaks": [
+      {
+        "timestamp": "0-8s",
+        "overlayCount": 8,
+        "intensity": 1.0
+      },
+      {
+        "timestamp": "24-32s",
+        "overlayCount": 6,
+        "intensity": 0.75
+      },
+      {
+        "timestamp": "32-40s",
+        "overlayCount": 8,
+        "intensity": 1.0
+      },
+      {
+        "timestamp": "40-48s",
+        "overlayCount": 6,
+        "intensity": 0.75
+      },
+      {
+        "timestamp": "72-80s",
+        "overlayCount": 7,
+        "intensity": 0.88
+      }
+    ],
+    "ctaMoments": [
+      {
+        "timestamp": "5s",
+        "ctaType": "get",
+        "textContent": "get"
+      },
+      {
+        "timestamp": "71s",
+        "ctaType": "buy",
+        "textContent": "buy organic"
+      }
+    ],
+    "climaxMoment": "0-8s",
+    "quietMoments": [
+      "16-24s",
+      "48-56s",
+      "56-64s"
+    ],
+    "confidence": 0.9
+  },
+  "visualOverlayPatterns": {
+    "overlayStrategy": "minimal",
+    "overlayTechniques": [
+      "direct_cta",
+      "dynamic_pacing",
+      "multimodal_reinforcement"
+    ],
+    "engagementArchetype": "informational",
+    "pacingPattern": "decelerating",
+    "contentFocus": "product_focused",
+    "confidence": 0.87
+  },
+  "visualOverlayQuality": {
+    "detectionConfidence": 0.95,
+    "dataCompleteness": 1.0,
+    "analysisReliability": "high",
+    "missingDataPoints": [],
+    "timelineCoverage": 0.49,
+    "overallConfidence": 0.95
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "first_5_seconds": {
+    "density_progression": [
+      2,
+      0,
+      0,
+      0,
+      0
+    ],
+    "text_moments": [],
+    "emotion_sequence": [
+      "neutral",
+      "neutral",
+      "neutral",
+      "neutral",
+      "neutral"
+    ],
+    "gesture_moments": [],
+    "object_appearances": [],
+    "speech_segments": [
+      {
+        "start": "0s",
+        "end": "5s",
+        "text": "\u266a Rain drops fall, it's a mellow sound \u266a"
+      },
+      {
+        "start": "5s",
+        "end": "11s",
+        "text": "\u266a That goes up serenity all around \u266a"
+      }
+    ],
+    "scene_changes": []
+  },
+  "cta_window": {
+    "time_range": "13-16s",
+    "cta_appearances": [],
+    "gesture_sync": {
+      "gesture_count": 0,
+      "speech_count": 1,
+      "sync_ratio": 0.0
+    },
+    "object_focus": [],
+    "speech_emphasis": {
+      "speech_duration": 4.199999999999999,
+      "word_count": 7,
+      "words_per_second": 1.666666666666667,
+      "segment_count": 1
+    },
+    "text_overlays": []
+  },
+  "peak_moments": [
+    {
+      "timestamp": 5.0,
+      "intensity": 1.5,
+      "events": [
+        "speech"
+      ]
+    },
+    {
+      "timestamp": 11.0,
+      "intensity": 1.5,
+      "events": [
+        "speech"
+      ]
+    }
+  ],
+  "engagement_curve": [
+    0.2,
+    0.2,
+    0.2,
+    0.1
+  ],
+  "metadata": {
+    "video_id": "7535176886729690374",
+    "duration": 16.0,
+    "generated_at": "2025-08-08T19:31:23.462889",
+    "ml_data_available": {
+      "yolo": true,
+      "whisper": true,
+      "ocr": true,
+      "mediapipe": true,
+      "scene": true
+    }
+  }
+}

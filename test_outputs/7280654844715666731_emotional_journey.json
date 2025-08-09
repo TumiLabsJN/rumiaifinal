@@ -1,0 +1,118 @@
+{
+  "emotionalCoreMetrics": {
+    "uniqueEmotions": 1,
+    "emotionTransitions": 0,
+    "dominantEmotion": "neutral",
+    "emotionalDiversity": 0,
+    "gestureEmotionAlignment": 0.0,
+    "audioEmotionAlignment": 0.0,
+    "captionSentiment": "neutral",
+    "emotionalIntensity": 0.76,
+    "confidence": 0.85
+  },
+  "emotionalDynamics": {
+    "emotionProgression": [
+      {
+        "timestamp": "0-7s",
+        "emotion": "neutral",
+        "intensity": 0.58
+      },
+      {
+        "timestamp": "7-14s",
+        "emotion": "neutral",
+        "intensity": 0.0
+      },
+      {
+        "timestamp": "14-21s",
+        "emotion": "neutral",
+        "intensity": 0.76
+      },
+      {
+        "timestamp": "21-28s",
+        "emotion": "neutral",
+        "intensity": 0.77
+      },
+      {
+        "timestamp": "28-35s",
+        "emotion": "neutral",
+        "intensity": 0.83
+      },
+      {
+        "timestamp": "35-42s",
+        "emotion": "neutral",
+        "intensity": 0.76
+      },
+      {
+        "timestamp": "42-49s",
+        "emotion": "neutral",
+        "intensity": 0.75
+      },
+      {
+        "timestamp": "49-56s",
+        "emotion": "neutral",
+        "intensity": 0.67
+      },
+      {
+        "timestamp": "56-63s",
+        "emotion": "neutral",
+        "intensity": 0.81
+      },
+      {
+        "timestamp": "63-70s",
+        "emotion": "neutral",
+        "intensity": 0.75
+      },
+      {
+        "timestamp": "70-77s",
+        "emotion": "neutral",
+        "intensity": 0.0
+      },
+      {
+        "timestamp": "77-79s",
+        "emotion": "neutral",
+        "intensity": 0.0
+      }
+    ],
+    "transitionSmoothness": 1.0,
+    "emotionalArc": "stable",
+    "peakEmotionMoments": [],
+    "stabilityScore": 1.0,
+    "tempoEmotionSync": 0.0,
+    "confidence": 0.8
+  },
+  "emotionalInteractions": {
+    "gestureReinforcement": 0.0,
+    "audioMoodCongruence": 0.0,
+    "captionEmotionAlignment": 0.0,
+    "multimodalCoherence": 0.0,
+    "emotionalContrastMoments": [],
+    "confidence": 0.75
+  },
+  "emotionalKeyEvents": {
+    "emotionalPeaks": [],
+    "transitionPoints": [],
+    "climaxMoment": "28s",
+    "resolutionMoment": "74s",
+    "confidence": 0.88
+  },
+  "emotionalPatterns": {
+    "journeyArchetype": "steady_state",
+    "emotionalTechniques": [
+      "steady_state"
+    ],
+    "pacingStrategy": "steady_state",
+    "engagementHooks": [],
+    "viewerJourneyMap": "steady_state",
+    "confidence": 0.82
+  },
+  "emotionalQuality": {
+    "detectionConfidence": 0.76,
+    "timelineCoverage": 0.46,
+    "emotionalDataCompleteness": 1.0,
+    "analysisReliability": "high",
+    "missingDataPoints": [
+      "limited_emotional_range"
+    ],
+    "overallConfidence": 0.74
+  }
+}

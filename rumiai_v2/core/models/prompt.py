@@ -51,6 +51,7 @@ class PromptResult:
     prompt_type: PromptType
     success: bool
     response: str = ""
+    parsed_response: Optional[Dict[str, Any]] = None  # Structured data for ML
     error: Optional[str] = None
     processing_time: float = 0.0
     tokens_used: int = 0
@@ -64,6 +65,7 @@ class PromptResult:
             'prompt_type': self.prompt_type.value,
             'success': self.success,
             'response': self.response,
+            'parsed_response': self.parsed_response,  # Include structured data
             'error': self.error,
             'processing_time': self.processing_time,
             'tokens_used': self.tokens_used,

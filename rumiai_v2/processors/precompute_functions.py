@@ -414,10 +414,18 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
                 'actual_time': changes[0]['actual_time']
             }
         else:
-            # Multiple changes in same second - create sub-second ranges
+            # Multiple changes in same second - use proper fractional seconds
+            # FIX for bug 1601M: Use actual decimal math instead of string concatenation
             for j, change in enumerate(changes):
-                # Create unique timestamp with proper end > start
-                timestamp = f"{second}.{j}-{second}.{j + 1}s"
+                # Use actual fractional seconds (supports up to 1000 changes per second)
+                fraction = j / 1000.0
+                start_time = second + fraction
+                end_time = second + (j + 1) / 1000.0
+                
+                # Format with consistent precision to ensure start < end
+                timestamp = f"{start_time:.3f}-{end_time:.3f}s"
+                # Examples: "0.000-0.001s", "0.009-0.010s", "0.999-1.000s"
+                
                 timelines['sceneChangeTimeline'][timestamp] = {
                     'type': 'scene_change',
                     'scene_index': change['index'],
@@ -551,11 +559,16 @@ def compute_speech_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     
     speech_timeline = timelines.get('speechTimeline', {})
     
-    return compute_speech_analysis_metrics(
+    # Get basic metrics first
+    basic_result = compute_speech_analysis_metrics(
         speech_timeline, transcript, speech_segments, expression_timeline, 
         gesture_timeline, human_analysis_data, video_duration,
         energy_level_windows, energy_variance, climax_timestamp, burst_pattern
     )
+    
+    # Convert to professional 6-block format
+    from .precompute_professional_wrappers import ensure_professional_format
+    return ensure_professional_format(basic_result, 'speech_analysis')
 
 
 def compute_visual_overlay_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -581,7 +594,12 @@ def compute_metadata_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     metadata_summary = _extract_metadata_summary(analysis_dict)
     video_duration = analysis_dict.get('timeline', {}).get('duration', 0)
     
-    return compute_metadata_analysis_metrics(static_metadata, metadata_summary, video_duration)
+    # Get basic metrics first
+    basic_result = compute_metadata_analysis_metrics(static_metadata, metadata_summary, video_duration)
+    
+    # Convert to professional 6-block format
+    from .precompute_professional_wrappers import ensure_professional_format
+    return ensure_professional_format(basic_result, 'metadata_analysis')
 
 
 def compute_person_framing_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -602,10 +620,15 @@ def compute_person_framing_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, A
     
     duration = analysis_dict.get('timeline', {}).get('duration', 0)
     
-    return compute_person_framing_metrics(
+    # Get basic metrics first
+    basic_result = compute_person_framing_metrics(
         expression_timeline, object_timeline, camera_distance_timeline,
         person_timeline, enhanced_human_data, duration
     )
+    
+    # Convert to professional 6-block format
+    from .precompute_professional_wrappers import ensure_professional_format
+    return ensure_professional_format(basic_result, 'person_framing')
 
 
 def compute_scene_pacing_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -619,13 +642,18 @@ def compute_scene_pacing_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, Any
     camera_distance_timeline = timelines.get('cameraDistanceTimeline', {})
     video_id = analysis_dict.get('video_id', None)
     
-    return compute_scene_pacing_metrics(
+    # Get basic metrics first
+    basic_result = compute_scene_pacing_metrics(
         scene_timeline=scene_timeline,
         video_duration=video_duration,
         object_timeline=object_timeline,
         camera_distance_timeline=camera_distance_timeline,
         video_id=video_id
     )
+    
+    # Convert to professional 6-block format
+    from .precompute_professional_wrappers import ensure_professional_format
+    return ensure_professional_format(basic_result, 'scene_pacing')
 
 
 # Create a mapping of compute function names to their wrapper implementations

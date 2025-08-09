@@ -1,0 +1,769 @@
+{
+  "densityCoreMetrics": {
+    "avgDensity": 16.99624530663329,
+    "maxDensity": 54.0,
+    "minDensity": 0.0,
+    "stdDeviation": 13.473909104868396,
+    "totalElements": 1358,
+    "elementsPerSecond": 16.99624530663329,
+    "elementCounts": {
+      "text": 156,
+      "sticker": 0,
+      "effect": 0,
+      "transition": 28,
+      "object": 1169,
+      "gesture": 0,
+      "expression": 37
+    },
+    "sceneChangeCount": 28,
+    "timelineCoverage": 0.8635794743429286,
+    "confidence": 0.95
+  },
+  "densityDynamics": {
+    "densityCurve": [
+      {
+        "second": 0,
+        "density": 38,
+        "primaryElement": "object"
+      },
+      {
+        "second": 1,
+        "density": 54,
+        "primaryElement": "object"
+      },
+      {
+        "second": 2,
+        "density": 41,
+        "primaryElement": "object"
+      },
+      {
+        "second": 3,
+        "density": 30,
+        "primaryElement": "object"
+      },
+      {
+        "second": 4,
+        "density": 33,
+        "primaryElement": "object"
+      },
+      {
+        "second": 5,
+        "density": 31,
+        "primaryElement": "object"
+      },
+      {
+        "second": 6,
+        "density": 38,
+        "primaryElement": "object"
+      },
+      {
+        "second": 7,
+        "density": 30,
+        "primaryElement": "object"
+      },
+      {
+        "second": 8,
+        "density": 24,
+        "primaryElement": "object"
+      },
+      {
+        "second": 9,
+        "density": 21,
+        "primaryElement": "object"
+      },
+      {
+        "second": 10,
+        "density": 19,
+        "primaryElement": "object"
+      },
+      {
+        "second": 11,
+        "density": 17,
+        "primaryElement": "object"
+      },
+      {
+        "second": 12,
+        "density": 19,
+        "primaryElement": "object"
+      },
+      {
+        "second": 13,
+        "density": 17,
+        "primaryElement": "object"
+      },
+      {
+        "second": 14,
+        "density": 26,
+        "primaryElement": "object"
+      },
+      {
+        "second": 15,
+        "density": 24,
+        "primaryElement": "object"
+      },
+      {
+        "second": 16,
+        "density": 27,
+        "primaryElement": "object"
+      },
+      {
+        "second": 17,
+        "density": 25,
+        "primaryElement": "object"
+      },
+      {
+        "second": 18,
+        "density": 19,
+        "primaryElement": "object"
+      },
+      {
+        "second": 19,
+        "density": 19,
+        "primaryElement": "object"
+      },
+      {
+        "second": 20,
+        "density": 17,
+        "primaryElement": "object"
+      },
+      {
+        "second": 21,
+        "density": 21,
+        "primaryElement": "object"
+      },
+      {
+        "second": 22,
+        "density": 23,
+        "primaryElement": "object"
+      },
+      {
+        "second": 23,
+        "density": 22,
+        "primaryElement": "object"
+      },
+      {
+        "second": 24,
+        "density": 22,
+        "primaryElement": "object"
+      },
+      {
+        "second": 25,
+        "density": 23,
+        "primaryElement": "object"
+      },
+      {
+        "second": 26,
+        "density": 32,
+        "primaryElement": "object"
+      },
+      {
+        "second": 27,
+        "density": 33,
+        "primaryElement": "object"
+      },
+      {
+        "second": 28,
+        "density": 28,
+        "primaryElement": "object"
+      },
+      {
+        "second": 29,
+        "density": 27,
+        "primaryElement": "object"
+      },
+      {
+        "second": 30,
+        "density": 29,
+        "primaryElement": "object"
+      },
+      {
+        "second": 31,
+        "density": 22,
+        "primaryElement": "object"
+      },
+      {
+        "second": 32,
+        "density": 19,
+        "primaryElement": "object"
+      },
+      {
+        "second": 33,
+        "density": 16,
+        "primaryElement": "object"
+      },
+      {
+        "second": 34,
+        "density": 32,
+        "primaryElement": "object"
+      },
+      {
+        "second": 35,
+        "density": 29,
+        "primaryElement": "object"
+      },
+      {
+        "second": 36,
+        "density": 27,
+        "primaryElement": "object"
+      },
+      {
+        "second": 37,
+        "density": 34,
+        "primaryElement": "object"
+      },
+      {
+        "second": 38,
+        "density": 34,
+        "primaryElement": "object"
+      },
+      {
+        "second": 39,
+        "density": 38,
+        "primaryElement": "object"
+      },
+      {
+        "second": 40,
+        "density": 38,
+        "primaryElement": "object"
+      },
+      {
+        "second": 41,
+        "density": 21,
+        "primaryElement": "object"
+      },
+      {
+        "second": 42,
+        "density": 19,
+        "primaryElement": "object"
+      },
+      {
+        "second": 43,
+        "density": 22,
+        "primaryElement": "object"
+      },
+      {
+        "second": 44,
+        "density": 21,
+        "primaryElement": "object"
+      },
+      {
+        "second": 45,
+        "density": 22,
+        "primaryElement": "object"
+      },
+      {
+        "second": 46,
+        "density": 19,
+        "primaryElement": "object"
+      },
+      {
+        "second": 47,
+        "density": 18,
+        "primaryElement": "object"
+      },
+      {
+        "second": 48,
+        "density": 23,
+        "primaryElement": "object"
+      },
+      {
+        "second": 49,
+        "density": 32,
+        "primaryElement": "object"
+      },
+      {
+        "second": 50,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 51,
+        "density": 1,
+        "primaryElement": "none"
+      },
+      {
+        "second": 52,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 53,
+        "density": 1,
+        "primaryElement": "none"
+      },
+      {
+        "second": 54,
+        "density": 1,
+        "primaryElement": "none"
+      },
+      {
+        "second": 55,
+        "density": 1,
+        "primaryElement": "none"
+      },
+      {
+        "second": 56,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 57,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 58,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 59,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 60,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 61,
+        "density": 1,
+        "primaryElement": "none"
+      },
+      {
+        "second": 62,
+        "density": 1,
+        "primaryElement": "none"
+      },
+      {
+        "second": 63,
+        "density": 1,
+        "primaryElement": "none"
+      },
+      {
+        "second": 64,
+        "density": 1,
+        "primaryElement": "none"
+      },
+      {
+        "second": 65,
+        "density": 1,
+        "primaryElement": "none"
+      },
+      {
+        "second": 66,
+        "density": 1,
+        "primaryElement": "none"
+      },
+      {
+        "second": 67,
+        "density": 1,
+        "primaryElement": "none"
+      },
+      {
+        "second": 68,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 69,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 70,
+        "density": 4,
+        "primaryElement": "text"
+      },
+      {
+        "second": 71,
+        "density": 4,
+        "primaryElement": "text"
+      },
+      {
+        "second": 72,
+        "density": 4,
+        "primaryElement": "text"
+      },
+      {
+        "second": 73,
+        "density": 4,
+        "primaryElement": "text"
+      },
+      {
+        "second": 74,
+        "density": 4,
+        "primaryElement": "text"
+      },
+      {
+        "second": 75,
+        "density": 4,
+        "primaryElement": "text"
+      },
+      {
+        "second": 76,
+        "density": 0,
+        "primaryElement": "none"
+      },
+      {
+        "second": 77,
+        "density": 4,
+        "primaryElement": "text"
+      },
+      {
+        "second": 78,
+        "density": 4,
+        "primaryElement": "text"
+      }
+    ],
+    "volatility": 0.7927113400905093,
+    "accelerationPattern": "front_loaded",
+    "densityProgression": "stable",
+    "emptySeconds": [
+      50,
+      52,
+      56,
+      57,
+      58,
+      59,
+      60,
+      68,
+      69,
+      76
+    ],
+    "confidence": 0.95
+  },
+  "densityInteractions": {
+    "multiModalPeaks": [
+      {
+        "timestamp": "5-6s",
+        "elements": [
+          "text",
+          "object",
+          "expression"
+        ],
+        "syncType": "complementary"
+      },
+      {
+        "timestamp": "28-29s",
+        "elements": [
+          "text",
+          "object",
+          "expression"
+        ],
+        "syncType": "complementary"
+      },
+      {
+        "timestamp": "29-30s",
+        "elements": [
+          "text",
+          "object",
+          "expression"
+        ],
+        "syncType": "complementary"
+      },
+      {
+        "timestamp": "31-32s",
+        "elements": [
+          "text",
+          "object",
+          "expression"
+        ],
+        "syncType": "complementary"
+      },
+      {
+        "timestamp": "32-33s",
+        "elements": [
+          "text",
+          "object",
+          "expression"
+        ],
+        "syncType": "complementary"
+      },
+      {
+        "timestamp": "33-34s",
+        "elements": [
+          "text",
+          "object",
+          "expression"
+        ],
+        "syncType": "complementary"
+      },
+      {
+        "timestamp": "34-35s",
+        "elements": [
+          "text",
+          "object",
+          "expression"
+        ],
+        "syncType": "complementary"
+      },
+      {
+        "timestamp": "35-36s",
+        "elements": [
+          "text",
+          "object",
+          "expression"
+        ],
+        "syncType": "complementary"
+      },
+      {
+        "timestamp": "36-37s",
+        "elements": [
+          "text",
+          "object",
+          "expression"
+        ],
+        "syncType": "complementary"
+      },
+      {
+        "timestamp": "41-42s",
+        "elements": [
+          "text",
+          "object",
+          "expression"
+        ],
+        "syncType": "complementary"
+      }
+    ],
+    "elementCooccurrence": {
+      "object_text": 30,
+      "expression_text": 14,
+      "expression_object": 26
+    },
+    "dominantCombination": "object_text",
+    "coordinationScore": 0.17521902377972465,
+    "confidence": 0.9
+  },
+  "densityKeyEvents": {
+    "peakMoments": [
+      {
+        "timestamp": "0-1s",
+        "totalElements": 38,
+        "surpriseScore": 1.558730714241196,
+        "elementBreakdown": {
+          "text": 4,
+          "sticker": 0,
+          "effect": 0,
+          "transition": 0,
+          "scene_change": 0
+        }
+      },
+      {
+        "timestamp": "1-2s",
+        "totalElements": 54,
+        "surpriseScore": 2.7461227682788225,
+        "elementBreakdown": {
+          "text": 4,
+          "sticker": 0,
+          "effect": 0,
+          "transition": 0,
+          "scene_change": 0
+        }
+      },
+      {
+        "timestamp": "2-3s",
+        "totalElements": 41,
+        "surpriseScore": 1.781366724373251,
+        "elementBreakdown": {
+          "text": 4,
+          "sticker": 0,
+          "effect": 0,
+          "transition": 0,
+          "scene_change": 0
+        }
+      },
+      {
+        "timestamp": "4-5s",
+        "totalElements": 33,
+        "surpriseScore": 1.1876706973544378,
+        "elementBreakdown": {
+          "text": 4,
+          "sticker": 0,
+          "effect": 0,
+          "transition": 0,
+          "scene_change": 0
+        }
+      },
+      {
+        "timestamp": "5-6s",
+        "totalElements": 31,
+        "surpriseScore": 1.0392466905997344,
+        "elementBreakdown": {
+          "text": 4,
+          "sticker": 0,
+          "effect": 0,
+          "transition": 0,
+          "scene_change": 0
+        }
+      },
+      {
+        "timestamp": "6-7s",
+        "totalElements": 38,
+        "surpriseScore": 1.558730714241196,
+        "elementBreakdown": {
+          "text": 4,
+          "sticker": 0,
+          "effect": 0,
+          "transition": 0,
+          "scene_change": 0
+        }
+      },
+      {
+        "timestamp": "26-27s",
+        "totalElements": 32,
+        "surpriseScore": 1.113458693977086,
+        "elementBreakdown": {
+          "text": 4,
+          "sticker": 0,
+          "effect": 0,
+          "transition": 0,
+          "scene_change": 0
+        }
+      },
+      {
+        "timestamp": "27-28s",
+        "totalElements": 33,
+        "surpriseScore": 1.1876706973544378,
+        "elementBreakdown": {
+          "text": 4,
+          "sticker": 0,
+          "effect": 0,
+          "transition": 0,
+          "scene_change": 0
+        }
+      },
+      {
+        "timestamp": "34-35s",
+        "totalElements": 32,
+        "surpriseScore": 1.113458693977086,
+        "elementBreakdown": {
+          "text": 4,
+          "sticker": 0,
+          "effect": 0,
+          "transition": 0,
+          "scene_change": 0
+        }
+      },
+      {
+        "timestamp": "37-38s",
+        "totalElements": 34,
+        "surpriseScore": 1.2618827007317894,
+        "elementBreakdown": {
+          "text": 4,
+          "sticker": 0,
+          "effect": 0,
+          "transition": 0,
+          "scene_change": 0
+        }
+      }
+    ],
+    "deadZones": [
+      {
+        "start": 56,
+        "end": 61,
+        "duration": 5
+      },
+      {
+        "start": 68,
+        "end": 70,
+        "duration": 2
+      }
+    ],
+    "densityShifts": [
+      {
+        "timestamp": 50,
+        "from": "high",
+        "to": "none",
+        "magnitude": 0.999968750976532
+      },
+      {
+        "timestamp": 70,
+        "from": "none",
+        "to": "medium",
+        "magnitude": 0.9997500624843788
+      },
+      {
+        "timestamp": 76,
+        "from": "medium",
+        "to": "none",
+        "magnitude": 0.9997500624843788
+      },
+      {
+        "timestamp": 77,
+        "from": "none",
+        "to": "medium",
+        "magnitude": 0.9997500624843788
+      },
+      {
+        "timestamp": 51,
+        "from": "none",
+        "to": "low",
+        "magnitude": 0.9990009990009991
+      },
+      {
+        "timestamp": 52,
+        "from": "low",
+        "to": "none",
+        "magnitude": 0.9990009990009991
+      },
+      {
+        "timestamp": 53,
+        "from": "none",
+        "to": "low",
+        "magnitude": 0.9990009990009991
+      },
+      {
+        "timestamp": 56,
+        "from": "low",
+        "to": "none",
+        "magnitude": 0.9990009990009991
+      },
+      {
+        "timestamp": 61,
+        "from": "none",
+        "to": "low",
+        "magnitude": 0.9990009990009991
+      },
+      {
+        "timestamp": 68,
+        "from": "low",
+        "to": "none",
+        "magnitude": 0.9990009990009991
+      }
+    ],
+    "confidence": 0.95
+  },
+  "densityPatterns": {
+    "structuralFlags": {
+      "strongOpeningHook": true,
+      "crescendoPattern": false,
+      "frontLoaded": true,
+      "consistentPacing": false,
+      "finalCallToAction": false,
+      "rhythmicPattern": false
+    },
+    "densityClassification": "dense",
+    "pacingStyle": "front_loaded",
+    "cognitiveLoadCategory": "challenging",
+    "mlTags": [
+      "density_computed",
+      "avg_17.0"
+    ],
+    "confidence": 0.85
+  },
+  "densityQuality": {
+    "dataCompleteness": 0.95,
+    "detectionReliability": {
+      "textOverlay": 0.95,
+      "sticker": 0.92,
+      "effect": 0.0,
+      "transition": 0.85,
+      "sceneChange": 0.85,
+      "object": 0.88,
+      "gesture": 0.87
+    },
+    "overallConfidence": 0.9
+  }
+}

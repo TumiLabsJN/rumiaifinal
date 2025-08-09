@@ -171,7 +171,10 @@ class MLDataExtractor:
     
     def _extract_speech_analysis(self, analysis: UnifiedAnalysis) -> Dict[str, Any]:
         """Extract data for speech analysis."""
+        import os
+        
         whisper_data = analysis.get_ml_data('whisper') or {}
+        audio_energy_data = analysis.get_ml_data('audio_energy') or {}  # ADD AUDIO ENERGY
         speech_entries = analysis.timeline.get_entries_by_type('speech')
         
         # Build speech segments with full text
@@ -202,6 +205,28 @@ class MLDataExtractor:
         
         top_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:20]
         
+        # ERROR HANDLING: Check for speech + missing audio energy (FAIL FAST)
+        has_speech = bool(speech_entries) or bool(whisper_data.get('segments', []))
+        has_audio_energy = bool(audio_energy_data.get('energy_level_windows', {}))
+        
+        if os.getenv('USE_PYTHON_ONLY_PROCESSING') == 'true':
+            if has_speech and not has_audio_energy:
+                # FAIL FAST: Speech detected but no audio energy data
+                raise RuntimeError(
+                    "CRITICAL: Speech detected but audio energy data missing. "
+                    "Audio energy analysis is required for speech analysis in Python-only mode."
+                )
+        
+        # BACKWARD COMPATIBILITY: No audio = continue with empty energy data
+        if not has_audio_energy:
+            audio_energy_data = {
+                'energy_level_windows': {},
+                'energy_variance': 0.0,
+                'climax_timestamp': 0.0,
+                'burst_pattern': 'none',
+                'metadata': {'processed': True, 'success': True, 'no_audio': True}
+            }
+        
         return {
             'ml_data': {
                 'total_segments': len(speech_segments),
@@ -210,7 +235,8 @@ class MLDataExtractor:
                 'word_count': word_count,
                 'words_per_minute': (word_count / total_speech_time * 60) if total_speech_time > 0 else 0,
                 'language': whisper_data.get('language', 'unknown'),
-                'top_words': dict(top_words)
+                'top_words': dict(top_words),
+                'audio_energy': audio_energy_data  # ADD AUDIO ENERGY DATA
             },
             'timelines': {
                 'speech_segments': speech_segments[:50],  # Limit to 50 segments

@@ -1,0 +1,48 @@
+{
+  "personFramingCoreMetrics": {
+    "primarySubject": "single",
+    "averageFaceSize": 0,
+    "faceVisibilityRate": 0,
+    "framingConsistency": 0,
+    "subjectCount": 1,
+    "dominantFraming": "medium",
+    "eyeContactRate": 0
+  },
+  "personFramingDynamics": {
+    "framingProgression": [],
+    "distanceVariation": 0,
+    "framingTransitions": 0,
+    "movementPattern": "static",
+    "stabilityScore": 0.8
+  },
+  "personFramingInteractions": {
+    "multiPersonDynamics": {},
+    "speakerFraming": {},
+    "interactionZones": [],
+    "socialDistance": "personal"
+  },
+  "personFramingKeyEvents": {
+    "closeUpMoments": [],
+    "groupShots": [],
+    "framingChanges": [],
+    "keySubjectMoments": []
+  },
+  "personFramingPatterns": {
+    "framingDistribution": {
+      "extreme_close": 0,
+      "close": 0.2,
+      "medium": 0.6,
+      "full": 0.2
+    },
+    "compositionRule": "center",
+    "cinematicStyle": "casual",
+    "framingTechnique": "standard"
+  },
+  "personFramingQuality": {
+    "compositionScore": 0.7,
+    "framingAppropriate": 0.8,
+    "visualEngagement": 0.75,
+    "professionalLevel": 0.6,
+    "overallScore": 0.72
+  }
+}

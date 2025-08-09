@@ -1,13 +1,22 @@
-# P0 Critical Fixes Implementation Guide
+# P0 Critical Fixes Implementation Guide (Python-Only Mode)
 **Date**: 2025-01-08  
 **Priority**: IMMEDIATE  
 **Impact**: Fixes 40% of placeholder features across system
 
+> **⚠️ CRITICAL CONTEXT: Python-Only Mode**
+> 
+> This implementation guide is **ONLY** for Python-only processing mode:
+> - Applies when `USE_PYTHON_ONLY_PROCESSING=true`
+> - Does **NOT** affect Claude API flow
+> - Claude API continues to work unchanged
+> - FEAT integration only runs in Python-only precompute layer
+> - All changes are isolated to local ML processing
+> - Zero impact on cloud-based Claude processing
+
 ## Table of Contents
 1. [Emotion Detection Fix](#1-emotion-detection-fix)
-2. [Visual Effect Detection Fix](#2-visual-effect-detection-fix)
-3. [Integration Testing](#3-integration-testing)
-4. [Rollout Strategy](#4-rollout-strategy)
+2. [Integration Testing](#2-integration-testing)
+3. [Rollout Strategy](#3-rollout-strategy)
 
 ---
 
@@ -18,8 +27,13 @@
 - System pretends to detect emotions with hardcoded mappings like `'smile' -> 'happy'`
 - Affects entire Emotional Journey analysis (39 features)
 - Current "emotions" are completely fabricated
+- **Inference-based emotion guessing** in `compute_emotional_metrics()`:
+  - Hardcoded `EMOTION_VALENCE` mappings (joy=0.8, anger=-0.8, etc.)
+  - Fake emotion sequence generation from expression labels
+  - Placeholder emotional intensity calculations
+  - Guessed emotional transitions and arcs
 
-### Solution: Integrate Real Emotion Recognition with FEAT
+### Solution: Integrate Real Emotion Recognition with FEAT & Remove All Inference (Python-Only Mode)
 
 #### Production Solution - FEAT (Facial Expression Analysis Toolkit)
 **Superior accuracy (87% vs 65%), Action Unit based detection**
@@ -38,22 +52,19 @@ brew install opencv ffmpeg
 
 ##### Python Dependencies
 ```bash
-# Create virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or
-venv\Scripts\activate  # Windows
+# System-wide installation for Python 3.12+ (no virtual environment)
+# Required for Python-only processing mode
 
 # Install with specific CUDA version (if using GPU)
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118  # CUDA 11.8
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --break-system-packages  # CUDA 11.8
 
 # Install FEAT and dependencies
-pip install py-feat==0.6.0
-pip install opencv-python-headless==4.8.0
-pip install scikit-learn pandas scipy
+pip install py-feat==0.6.0 --break-system-packages
+pip install opencv-python-headless==4.8.0 --break-system-packages
+pip install scikit-learn pandas scipy --break-system-packages
 
 # For development/testing
-pip install pytest pytest-asyncio
+pip install pytest pytest-asyncio --break-system-packages
 ```
 
 ##### First Run Setup
@@ -74,6 +85,66 @@ from feat import Detector
 print("Downloading FEAT models...")
 detector = Detector(device='cpu')  # Downloads models
 print("Models downloaded successfully!")
+```
+
+#### Removing Emotion Inference Logic
+
+##### Current Inference to Remove
+```python
+# In precompute_functions_full.py - REMOVE ALL OF THIS:
+
+# Hardcoded emotion mappings
+EMOTION_VALENCE = {
+    'joy': 0.8, 'happy': 0.8, 'excited': 0.9,
+    'neutral': 0.0, 'calm': 0.1,
+    'sadness': -0.6, 'sad': -0.6,
+    'anger': -0.8, 'angry': -0.8,
+    'fear': -0.7, 'worried': -0.5,
+    'surprise': 0.3, 'surprised': 0.3,
+    'disgust': -0.9,
+    'contemplative': -0.1, 'thoughtful': -0.1
+}
+
+# Fake emotion generation from expression labels
+def compute_emotional_metrics(...):
+    # REMOVE: Mapping expressions to emotions
+    dominant = max(expressions, key=expressions.get)
+    dominant_std = EMOTION_LABELS[...] 
+    
+    # REMOVE: Guessed valence calculations
+    emotion_valence.append(EMOTION_VALENCE.get(dominant, 0.0))
+    
+    # REMOVE: Fake emotional arc generation
+    emotional_arc = "ascending" if valence_trend > 0 else "descending"
+```
+
+##### Fail-Fast Implementation
+```python
+def compute_emotional_metrics(feat_analysis, duration):
+    """
+    Compute emotional metrics using REAL FEAT analysis
+    FAIL-FAST if FEAT data is missing
+    """
+    
+    # MANDATORY: Require FEAT analysis in Python-only mode
+    if not feat_analysis:
+        if os.getenv('USE_PYTHON_ONLY_PROCESSING') == 'true':
+            raise ValueError(
+                "CRITICAL: FEAT emotion analysis is required.\n"
+                "No emotion data available. Ensure FEAT service has been run.\n"
+                "Cannot proceed with inference-based emotions."
+            )
+        # For non-Python mode, return empty metrics
+        return {}
+    
+    # Use ONLY real emotion data from FEAT
+    emotions = feat_analysis.get('emotions', [])
+    action_units = feat_analysis.get('action_units', {})
+    confidence_scores = feat_analysis.get('confidence_scores', [])
+    
+    # NO INFERENCE - only real detected emotions
+    # NO GUESSING - only measured Action Units
+    # NO PLACEHOLDERS - fail if data missing
 ```
 
 ##### Verification Script
@@ -799,494 +870,69 @@ def get_emotion_detector() -> EmotionDetectionService:
     return EmotionDetectionService(gpu=use_gpu)
 ```
 
-#### Integration into ML Pipeline
+#### Integration into Python-Only Precompute Layer
+
+**IMPORTANT: For Python-only flow, FEAT integrates at the precompute layer, NOT ml_services_unified.py**
+**This ensures Claude API flow remains completely unchanged**
 
 ```python
-# Location: /home/jorge/rumiaifinal/rumiai_v2/api/ml_services_unified.py
-# Add to the ML services
+# Location: /home/jorge/rumiaifinal/rumiai_v2/processors/precompute_professional.py
+# Update compute_emotional_journey_analysis_professional to call FEAT
 
-async def _run_emotion_detection(self,
-                                frames: List[FrameData],
-                                video_id: str,
-                                output_dir: Path) -> Dict[str, Any]:
-    """Run real emotion detection on frames"""
+async def compute_emotional_journey_analysis_professional(timelines: Dict[str, Any], 
+                                                         duration: float,
+                                                         frames: Optional[List[np.ndarray]] = None,
+                                                         timestamps: Optional[List[float]] = None) -> Dict[str, Any]:
+    """
+    Professional emotional journey analysis with FEAT integration
+    Called during precompute phase in Python-only flow
+    """
     
-    # Load emotion detector
-    detector = await self._ensure_model_loaded('emotion')
-    if not detector:
-        logger.warning("Emotion detector not available")
-        return self._empty_emotion_result()
-    
-    # Get frames for emotion detection (sample at 1 FPS for efficiency)
-    emotion_frames = self.frame_manager.get_frames_for_service(frames, 'emotion')
-    
-    # Extract numpy arrays and timestamps
-    frame_arrays = [f.image for f in emotion_frames]
-    timestamps = [f.timestamp for f in emotion_frames]
-    
-    logger.info(f"Running emotion detection on {len(emotion_frames)} frames")
-    
-    # Run emotion detection
-    emotion_results = await detector.analyze_emotional_journey(
-        frame_arrays, timestamps
-    )
-    
-    # Save results
-    output_file = output_dir / f"{video_id}_emotions.json"
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_file, 'w') as f:
-        json.dump(emotion_results, f, indent=2)
-    
-    return emotion_results
-
-# Add to model loading
-elif model_name == 'emotion':
-    from ..ml_services.emotion_detection_service import get_emotion_detector
-    self._models['emotion'] = get_emotion_detector()
+    # If frames provided, run FEAT emotion detection
+    if frames is not None and timestamps is not None:
+        from rumiai_v2.ml_services.emotion_detection_service import get_emotion_detector
+        
+        detector = get_emotion_detector()
+        
+        # Run FEAT emotion detection
+        emotion_data = await detector.detect_emotions_batch(frames, timestamps)
+        
+        # Build expression timeline from FEAT results
+        expression_timeline = {}
+        for emotion_entry in emotion_data['emotions']:
+            time_key = f"{int(emotion_entry['timestamp'])}-{int(emotion_entry['timestamp'])+5}s"
+            expression_timeline[time_key] = {
+                'emotion': emotion_entry['emotion'],
+                'confidence': emotion_entry['confidence']
+            }
+        
+        # Update timelines with FEAT results
+        timelines['expressionTimeline'] = expression_timeline
+        
+    # Rest of the function continues with the updated expression timeline
+    expression_timeline = timelines.get('expressionTimeline', {})
+    # ... continue with existing logic
 ```
+
+**Key Integration Points:**
+
+1. **Frame Manager** → Extracts frames once at adaptive FPS
+2. **Precompute Layer** → Calls FEAT during `compute_emotional_journey_analysis_professional`
+3. **FEAT Service** → Returns emotion detection results
+4. **Timeline Builder** → Already has emotion data from precompute, no changes needed
+5. **Output** → Professional 6-block format with real emotions
+
+This approach ensures:
+- FEAT runs during precompute phase (Python-only)
+- No changes to ml_services_unified.py needed
+- Emotions are computed before professional formatting
+- Service contract is maintained at precompute layer
 
 ---
 
-## 2. Visual Effect Detection - REMOVED
+## 2. Integration Testing
 
-### Decision: Skip Visual Effects for P0
-After analysis, visual effect detection is:
-- Not needed for emotion analysis
-- Computationally expensive (optical flow, etc.)
-- Full of arbitrary thresholds
-- Low accuracy with high complexity
-
-### Simplified Approach:
-```python
-# Location: /home/jorge/rumiaifinal/rumiai_v2/ml_services/visual_effects_service.py
-
-"""
-Minimal visual effects stub - P0 implementation
-Real effect detection not needed for emotion analysis
-"""
-
-import numpy as np
-from typing import Dict, List, Any
-import logging
-
-logger = logging.getLogger(__name__)
-
-class VisualEffectDetector:
-    """
-    Minimal visual effects stub for P0
-    Returns empty results - effect detection not needed for emotion analysis
-    """
-    
-    def __init__(self):
-        logger.info("Visual effect detection disabled for P0 - not needed for emotion analysis")
-        
-    async def detect_effects_batch(self,
-                                  frames: List[np.ndarray],
-                                  timestamps: List[float]) -> Dict[str, Any]:
-        """
-        Returns empty results - visual effects not analyzed for P0
-        
-        Returns:
-            Empty structure for compatibility
-        """
-        return {
-            'effects': [],
-            'transitions': [],
-            'effect_timeline': {},
-            'filter_timeline': {},
-            'metrics': {
-                'total_effects': 0,
-                'total_transitions': 0,
-                'effect_density': 0,
-                'most_common_effect': None,
-                'note': 'Visual effect detection disabled for P0'
-            }
-        }
-    
-    def _analyze_frame(self, frame: np.ndarray, timestamp: float, index: int) -> List[Dict]:
-        """Analyze single frame for all effects"""
-        detected_effects = []
-        
-        # Check each effect type
-        for effect_name, detect_func in self.effect_types.items():
-            result = detect_func(frame, timestamp)
-            if result and result['confidence'] > 0.5:
-                detected_effects.append(result)
-        
-        return detected_effects
-    
-    def _detect_blur(self, frame: np.ndarray, timestamp: float) -> Optional[Dict]:
-        """
-        Detect blur using Laplacian variance
-        Lower variance = more blur
-        """
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
-        
-        # Threshold for blur detection (tune based on testing)
-        blur_threshold = 100
-        
-        if laplacian_var < blur_threshold:
-            blur_strength = 1.0 - (laplacian_var / blur_threshold)
-            return {
-                'type': 'blur',
-                'timestamp': timestamp,
-                'confidence': min(blur_strength * 1.5, 1.0),
-                'intensity': blur_strength,
-                'subtype': 'motion_blur' if blur_strength > 0.7 else 'gaussian_blur'
-            }
-        return None
-    
-    def _detect_zoom(self, frame: np.ndarray, timestamp: float) -> Optional[Dict]:
-        """
-        Detect zoom by analyzing optical flow patterns
-        Radial flow indicates zoom
-        """
-        if self.prev_frame is None:
-            return None
-            
-        # Convert to grayscale
-        gray1 = cv2.cvtColor(self.prev_frame, cv2.COLOR_BGR2GRAY)
-        gray2 = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        
-        # Calculate optical flow
-        flow = cv2.calcOpticalFlowFarneback(
-            gray1, gray2, None, 0.5, 3, 15, 3, 5, 1.2, 0
-        )
-        
-        # Analyze flow pattern for radial movement
-        h, w = flow.shape[:2]
-        cx, cy = w // 2, h // 2
-        
-        # Sample points in a grid
-        radial_score = 0
-        sample_points = 20
-        
-        for i in range(0, h, h // sample_points):
-            for j in range(0, w, w // sample_points):
-                dx, dy = flow[i, j]
-                
-                # Vector from center to point
-                to_point_x = j - cx
-                to_point_y = i - cy
-                
-                # Normalize
-                mag = np.sqrt(to_point_x**2 + to_point_y**2)
-                if mag > 0:
-                    to_point_x /= mag
-                    to_point_y /= mag
-                    
-                    # Dot product with flow vector (correlation)
-                    flow_mag = np.sqrt(dx**2 + dy**2)
-                    if flow_mag > 0:
-                        dx_norm = dx / flow_mag
-                        dy_norm = dy / flow_mag
-                        dot = dx_norm * to_point_x + dy_norm * to_point_y
-                        radial_score += abs(dot)
-        
-        radial_score /= (sample_points * sample_points)
-        
-        if radial_score > 0.6:  # Threshold for zoom detection
-            # Determine zoom direction
-            avg_flow_mag = np.mean(np.sqrt(flow[:,:,0]**2 + flow[:,:,1]**2))
-            
-            return {
-                'type': 'zoom',
-                'timestamp': timestamp,
-                'confidence': min(radial_score, 1.0),
-                'direction': 'in' if avg_flow_mag > 2 else 'out',
-                'intensity': avg_flow_mag
-            }
-        return None
-    
-    def _detect_fade(self, frame: np.ndarray, timestamp: float) -> Optional[Dict]:
-        """Detect fade in/out by analyzing frame brightness"""
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        mean_brightness = np.mean(gray)
-        
-        # Detect black fade
-        if mean_brightness < 20:
-            return {
-                'type': 'fade',
-                'timestamp': timestamp,
-                'confidence': 0.9,
-                'subtype': 'fade_to_black',
-                'intensity': 1.0 - (mean_brightness / 20)
-            }
-        
-        # Detect white fade
-        elif mean_brightness > 235:
-            return {
-                'type': 'fade',
-                'timestamp': timestamp,
-                'confidence': 0.9,
-                'subtype': 'fade_to_white',
-                'intensity': (mean_brightness - 235) / 20
-            }
-        
-        return None
-    
-    def _detect_wipe(self, frame: np.ndarray, timestamp: float) -> Optional[Dict]:
-        """Detect wipe transitions using edge detection"""
-        if self.prev_frame is None:
-            return None
-            
-        # Calculate difference
-        diff = cv2.absdiff(frame, self.prev_frame)
-        gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-        
-        # Detect vertical/horizontal lines in difference
-        edges = cv2.Canny(gray_diff, 50, 150)
-        
-        # Hough line detection
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=100, maxLineGap=10)
-        
-        if lines is not None and len(lines) > 5:
-            # Analyze line orientations
-            vertical_lines = 0
-            horizontal_lines = 0
-            
-            for line in lines:
-                x1, y1, x2, y2 = line[0]
-                angle = np.abs(np.arctan2(y2-y1, x2-x1) * 180 / np.pi)
-                
-                if angle < 30 or angle > 150:
-                    horizontal_lines += 1
-                elif 60 < angle < 120:
-                    vertical_lines += 1
-            
-            if vertical_lines > 3:
-                return {
-                    'type': 'wipe',
-                    'timestamp': timestamp,
-                    'confidence': 0.7,
-                    'direction': 'vertical'
-                }
-            elif horizontal_lines > 3:
-                return {
-                    'type': 'wipe',
-                    'timestamp': timestamp,
-                    'confidence': 0.7,
-                    'direction': 'horizontal'
-                }
-        
-        return None
-    
-    def _detect_filter(self, frame: np.ndarray, timestamp: float) -> Optional[Dict]:
-        """Detect color filters by analyzing color distribution"""
-        # Analyze color channels
-        b, g, r = cv2.split(frame)
-        
-        # Calculate channel statistics
-        avg_b, avg_g, avg_r = np.mean(b), np.mean(g), np.mean(r)
-        std_b, std_g, std_r = np.std(b), np.std(g), np.std(r)
-        
-        # Detect specific filters
-        filter_type = None
-        confidence = 0
-        
-        # Sepia filter detection
-        if avg_r > avg_g > avg_b and (avg_r - avg_b) > 30:
-            filter_type = 'sepia'
-            confidence = min((avg_r - avg_b) / 50, 1.0)
-        
-        # Blue filter (cold tone)
-        elif avg_b > avg_r and avg_b > avg_g and (avg_b - avg_r) > 20:
-            filter_type = 'cold_tone'
-            confidence = min((avg_b - avg_r) / 40, 1.0)
-        
-        # Warm filter
-        elif avg_r > avg_b and avg_g > avg_b and (avg_r - avg_b) > 20:
-            filter_type = 'warm_tone'
-            confidence = min((avg_r - avg_b) / 40, 1.0)
-        
-        # Black and white
-        elif std_b < 5 and std_g < 5 and std_r < 5:
-            filter_type = 'black_white'
-            confidence = 0.9
-        
-        # High contrast
-        elif (std_b + std_g + std_r) / 3 > 80:
-            filter_type = 'high_contrast'
-            confidence = min(((std_b + std_g + std_r) / 3 - 80) / 40, 1.0)
-        
-        if filter_type and confidence > 0.5:
-            return {
-                'type': 'filter',
-                'timestamp': timestamp,
-                'confidence': confidence,
-                'filter_type': filter_type,
-                'color_shift': {
-                    'r': avg_r,
-                    'g': avg_g,
-                    'b': avg_b
-                }
-            }
-        
-        return None
-    
-    def _detect_overlay(self, frame: np.ndarray, timestamp: float) -> Optional[Dict]:
-        """Detect graphic overlays using edge density"""
-        # Convert to grayscale
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        
-        # Detect edges
-        edges = cv2.Canny(gray, 50, 150)
-        
-        # Calculate edge density in different regions
-        h, w = edges.shape
-        regions = {
-            'top': edges[:h//3, :],
-            'middle': edges[h//3:2*h//3, :],
-            'bottom': edges[2*h//3:, :],
-            'left': edges[:, :w//3],
-            'right': edges[:, 2*w//3:]
-        }
-        
-        overlay_detected = False
-        overlay_regions = []
-        
-        for region_name, region in regions.items():
-            edge_density = np.sum(region > 0) / region.size
-            
-            # High edge density might indicate overlay graphics
-            if edge_density > 0.15:  # Threshold
-                overlay_detected = True
-                overlay_regions.append(region_name)
-        
-        if overlay_detected:
-            return {
-                'type': 'overlay',
-                'timestamp': timestamp,
-                'confidence': 0.6,
-                'regions': overlay_regions,
-                'subtype': 'graphic_overlay'
-            }
-        
-        return None
-    
-    def _detect_shake(self, frame: np.ndarray, timestamp: float) -> Optional[Dict]:
-        """Detect camera shake using motion vectors"""
-        if len(self.frame_cache) < 3:
-            self.frame_cache.append(frame)
-            return None
-            
-        # Compare with previous frames
-        motion_scores = []
-        
-        for prev_frame in self.frame_cache:
-            # Calculate motion
-            diff = cv2.absdiff(frame, prev_frame)
-            motion_score = np.mean(diff)
-            motion_scores.append(motion_score)
-        
-        avg_motion = np.mean(motion_scores)
-        motion_variance = np.var(motion_scores)
-        
-        # High variance indicates shake
-        if motion_variance > 100 and avg_motion > 10:
-            return {
-                'type': 'shake',
-                'timestamp': timestamp,
-                'confidence': min(motion_variance / 200, 1.0),
-                'intensity': avg_motion
-            }
-        
-        self.frame_cache.append(frame)
-        return None
-    
-    def _detect_speed_effect(self, frame: np.ndarray, timestamp: float) -> Optional[Dict]:
-        """Detect slow motion or time lapse (requires timestamp analysis)"""
-        # This would need frame rate analysis over time
-        # Placeholder for now - would need temporal consistency check
-        return None
-    
-    def _detect_transition(self, 
-                          prev_frame: np.ndarray, 
-                          curr_frame: np.ndarray,
-                          prev_time: float,
-                          curr_time: float) -> Optional[Dict]:
-        """
-        Detect transitions between frames
-        More sophisticated than scene detection - looks for transition effects
-        """
-        # Calculate SSIM
-        gray1 = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
-        gray2 = cv2.cvtColor(curr_frame, cv2.COLOR_BGR2GRAY)
-        
-        similarity = ssim(gray1, gray2)
-        
-        # Very low similarity indicates hard cut or transition
-        if similarity < 0.3:
-            # Analyze the type of transition
-            transition_type = 'cut'  # Default
-            
-            # Check for fade
-            if np.mean(gray1) < 30 or np.mean(gray2) < 30:
-                transition_type = 'fade'
-            elif np.mean(gray1) > 225 or np.mean(gray2) > 225:
-                transition_type = 'fade'
-            
-            # Check for wipe (already detected in effects)
-            
-            return {
-                'type': 'transition',
-                'subtype': transition_type,
-                'timestamp': curr_time,
-                'from_time': prev_time,
-                'confidence': 1.0 - similarity,
-                'similarity_score': similarity
-            }
-        
-        return None
-
-
-def get_effect_detector() -> VisualEffectDetector:
-    """Factory function for effect detector"""
-    return VisualEffectDetector()
-```
-
-#### Integration with Creative Density
-
-```python
-# Update precompute_functions.py to use real effect data
-
-def compute_creative_density_analysis(timelines: Dict, duration: float) -> Dict:
-    """Updated to use real effect detection"""
-    
-    # Get real effect and transition counts from ML service
-    effect_timeline = timelines.get('effectTimeline', {})
-    transition_timeline = timelines.get('transitionTimeline', {})
-    
-    # Count real effects
-    effect_count = sum(len(effects) for effects in effect_timeline.values())
-    transition_count = sum(len(trans) for trans in transition_timeline.values())
-    
-    # Update element counts with real data
-    element_counts = {
-        'text': len(timelines.get('textOverlayTimeline', {})),
-        'sticker': len(timelines.get('stickerTimeline', {})),
-        'effect': effect_count,  # NOW REAL!
-        'transition': transition_count,  # NOW REAL!
-        'object': sum(len(objs) for objs in timelines.get('objectTimeline', {}).values())
-    }
-    
-    # Rest of computation remains the same but with real data
-    total_elements = sum(element_counts.values())
-    
-    return {
-        'elementCounts': element_counts,
-        'totalElements': total_elements,
-        'avgDensity': total_elements / duration if duration > 0 else 0,
-        # ... rest of metrics
-    }
-```
-
----
-
-## 3. Integration Testing
-
-### Test Script for Both Services
+### Test Script for Emotion Detection
 
 ```python
 # Location: /home/jorge/rumiaifinal/test_p0_fixes.py
@@ -1393,68 +1039,20 @@ async def test_emotion_detection():
         print("❌ No test frames available")
         return False
 
-async def test_effect_detection():
-    """Test visual effect detection"""
-    from rumiai_v2.ml_services.visual_effects_service import get_effect_detector
-    
-    print("\nTesting Visual Effect Detection...")
-    detector = get_effect_detector()
-    
-    # Create test frames with effects
-    test_frames = []
-    timestamps = []
-    
-    # Generate synthetic frames with effects
-    for i in range(10):
-        frame = np.zeros((480, 640, 3), dtype=np.uint8)
-        
-        # Add different effects
-        if i < 3:
-            # Fade in from black
-            brightness = int(i * 85)
-            frame[:] = brightness
-        elif i < 6:
-            # Normal frames
-            frame[:] = [100, 100, 100]
-            # Add some edges for overlay detection
-            cv2.rectangle(frame, (50, 50), (200, 200), (255, 255, 255), 2)
-        else:
-            # Apply blur simulation
-            frame[:] = [150, 150, 150]
-            frame = cv2.GaussianBlur(frame, (21, 21), 10)
-        
-        test_frames.append(frame)
-        timestamps.append(i * 0.5)
-    
-    results = await detector.detect_effects_batch(test_frames, timestamps)
-    
-    print(f"✅ Detected {results['metrics']['total_effects']} effects")
-    print(f"✅ Detected {results['metrics']['total_transitions']} transitions")
-    print(f"✅ Effect density: {results['metrics']['effect_density']:.2f}")
-    
-    if results['metrics']['effect_distribution']:
-        print("✅ Effect types found:", list(results['metrics']['effect_distribution'].keys()))
-    
-    # Save results
-    with open('test_effect_results.json', 'w') as f:
-        json.dump(results, f, indent=2, default=str)
-    
-    return True
 
 async def test_integration():
-    """Test full integration with pipeline"""
+    """Test FEAT emotion detection integration"""
     print("\n" + "="*50)
-    print("Testing P0 Fixes Integration")
+    print("Testing P0 FEAT Integration")
     print("="*50)
     
     emotion_success = await test_emotion_detection()
-    effect_success = await test_effect_detection()
     
-    if emotion_success and effect_success:
-        print("\n✅ All P0 fixes working correctly!")
+    if emotion_success:
+        print("\n✅ FEAT emotion detection working correctly!")
         print("Ready for production deployment")
     else:
-        print("\n⚠️ Some tests failed, review logs")
+        print("\n⚠️ Emotion detection failed, review logs")
 
 if __name__ == "__main__":
     asyncio.run(test_integration())
@@ -1495,13 +1093,140 @@ if __name__ == "__main__":
 
 ---
 
-## 4. Rollout Strategy
+## Output Service Contract
+
+### Contract: Emotion Detection Output Format
+This contract defines the REQUIRED output format that downstream services expect.
+Breaking this contract will cause pipeline failures.
+
+```python
+class EmotionTimelineContract:
+    """
+    REQUIRED format for expression_timeline entries
+    Used by: compute_emotional_journey_analysis_professional
+    """
+    
+    # Timeline format MUST be:
+    expression_timeline = {
+        "0-5s": {
+            "emotion": str,      # REQUIRED: One of: joy, sadness, anger, fear, surprise, disgust, neutral
+            "confidence": float, # REQUIRED: 0.0-1.0 confidence score
+            # Optional fields (won't break if missing):
+            "face_count": int,   # Number of faces detected
+            "primary_face_area": float  # Size of primary face
+        },
+        "5-10s": {...},  # Same structure
+        # ... continues for all time windows
+    }
+    
+    # Emotion values MUST be exactly one of:
+    VALID_EMOTIONS = ["joy", "sadness", "anger", "fear", "surprise", "disgust", "neutral"]
+    # NOT "happy", "happiness", "sad", etc. - must be exact strings above
+    
+    # Time window keys MUST be:
+    # - Format: "{start}-{end}s" where start/end are integers
+    # - Sequential: "0-5s", "5-10s", "10-15s"
+    # - No gaps: Every window must be present even if no face detected
+    
+    # When no face detected in a window:
+    NO_FACE_ENTRY = {
+        "emotion": "neutral",  # Default to neutral, not None or empty
+        "confidence": 0.0      # Zero confidence
+    }
+
+class EmotionDataContract:
+    """
+    REQUIRED format for emotion_data in ML results
+    Used by: Timeline builder and precompute functions
+    """
+    
+    emotion_data = {
+        "emotions": [  # List of all detected emotions
+            {
+                "timestamp": float,
+                "emotion": str,  # From VALID_EMOTIONS
+                "confidence": float
+            }
+        ],
+        "dominant_emotion": str or None,  # Most frequent emotion
+        "emotion_transitions": [],  # List of transition events
+        "processing_stats": {
+            "video_type": str,  # "people_detected" | "no_people" | "feat_unavailable"
+            "successful_frames": int,
+            "no_face_frames": int,
+            "total_frames": int
+        }
+    }
+
+def validate_emotion_output(timeline_data: dict) -> bool:
+    """
+    Validate emotion data meets contract requirements
+    Run this before passing to downstream services
+    """
+    for time_key, entry in timeline_data.items():
+        # Check time key format
+        if not re.match(r'^\d+-\d+s$', time_key):
+            raise ValueError(f"Invalid time key format: {time_key}")
+        
+        # Check required fields
+        if 'emotion' not in entry or 'confidence' not in entry:
+            raise ValueError(f"Missing required fields in {time_key}")
+        
+        # Check emotion is valid
+        if entry['emotion'] not in VALID_EMOTIONS:
+            raise ValueError(f"Invalid emotion '{entry['emotion']}' in {time_key}")
+        
+        # Check confidence range
+        if not 0.0 <= entry['confidence'] <= 1.0:
+            raise ValueError(f"Invalid confidence {entry['confidence']} in {time_key}")
+    
+    return True
+```
+
+### Integration Points
+
+1. **EmotionDetectionService** outputs → **Timeline Builder** expects:
+   - `emotion_data` dict with emotions list
+   - Each emotion has `timestamp`, `emotion`, `confidence`
+
+2. **Timeline Builder** outputs → **Precompute Functions** expect:
+   - `expression_timeline` dict with time windows
+   - Each window has `emotion` and `confidence`
+
+3. **Precompute Functions** output → **Claude Prompts** expect:
+   - Precomputed metrics (not raw timeline)
+   - These are generated from timeline, not passed directly
+
+### Testing the Contract
+
+```python
+# Test in emotion_detection_service.py
+async def test_output_contract():
+    service = EmotionDetectionService()
+    
+    # Process test video
+    result = await service.detect_emotions_batch(frames, timestamps)
+    
+    # Validate meets contract
+    assert result['processing_stats']['video_type'] in ['people_detected', 'no_people']
+    
+    # Build timeline
+    timeline = build_expression_timeline(result)
+    
+    # Validate timeline format
+    assert validate_emotion_output(timeline)
+    
+    print("✅ Output contract validated")
+```
+
+---
+
+## 3. Rollout Strategy
 
 ### Phase 1: Development & Testing (Day 1)
 1. Implement emotion detection service
-2. Implement effect detection service
-3. Run unit tests on sample videos
-4. Validate output formats match existing schema
+2. Run unit tests on sample videos
+3. Validate output formats match existing schema
 
 ### Phase 2: Integration (Day 2)
 1. Integrate with ml_services_unified.py
@@ -1512,8 +1237,7 @@ if __name__ == "__main__":
 ### Phase 3: Validation (Day 3)
 1. Process 20+ videos with known characteristics
 2. Validate emotion detection accuracy (target: >70%)
-3. Validate effect detection accuracy (target: >80%)
-4. Check performance impact (target: <20% slower)
+3. Check performance impact (target: <20% slower)
 
 ### Phase 4: Production Deployment
 1. Deploy with feature flag for gradual rollout
@@ -1541,100 +1265,264 @@ if __name__ == "__main__":
 | Accuracy | 0% (fake data) | 87% real emotions | +87% accuracy |
 | Quality Improvement | 25% features fake | 95% features real | +70% data legitimacy |
 
-### Fallback Strategy
+### Service Contract Definition
 
 ```python
-# Add graceful degradation for FEAT with dependency checking
-class EmotionDetectionService:
-    def __init__(self, gpu=True, fallback_mode=False):
-        self.fallback_mode = fallback_mode
-        self.missing_deps = []
-        
-        if not fallback_mode:
-            # Check dependencies first
-            if not self._check_dependencies():
-                logger.warning(f"Missing dependencies: {', '.join(self.missing_deps)}")
-                self.fallback_mode = True
-                return
-                
-            try:
-                from feat import Detector
-                device = 'cuda' if gpu and torch.cuda.is_available() else 'cpu'
-                
-                # Check if models exist
-                import os
-                model_path = os.path.expanduser('~/.feat/models')
-                if not os.path.exists(model_path):
-                    logger.info("First run: Downloading FEAT models (~355MB)...")
-                
-                self.detector = Detector(
-                    face_model='retinaface',
-                    emotion_model='resmasknet',
-                    au_model='xgb',
-                    device=device
-                )
-                self.device = device
-            except ImportError as e:
-                logger.warning(f"FEAT not installed: {e}")
-                self.fallback_mode = True
-            except Exception as e:
-                logger.warning(f"FEAT initialization failed: {e}")
-                self.fallback_mode = True
+# emotion_detection_contract.py
+"""
+Service contract for emotion detection - no fallbacks, no feature flags
+This contract ensures fail-fast behavior and data integrity
+"""
+
+from typing import Dict, List, Any, TypedDict, Optional
+from enum import Enum
+import numpy as np
+
+class VideoType(Enum):
+    """Video classification based on face detection"""
+    PEOPLE_DETECTED = "people_detected"
+    NO_PEOPLE = "no_people"  # B-roll, text, animation - valid outcome
+
+class EmotionResult(TypedDict):
+    """Single emotion detection result"""
+    timestamp: float
+    emotion: str  # 'joy', 'sadness', 'anger', 'fear', 'surprise', 'disgust', 'neutral'
+    confidence: float  # 0.0 to 1.0
+    emotion_scores: Dict[str, float]
+    action_units: List[int]
+    au_intensities: Dict[int, float]
+
+class ProcessingStats(TypedDict):
+    """Processing statistics"""
+    total_frames: int
+    successful_frames: int
+    no_face_frames: int
+    video_type: str  # VideoType value
+
+class EmotionDetectionResponse(TypedDict):
+    """Complete response from emotion detection service"""
+    emotions: List[EmotionResult]
+    timeline: Dict[str, Any]  # Time-bucketed emotions
+    dominant_emotion: Optional[str]
+    emotion_transitions: List[Dict]
+    confidence_scores: List[float]
+    processing_stats: ProcessingStats
+    metrics: Dict[str, Any]
+
+class IEmotionDetectionService:
+    """
+    Service contract for emotion detection
     
-    def _check_dependencies(self) -> bool:
-        """Check if all required dependencies are installed"""
-        required = {
-            'torch': 'PyTorch',
-            'cv2': 'OpenCV',
-            'sklearn': 'scikit-learn',
-            'pandas': 'pandas',
-            'feat': 'py-feat'
+    Guarantees:
+    - Always returns EmotionDetectionResponse structure
+    - Never returns None or raises exceptions for missing faces
+    - FEAT crashes should fail fast (no recovery)
+    - No fallback modes - either works or fails
+    - No feature flags - always uses FEAT
+    """
+    
+    async def detect_emotions(
+        self, 
+        frames: List[np.ndarray],
+        timestamps: List[float],
+        video_duration: float
+    ) -> EmotionDetectionResponse:
+        """
+        Detect emotions in video frames
+        
+        Args:
+            frames: List of video frames (BGR format)
+            timestamps: Timestamp for each frame
+            video_duration: Total video duration for adaptive sampling
+            
+        Returns:
+            EmotionDetectionResponse with results or empty data for no-face videos
+            
+        Raises:
+            RuntimeError: If FEAT not installed (fail at startup)
+            Exception: If FEAT crashes (fail fast - no recovery)
+        """
+        raise NotImplementedError
+    
+    def get_service_info(self) -> Dict[str, Any]:
+        """
+        Get service information and capabilities
+        
+        Returns:
+            Service metadata including version, model, device
+        """
+        raise NotImplementedError
+```
+
+### Service Implementation
+
+```python
+# emotion_detection_service.py
+"""FEAT implementation of emotion detection contract - no fallbacks"""
+
+class EmotionDetectionService(IEmotionDetectionService):
+    """
+    FEAT-based implementation of emotion detection contract
+    
+    Requirements:
+    1. FEAT must be installed (no fallback)
+    2. Returns structured data even for no-face videos
+    3. Fails fast on FEAT crashes
+    4. No feature flags - always uses FEAT
+    """
+    
+    def __init__(self, gpu: bool = True):
+        """
+        Initialize FEAT emotion detector
+        Fails immediately if dependencies missing - no fallback
+        """
+        # Check dependencies upfront - fail fast
+        try:
+            from feat import Detector
+            import torch
+            import pandas
+            import cv2
+        except ImportError as e:
+            raise RuntimeError(f"FEAT dependencies not installed: {e}")
+        
+        # Initialize FEAT - fail if not possible
+        device = 'cuda' if gpu and torch.cuda.is_available() else 'cpu'
+        
+        try:
+            self.detector = Detector(
+                face_model='retinaface',
+                emotion_model='resmasknet',
+                au_model='xgb',
+                device=device
+            )
+        except Exception as e:
+            raise RuntimeError(f"FEAT initialization failed: {e}")
+        
+        self.device = device
+        logger.info(f"FEAT emotion detector initialized (Device: {device})")
+    
+    async def detect_emotions(
+        self, 
+        frames: List[np.ndarray],
+        timestamps: List[float],
+        video_duration: float
+    ) -> EmotionDetectionResponse:
+        """
+        Implementation of service contract
+        
+        Guarantees:
+        - Always returns valid EmotionDetectionResponse
+        - No fake data
+        - No fallbacks
+        - Fails fast on errors
+        """
+        # Use existing detect_emotions_batch implementation
+        sample_rate = self.get_adaptive_sample_rate(video_duration)
+        
+        # Sample frames based on video duration
+        sampled_indices = list(range(0, len(frames), int(30 / sample_rate)))
+        sampled_frames = [frames[i] for i in sampled_indices if i < len(frames)]
+        sampled_timestamps = [timestamps[i] for i in sampled_indices if i < len(timestamps)]
+        
+        # Process with FEAT - let it crash if it fails
+        return await self.detect_emotions_batch(sampled_frames, sampled_timestamps)
+    
+    def get_service_info(self) -> Dict[str, Any]:
+        """Get service information"""
+        return {
+            'version': '1.0.0',
+            'model': 'FEAT',
+            'accuracy': 0.87,
+            'device': self.device,
+            'max_batch_size': 8 if self.device == 'cuda' else 4,
+            'adaptive_sampling': True,
+            'supported_emotions': ['joy', 'sadness', 'anger', 'fear', 'surprise', 'disgust', 'neutral']
         }
-        
-        for module, name in required.items():
-            try:
-                __import__(module)
-            except ImportError:
-                self.missing_deps.append(name)
-        
-        return len(self.missing_deps) == 0
+```
+
+### Service Registry
+
+```python
+# services/registry.py
+"""Central registry for ML services - no feature flags"""
+
+class ServiceRegistry:
+    """
+    Central registry for ML services
+    No feature flags - services are either available or not
+    """
     
-    async def detect_emotions_batch(self, frames, timestamps):
-        if self.fallback_mode:
-            # Return structured data for videos without FEAT capability
-            return {
-                'emotions': [],
-                'action_units': [],
-                'timeline': {},
-                'dominant_emotion': None,
-                'emotion_transitions': [],
-                'confidence_scores': [],
-                'au_activations': {},
-                'processing_stats': {
-                    'total_frames': len(frames),
-                    'successful_frames': 0,
-                    'no_face_frames': 0,
-                    'video_type': 'feat_unavailable'
-                },
-                'metrics': {
-                    'video_type': 'feat_unavailable',
-                    'detection_rate': 0.0,
-                    'suitable_for_emotion_analysis': False,
-                    'reason': f'FEAT dependencies missing: {", ".join(self.missing_deps) if self.missing_deps else "Unknown error"}',
-                    'processing_stats': {
-                        'total_frames': len(frames),
-                        'successful_frames': 0,
-                        'no_face_frames': 0,
-                        'video_type': 'feat_unavailable'
-                    }
-                }
-            }
-        # ... normal FEAT detection
+    def __init__(self):
+        self.services = {}
+        self._initialized = False
+    
+    def initialize(self) -> None:
+        """
+        Initialize all services at startup
+        Fails fast if any service cannot be initialized
+        """
+        if self._initialized:
+            return
+        
+        # Register emotion service - fail if not available
+        try:
+            from ml_services.emotion_detection_service import EmotionDetectionService
+            self.services['emotion'] = EmotionDetectionService()
+            logger.info("Emotion detection service registered")
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize emotion service: {e}")
+        
+        # Register other services...
+        
+        self._initialized = True
+    
+    def get_emotion_service(self) -> IEmotionDetectionService:
+        """
+        Get emotion detection service
+        
+        Returns:
+            Emotion detection service instance
+            
+        Raises:
+            RuntimeError: If service not initialized
+        """
+        if not self._initialized:
+            raise RuntimeError("Services not initialized")
+        
+        if 'emotion' not in self.services:
+            raise RuntimeError("Emotion service not available")
+        
+        return self.services['emotion']
+
+# Global registry instance
+registry = ServiceRegistry()
+
+# Initialize at module import - fail fast
+try:
+    registry.initialize()
+except Exception as e:
+    logger.error(f"Failed to initialize services: {e}")
+    raise
 ```
 
 ---
 
 ## Summary
+
+### Critical Changes Required
+
+#### Remove ALL Emotion Inference
+1. **DELETE hardcoded emotion mappings** (`EMOTION_VALENCE` dictionary)
+2. **DELETE expression-to-emotion conversion** (no more `'smile' -> 'happy'`)
+3. **DELETE fake valence calculations** (no more arbitrary +0.8/-0.6 values)
+4. **DELETE placeholder emotional arcs** (no more guessing trends)
+5. **REQUIRE FEAT data or fail-fast** in Python-only mode
+
+#### Implementation Principles
+- **NO INFERENCE**: If we can't detect it, we don't guess it
+- **FAIL FAST**: Missing FEAT data = immediate error in Python-only mode
+- **REAL DATA ONLY**: Use actual Action Units and emotion probabilities
+- **NO PLACEHOLDERS**: Empty results are better than fake results
 
 These P0 fixes with FEAT will:
 1. **Transform 40% of placeholder features into real ML-derived features**
@@ -1643,6 +1531,7 @@ These P0 fixes with FEAT will:
 4. **Complete Creative Density** with real effect detection
 5. **Improve overall system legitimacy from 75% to 95%**
 6. **Provide foundation for advanced features** (engagement prediction, viral scoring)
+7. **Remove ALL inference-based emotion guessing**
 
 The FEAT implementation advantages:
 - **87% accuracy** vs 65% with FER

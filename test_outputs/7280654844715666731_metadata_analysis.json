@@ -1,0 +1,46 @@
+{
+  "metadataCoreMetrics": {
+    "captionLength": 0,
+    "wordCount": 0,
+    "hashtagCount": 0,
+    "emojiCount": 0,
+    "mentionCount": 0,
+    "engagementRate": 0,
+    "viewCount": 0,
+    "videoDuration": 79.9
+  },
+  "metadataDynamics": {
+    "hashtagStrategy": "none",
+    "captionStyle": "minimal",
+    "emojiDensity": 0,
+    "mentionDensity": 0,
+    "publishHour": 0,
+    "publishDayOfWeek": 0
+  },
+  "metadataInteractions": {
+    "likeCount": 0,
+    "commentCount": 0,
+    "shareCount": 0,
+    "saveCount": 0,
+    "engagementVelocity": 0
+  },
+  "metadataKeyEvents": {
+    "topHashtags": [],
+    "keyMentions": [],
+    "primaryEmojis": [],
+    "callToAction": false
+  },
+  "metadataPatterns": {
+    "sentimentCategory": "neutral",
+    "urgencyLevel": "none",
+    "contentCategory": "general",
+    "viralPotential": 0
+  },
+  "metadataQuality": {
+    "readabilityScore": 1.0,
+    "sentimentPolarity": 0.0,
+    "hashtagRelevance": 0.5,
+    "captionEffectiveness": 0.6,
+    "overallScore": 0.7
+  }
+}

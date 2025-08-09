@@ -1,0 +1,27 @@
+# ML Requirements for RumiAI Python-only Processing
+# Python 3.12.3 compatible
+# Install with: pip install -r requirements_ml.txt
+
+# Core ML frameworks
+torch>=2.0.0  # PyTorch for deep learning
+torchvision>=0.15.0  # Computer vision models
+torchaudio>=2.0.0  # Audio processing
+
+# Computer Vision
+ultralytics>=8.0.0  # YOLO object detection
+opencv-python>=4.8.0  # Image processing (already installed)
+mediapipe>=0.10.0  # Human pose/face detection
+
+# OCR
+easyocr>=1.7.0  # Text detection and recognition
+
+# Scene Detection  
+scenedetect[opencv]>=0.6.0  # Scene change detection
+
+# Required by ML packages
+numpy>=1.24.0  # Numerical computing
+Pillow>=10.0.0  # Image processing
+scipy>=1.10.0  # Scientific computing
+
+# Audio (already installed from main requirements)
+# whisper.cpp is used via subprocess, not a Python package
