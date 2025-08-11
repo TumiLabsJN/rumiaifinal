@@ -110,13 +110,14 @@ The 432 features are categorized into three types for ML model consumption:
 # Professional 6-block generation with accurate feature counts
 def compute_analysis(timelines, duration):
     """Generate 6-block professional analysis - Python-only"""
+    # Example for visual_overlay_analysis:
     return {
-        "CoreMetrics": {},      # 7-9 scalar features
-        "Dynamics": {},         # 2-5 features including arrays
-        "Interactions": {},     # 1-5 cross-modal features
-        "KeyEvents": {},        # 0-5 timestamp-based events
-        "Patterns": {},         # 2-7 categorical/strategic features
-        "Quality": {}          # 5-6 confidence scores
+        "visualOverlayCoreMetrics": {},      # 7-9 scalar features
+        "visualOverlayDynamics": {},         # 2-5 features including arrays
+        "visualOverlayInteractions": {},     # 1-5 cross-modal features
+        "visualOverlayKeyEvents": {},        # 0-5 timestamp-based events
+        "visualOverlayPatterns": {},         # 2-7 categorical/strategic features
+        "visualOverlayQuality": {}          # 5-6 confidence scores
     }
     # Total: 24-103 features per analysis type
 ```
@@ -387,13 +388,13 @@ def validate_compute_contract(timelines, duration):
 
 # Implementation in rumiai_runner.py
 if self.settings.use_python_only_processing:
-    compute_func = get_compute_function(analysis_type)
+    compute_func = get_compute_function(compute_name)
     if not compute_func:
-        raise RuntimeError(f"Python-only requires precompute function for {analysis_type}")
+        raise RuntimeError(f"Python-only mode requires precompute function for {compute_name}, but none found")
     
     precomputed_metrics = compute_func(analysis.to_dict())
     if not precomputed_metrics:
-        raise RuntimeError(f"Python-only mode: {analysis_type} returned empty result")
+        raise RuntimeError(f"Python-only mode: {compute_name} returned empty result")
 ```
 
 ---

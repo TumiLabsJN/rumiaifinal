@@ -3,19 +3,14 @@
 ## CRITICAL SYSTEM STATUS
 
 ### ✅ ACTIVE MAIN FLOW (Python-Only Processing)
-This documentation reflects **ONLY** the main production pipeline using:
+This documentation reflects **ONLY** the main production pipeline.
+
+**Note**: Python-only mode is **hardcoded** in `rumiai_v2/config/settings.py`:
+- `use_python_only_processing = True` (HARDCODED)
+- `use_ml_precompute = True` (HARDCODED)
+- All precompute functions enabled by default (HARDCODED)
 
 ```bash
-export USE_PYTHON_ONLY_PROCESSING=true
-export USE_ML_PRECOMPUTE=true
-export PRECOMPUTE_CREATIVE_DENSITY=true
-export PRECOMPUTE_EMOTIONAL_JOURNEY=true
-export PRECOMPUTE_PERSON_FRAMING=true
-export PRECOMPUTE_SCENE_PACING=true
-export PRECOMPUTE_SPEECH_ANALYSIS=true
-export PRECOMPUTE_VISUAL_OVERLAY=true
-export PRECOMPUTE_METADATA=true
-
 python3 scripts/rumiai_runner.py "VIDEO_URL"
 ```
 
@@ -75,31 +70,31 @@ python3 scripts/rumiai_runner.py "VIDEO_URL"
 
 ```json
 {
-  "{analysisType}CoreMetrics": {
+  "CoreMetrics": {
     "primaryMetrics": "...",
     "confidence": 0.85
   },
-  "{analysisType}Dynamics": {
+  "Dynamics": {
     "progressionArrays": [],
     "temporalPatterns": [],
     "confidence": 0.88
   },
-  "{analysisType}Interactions": {
+  "Interactions": {
     "crossModalCoherence": 0.0,
     "multimodalMoments": [],
     "confidence": 0.90
   },
-  "{analysisType}KeyEvents": {
+  "KeyEvents": {
     "peaks": [],
     "climaxMoment": "15s",
     "confidence": 0.87
   },
-  "{analysisType}Patterns": {
+  "Patterns": {
     "techniques": [],
     "archetype": "conversion_focused",
     "confidence": 0.82
   },
-  "{analysisType}Quality": {
+  "Quality": {
     "detectionConfidence": 0.95,
     "analysisReliability": "high",
     "overallConfidence": 0.90
@@ -117,17 +112,17 @@ python3 scripts/rumiai_runner.py "VIDEO_URL"
 
 ## Configuration and Settings
 
-| **Environment Variable** | **Purpose** | **Value** | **Effect** |
+| **Setting (Hardcoded in settings.py)** | **Purpose** | **Value** | **Effect** |
 |---------------------------|-------------|-----------|------------|
-| `USE_PYTHON_ONLY_PROCESSING` | **Fail-fast mode** | `true` | Bypasses Claude API completely |
-| `USE_ML_PRECOMPUTE` | **Precompute pipeline** | `true` | Enables v2 pipeline with Python functions |
-| `PRECOMPUTE_CREATIVE_DENSITY` | **Creative analysis** | `true` | Enables Python creative density computation |
-| `PRECOMPUTE_EMOTIONAL_JOURNEY` | **Emotion analysis** | `true` | Enables Python emotional analysis |
-| `PRECOMPUTE_PERSON_FRAMING` | **Human analysis** | `true` | Enables Python person framing analysis |
-| `PRECOMPUTE_SCENE_PACING` | **Pacing analysis** | `true` | Enables Python scene pacing analysis |
-| `PRECOMPUTE_SPEECH_ANALYSIS` | **Speech analysis** | `true` | Enables Python speech pattern analysis |
-| `PRECOMPUTE_VISUAL_OVERLAY` | **Overlay analysis** | `true` | Enables Python visual overlay analysis |
-| `PRECOMPUTE_METADATA` | **Metadata analysis** | `true` | Enables Python metadata analysis |
+| `use_python_only_processing` | **Fail-fast mode** | `True` | Bypasses Claude API completely |
+| `use_ml_precompute` | **Precompute pipeline** | `True` | Enables v2 pipeline with Python functions |
+| `precompute_enabled_prompts['creative_density']` | **Creative analysis** | `True` | Enables Python creative density computation |
+| `precompute_enabled_prompts['emotional_journey']` | **Emotion analysis** | `True` | Enables Python emotional analysis |
+| `precompute_enabled_prompts['person_framing']` | **Human analysis** | `True` | Enables Python person framing analysis |
+| `precompute_enabled_prompts['scene_pacing']` | **Pacing analysis** | `True` | Enables Python scene pacing analysis |
+| `precompute_enabled_prompts['speech_analysis']` | **Speech analysis** | `True` | Enables Python speech pattern analysis |
+| `precompute_enabled_prompts['visual_overlay_analysis']` | **Overlay analysis** | `True` | Enables Python visual overlay analysis |
+| `precompute_enabled_prompts['metadata_analysis']` | **Metadata analysis** | `True` | Enables Python metadata analysis |
 
 ## Processing Flow Architecture
 

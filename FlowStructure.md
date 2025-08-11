@@ -12,15 +12,8 @@
 
 **Configuration:**
 ```bash
-export USE_PYTHON_ONLY_PROCESSING=true
-export USE_ML_PRECOMPUTE=true
-export PRECOMPUTE_CREATIVE_DENSITY=true
-export PRECOMPUTE_EMOTIONAL_JOURNEY=true
-export PRECOMPUTE_PERSON_FRAMING=true
-export PRECOMPUTE_SCENE_PACING=true
-export PRECOMPUTE_SPEECH_ANALYSIS=true
-export PRECOMPUTE_VISUAL_OVERLAY=true
-export PRECOMPUTE_METADATA=true
+# Note: Python-only mode is HARDCODED in rumiai_v2/config/settings.py
+# All settings are enabled by default - no environment setup needed
 
 python3 scripts/rumiai_runner.py "VIDEO_URL"
 ```
@@ -109,32 +102,33 @@ Each analysis type is implemented as a Python function that generates profession
 All Python functions generate the same professional 6-block CoreBlocks format that Claude previously produced:
 
 ```json
+// Example for visual_overlay_analysis:
 {
-  "{analysisType}CoreMetrics": {
+  "visualOverlayCoreMetrics": {
     "primaryMetrics": "...",
     "confidence": 0.85
   },
-  "{analysisType}Dynamics": {
+  "visualOverlayDynamics": {
     "temporalProgression": [...],
     "patterns": [...],
     "confidence": 0.88
   },
-  "{analysisType}Interactions": {
+  "visualOverlayInteractions": {
     "crossModalCoherence": 0.0,
     "multimodalMoments": [...],
     "confidence": 0.90
   },
-  "{analysisType}KeyEvents": {
+  "visualOverlayKeyEvents": {
     "peaks": [...],
     "climaxMoment": "15s",
     "confidence": 0.87
   },
-  "{analysisType}Patterns": {
+  "visualOverlayPatterns": {
     "techniques": [...],
     "archetype": "conversion_focused",
     "confidence": 0.82
   },
-  "{analysisType}Quality": {
+  "visualOverlayQuality": {
     "detectionConfidence": 0.95,
     "analysisReliability": "high",
     "overallConfidence": 0.90
@@ -187,9 +181,9 @@ UnifiedFrameManager (unified_frame_manager.py)
 # Python-only processing bypass in rumiai_runner.py
 if self.settings.use_python_only_processing:
     # NO fallbacks - precompute must work or fail
-    compute_func = get_compute_function(analysis_type)
+    compute_func = get_compute_function(compute_name)
     if not compute_func:
-        raise RuntimeError(f"Python-only requires precompute function for {analysis_type}")
+        raise RuntimeError(f"Python-only mode requires precompute function for {compute_name}, but none found")
     
     precomputed_metrics = compute_func(analysis.to_dict())
     

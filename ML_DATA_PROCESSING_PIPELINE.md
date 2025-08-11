@@ -252,7 +252,7 @@ def compute_creative_density_analysis(timelines, duration):
     Generate professional 6-block creative density analysis
     """
     return {
-        "densityCoreMetrics": {
+        "creativeDensityCoreMetrics": {
             "avgDensity": calculated_avg_density,
             "maxDensity": calculated_max_density,
             "elementsPerSecond": elements_per_second,
@@ -263,7 +263,7 @@ def compute_creative_density_analysis(timelines, duration):
             },
             "confidence": 0.95
         },
-        "densityDynamics": {
+        "creativeDensityDynamics": {
             "densityCurve": [
                 {"second": i, "density": density, "primaryElement": element}
                 for i in range(duration)
@@ -271,17 +271,17 @@ def compute_creative_density_analysis(timelines, duration):
             "volatility": calculated_volatility,
             "confidence": 0.88
         },
-        "densityInteractions": {
+        "creativeDensityInteractions": {
             "multiModalPeaks": detected_peaks,
             "elementCooccurrence": cooccurrence_matrix,
             "confidence": 0.90
         },
-        "densityKeyEvents": {
+        "creativeDensityKeyEvents": {
             "peakMoments": peak_moments,
             "deadZones": dead_zones,
             "confidence": 0.87
         },
-        "densityPatterns": {
+        "creativeDensityPatterns": {
             "structuralFlags": {
                 "strongOpeningHook": bool,
                 "crescendoPattern": bool,
@@ -290,7 +290,7 @@ def compute_creative_density_analysis(timelines, duration):
             "densityClassification": "sparse|moderate|dense",
             "confidence": 0.82
         },
-        "densityQuality": {
+        "creativeDensityQuality": {
             "dataCompleteness": 0.95,
             "detectionReliability": reliability_scores,
             "overallConfidence": 0.90
@@ -427,9 +427,9 @@ def compute_metadata_wrapper(analysis_dict):
 ```python
 if self.settings.use_python_only_processing:
     # NO Claude fallbacks - precompute must work or fail
-    compute_func = get_compute_function(analysis_type)
+    compute_func = get_compute_function(compute_name)
     if not compute_func:
-        raise RuntimeError(f"Python-only requires precompute function for {analysis_type}")
+        raise RuntimeError(f"Python-only mode requires precompute function for {compute_name}, but none found")
     
     # Generate professional analysis instantly
     precomputed_metrics = compute_func(analysis.to_dict())
@@ -462,32 +462,33 @@ All Python functions generate identical professional output to what Claude previ
 ### Standard CoreBlocks Format
 
 ```json
+// Example for visual_overlay_analysis:
 {
-  "{analysisType}CoreMetrics": {
+  "visualOverlayCoreMetrics": {
     "primaryMetrics": "Semantic field names and meaningful values",
     "confidence": 0.85
   },
-  "{analysisType}Dynamics": {
+  "visualOverlayDynamics": {
     "temporalProgression": "Arrays showing change over time",
     "patterns": "Detected behavioral patterns",  
     "confidence": 0.88
   },
-  "{analysisType}Interactions": {
+  "visualOverlayInteractions": {
     "crossModalCoherence": "Speech-visual-gesture alignment scores",
     "multimodalMoments": "Coordinated multi-element events",
     "confidence": 0.90
   },
-  "{analysisType}KeyEvents": {
+  "visualOverlayKeyEvents": {
     "peaks": "High-impact moments with timestamps",
     "climaxMoment": "Peak emotional/creative moment",
     "confidence": 0.87
   },
-  "{analysisType}Patterns": {
+  "visualOverlayPatterns": {
     "techniques": "Production and creative techniques used",
     "archetype": "Overall video classification", 
     "confidence": 0.82
   },
-  "{analysisType}Quality": {
+  "visualOverlayQuality": {
     "detectionConfidence": "ML model confidence scores",
     "analysisReliability": "high|medium|low reliability rating",
     "overallConfidence": 0.90
@@ -574,7 +575,7 @@ if not all_required_timelines_present:
 
 # Implementation check
 if not precomputed_metrics:
-    raise RuntimeError(f"Python-only mode: {analysis_type} returned empty/None result")
+    raise RuntimeError(f"Python-only mode: {compute_name} returned empty/None result")
 ```
 
 ---

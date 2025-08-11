@@ -11,15 +11,11 @@
 The ONLY supported pipeline configuration:
 
 ```bash
-export USE_PYTHON_ONLY_PROCESSING=true
-export USE_ML_PRECOMPUTE=true
-export PRECOMPUTE_CREATIVE_DENSITY=true
-export PRECOMPUTE_EMOTIONAL_JOURNEY=true
-export PRECOMPUTE_PERSON_FRAMING=true
-export PRECOMPUTE_SCENE_PACING=true
-export PRECOMPUTE_SPEECH_ANALYSIS=true
-export PRECOMPUTE_VISUAL_OVERLAY=true
-export PRECOMPUTE_METADATA=true
+# Note: Python-only mode is HARDCODED in rumiai_v2/config/settings.py
+# These values are set directly in code, not via environment variables:
+#   use_python_only_processing = True
+#   use_ml_precompute = True
+#   All precompute functions enabled by default
 
 python3 scripts/rumiai_runner.py "VIDEO_URL"
 ```
@@ -42,9 +38,9 @@ The system operates entirely in Python with zero Claude API dependency, generati
 ```python
 if self.settings.use_python_only_processing:
     # NO fallbacks - precompute must work or fail
-    compute_func = get_compute_function(analysis_type)
+    compute_func = get_compute_function(compute_name)
     if not compute_func:
-        raise RuntimeError(f"Python-only requires precompute function for {analysis_type}")
+        raise RuntimeError(f"Python-only mode requires precompute function for {compute_name}, but none found")
     
     precomputed_metrics = compute_func(analysis.to_dict())
     
@@ -80,32 +76,33 @@ Python functions must generate Claude-quality 6-block CoreBlocks analysis withou
 
 ### 6-Block Structure Implementation
 ```python
+# Example for visual_overlay_analysis:
 {
-  "{analysisType}CoreMetrics": {
+  "visualOverlayCoreMetrics": {
     "primaryMetrics": {...},
     "confidence": 0.85
   },
-  "{analysisType}Dynamics": {
+  "visualOverlayDynamics": {
     "temporalProgression": [...],
     "patterns": [...],
     "confidence": 0.88
   },
-  "{analysisType}Interactions": {
+  "visualOverlayInteractions": {
     "crossModalCoherence": 0.0,
     "multimodalMoments": [...],
     "confidence": 0.90
   },
-  "{analysisType}KeyEvents": {
+  "visualOverlayKeyEvents": {
     "peaks": [...],
     "climaxMoment": "15s",
     "confidence": 0.87
   },
-  "{analysisType}Patterns": {
+  "visualOverlayPatterns": {
     "techniques": [...],
     "archetype": "conversion_focused",
     "confidence": 0.82
   },
-  "{analysisType}Quality": {
+  "visualOverlayQuality": {
     "detectionConfidence": 0.95,
     "analysisReliability": "high",
     "overallConfidence": 0.90
@@ -139,9 +136,10 @@ ML analysis provides data to Python functions, not Claude prompts. All ML servic
 ### ML Service Architecture
 ```python
 class UnifiedMLServices:
-    async def analyze_video(self, video_path, video_id, output_dir):
-        # Extract frames once
-        frame_data = await self.frame_manager.extract_frames(video_path)
+    async def analyze_video(self, video_path: Path, video_id: str, output_dir: Path):
+        # Extract frames once with timeout protection
+        async with asyncio.timeout(600):  # 10 minute timeout
+            frame_data = await self.frame_manager.extract_frames(video_path, video_id)
         
         # Run all ML services in parallel
         results = await asyncio.gather(
@@ -270,29 +268,29 @@ Python-only processing must be dramatically faster than Claude-based processing 
 ## 8. Configuration Management (CRITICAL)
 
 ### Principle
-All Python-only behavior is controlled by environment variables, with no ambiguous states.
+All Python-only behavior is HARDCODED in settings.py to ensure consistent operation.
 
-### Required Environment Variables
-```bash
-USE_PYTHON_ONLY_PROCESSING=true    # Enables fail-fast bypass
-USE_ML_PRECOMPUTE=true             # Enables v2 pipeline
-PRECOMPUTE_CREATIVE_DENSITY=true   # Python creative analysis
-PRECOMPUTE_EMOTIONAL_JOURNEY=true  # Python emotional analysis
-PRECOMPUTE_PERSON_FRAMING=true     # Python human analysis
-PRECOMPUTE_SCENE_PACING=true       # Python pacing analysis
-PRECOMPUTE_SPEECH_ANALYSIS=true    # Python speech analysis
-PRECOMPUTE_VISUAL_OVERLAY=true     # Python overlay analysis
-PRECOMPUTE_METADATA=true           # Python metadata analysis
-```
-
-### Settings Implementation
+### Hardcoded Settings (rumiai_v2/config/settings.py)
 ```python
 class Settings:
-    def __init__(self):
-        self.use_python_only_processing = os.getenv('USE_PYTHON_ONLY_PROCESSING', 'false').lower() == 'true'
-        self.use_ml_precompute = os.getenv('USE_ML_PRECOMPUTE', 'false').lower() == 'true'
-        # Individual precompute flags...
+    def __init__(self, config_dir: Optional[Path] = None):
+        # Python-only mode is HARDCODED - not environment-based
+        self.use_python_only_processing = True  # HARDCODED
+        self.use_ml_precompute = True  # HARDCODED
+        
+        # All precompute functions are HARDCODED as enabled
+        self.precompute_enabled_prompts = {
+            'creative_density': True,      # HARDCODED
+            'emotional_journey': True,     # HARDCODED
+            'person_framing': True,        # HARDCODED
+            'scene_pacing': True,          # HARDCODED
+            'speech_analysis': True,       # HARDCODED
+            'visual_overlay_analysis': True,  # HARDCODED
+            'metadata_analysis': True      # HARDCODED
+        }
 ```
+
+Note: These values are hardcoded to ensure Python-only processing is always active.
 
 ---
 
@@ -347,7 +345,7 @@ Python-only processing must be thoroughly tested to ensure professional quality 
 
 These principles are enforced through:
 
-1. **Environment Validation**: Pipeline fails if required flags not set
+1. **Hardcoded Configuration**: Settings ensure Python-only mode is always active
 2. **Service Contracts**: Input/output validation for all functions
 3. **Quality Checks**: 6-block structure validation
 4. **Performance Monitoring**: $0.00 cost verification

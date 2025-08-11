@@ -683,32 +683,31 @@ def detect_scenes(video_path: str) -> List[Tuple[float, float]]:
 ### 10.1 Complete Environment Variables
 
 ```bash
-# Python-Only Processing
-export USE_PYTHON_ONLY_PROCESSING=true
-export USE_ML_PRECOMPUTE=true
+# NOTE: Python-only settings are HARDCODED in rumiai_v2/config/settings.py
+# The following are already set to True in code (NOT read from environment):
+#   use_python_only_processing = True
+#   use_ml_precompute = True  
+#   All precompute_enabled_prompts = True
 
-# Individual Analysis Flags
-export PRECOMPUTE_CREATIVE_DENSITY=true
-export PRECOMPUTE_EMOTIONAL_JOURNEY=true
-export PRECOMPUTE_PERSON_FRAMING=true
-export PRECOMPUTE_SCENE_PACING=true
-export PRECOMPUTE_SPEECH_ANALYSIS=true
-export PRECOMPUTE_VISUAL_OVERLAY=true
-export PRECOMPUTE_METADATA=true
+# ACTUAL Environment Variables (these ARE read from environment):
 
 # Performance Settings
 export RUMIAI_MAX_VIDEO_DURATION=300     # 5 minutes max
 export RUMIAI_FRAME_SAMPLE_RATE=1.0     # FPS multiplier
-export RUMIAI_MAX_MEMORY_GB=4.0         # Memory limit
-export RUMIAI_CACHE_SIZE_GB=2.0         # Cache size
 
-# WSL2 Specific
-export WSL_THREADS=10                    # Must match .wslconfig
-export WHISPER_THREADS=10                # Whisper.cpp threads
+# API Token (required)
+export APIFY_API_TOKEN=your_token_here   # For TikTok scraping
 
-# GPU Settings
-export RUMIAI_USE_GPU=true
-export CUDA_VISIBLE_DEVICES=0
+# Optional Settings
+export RUMIAI_OUTPUT_DIR=outputs         # Output directory
+export RUMIAI_TEMP_DIR=temp             # Temp directory
+export LOG_LEVEL=INFO                    # Logging level
+
+# WSL2 Specific (for whisper.cpp optimization)
+export OMP_NUM_THREADS=10                # OpenMP threads for whisper.cpp
+
+# GPU Settings (if available)
+export CUDA_VISIBLE_DEVICES=0            # GPU device ID
 ```
 
 ### 10.2 System Requirements

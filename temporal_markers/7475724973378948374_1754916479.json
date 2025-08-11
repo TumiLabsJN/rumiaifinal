@@ -1,0 +1,261 @@
+{
+  "first_5_seconds": {
+    "density_progression": [
+      10,
+      10,
+      10,
+      9,
+      10
+    ],
+    "text_moments": [
+      {
+        "timestamp": "0s",
+        "text": "supplements for",
+        "duration": 1.5,
+        "position": "right"
+      },
+      {
+        "timestamp": "0s",
+        "text": "CLEAR SKINand GLOWUP",
+        "duration": 2.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "1s",
+        "text": "supplementsfor",
+        "duration": 1.4000000000000004,
+        "position": "right"
+      },
+      {
+        "timestamp": "1s",
+        "text": "CLEAR SKinand GLOWUP",
+        "duration": 1.9999999999999998,
+        "position": "right"
+      },
+      {
+        "timestamp": "2s",
+        "text": "CLEAR SKIN and GLOWUP",
+        "duration": 2.0999999999999996,
+        "position": "right"
+      }
+    ],
+    "emotion_sequence": [
+      "neutral",
+      "neutral",
+      "neutral",
+      "neutral",
+      "neutral"
+    ],
+    "gesture_moments": [],
+    "object_appearances": [],
+    "speech_segments": [
+      {
+        "start": "0s",
+        "end": "4s",
+        "text": "These are the best collagen supplements you need i..."
+      },
+      {
+        "start": "4s",
+        "end": "5s",
+        "text": "glow."
+      }
+    ],
+    "scene_changes": []
+  },
+  "cta_window": {
+    "time_range": "44-52s",
+    "cta_appearances": [
+      {
+        "timestamp": "48s",
+        "keyword": "comment",
+        "context": "the link is in my bio and in the comments if you want to check it out.",
+        "type": "speech"
+      },
+      {
+        "timestamp": "48s",
+        "keyword": "link",
+        "context": "the link is in my bio and in the comments if you want to check it out.",
+        "type": "speech"
+      },
+      {
+        "timestamp": "48s",
+        "keyword": "bio",
+        "context": "the link is in my bio and in the comments if you want to check it out.",
+        "type": "speech"
+      },
+      {
+        "timestamp": "48s",
+        "keyword": "link",
+        "context": "thelinkisin mybioandin",
+        "type": "text"
+      },
+      {
+        "timestamp": "48s",
+        "keyword": "bio",
+        "context": "thelinkisin mybioandin",
+        "type": "text"
+      },
+      {
+        "timestamp": "48s",
+        "keyword": "comment",
+        "context": "thecomments3",
+        "type": "text"
+      },
+      {
+        "timestamp": "49s",
+        "keyword": "comment",
+        "context": "thecomments-3",
+        "type": "text"
+      },
+      {
+        "timestamp": "49s",
+        "keyword": "comment",
+        "context": "thecomments 3",
+        "type": "text"
+      },
+      {
+        "timestamp": "50s",
+        "keyword": "follow",
+        "context": "and follow from our beauty tips.",
+        "type": "speech"
+      },
+      {
+        "timestamp": "51s",
+        "keyword": "link",
+        "context": "thelinkisinmybioandin",
+        "type": "text"
+      },
+      {
+        "timestamp": "51s",
+        "keyword": "bio",
+        "context": "thelinkisinmybioandin",
+        "type": "text"
+      }
+    ],
+    "gesture_sync": {
+      "gesture_count": 0,
+      "speech_count": 5,
+      "sync_ratio": 0.0
+    },
+    "object_focus": [],
+    "speech_emphasis": {
+      "speech_duration": 11.840000000000003,
+      "word_count": 51,
+      "words_per_second": 4.307432432432432,
+      "segment_count": 5
+    },
+    "text_overlays": [
+      {
+        "timestamp": "45s",
+        "text": "Here's what my GLOW UP",
+        "duration": 2.200000000000003,
+        "position": "right"
+      },
+      {
+        "timestamp": "45s",
+        "text": "guide book contains!=",
+        "duration": 2.1000000000000014,
+        "position": "right"
+      },
+      {
+        "timestamp": "45s",
+        "text": "benelits",
+        "duration": 1.0,
+        "position": "right"
+      },
+      {
+        "timestamp": "48s",
+        "text": "thelinkisin mybioandin",
+        "duration": 2.200000000000003,
+        "position": "right"
+      },
+      {
+        "timestamp": "48s",
+        "text": "thecomments3",
+        "duration": 1.2000000000000028,
+        "position": "right"
+      },
+      {
+        "timestamp": "49s",
+        "text": "thecomments-3",
+        "duration": 1.2999999999999972,
+        "position": "right"
+      },
+      {
+        "timestamp": "49s",
+        "text": "thecomments 3",
+        "duration": 1.2999999999999972,
+        "position": "right"
+      },
+      {
+        "timestamp": "51s",
+        "text": "thelinkisinmybioandin",
+        "duration": 1.0,
+        "position": "right"
+      }
+    ]
+  },
+  "peak_moments": [
+    {
+      "timestamp": 21.0,
+      "intensity": 22.5,
+      "events": [
+        "speech",
+        "sticker",
+        "sticker",
+        "pose",
+        "face"
+      ]
+    },
+    {
+      "timestamp": 45.0,
+      "intensity": 16.5,
+      "events": [
+        "speech",
+        "pose",
+        "face"
+      ]
+    },
+    {
+      "timestamp": 48.0,
+      "intensity": 15.5,
+      "events": [
+        "sticker",
+        "sticker",
+        "speech",
+        "sticker",
+        "sticker",
+        "sticker",
+        "sticker",
+        "sticker",
+        "pose",
+        "face"
+      ]
+    }
+  ],
+  "engagement_curve": [
+    1.0,
+    0.3,
+    0.3,
+    0.2,
+    1.0,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    1.0,
+    1.0
+  ],
+  "metadata": {
+    "video_id": "7475724973378948374",
+    "duration": 52.0,
+    "generated_at": "2025-08-11T12:47:59.623997",
+    "ml_data_available": {
+      "yolo": true,
+      "whisper": true,
+      "ocr": true,
+      "mediapipe": true,
+      "scene": true
+    }
+  }
+}

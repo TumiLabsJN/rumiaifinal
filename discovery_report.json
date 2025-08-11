@@ -1,0 +1,173 @@
+{
+  "critical_path": {
+    "success": true,
+    "modules_imported": [
+      "rumiai_v2.api",
+      "rumiai_v2.processors",
+      "rumiai_v2.core.ml_dependency_validator",
+      "rumiai_v2.prompts",
+      "rumiai_v2.config",
+      "rumiai_v2.validators",
+      "rumiai_v2.core.models",
+      "rumiai_v2.utils",
+      "scripts.rumiai_runner"
+    ],
+    "count": 9
+  },
+  "dependencies": {
+    "total_files": 122,
+    "claude_imports": [
+      [
+        "test_failfast.py",
+        "rumiai_v2.contracts.claude_output_validators"
+      ],
+      [
+        "tests/test_claude_temporal_integration.py",
+        "python.claude_temporal_integration"
+      ],
+      [
+        "rumiai_v2/api/__init__.py",
+        "claude_client"
+      ]
+    ],
+    "sample_graph": {
+      "test_python_only_e2e.py": [
+        "asyncio",
+        "argparse",
+        "json",
+        "time",
+        "psutil",
+        "os",
+        "sys",
+        "re",
+        "pathlib",
+        "datetime",
+        "typing",
+        "logging",
+        "dotenv",
+        "rumiai_v2.api.ml_services",
+        "rumiai_v2.processors.video_analyzer",
+        "rumiai_v2.processors.timeline_builder",
+        "rumiai_v2.processors.precompute_functions",
+        "rumiai_v2.core.models.prompt",
+        "rumiai_v2.config.settings",
+        "cv2"
+      ],
+      "test_helper_vs_timeline.py": [
+        "json",
+        "sys",
+        "pathlib",
+        "rumiai_v2.processors.precompute_functions"
+      ],
+      "test_helper_solution.py": [
+        "json",
+        "sys",
+        "pathlib",
+        "rumiai_v2.processors.precompute_functions"
+      ],
+      "detect_tiktok_creative_elements.py": [
+        "os",
+        "sys",
+        "cv2",
+        "json",
+        "numpy",
+        "datetime",
+        "glob",
+        "ultralytics",
+        "torch",
+        "easyocr",
+        "python.temporal_marker_extractors",
+        "time",
+        "sys"
+      ],
+      "discovery_analysis.py": [
+        "os",
+        "sys",
+        "ast",
+        "json",
+        "pathlib",
+        "collections",
+        "builtins",
+        "scripts.rumiai_runner",
+        "scripts.rumiai_runner",
+        "rumiai_v2.processors.precompute_functions"
+      ]
+    }
+  },
+  "claude_usage": {
+    "bypass_found": true,
+    "bypass_line": 483,
+    "zero_cost_found": true,
+    "zero_cost_line": 511
+  },
+  "file_classification": {
+    "to_delete": {
+      "javascript": [
+        "scripts/compatibility_wrapper.js",
+        "prompt_templates/UnifiedTimelineAssembler.js",
+        "package.json",
+        "package-lock.json"
+      ],
+      "claude": [
+        "tests/test_claude_temporal_integration.py",
+        "tests/test_claude_client.py",
+        "rumiai_v2/api/claude_client.py",
+        "rumiai_v2/contracts/claude_output_validators.py"
+      ],
+      "prompts": [
+        "prompt_templates/metadata_analysis_v2.txt",
+        "prompt_templates/scene_pacing.txt",
+        "prompt_templates/visual_overlay_analysis_v2.txt",
+        "prompt_templates/person_framing_v2.txt",
+        "prompt_templates/scene_pacing_v2.txt",
+        "prompt_templates/visual_overlay_analysis.txt",
+        "prompt_templates/emotional_journey.txt",
+        "prompt_templates/metadata_analysis.txt",
+        "prompt_templates/creative_density_v2.txt",
+        "prompt_templates/person_framing.txt",
+        "prompt_templates/speech_analysis.txt",
+        "prompt_templates/emotional_journey_v2.txt",
+        "prompt_templates/creative_density.txt",
+        "prompt_templates/speech_analysis_v2.txt"
+      ],
+      "legacy": [
+        "rumiai_v2/processors/output_adapter.py"
+      ]
+    },
+    "to_keep": {
+      "whisper": [
+        "whisper.cpp/tests/test-whisper.js",
+        "whisper.cpp/examples/helpers.js",
+        "whisper.cpp/examples/addon.node/index.js",
+        "whisper.cpp/examples/wchess/wchess.wasm/jquery-3.7.1.min.js",
+        "whisper.cpp/examples/wchess/wchess.wasm/chessboardjs-1.0.0/js/chessboard-1.0.0.min.js",
+        "whisper.cpp/examples/wchess/wchess.wasm/chessboardjs-1.0.0/js/chessboard-1.0.0.js",
+        "whisper.cpp/examples/addon.node/__test__/whisper.spec.js",
+        "whisper.cpp/bindings/javascript/libwhisper.worker.js",
+        "whisper.cpp/bindings/javascript/whisper.js"
+      ],
+      "python_only": [
+        "rumiai_v2/processors/precompute_professional_wrappers.py",
+        "rumiai_v2/processors/precompute_functions.py",
+        "rumiai_v2/processors/precompute_professional.py",
+        "rumiai_v2/processors/precompute_creative_density.py",
+        "rumiai_v2/processors/precompute_functions_full.py"
+      ]
+    },
+    "total_to_delete": 23
+  },
+  "runtime_check": {
+    "can_import": true,
+    "claude_modules_imported": [],
+    "compute_functions_available": [
+      "creative_density",
+      "emotional_journey",
+      "person_framing",
+      "scene_pacing",
+      "speech_analysis",
+      "visual_overlay_analysis",
+      "metadata_analysis"
+    ],
+    "needs_refactoring": false
+  }
+}
