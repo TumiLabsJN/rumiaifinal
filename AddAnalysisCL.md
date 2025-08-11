@@ -189,25 +189,16 @@ After adding a new analysis type, verify:
 - [ ] Settings enable the new analysis
 - [ ] Backward compatibility maintained
 
-## URL vs Video ID Processing Flows
+## Processing Flow
 
-### URL Flow (Complete Processing)
+### URL Processing (Only Available Flow)
 ```bash
 python3 scripts/rumiai_runner.py "https://tiktok.com/..."
 ```
 - Downloads video via Apify
 - Runs full ML pipeline
 - Generates all 8 analyses
-- Saves to insights/{video_id}/
-
-### Video ID Flow (Gap Filling)
-```bash
-python3 scripts/rumiai_runner.py --video-id "7535176886729690374"
-```
-- Loads existing ML data
-- Reruns specific analyses
-- Updates insights directory
-- Maintains 3-file structure
+- Saves to insights/{video_id}/ with 3-file structure
 
 ## Critical Lessons Learned
 
@@ -241,9 +232,6 @@ from .temporal_markers import generate_markers
 ```bash
 # Test with URL (full pipeline)
 python3 scripts/rumiai_runner.py "https://www.tiktok.com/@user/video/123"
-
-# Test with Video ID (reprocessing)
-python3 scripts/rumiai_runner.py --video-id "123456789"
 
 # Check output structure
 ls -la insights/123456789/[new_analysis]/

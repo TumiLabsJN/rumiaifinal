@@ -17,7 +17,7 @@ Temporal markers have been fully integrated as the **8th analysis type** in Rumi
 
 - ✅ Added to all 3 documentation files (ML_FEATURES, FlowStructure, Codemappingfinal)
 - ✅ Integrated with backward compatibility (3-file output structure)
-- ✅ Works in both URL and Video ID processing flows
+- ✅ Works with URL processing flow
 - ✅ Zero-cost processing ($0.00) with instant execution (0.001s)
 
 ## 2. Architecture
@@ -579,7 +579,7 @@ const markers = await service.generateMarkers({
 - ✅ Added to `FlowStructure.md` analysis table and descriptions
 - ✅ Added to `Codemappingfinal.md` Python Compute Functions table
 - ✅ Integrated with 3-file backward compatibility system
-- ✅ Works in both URL and Video ID processing flows
+- ✅ Works with URL processing flow
 
 ### 14.2 Key Changes Made
 1. **Documentation Updates**: Updated all 3 core documentation files to reflect 8 analysis types

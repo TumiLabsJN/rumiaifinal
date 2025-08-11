@@ -61,14 +61,10 @@ class RumiAIRunner:
     CRITICAL: Maintains backward compatibility with old system.
     """
     
-    def __init__(self, legacy_mode: bool = False):
+    def __init__(self):
         """
         Initialize runner.
-        
-        Args:
-            legacy_mode: If True, operate in backward compatibility mode
         """
-        self.legacy_mode = legacy_mode
         self.settings = Settings()
         self.metrics = Metrics()
         self.video_metrics = VideoProcessingMetrics()
@@ -332,69 +328,6 @@ class RumiAIRunner:
                 'metrics': self.metrics.get_all()
             }
     
-    async def process_video_id(self, video_id: str) -> Dict[str, Any]:
-        """
-        Process a video by ID (legacy mode).
-        
-        This maintains compatibility with old Python script calls.
-        """
-        logger.info(f"🔄 Processing video ID in legacy mode: {video_id}")
-        
-        try:
-            # Load existing analysis data
-            unified_path = self.unified_handler.get_path(f"{video_id}.json")
-            if not unified_path.exists():
-                # Try old path structure
-                old_path = Path(f"unified_analysis/{video_id}.json")
-                if old_path.exists():
-                    unified_path = old_path
-                else:
-                    raise FileNotFoundError(f"No unified analysis found for {video_id}")
-            
-            # Load unified analysis
-            from rumiai_v2.core.models import UnifiedAnalysis
-            unified_analysis = UnifiedAnalysis.load_from_file(str(unified_path))
-            
-            # Generate temporal markers if missing
-            if not unified_analysis.temporal_markers:
-                print("🔄 Generating temporal markers...")
-                temporal_markers = self.temporal_processor.generate_markers(unified_analysis)
-                unified_analysis.temporal_markers = temporal_markers
-                
-                # Save temporal markers
-                temporal_path = self.save_analysis_result(video_id, "temporal_markers", temporal_markers)
-            
-            print("🧠 Running precompute functions...")
-            prompt_results = {}
-            for func_name, func in COMPUTE_FUNCTIONS.items():
-                try:
-                    result = func(unified_analysis.to_dict())
-                    prompt_results[func_name] = result
-                    # Save each insight to the insights folder
-                    if result:  # Only save if result is not empty
-                        self.save_analysis_result(video_id, func_name, result)
-                except Exception as e:
-                    logger.error(f"Precompute {func_name} failed: {e}")
-                    prompt_results[func_name] = {}
-            
-            # Generate report
-            report = self._generate_report(unified_analysis, prompt_results)
-            
-            return {
-                'success': True,
-                'video_id': video_id,
-                'prompts_completed': len([r for r in prompt_results.values() if (hasattr(r, 'success') and r.success) or (isinstance(r, dict) and r)]),
-                'report': report
-            }
-            
-        except Exception as e:
-            logger.error(f"Legacy processing failed: {str(e)}", exc_info=True)
-            return {
-                'success': False,
-                'error': str(e),
-                'error_type': type(e).__name__
-            }
-    
     async def _scrape_video(self, video_url: str) -> VideoMetadata:
         """Scrape video metadata from TikTok."""
         self.metrics.start_timer('scraping')
@@ -510,49 +443,37 @@ def main():
     parser = argparse.ArgumentParser(description='RumiAI v2 Video Processor')
     
     # Support multiple calling conventions
-    parser.add_argument('video_input', nargs='?', help='Video URL or ID')
+    parser.add_argument('video_input', nargs='?', help='Video URL (must start with http:// or https://)')
     parser.add_argument('--video-url', help='Video URL to process')
-    parser.add_argument('--video-id', help='Video ID to process (legacy mode)')
     parser.add_argument('--config-dir', help='Configuration directory')
     parser.add_argument('--output-format', choices=['json', 'text'], default='json')
     
     args = parser.parse_args()
     
-    # Determine mode and input
+    # Determine input
     video_url = None
-    video_id = None
-    legacy_mode = False
     
     if args.video_url:
         video_url = args.video_url
-    elif args.video_id:
-        video_id = args.video_id
-        legacy_mode = True
     elif args.video_input:
-        # Auto-detect URL vs ID
+        # Only accept URLs
         if args.video_input.startswith('http'):
             video_url = args.video_input
         else:
-            video_id = args.video_input
-            legacy_mode = True
+            logger.error(f"Error: '{args.video_input}' is not a valid URL")
+            logger.error("Please provide a complete TikTok URL starting with http:// or https://")
+            sys.exit(1)
     else:
-        print("Usage: rumiai_runner.py <video_url_or_id>", file=sys.stderr)
+        print("Usage: rumiai_runner.py <video_url>", file=sys.stderr)
         sys.exit(2)
     
     try:
         # Create runner
-        runner = RumiAIRunner(legacy_mode=legacy_mode)
+        runner = RumiAIRunner()
         
         # Run processing
-        if video_url:
-            logger.info(f"Processing video URL: {video_url}")
-            result = asyncio.run(runner.process_video_url(video_url))
-        elif video_id:
-            logger.info(f"Running in legacy mode for video ID: {video_id}")
-            result = asyncio.run(runner.process_video_id(video_id))
-        else:
-            logger.error("No video URL or ID provided")
-            sys.exit(1)
+        logger.info(f"Processing video URL: {video_url}")
+        result = asyncio.run(runner.process_video_url(video_url))
     except Exception as e:
         logger.error(f"Processing failed: {e}")
         sys.exit(1)
