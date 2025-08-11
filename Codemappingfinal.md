@@ -65,6 +65,7 @@ python3 scripts/rumiai_runner.py "VIDEO_URL"
 | **Speech Analysis** | `compute_speech_wrapper()` | Professional metrics | Speech patterns, audio energy, timing |
 | **Visual Overlay** | `compute_visual_overlay_analysis_professional()` | 6-block CoreBlocks | Text-speech alignment, multimodal coordination |
 | **Metadata Analysis** | `compute_metadata_wrapper()` | Professional metrics | Platform metrics, engagement patterns |
+| **Temporal Markers** | `generate_markers()` | JSON markers format | Hook analysis, retention patterns, engagement zones |
 
 ### Professional 6-Block CoreBlocks Structure
 

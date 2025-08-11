@@ -21,8 +21,8 @@ class TemporalMarkerProcessor:
     """
     Generate temporal markers from unified analysis.
     
-    CRITICAL: This is called by Node.js via subprocess.
-    MUST output valid JSON to stdout even on error.
+    Generates temporal markers from unified ML analysis.
+    Used in Python-only processing pipeline.
     """
     
     def __init__(self):
@@ -32,8 +32,8 @@ class TemporalMarkerProcessor:
         """
         Generate temporal markers for video.
         
-        CRITICAL: This is called by Node.js via subprocess.
-        MUST output valid JSON to stdout even on error.
+        Generate temporal markers from ML data for video analysis.
+        Returns dictionary with first_5_seconds, cta_window, peak_moments, etc.
         """
         try:
             # Extract data from ML results
@@ -74,7 +74,7 @@ class TemporalMarkerProcessor:
             return markers
             
         except Exception as e:
-            # CRITICAL: Log to stderr only, not stdout
+            # Log error and return empty markers structure
             logger.error(f"Temporal marker generation failed: {str(e)}", exc_info=True)
             # ALWAYS return valid JSON structure
             return self._get_empty_markers(analysis.video_id, str(e))
@@ -415,7 +415,8 @@ def main():
     """
     Main entry point for command-line execution.
     
-    This maintains compatibility with existing Node.js calls.
+    For testing and standalone execution only.
+    Production uses direct function calls from rumiai_runner.py.
     """
     import argparse
     from pathlib import Path

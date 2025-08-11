@@ -24,8 +24,7 @@ class Settings:
         self.apify_token = os.getenv('APIFY_API_TOKEN', '')
         
         # Model settings
-        default_model = 'claude-3-haiku-20240307'
-            default_model = 'claude-3-5-sonnet-20241022'
+        default_model = 'claude-3-5-sonnet-20241022'
         
         # Paths
         self.output_dir = Path(os.getenv('RUMIAI_OUTPUT_DIR', 'outputs'))
@@ -39,6 +38,7 @@ class Settings:
         self.frame_sample_rate = float(os.getenv('RUMIAI_FRAME_SAMPLE_RATE', '1.0'))  # 1 fps
         
         # Prompt timeouts (seconds)
+        self.prompt_timeouts = {
             'creative_density': 60,
             'emotional_journey': 90,
             'speech_analysis': 90,
@@ -71,8 +71,6 @@ class Settings:
         
         # Cost control settings
         self.enable_cost_monitoring = True  # HARDCODED
-        
-                return self._prompt_templates.get(prompt_type, "Analyze this video.")
     
     def _validate_config(self):
         """Validate configuration settings."""

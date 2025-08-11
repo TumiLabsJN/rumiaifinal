@@ -117,7 +117,7 @@ class Timestamp:
         else:
             return str(self.seconds)
     
-    def to_json(self) -> Union[str, float]:
+    def to_json(self, legacy_mode: bool = False) -> Union[str, float]:
         """
         Serialize to JSON-compatible format.
         

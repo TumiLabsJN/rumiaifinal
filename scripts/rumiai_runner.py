@@ -77,7 +77,7 @@ class RumiAIRunner:
         self.file_handler = FileHandler(self.settings.output_dir)
         self.unified_handler = FileHandler(self.settings.unified_dir)
         self.insights_handler = FileHandler(self.settings.insights_dir)
-        self.temporal_handler = FileHandler(self.settings.temporal_dir)
+        # temporal_handler removed - using insights_handler for temporal markers now
         
         # Initialize clients
         self.apify = ApifyClient(self.settings.apify_token)
@@ -90,6 +90,94 @@ class RumiAIRunner:
         
         # Verify GPU availability at startup
         self._verify_gpu()
+    
+    def get_prefix_for_type(self, insight_type: str) -> str:
+        """Get the prefix used in RESULT format for each insight type."""
+        prefix_map = {
+            'creative_density': 'density',
+            'emotional_journey': 'emotional',
+            'person_framing': 'personFraming',
+            'scene_pacing': 'scenePacing', 
+            'speech_analysis': 'speech',
+            'visual_overlay_analysis': 'visualOverlay',
+            'metadata_analysis': 'metadata',
+            'temporal_markers': None  # No prefix needed
+        }
+        return prefix_map.get(insight_type, insight_type)
+    
+    def convert_to_ml_format(self, prefixed_data: dict, insight_type: str) -> dict:
+        """Convert prefixed format to ML format by removing type prefix."""
+        if insight_type == 'temporal_markers':
+            return prefixed_data  # No conversion needed
+        
+        ml_data = {}
+        prefix = self.get_prefix_for_type(insight_type)  # e.g., "density", "emotional"
+        
+        if not prefix:
+            return prefixed_data
+        
+        for key, value in prefixed_data.items():
+            if key.startswith(prefix):
+                # Remove prefix and capitalize first letter
+                new_key = key[len(prefix):]
+                new_key = new_key[0].upper() + new_key[1:] if new_key else key
+                ml_data[new_key] = value
+            else:
+                ml_data[key] = value
+        
+        return ml_data
+    
+    def save_analysis_result(self, video_id: str, analysis_type: str, data: dict) -> Path:
+        """Save analysis result in 3-file backward compatible format."""
+        from datetime import datetime
+        import json
+        
+        # Generate single timestamp for all 3 files
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        # Create directory structure
+        analysis_dir = self.insights_handler.get_path(video_id, analysis_type)
+        self.insights_handler.ensure_dir(analysis_dir)
+        
+        # Initialize paths to None for cleanup in case of error
+        complete_path = None
+        ml_path = None
+        result_path = None
+        
+        try:
+            # 1. Prepare the three formats
+            result_data = data  # Already in prefixed format from precompute
+            ml_data = self.convert_to_ml_format(data, analysis_type)
+            
+            # 2. Create _complete file content
+            complete_data = {
+                "prompt_type": analysis_type,
+                "success": True,
+                "response": json.dumps(result_data),
+                "parsed_response": ml_data
+            }
+            
+            # 3. Generate file paths with same timestamp
+            complete_path = analysis_dir / f"{analysis_type}_complete_{timestamp}.json"
+            ml_path = analysis_dir / f"{analysis_type}_ml_{timestamp}.json"
+            result_path = analysis_dir / f"{analysis_type}_result_{timestamp}.json"
+            
+            # 4. Save all 3 files atomically (fail fast on any error)
+            self.insights_handler.save_json(complete_path, complete_data)
+            self.insights_handler.save_json(ml_path, ml_data)
+            self.insights_handler.save_json(result_path, result_data)
+            
+            logger.info(f"Saved 3-file set for {analysis_type} to {analysis_dir}")
+            return complete_path
+            
+        except Exception as e:
+            # Fail fast - log and re-raise
+            logger.error(f"Failed to save {analysis_type} for {video_id}: {e}")
+            # Clean up any partial files if they exist
+            for path in [complete_path, ml_path, result_path]:
+                if path and path.exists():
+                    path.unlink()
+            raise
     
     def _verify_gpu(self) -> None:
         """Verify GPU/CUDA availability at startup."""
@@ -189,10 +277,7 @@ class RumiAIRunner:
             unified_analysis.temporal_markers = temporal_markers
             
             # Save temporal markers separately for compatibility
-            temporal_path = self.temporal_handler.get_path(
-                f"{video_id}_{int(time.time())}.json"
-            )
-            self.temporal_handler.save_json(temporal_path, temporal_markers)
+            temporal_path = self.save_analysis_result(video_id, "temporal_markers", temporal_markers)
             
             # Step 6: Save unified analysis
             print("📊 saving_analysis... (65%)")
@@ -205,6 +290,9 @@ class RumiAIRunner:
                 try:
                     result = func(unified_analysis.to_dict())
                     prompt_results[func_name] = result
+                    # Save each insight to the insights folder
+                    if result:  # Only save if result is not empty
+                        self.save_analysis_result(video_id, func_name, result)
                 except Exception as e:
                     logger.error(f"Precompute {func_name} failed: {e}")
                     prompt_results[func_name] = {}
@@ -264,7 +352,7 @@ class RumiAIRunner:
                     raise FileNotFoundError(f"No unified analysis found for {video_id}")
             
             # Load unified analysis
-            from ..core.models import UnifiedAnalysis
+            from rumiai_v2.core.models import UnifiedAnalysis
             unified_analysis = UnifiedAnalysis.load_from_file(str(unified_path))
             
             # Generate temporal markers if missing
@@ -274,10 +362,7 @@ class RumiAIRunner:
                 unified_analysis.temporal_markers = temporal_markers
                 
                 # Save temporal markers
-                temporal_path = self.temporal_handler.get_path(
-                    f"{video_id}_{int(time.time())}.json"
-                )
-                self.temporal_handler.save_json(temporal_path, temporal_markers)
+                temporal_path = self.save_analysis_result(video_id, "temporal_markers", temporal_markers)
             
             print("🧠 Running precompute functions...")
             prompt_results = {}
@@ -285,6 +370,9 @@ class RumiAIRunner:
                 try:
                     result = func(unified_analysis.to_dict())
                     prompt_results[func_name] = result
+                    # Save each insight to the insights folder
+                    if result:  # Only save if result is not empty
+                        self.save_analysis_result(video_id, func_name, result)
                 except Exception as e:
                     logger.error(f"Precompute {func_name} failed: {e}")
                     prompt_results[func_name] = {}
@@ -295,7 +383,7 @@ class RumiAIRunner:
             return {
                 'success': True,
                 'video_id': video_id,
-                'prompts_completed': len([r for r in prompt_results.values() if r.success]),
+                'prompts_completed': len([r for r in prompt_results.values() if (hasattr(r, 'success') and r.success) or (isinstance(r, dict) and r)]),
                 'report': report
             }
             
@@ -352,9 +440,24 @@ class RumiAIRunner:
     
     def _generate_report(self, analysis, prompt_results: Dict[str, Any]) -> Dict[str, Any]:
         """Generate final analysis report."""
-        successful_prompts = sum(1 for r in prompt_results.values() if r.success)
-        total_cost = sum(r.estimated_cost for r in prompt_results.values() if r.success and r.estimated_cost)
-        total_tokens = sum(r.tokens_used for r in prompt_results.values() if r.success and r.tokens_used)
+        # Handle both PromptResult objects and dictionary results from precompute functions
+        successful_prompts = 0
+        total_cost = 0.0
+        total_tokens = 0
+        
+        for r in prompt_results.values():
+            if hasattr(r, 'success'):  # PromptResult object
+                if r.success:
+                    successful_prompts += 1
+                    if hasattr(r, 'estimated_cost') and r.estimated_cost:
+                        total_cost += r.estimated_cost
+                    if hasattr(r, 'tokens_used') and r.tokens_used:
+                        total_tokens += r.tokens_used
+            elif isinstance(r, dict) and r:  # Non-empty dictionary from precompute
+                successful_prompts += 1
+                # Precompute functions are free and don't use tokens
+                total_cost += 0.0
+                total_tokens += 0
         
         # Get final memory usage
         final_memory = self._get_memory_usage()
@@ -371,10 +474,10 @@ class RumiAIRunner:
             'total_tokens': total_tokens,
             'prompt_details': {
                 name: {
-                    'success': result.success,
-                    'tokens': result.tokens_used,
-                    'cost': result.estimated_cost,
-                    'time': result.processing_time
+                    'success': result.success if hasattr(result, 'success') else bool(result),
+                    'tokens': result.tokens_used if hasattr(result, 'tokens_used') else 0,
+                    'cost': result.estimated_cost if hasattr(result, 'estimated_cost') else 0.0,
+                    'time': result.processing_time if hasattr(result, 'processing_time') else 0.001
                 }
                 for name, result in prompt_results.items()
             },
@@ -386,9 +489,9 @@ class RumiAIRunner:
                 'system_percent': final_memory['system_percent']
             },
             'feature_flags': {
-                'ml_precompute': self.settings.use_ml_precompute,
-                'claude_sonnet': self.settings.use_claude_sonnet,
-                'output_format': self.settings.output_format_version
+                'ml_precompute': getattr(self.settings, 'use_ml_precompute', True),
+                'claude_sonnet': getattr(self.settings, 'use_claude_sonnet', False),
+                'output_format': getattr(self.settings, 'output_format_version', '2.0')
             }
         }
 
@@ -441,9 +544,18 @@ def main():
         runner = RumiAIRunner(legacy_mode=legacy_mode)
         
         # Run processing
-        
+        if video_url:
+            logger.info(f"Processing video URL: {video_url}")
+            result = asyncio.run(runner.process_video_url(video_url))
+        elif video_id:
             logger.info(f"Running in legacy mode for video ID: {video_id}")
             result = asyncio.run(runner.process_video_id(video_id))
+        else:
+            logger.error("No video URL or ID provided")
+            sys.exit(1)
+    except Exception as e:
+        logger.error(f"Processing failed: {e}")
+        sys.exit(1)
         
 if __name__ == "__main__":
     main()

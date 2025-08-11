@@ -73,7 +73,7 @@ TikTok URL
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 7 Python Analysis Types
+## 8 Python Analysis Types
 
 Each analysis type is implemented as a Python function that generates professional-quality output without Claude dependency:
 
@@ -86,6 +86,7 @@ Each analysis type is implemented as a Python function that generates profession
 | **Speech Analysis** | `compute_speech_wrapper()` | 0.001s | $0.00 |
 | **Visual Overlay** | `compute_visual_overlay_analysis_professional()` | 0.001s | $0.00 |
 | **Metadata Analysis** | `compute_metadata_wrapper()` | 0.001s | $0.00 |
+| **Temporal Markers** | `generate_markers()` | 0.001s | $0.00 |
 
 ### Analysis Descriptions
 
@@ -96,6 +97,7 @@ Each analysis type is implemented as a Python function that generates profession
 5. **Speech Analysis** - Examines speech patterns, audio energy, timing, and speech-gesture synchronization
 6. **Visual Overlay** - Analyzes text-speech alignment, overlay density, and multimodal coordination
 7. **Metadata Analysis** - Processes caption effectiveness, hashtag analysis, and engagement patterns
+8. **Temporal Markers** - Analyzes first 5 seconds and last 15% of video for engagement hooks and retention patterns
 
 ## Professional 6-Block Output Structure
 

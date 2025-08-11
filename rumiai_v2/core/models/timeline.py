@@ -46,7 +46,7 @@ class TimelineEntry:
             # For instantaneous events, check exact match
             return abs(self.start.seconds - timestamp) < 0.001
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, legacy_mode: bool = False) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         result = {
             'start': self.start.to_json(legacy_mode),
@@ -179,7 +179,7 @@ class Timeline:
         for entry in other.entries:
             self.add_entry(entry)
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, legacy_mode: bool = False) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             'video_id': self.video_id,
