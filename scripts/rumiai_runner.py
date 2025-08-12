@@ -422,8 +422,8 @@ class RumiAIRunner:
                 'system_percent': final_memory['system_percent']
             },
             'feature_flags': {
-                'ml_precompute': getattr(self.settings, 'use_ml_precompute', True),
-                'claude_sonnet': getattr(self.settings, 'use_claude_sonnet', False),
+                'ml_precompute': True,  # Always True in Python-only mode
+                'python_only': True,   # Python-only mode enabled
                 'output_format': getattr(self.settings, 'output_format_version', '2.0')
             }
         }

@@ -29,7 +29,7 @@ from rumiai_v2.api.ml_services import MLServices
 from rumiai_v2.processors.video_analyzer import VideoAnalyzer
 from rumiai_v2.processors.timeline_builder import TimelineBuilder
 from rumiai_v2.processors.precompute_functions import get_compute_function, COMPUTE_FUNCTIONS
-from rumiai_v2.core.models.prompt import PromptType
+# from rumiai_v2.core.models.prompt import PromptType  # Removed in cleanup
 from rumiai_v2.config.settings import Settings
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

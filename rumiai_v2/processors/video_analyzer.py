@@ -42,7 +42,8 @@ class VideoAnalyzer:
             'mediapipe': self._run_mediapipe,
             'ocr': self._run_ocr,
             'scene_detection': self._run_scene_detection,
-            'audio_energy': self._run_audio_energy
+            'audio_energy': self._run_audio_energy,
+            'emotion_detection': self._run_emotion_detection  # NEW - FEAT integration
         }
         
         # Run analyses in parallel
@@ -354,6 +355,98 @@ class VideoAnalyzer:
             return MLAnalysisResult(
                 model_name='audio_energy',
                 model_version='librosa-0.11',
+                success=False,
+                error=str(e)
+            )
+    
+    async def _run_emotion_detection(self, video_id: str, video_path: Path) -> MLAnalysisResult:
+        """Run FEAT emotion detection."""
+        try:
+            # Check for existing output
+            output_dir = Path(f"emotion_detection_outputs/{video_id}")
+            output_path = output_dir / f"{video_id}_emotions.json"
+            
+            if output_path.exists():
+                logger.info(f"Using existing emotion output: {output_path}")
+                with open(output_path, 'r') as f:
+                    data = json.load(f)
+                
+                return MLAnalysisResult(
+                    model_name='emotion_detection',
+                    model_version='feat-0.6.0',
+                    success=True,
+                    data=data,
+                    processing_time=0.0
+                )
+            
+            # Run actual emotion detection
+            logger.info(f"Running FEAT emotion detection on {video_path}")
+            from ..ml_services.emotion_detection_service import get_emotion_detector
+            
+            # Get detector instance
+            detector = get_emotion_detector()
+            
+            # Extract frames for emotion detection
+            import cv2
+            cap = cv2.VideoCapture(str(video_path))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            duration = total_frames / fps if fps > 0 else 0
+            
+            # Adaptive sampling based on video duration
+            sample_rate = detector.get_adaptive_sample_rate(duration)
+            frame_interval = int(fps / sample_rate) if sample_rate > 0 else int(fps)
+            
+            frames = []
+            timestamps = []
+            frame_count = 0
+            
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                    
+                if frame_count % frame_interval == 0:
+                    frames.append(frame)
+                    timestamps.append(frame_count / fps)
+                    
+                frame_count += 1
+                
+                # Limit to reasonable number of frames
+                if len(frames) >= 60:
+                    break
+            
+            cap.release()
+            
+            # Run emotion detection
+            data = await detector.detect_emotions_batch(frames, timestamps)
+            
+            # Add video metadata
+            data['video_id'] = video_id
+            data['video_duration'] = duration
+            data['frames_analyzed'] = len(frames)
+            data['sample_rate'] = sample_rate
+            
+            # Save output
+            output_dir.mkdir(parents=True, exist_ok=True)
+            with open(output_path, 'w') as f:
+                json.dump(data, f, indent=2)
+            
+            processing_time = data.get('metrics', {}).get('processing_time', 0.0)
+            
+            return MLAnalysisResult(
+                model_name='emotion_detection',
+                model_version='feat-0.6.0',
+                success=True,
+                data=data,
+                processing_time=processing_time
+            )
+            
+        except Exception as e:
+            logger.error(f"Emotion detection failed: {e}")
+            return MLAnalysisResult(
+                model_name='emotion_detection',
+                model_version='feat-0.6.0',
                 success=False,
                 error=str(e)
             )

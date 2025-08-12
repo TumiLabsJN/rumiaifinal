@@ -37,17 +37,6 @@ class Settings:
         self.max_video_duration = int(os.getenv('RUMIAI_MAX_VIDEO_DURATION', '300'))  # 5 minutes
         self.frame_sample_rate = float(os.getenv('RUMIAI_FRAME_SAMPLE_RATE', '1.0'))  # 1 fps
         
-        # Prompt timeouts (seconds)
-        self.prompt_timeouts = {
-            'creative_density': 60,
-            'emotional_journey': 90,
-            'speech_analysis': 90,
-            'visual_overlay_analysis': 120,  # Larger timeout for problematic prompt
-            'metadata_analysis': 60,
-            'person_framing': 60,
-            'scene_pacing': 60
-        }
-        
         # Feature flags
         self.temporal_markers_enabled = True  # HARDCODED
         self.strict_mode = os.getenv('RUMIAI_STRICT_MODE', 'false').lower() == 'true'

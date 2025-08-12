@@ -1,0 +1,385 @@
+{
+  "test_focus": {
+    "_purpose": "Identify what this video primarily validates",
+    "primary_validation": "temporal_markers|energy_patterns|scene_detection|text_overlay|speech|multimodal_sync",
+    "video_characteristics": {
+      "has_strong_hook": true,
+      "has_clear_peak": true,
+      "energy_pattern_type": "crescendo|steady|variable|complex",
+      "text_density": "high|medium|low",
+      "speech_coverage": "high|medium|low",
+      "scene_change_frequency": "rapid|moderate|slow"
+    },
+    "edge_cases_present": ["silent_opening", "no_person_visible", "text_only_section"],
+    "expected_challenges": ["Fast cuts might confuse scene detection", "Multiple speakers"]
+  },
+  
+  "video_info": {
+    "video_id": "example_001",
+    "url": "https://tiktok.com/@user/video/123",
+    "duration_seconds": 30,
+    "validator": "initials",
+    "validation_date": "2025-01-15",
+    "validation_time_taken": 10,
+    "video_type": "high_energy|tutorial|story|product|minimal|text_heavy|edge_case"
+  },
+  
+  "initial_observations": {
+    "_instructions": "2 minutes - Watch once at normal speed",
+    "immediate_impression": "High-energy product review with strong CTA",
+    "video_type": "tutorial|review|story|entertainment|promotional|educational",
+    "production_quality": "professional|good|amateur",
+    "hook_strength": "strong|medium|weak",
+    "first_3_seconds": {
+      "grabbed_attention": true,
+      "how": "Shocking question posed directly to camera",
+      "elements_shown": ["close-up face", "bold text overlay", "dramatic music start"]
+    }
+  },
+  
+  "timestamp_observations": [
+    {
+      "_instructions": "4 minutes - Capture 5 key moments with energy levels",
+      "timestamp": "0:00",
+      "section": "opening_hook",
+      "energy_level": 8,
+      "_energy_guide": "1-10 scale: 1=very calm, 5=moderate, 10=maximum intensity",
+      "elements": {
+        "people": {
+          "count": 1,
+          "position": "center|left|right|moving",
+          "activity": "speaking to camera"
+        },
+        "text": {
+          "content": ["Main text here", "Secondary text if any"],
+          "style": "static|animated_pop|typewriter|fade|shake",
+          "prominence": "dominant|supporting|subtle"
+        },
+        "audio": {
+          "music_intensity": "none|low|medium|high|peak",
+          "speech": "none|calm|normal|excited|urgent",
+          "effects": ["whoosh", "ding"]
+        },
+        "objects": ["product bottle", "hand gesture"],
+        "stickers": ["emoji type", "arrow"]
+      },
+      "why_important": "Sets confrontational hook that challenges viewer assumptions"
+    },
+    {
+      "timestamp": "0:05",
+      "section": "context_setup|main_content|transition",
+      "energy_level": 6,
+      "elements": {
+        "people": {},
+        "text": {},
+        "audio": {},
+        "scene_change": true,
+        "transition_type": "cut|fade|swipe|zoom|morph"
+      },
+      "why_important": "Transitions from hook to value delivery"
+    },
+    {
+      "timestamp": "0:12",
+      "section": "peak_moment",
+      "energy_level": 9,
+      "elements": {
+        "description": "Multiple elements converge for maximum impact",
+        "people": {},
+        "text": {},
+        "audio": {}
+      },
+      "why_peak": "Maximum visual and audio stimulation with gesture emphasis"
+    },
+    {
+      "timestamp": "0:20",
+      "section": "value_delivery|demonstration|explanation",
+      "energy_level": 5,
+      "elements": {}
+    },
+    {
+      "timestamp": "0:27",
+      "section": "closing_retention",
+      "energy_level": 8,
+      "elements": {
+        "text": {
+          "content": ["CTA text", "Urgency text"],
+          "style": "urgent_flash|persistent|animated"
+        },
+        "cta_elements": ["follow button", "link arrow", "discount code"],
+        "audio": {
+          "music_intensity": "rising|sustained|peak",
+          "speech": "urgent|excited|calm"
+        }
+      },
+      "retention_hook": "Creates urgency with limited-time offer"
+    }
+  ],
+  
+  "energy_analysis": {
+    "_instructions": "2 minutes - Track energy patterns throughout video",
+    "visual_energy": {
+      "overall_pattern": "high-low-high-medium-high",
+      "_pattern_guide": "Describe shape: steady, crescendo, variable, pulsing, waves",
+      "checkpoints": [
+        {"time": "0:00", "level": 8, "reason": "rapid cuts and motion"},
+        {"time": "0:05", "level": 4, "reason": "static demonstration"},
+        {"time": "0:10", "level": 9, "reason": "maximum elements on screen"},
+        {"time": "0:15", "level": 5, "reason": "steady explanation"},
+        {"time": "0:20", "level": 6, "reason": "moderate activity"},
+        {"time": "0:25", "level": 8, "reason": "urgent CTA with effects"}
+      ],
+      "highest_activity": "0:10-0:12",
+      "lowest_activity": "0:05-0:07",
+      "cut_rhythm": {
+        "first_10_sec": 8,
+        "middle_10_sec": 4,
+        "last_10_sec": 6,
+        "_note": "Count scene changes/cuts in each third"
+      }
+    },
+    "audio_energy": {
+      "music_pattern": "crescendo-steady-peak-fade-crescendo",
+      "checkpoints": [
+        {"time": "0:00", "music": 7, "speech": 8},
+        {"time": "0:10", "music": 9, "speech": 9},
+        {"time": "0:20", "music": 4, "speech": 5},
+        {"time": "0:28", "music": 8, "speech": 9}
+      ],
+      "speech_pacing": {
+        "opening": "fast|moderate|slow",
+        "middle": "fast|moderate|slow",
+        "closing": "fast|moderate|slow"
+      },
+      "volume_dynamics": "consistent|variable|building",
+      "has_silence_moments": true,
+      "silence_timestamps": ["0:18-0:19"]
+    },
+    "multimodal_alignment": {
+      "sync_observations": [
+        {"time": "0:00", "aligned": true, "description": "Music beat matches cuts"},
+        {"time": "0:10", "aligned": true, "description": "All elements peak together"},
+        {"time": "0:20", "aligned": false, "description": "Calm music but text appears"}
+      ],
+      "overall_coordination": "high|medium|low",
+      "gesture_speech_sync": "synchronized|delayed|independent",
+      "text_speech_alignment": "reinforcing|contrasting|independent"
+    }
+  },
+  
+  "temporal_markers": {
+    "_instructions": "1 minute - Focus on opening and closing engagement",
+    "opening_analysis": {
+      "first_5_seconds": {
+        "hook_type": "controversy|question|shock|preview|story|visual_surprise",
+        "hook_effectiveness": 8,
+        "_effectiveness_guide": "1-10: How well does it stop scrolling?",
+        "immediate_value": "Challenges common belief about skincare",
+        "visual_impact": ["face close-up", "bold text", "high contrast"],
+        "audio_hook": ["dramatic music", "provocative question", "sound effect"],
+        "cognitive_load": "low|medium|high",
+        "establishes_expectation": true,
+        "expectation_type": "will learn something new"
+      }
+    },
+    "closing_analysis": {
+      "last_15_percent_starts": "0:25",
+      "_calculation": "For 30s video, last 15% = final 4.5 seconds",
+      "retention_tactics": [
+        "discount_offer",
+        "next_video_tease", 
+        "urgency_creation",
+        "completion_reward",
+        "question_to_ponder"
+      ],
+      "energy_trend": "increasing|maintaining|decreasing",
+      "loop_probability": 6,
+      "_loop_guide": "1-10: How likely to rewatch?",
+      "cta_clarity": 9,
+      "_cta_guide": "1-10: How clear is the action to take?",
+      "final_frame_impact": "memorable|standard|weak",
+      "final_frame_elements": ["text persistent", "face visible", "product shown"]
+    },
+    "engagement_zones": {
+      "highest_engagement": ["0:00-0:03", "0:10-0:12", "0:27-0:30"],
+      "potential_drop_offs": ["0:05-0:07", "0:18-0:20"],
+      "_drop_reason": "Energy dips or repetitive content",
+      "surprise_moments": ["0:12"],
+      "pattern_breaks": ["0:10", "0:25"],
+      "_pattern_break": "Moments that disrupt expected flow"
+    }
+  },
+  
+  "element_tracking": {
+    "_instructions": "1 minute - Track key elements efficiently",
+    "people": {
+      "main_person_coverage": "75%",
+      "_coverage_guide": "Rough percentage of video duration",
+      "appearance_pattern": [[0, 8], [12, 20], [25, 30]],
+      "_pattern_format": "[start_second, end_second] for each appearance",
+      "framing_changes": 4,
+      "dominant_framing": "close-up|medium_shot|wide_shot|mixed"
+    },
+    "text_overlays": {
+      "total_unique": 12,
+      "_counting_guide": "Count distinct text messages, not repeats",
+      "appearance_pattern": "front_loaded|even|back_loaded|crescendo",
+      "longest_display": {
+        "text": "50% OFF TODAY",
+        "duration": 5
+      },
+      "text_density_score": 7,
+      "_density_guide": "1-10: 1=minimal text, 10=constant text"
+    },
+    "objects": {
+      "featured_items": ["product_name", "prop_name"],
+      "primary_object": "skincare_bottle",
+      "screen_time": {
+        "skincare_bottle": 15,
+        "cotton_pad": 5
+      },
+      "prominence_pattern": "constant|recurring|brief|building"
+    },
+    "scene_changes": {
+      "total_count": 12,
+      "_count_guide": "Rough count is fine, ±2 acceptable",
+      "change_rate": 0.4,
+      "_rate_calculation": "total_changes / video_duration",
+      "longest_scene": {
+        "start": 15,
+        "end": 20,
+        "duration": 5
+      },
+      "rhythm_consistency": "consistent|variable|chaotic"
+    }
+  },
+  
+  "speech_audio": {
+    "_instructions": "1 minute - Key phrases and audio patterns",
+    "speech_presence": "70%",
+    "_presence_guide": "Rough percentage with speech/talking",
+    "key_phrases": [
+      {"time": "0:00", "text": "Opening hook phrase"},
+      {"time": "0:10", "text": "Peak moment phrase"},
+      {"time": "0:27", "text": "CTA phrase"}
+    ],
+    "_phrase_note": "Just 3-5 most important phrases",
+    "speech_patterns": {
+      "pace_variation": "low|medium|high",
+      "emphasis_technique": "volume|pause|repetition|combination",
+      "filler_usage": "none|minimal|moderate|heavy",
+      "clarity": 8,
+      "_clarity_guide": "1-10: 1=hard to understand, 10=crystal clear"
+    },
+    "music_characteristics": {
+      "genre": "pop|electronic|hip-hop|acoustic|mixed",
+      "tempo_changes": 3,
+      "builds_and_drops": true,
+      "supports_narrative": true,
+      "_support_guide": "Does music enhance the message?"
+    },
+    "audio_effects": ["whoosh", "ding", "impact", "transition"],
+    "effect_timestamps": ["0:03", "0:10", "0:25"],
+    "_effect_note": "Just major/noticeable effects"
+  },
+  
+  "metadata_summary": {
+    "_instructions": "30 seconds - Quick final details",
+    "caption_snippet": "First 100 characters of caption text here...",
+    "hashtag_count": 8,
+    "hashtag_strategy": "broad_only|niche_only|mixed|branded",
+    "emoji_usage": "none|light|moderate|heavy",
+    "cta_in_caption": true,
+    "link_mentioned": true,
+    "caption_hook": "question|statement|emoji_first|direct_cta"
+  },
+  
+  "validation_summary": {
+    "video_purpose": "educate|entertain|sell|inspire|inform",
+    "_purpose_note": "Can combine: educate_and_sell",
+    "target_audience": "demographic or interest group",
+    "viral_potential": 7,
+    "_viral_guide": "1-10 based on hook, energy, retention tactics",
+    "production_effort": "low|medium|high",
+    "key_success_factors": ["strong hook", "clear value", "urgent CTA"],
+    "confidence_in_observations": 8,
+    "_confidence_guide": "1-10: Your confidence in accuracy",
+    "unclear_elements": ["Some text too fast", "Background music genre uncertain"],
+    "notes": "Any additional observations or context"
+  },
+  
+  "quick_validation_checks": {
+    "_purpose": "Binary checks to quickly identify major system failures",
+    "ml_detection_basics": {
+      "person_detected_correctly": true,
+      "text_detected_correctly": true,
+      "speech_detected_correctly": true,
+      "scene_count_reasonable": true,
+      "_scene_note": "Within ±3 of your count"
+    },
+    "energy_analysis_check": {
+      "identified_peak_moment": true,
+      "peak_at_correct_time": true,
+      "_peak_note": "Within ±2 seconds of your observation",
+      "energy_pattern_matches": true,
+      "visual_energy_accurate": true,
+      "audio_energy_accurate": true
+    },
+    "temporal_markers_check": {
+      "hook_type_correct": true,
+      "hook_effectiveness_reasonable": true,
+      "retention_elements_found": true,
+      "engagement_zones_reasonable": true
+    },
+    "major_failures": [
+      "List any complete failures here",
+      "e.g., 'No text detected despite heavy text overlays'",
+      "e.g., 'Peak moment in wrong half of video'"
+    ]
+  },
+  
+  "expected_vs_actual": {
+    "_purpose": "Quick comparison of key metrics - fill 'system_output' after running",
+    "scene_count": {
+      "your_count": 12,
+      "acceptable_range": [10, 14],
+      "system_output": "TBD",
+      "passes": "TBD"
+    },
+    "peak_moment": {
+      "your_timestamp": "0:12",
+      "acceptable_range": ["0:10", "0:14"],
+      "system_output": "TBD",
+      "passes": "TBD"
+    },
+    "text_overlay_count": {
+      "your_count": 15,
+      "acceptable_range": [12, 18],
+      "system_output": "TBD",
+      "passes": "TBD"
+    },
+    "speech_coverage": {
+      "your_estimate": "70%",
+      "acceptable_range": ["60%", "80%"],
+      "system_output": "TBD",
+      "passes": "TBD"
+    },
+    "opening_hook": {
+      "your_assessment": "question",
+      "acceptable_matches": ["question", "provocative"],
+      "system_output": "TBD",
+      "passes": "TBD"
+    },
+    "energy_peak_time": {
+      "your_observation": "0:10-0:12",
+      "acceptable_range": ["0:08", "0:14"],
+      "system_output": "TBD",
+      "passes": "TBD"
+    },
+    "overall_validation": {
+      "total_checks": 6,
+      "passed": "TBD",
+      "failed": "TBD",
+      "pass_rate": "TBD"
+    }
+  }
+}

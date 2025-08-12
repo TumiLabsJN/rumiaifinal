@@ -1,0 +1,197 @@
+{
+  "test_focus": {
+    "_purpose": "Validate energy peak detection and multimodal synchronization",
+    "primary_validation": "energy_patterns",
+    "video_characteristics": {
+      "has_strong_hook": true,
+      "has_clear_peak": true,
+      "energy_pattern_type": "variable",
+      "text_density": "medium",
+      "speech_coverage": "high",
+      "scene_change_frequency": "moderate"
+    },
+    "edge_cases_present": ["no_music"],
+    "expected_challenges": ["No music might affect energy detection", "Peak timing shifted from script"]
+  },
+  
+  "video_info": {
+    "video_id": "7537417181332557061",
+    "url": "https://www.tiktok.com/@jorgen1833/video/7537417181332557061",
+    "duration_seconds": 31,
+    "validator": "JD",
+    "validation_date": "2025-08-11",
+    "video_type": "high_energy",
+    "actual_vs_script": "Modified timing from original script"
+  },
+  
+  "expected_peaks": {
+    "_based_on": "VIDEO TEST #1.md actual timings",
+    "first_peak": {
+      "time_range": "0:12-0:16",
+      "acceptable_range": ["0:11", "0:17"],
+      "elements": ["Jump", "THIS IS IT!", "PEAK MOMENT text", "Energy level 10"],
+      "energy_level": 10
+    },
+    "second_peak": {
+      "time_range": "0:24-0:26", 
+      "acceptable_range": ["0:23", "0:27"],
+      "elements": ["Clap hands", "BOOM!", "SECOND PEAK text"],
+      "energy_level": 9
+    },
+    "low_energy_section": {
+      "time_range": "0:16-0:20",
+      "description": "Calm section - 'Now let me explain...'",
+      "energy_level": 3
+    }
+  },
+  
+  "expected_timeline": {
+    "speech_segments": [
+      {"time": "0:00-0:04", "text": "WAIT WAIT WAIT! Stop scrolling!", "energy": "high"},
+      {"time": "0:04-0:05", "text": "You need to see this", "energy": "medium"},
+      {"time": "0:08", "text": "One... Two... Three...", "energy": "building"},
+      {"time": "0:12-0:16", "text": "THIS IS IT!", "energy": "peak"},
+      {"time": "0:16-0:20", "text": "Now let me explain...", "energy": "low"},
+      {"time": "0:20-0:24", "text": "It gets better...", "energy": "building"},
+      {"time": "0:24-0:26", "text": "BOOM!", "energy": "peak"},
+      {"time": "0:26-0:29", "text": "Almost done but wait", "energy": "medium"},
+      {"time": "0:29-0:31", "text": "FOLLOW NOW!", "energy": "high"}
+    ],
+    "text_overlays": [
+      {"time": "0:00-0:04", "text": "STOP SCROLLING", "style": "shaking"},
+      {"time": "0:08", "text": "1 2 3", "style": "numbers appear"},
+      {"time": "0:12-0:16", "text": "🔥🔥🔥 PEAK MOMENT", "style": "flashing"},
+      {"time": "0:20-0:24", "text": "Watch this...", "style": "static"},
+      {"time": "0:24-0:26", "text": "SECOND PEAK", "style": "static"},
+      {"time": "0:26-0:29", "text": "One more thing", "style": "static"},
+      {"time": "0:29-0:31", "text": "⬇️ FOLLOW ⬇️", "style": "pulsing"}
+    ],
+    "visual_actions": [
+      {"time": "0:00-0:04", "action": "Face close-up, excited"},
+      {"time": "0:04-0:05", "action": "Pull back to medium shot"},
+      {"time": "0:08", "action": "Quick cuts between angles"},
+      {"time": "0:12-0:16", "action": "JUMP + excited gesture"},
+      {"time": "0:16-0:20", "action": "Slow, calm shot"},
+      {"time": "0:20-0:24", "action": "Building energy, lean forward"},
+      {"time": "0:24-0:26", "action": "Clap hands"},
+      {"time": "0:26-0:29", "action": "Medium energy dancing"},
+      {"time": "0:29-0:31", "action": "Point at camera"}
+    ]
+  },
+  
+  "expected_detections": {
+    "person_presence": "100%",
+    "text_overlay_count": {
+      "expected": 7,
+      "acceptable_range": [5, 9]
+    },
+    "speech_coverage": {
+      "expected": "100%",
+      "acceptable_range": ["90%", "100%"]
+    },
+    "scene_changes": {
+      "expected": 8,
+      "acceptable_range": [5, 11],
+      "note": "Multiple quick cuts and angle changes"
+    },
+    "opening_hook": {
+      "type": "urgency",
+      "effectiveness": "strong",
+      "elements": ["loud speech", "stop scrolling text", "excited expression"]
+    },
+    "closing_retention": {
+      "type": "direct_cta",
+      "elements": ["FOLLOW NOW speech", "follow arrow text", "pointing gesture"]
+    }
+  },
+  
+  "energy_pattern": {
+    "overall_shape": "high-medium-low-peak-low-building-peak-medium-high",
+    "checkpoints": [
+      {"time": "0:00", "level": 9, "reason": "Urgent opening"},
+      {"time": "0:05", "level": 5, "reason": "Normal speech"},
+      {"time": "0:08", "level": 7, "reason": "Building with counting"},
+      {"time": "0:14", "level": 10, "reason": "Peak moment - jump"},
+      {"time": "0:18", "level": 3, "reason": "Calm explanation"},
+      {"time": "0:22", "level": 6, "reason": "Building energy"},
+      {"time": "0:25", "level": 9, "reason": "Second peak - clap"},
+      {"time": "0:27", "level": 6, "reason": "Medium energy"},
+      {"time": "0:30", "level": 8, "reason": "Final CTA burst"}
+    ]
+  },
+  
+  "quick_validation_checks": {
+    "_instructions": "Fill these after reviewing RumiAI output",
+    "ml_detection_basics": {
+      "person_detected_correctly": "TBD",
+      "text_detected_correctly": "TBD",
+      "speech_detected_correctly": "TBD",
+      "scene_count_reasonable": "TBD"
+    },
+    "energy_analysis_check": {
+      "identified_first_peak": "TBD",
+      "first_peak_timing": "TBD",
+      "identified_second_peak": "TBD",
+      "second_peak_timing": "TBD",
+      "energy_pattern_matches": "TBD"
+    },
+    "temporal_markers_check": {
+      "hook_detected": "TBD",
+      "hook_type_correct": "TBD",
+      "cta_detected": "TBD",
+      "engagement_zones_reasonable": "TBD"
+    }
+  },
+  
+  "system_output_comparison": {
+    "_instructions": "Compare actual RumiAI output to expectations",
+    "temporal_markers": {
+      "first_5_seconds": {
+        "expected": "High energy opening with 'WAIT WAIT WAIT'",
+        "actual": "TBD"
+      },
+      "cta_window": {
+        "expected": "26-31s with FOLLOW NOW",
+        "actual": "TBD"
+      },
+      "peak_moments": {
+        "expected": ["0:14", "0:25"],
+        "actual": "TBD"
+      }
+    },
+    "scene_pacing": {
+      "scene_count": {
+        "expected": 8,
+        "actual": "TBD"
+      }
+    },
+    "speech_analysis": {
+      "coverage": {
+        "expected": "100%",
+        "actual": "TBD"
+      },
+      "transcription_accuracy": {
+        "sample_check": "WAIT WAIT WAIT detected?",
+        "actual": "TBD"
+      }
+    },
+    "visual_overlay": {
+      "text_count": {
+        "expected": 7,
+        "actual": "TBD"
+      },
+      "key_texts_detected": {
+        "stop_scrolling": "TBD",
+        "peak_moment": "TBD",
+        "follow": "TBD"
+      }
+    }
+  },
+  
+  "validation_summary": {
+    "passes": [],
+    "failures": [],
+    "overall_result": "TBD",
+    "notes": "First test video - high energy with two peaks"
+  }
+}

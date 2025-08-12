@@ -1,0 +1,126 @@
+{
+  "_description": "Template for expected outputs - Generated from VIDEO TEST #X.md descriptions",
+  "_tolerance_notes": {
+    "exact": "Must match exactly (0% tolerance)",
+    "low": "5% tolerance for minor variations",
+    "medium": "10% tolerance for ML variations", 
+    "high": "15% tolerance for high-variance ML outputs"
+  },
+  
+  "creative_density": {
+    "CoreMetrics": {
+      "totalElements": 100,
+      "avgDensity": 10.5,
+      "maxDensity": 20,
+      "minDensity": 0,
+      "sceneChangeCount": 3,
+      "timelineCoverage": 0.95,
+      "elementsPerSecond": 10.5
+    },
+    "Dynamics": {
+      "volatility": 0.4,
+      "accelerationPattern": "front_loaded",
+      "densityProgression": "stable"
+    },
+    "KeyEvents": {
+      "peakMoments": 5,
+      "deadZones": 1
+    }
+  },
+  
+  "emotional_journey": {
+    "CoreMetrics": {
+      "uniqueEmotions": 3,
+      "dominantEmotion": "happy",
+      "emotionalIntensity": 0.75,
+      "emotionTransitions": 2,
+      "emotionalDiversity": 0.6
+    },
+    "Dynamics": {
+      "emotionalArc": "rising",
+      "stabilityScore": 0.7
+    }
+  },
+  
+  "person_framing": {
+    "CoreMetrics": {
+      "faceVisibilityRate": 0.8,
+      "dominantFraming": "medium_shot",
+      "eyeContactRate": 0.6,
+      "averageFaceSize": 0.3,
+      "framingVariety": 3
+    },
+    "Dynamics": {
+      "framingConsistency": 0.7,
+      "framingTransitions": 4
+    }
+  },
+  
+  "scene_pacing": {
+    "CoreMetrics": {
+      "totalScenes": 5,
+      "averageSceneDuration": 6.0,
+      "scenesPerMinute": 2.0,
+      "pacingScore": 0.7,
+      "rhythmConsistency": 0.8
+    },
+    "Dynamics": {
+      "pacingProgression": "accelerating",
+      "sceneRhythm": "regular"
+    }
+  },
+  
+  "speech_analysis": {
+    "CoreMetrics": {
+      "totalWords": 150,
+      "wordsPerMinute": 120,
+      "speechCoverage": 0.8,
+      "vocabularyDiversity": 0.6,
+      "uniqueWords": 90,
+      "avgSegmentDuration": 3.5
+    },
+    "Dynamics": {
+      "speechRhythm": "conversational",
+      "pausePattern": "natural"
+    }
+  },
+  
+  "visual_overlay_analysis": {
+    "CoreMetrics": {
+      "totalOverlays": 10,
+      "overlayDensity": 0.3,
+      "avgOverlayDuration": 2.0,
+      "textToSpeechAlignment": 0.7,
+      "overlayFrequency": 20
+    },
+    "Dynamics": {
+      "overlayTiming": "synchronized",
+      "overlayProgression": "front_loaded"
+    }
+  },
+  
+  "metadata_analysis": {
+    "CoreMetrics": {
+      "hashtagCount": 5,
+      "captionLength": 100,
+      "emojiCount": 3,
+      "videoDuration": 30,
+      "wordCount": 20
+    }
+  },
+  
+  "temporal_markers": {
+    "first_5_seconds": {
+      "hooks": ["visual_hook", "audio_hook"],
+      "engagement_score": 0.8
+    },
+    "cta_window": {
+      "optimal_cta_start": 25.0,
+      "cta_strength": 0.7
+    },
+    "engagement_curve": {
+      "peak_engagement_time": 15.0,
+      "attention_drop_point": 20.0
+    }
+  }
+}
