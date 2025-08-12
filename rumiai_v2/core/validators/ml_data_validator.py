@@ -300,3 +300,81 @@ class MLDataValidator:
                 logger,
                 default_return={'scenes': [], 'scene_changes': [], 'total_scenes': 0, 'error': str(e)}
             )
+    
+    @staticmethod
+    def validate_emotion_data(data: Dict[str, Any], video_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Validate FEAT emotion detection data with fail-fast approach.
+        Raises exception on any data quality issues rather than normalizing.
+        
+        Expected structure:
+        {
+            'emotions': [
+                {
+                    'timestamp': float,
+                    'emotion': str,
+                    'confidence': float,
+                    'all_scores': {...},
+                    'action_units': [...],
+                    'au_intensities': {...}
+                }
+            ]
+        }
+        """
+        # FAIL if no emotions key
+        if 'emotions' not in data:
+            raise ValueError(f"FATAL: FEAT data missing 'emotions' key for video {video_id}")
+        
+        if not isinstance(data['emotions'], list):
+            raise ValueError(f"FATAL: FEAT 'emotions' is not a list for video {video_id}")
+        
+        valid_emotions = {'joy', 'sadness', 'anger', 'fear', 'disgust', 'surprise', 'neutral'}
+        
+        for i, emotion_entry in enumerate(data['emotions']):
+            if not isinstance(emotion_entry, dict):
+                raise ValueError(f"FATAL: FEAT emotion entry {i} is not a dict for video {video_id}")
+            
+            # Required fields - FAIL if missing
+            if 'timestamp' not in emotion_entry:
+                raise ValueError(f"FATAL: FEAT emotion entry {i} missing timestamp for video {video_id}")
+            
+            if 'emotion' not in emotion_entry:
+                raise ValueError(f"FATAL: FEAT emotion entry {i} missing emotion for video {video_id}")
+            
+            # Validate timestamp
+            timestamp = emotion_entry['timestamp']
+            if not isinstance(timestamp, (int, float)) or timestamp < 0:
+                raise ValueError(f"FATAL: Invalid timestamp {timestamp} at entry {i} for video {video_id}")
+            
+            # Validate emotion - FAIL if unknown
+            emotion = emotion_entry['emotion']
+            if emotion not in valid_emotions:
+                raise ValueError(f"FATAL: Unknown emotion '{emotion}' at {timestamp}s for video {video_id}. "
+                               f"Valid emotions: {valid_emotions}")
+            
+            # Validate confidence - FAIL if out of range
+            if 'confidence' in emotion_entry:
+                confidence = emotion_entry['confidence']
+                if not isinstance(confidence, (int, float)) or not 0.0 <= confidence <= 1.0:
+                    raise ValueError(f"FATAL: Invalid confidence {confidence} at {timestamp}s for video {video_id}")
+            
+            # Validate action_units if present - FAIL if invalid
+            if 'action_units' in emotion_entry:
+                aus = emotion_entry['action_units']
+                if not isinstance(aus, list):
+                    raise ValueError(f"FATAL: action_units is not a list at {timestamp}s for video {video_id}")
+                for au in aus:
+                    if not isinstance(au, int) or not 1 <= au <= 45:
+                        raise ValueError(f"FATAL: Invalid AU {au} at {timestamp}s for video {video_id}")
+            
+            # Validate au_intensities if present
+            if 'au_intensities' in emotion_entry:
+                intensities = emotion_entry['au_intensities']
+                if not isinstance(intensities, dict):
+                    raise ValueError(f"FATAL: au_intensities is not a dict at {timestamp}s for video {video_id}")
+                for au, intensity in intensities.items():
+                    if not isinstance(intensity, (int, float)) or not 0.0 <= intensity <= 1.0:
+                        raise ValueError(f"FATAL: Invalid AU intensity {intensity} for AU {au} at {timestamp}s")
+        
+        # Return data AS-IS if all validation passes
+        return data

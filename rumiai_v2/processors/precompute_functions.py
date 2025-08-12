@@ -451,13 +451,31 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
         timestamp_key = f"{int(timestamp)}-{int(timestamp)+1}s"
         timelines['gestureTimeline'][timestamp_key] = gesture
     
-    # Transform faces to expression timeline
-    for face in mediapipe_data.get('faces', []):
-        timestamp = face.get('timestamp', 0)
-        timestamp_key = f"{int(timestamp)}-{int(timestamp)+1}s"
-        timelines['expressionTimeline'][timestamp_key] = {
-            'confidence': face.get('confidence', 0.7)
-        }
+    # Extract FEAT emotion entries from timeline instead of MediaPipe faces
+    for entry in timeline_entries:
+        if entry.get('entry_type') == 'emotion':
+            # Extract timestamp range
+            start = entry.get('start', 0)
+            # Handle both string format ("1.5s") and numeric format
+            if isinstance(start, str) and start.endswith('s'):
+                start = float(start[:-1])
+            elif hasattr(start, 'seconds'):
+                start = start.seconds
+            else:
+                start = float(start)
+            
+            end = entry.get('end', start + 1)
+            if isinstance(end, str) and end.endswith('s'):
+                end = float(end[:-1])
+            elif hasattr(end, 'seconds'):
+                end = end.seconds
+            else:
+                end = float(end)
+            
+            timestamp_key = f"{int(start)}-{int(end)}s"
+            
+            # Add FEAT data to expressionTimeline
+            timelines['expressionTimeline'][timestamp_key] = entry.get('data', {})
     
     # Log extraction results for validation
     extraction_summary = {

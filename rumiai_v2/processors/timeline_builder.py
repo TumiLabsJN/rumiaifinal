@@ -47,7 +47,8 @@ class TimelineBuilder:
             'whisper': self._add_whisper_entries,
             'ocr': self._add_ocr_entries,
             'mediapipe': self._add_mediapipe_entries,
-            'scene_detection': self._add_scene_entries
+            'scene_detection': self._add_scene_entries,
+            'emotion_detection': self._add_emotion_entries
         }
         
         for model_name, builder_func in builders.items():
@@ -353,6 +354,40 @@ class TimelineBuilder:
                 timeline.add_entry(entry)
         
         logger.info(f"Scene Detection: Added {scene_count} scene changes")
+    
+    def _add_emotion_entries(self, timeline: Timeline, emotion_data: Dict[str, Any]) -> None:
+        """
+        Add FEAT emotion detection entries to timeline.
+        
+        Transforms FEAT emotion data into timeline entries with Action Units.
+        """
+        # Validate emotion data
+        emotion_data = self.ml_validator.validate_emotion_data(emotion_data, timeline.video_id)
+        
+        # Process each emotion detection
+        for emotion_entry in emotion_data.get('emotions', []):
+            timestamp = emotion_entry['timestamp']  # Trust validator - no default needed
+            
+            # Create timeline entry with full FEAT data
+            entry = TimelineEntry(
+                entry_type='emotion',
+                start=Timestamp(timestamp),
+                end=Timestamp(timestamp + 1),  # 1-second window
+                data={
+                    'emotion': emotion_entry['emotion'],  # Trust validator - required field
+                    'confidence': emotion_entry.get('confidence', 0.0),  # Optional field, keep default
+                    'all_scores': emotion_entry.get('all_scores', {}),  # Optional field
+                    'action_units': emotion_entry.get('action_units', []),  # Optional field
+                    'au_intensities': emotion_entry.get('au_intensities', {}),  # Optional field
+                    'source': 'feat',  # Mark source for downstream validation
+                    'model': 'feat',
+                    'has_action_units': bool(emotion_entry.get('action_units'))
+                }
+            )
+            
+            timeline.add_entry(entry)
+        
+        logger.info(f"Added {len(emotion_data.get('emotions', []))} FEAT emotion entries to timeline")
     
     def _extract_timestamp_from_annotation(self, annotation: Dict[str, Any]) -> Optional[Timestamp]:
         """Extract timestamp from various annotation formats."""
