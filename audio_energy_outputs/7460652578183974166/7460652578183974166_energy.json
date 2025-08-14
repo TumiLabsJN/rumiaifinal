@@ -1,0 +1,18 @@
+{
+  "energy_level_windows": {
+    "0-4s": 0.6585935187970974,
+    "4-9s": 0.6381970113593427,
+    "9-12s": 1.0
+  },
+  "energy_variance": 0.001881533526364492,
+  "climax_timestamp": 0.096,
+  "burst_pattern": "back_loaded",
+  "duration": 12.099,
+  "metadata": {
+    "processed": true,
+    "success": true,
+    "method": "librosa_rms",
+    "sample_rate": 16000,
+    "window_seconds": 5
+  }
+}

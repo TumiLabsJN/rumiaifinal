@@ -118,7 +118,7 @@ class MLServices:
             # First get video duration for adaptive threshold selection
             video_manager = VideoManager([str(video_path)])
             video_manager.start()
-            duration = video_manager.get_duration()[0] if video_manager.get_duration() else 30.0
+            duration = video_manager.get_duration()[0].get_seconds() if video_manager.get_duration() else 30.0
             video_manager.release()
             
             # Try progressively lower thresholds for better scene detection
@@ -129,13 +129,13 @@ class MLServices:
                     avg_scene_length = duration / len(scenes) if scenes else duration
                     # Good detection: scenes between 1-5 seconds average
                     if 1.0 <= avg_scene_length <= 5.0:
-                        self.logger.info(f"Using threshold {threshold} with {len(scenes)} scenes detected")
+                        logger.info(f"Using threshold {threshold} with {len(scenes)} scenes detected")
                         break
             
             # If no good match, use most sensitive threshold
             if not scenes or avg_scene_length > 5.0:
                 scenes = detect(str(video_path), ContentDetector(threshold=10.0, min_scene_len=10))
-                self.logger.info(f"Using fallback threshold 10.0 with {len(scenes)} scenes detected")
+                logger.info(f"Using fallback threshold 10.0 with {len(scenes)} scenes detected")
             
             scene_list = []
             for i, (start, end) in enumerate(scenes):

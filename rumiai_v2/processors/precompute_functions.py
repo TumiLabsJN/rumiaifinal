@@ -58,6 +58,7 @@ def extract_mediapipe_data(ml_data):
             'poses': mp_data.get('poses', []),
             'faces': mp_data.get('faces', []),
             'hands': mp_data.get('hands', []),
+            'gaze': mp_data.get('gaze', []),  # ADD: Extract gaze data
             'gestures': mp_data.get('gestures', []),
             'presence_percentage': mp_data.get('presence_percentage', 0),
             'frames_with_people': mp_data.get('frames_with_people', 0)
@@ -70,13 +71,14 @@ def extract_mediapipe_data(ml_data):
             'poses': data.get('poses', []),
             'faces': data.get('faces', []),
             'hands': data.get('hands', []),
+            'gaze': data.get('gaze', []),  # ADD: Extract gaze data
             'gestures': data.get('gestures', []),
             'presence_percentage': data.get('presence_percentage', 0),
             'frames_with_people': data.get('frames_with_people', 0)
         }
     
     return {
-        'poses': [], 'faces': [], 'hands': [], 'gestures': [],
+        'poses': [], 'faces': [], 'hands': [], 'gaze': [], 'gestures': [],  # ADD: Include gaze
         'presence_percentage': 0, 'frames_with_people': 0
     }
 
@@ -223,9 +225,93 @@ except ImportError as e:
         logger.warning("Using placeholder for compute_metadata_analysis_metrics")
         return {}
     
-    def compute_person_framing_metrics(*args, **kwargs):
-        logger.warning("Using placeholder for compute_person_framing_metrics")
-        return {}
+    def compute_person_framing_metrics(expression_timeline, object_timeline, camera_distance_timeline,
+                                      person_timeline, enhanced_human_data, duration, gaze_timeline=None):
+        """Compute person framing metrics using MediaPipe face data from person_timeline"""
+        
+        # Initialize metrics
+        face_sizes = []
+        total_frames = int(duration) if duration else 0
+        face_frames = 0
+        eye_contact_frames = 0
+        max_faces_in_frame = 0  # Track maximum faces detected in any frame
+        
+        # Extract MediaPipe face data from person_timeline (populated by wrapper)
+        face_seconds = set()  # Track unique seconds with faces
+        
+        for timestamp_key, person_data in person_timeline.items():
+            # Check if this entry has MediaPipe face data
+            if person_data.get('face_bbox') and person_data.get('detected'):
+                second = int(timestamp_key.split('-')[0])  # Extract second from "0-1s" format
+                face_seconds.add(second)
+                
+                # Track face count for multi-person detection
+                face_count = person_data.get('face_count', 1)
+                max_faces_in_frame = max(max_faces_in_frame, face_count)
+                
+                # Extract face bbox for size calculation  
+                bbox = person_data['face_bbox']
+                if bbox and isinstance(bbox, dict):
+                    # MediaPipe bbox is in relative coordinates (0-1), convert to percentage
+                    face_area = bbox.get('width', 0) * bbox.get('height', 0) * 100
+                    face_sizes.append(face_area)
+        
+        # Face frames = unique seconds with MediaPipe face detections
+        face_frames = len(face_seconds)
+        
+        # Calculate face visibility and average face size
+        face_visibility_rate = face_frames / total_frames if total_frames > 0 else 0
+        avg_face_size = sum(face_sizes) / len(face_sizes) if face_sizes else 0
+        
+        # Extract eye contact data from gaze timeline
+        if gaze_timeline:
+            for timestamp_key, gaze_data in gaze_timeline.items():
+                if gaze_data.get('eye_contact', 0) > 0.5:  # Threshold for eye contact
+                    eye_contact_frames += 1
+        
+        eye_contact_rate = eye_contact_frames / total_frames if total_frames > 0 else 0
+        
+        # Calculate framing consistency (simplified)
+        framing_consistency = 0.8 if face_frames > 0 else 0  # Default for now
+        
+        # Determine dominant framing based on face size
+        if avg_face_size > 30:
+            dominant_framing = 'close-up'
+        elif avg_face_size > 15:
+            dominant_framing = 'medium'
+        else:
+            dominant_framing = 'wide'
+        
+        # Calculate subject count dynamically from MediaPipe data
+        subject_count = max(1, max_faces_in_frame)  # At least 1, up to max detected
+        primary_subject = 'multiple' if subject_count > 1 else 'single'
+        
+        # Calculate gaze steadiness based on eye contact consistency
+        if eye_contact_rate > 0.7:
+            gaze_steadiness = 'high'
+        elif eye_contact_rate > 0.4:
+            gaze_steadiness = 'medium'
+        elif eye_contact_rate > 0:
+            gaze_steadiness = 'low'
+        else:
+            gaze_steadiness = 'unknown'
+        
+        # Return the expected fields for professional wrapper
+        return {
+            'avg_face_size': avg_face_size,
+            'face_visibility_rate': face_visibility_rate,
+            'eye_contact_rate': eye_contact_rate,
+            'framing_consistency': framing_consistency,
+            'primary_subject': primary_subject,  # Calculated from data
+            'subject_count': subject_count,  # Calculated from data
+            'dominant_framing': dominant_framing,
+            'gaze_steadiness': gaze_steadiness,  # Calculated from eye contact
+            'framing_progression': [],  # Default for now
+            'distance_variation': 0,  # Default for now
+            'framing_transitions': 0,  # Default for now
+            'movement_pattern': 'static',  # Default for now
+            'stability_score': framing_consistency
+        }
     
     def compute_scene_pacing_metrics(*args, **kwargs):
         logger.warning("Using placeholder for compute_scene_pacing_metrics")
@@ -254,6 +340,7 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
         'objectTimeline': {},
         'gestureTimeline': {},
         'expressionTimeline': {},
+        'gazeTimeline': {},  # NEW: For eye contact tracking
         'sceneTimeline': {},
         'sceneChangeTimeline': {},  # Add this for scene pacing
         'personTimeline': {},
@@ -352,13 +439,15 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
     
     for entry in timeline_entries:
         if entry.get('entry_type') == 'scene_change':
-            # Extract seconds from start time string (e.g., "3s" -> 3, "1.5s" -> 1.5)
-            start_str = entry.get('start', '0s')
-            if isinstance(start_str, str) and start_str.endswith('s'):
+            # Extract seconds from start time (handles both string and numeric formats)
+            start_value = entry.get('start', 0)
+            if isinstance(start_value, str) and start_value.endswith('s'):
                 try:
-                    start_seconds = float(start_str[:-1])
+                    start_seconds = float(start_value[:-1])
                 except ValueError:
                     start_seconds = 0
+            elif isinstance(start_value, (int, float)):
+                start_seconds = float(start_value)
             else:
                 start_seconds = 0
             
@@ -442,14 +531,43 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
         timestamp_key = f"{int(timestamp)}-{int(timestamp)+1}s"
         timelines['personTimeline'][timestamp_key] = {
             'detected': True,
-            'confidence': pose.get('confidence', 0.8)
+            'pose_confidence': pose.get('confidence', 0.8),
+            'face_bbox': None,  # Will be filled if face detected at same time
+            'face_confidence': None
         }
+    
+    # Merge face data into personTimeline (Step 2B from GazeFix.md)
+    for face in mediapipe_data.get('faces', []):
+        timestamp = face.get('timestamp', 0)
+        timestamp_key = f"{int(timestamp)}-{int(timestamp)+1}s"
+        
+        # Create or update personTimeline entry with face data
+        if timestamp_key in timelines['personTimeline']:
+            # Person already detected via pose, add face data
+            timelines['personTimeline'][timestamp_key]['face_bbox'] = face.get('bbox')
+            timelines['personTimeline'][timestamp_key]['face_confidence'] = face.get('confidence')
+            timelines['personTimeline'][timestamp_key]['face_count'] = face.get('count', 1)  # Add face count
+        else:
+            # Face detected but no pose, create entry
+            timelines['personTimeline'][timestamp_key] = {
+                'detected': True,
+                'pose_confidence': None,
+                'face_bbox': face.get('bbox'),
+                'face_confidence': face.get('confidence', 0),
+                'face_count': face.get('count', 1)  # Add face count
+            }
     
     # Transform gestures to timeline
     for gesture in mediapipe_data.get('gestures', []):
         timestamp = gesture.get('timestamp', 0)
         timestamp_key = f"{int(timestamp)}-{int(timestamp)+1}s"
         timelines['gestureTimeline'][timestamp_key] = gesture
+    
+    # Extract gaze data from MediaPipe (new from FaceMesh iris detection)
+    for gaze in mediapipe_data.get('gaze', []):
+        timestamp = gaze.get('timestamp', 0)
+        timestamp_key = f"{int(timestamp)}-{int(timestamp)+1}s"
+        timelines['gazeTimeline'][timestamp_key] = gaze
     
     # Extract FEAT emotion entries from timeline instead of MediaPipe faces
     for entry in timeline_entries:
@@ -477,6 +595,23 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
             # Add FEAT data to expressionTimeline
             timelines['expressionTimeline'][timestamp_key] = entry.get('data', {})
     
+    # Extract gaze entries from timeline for eye contact tracking
+    for entry in timeline_entries:
+        if entry.get('entry_type') == 'gaze':
+            # Extract timestamp range
+            start = entry.get('start', 0)
+            if isinstance(start, str) and start.endswith('s'):
+                start = float(start[:-1])
+            elif hasattr(start, 'seconds'):
+                start = start.seconds
+            else:
+                start = float(start)
+            
+            timestamp_key = f"{int(start)}-{int(start)+1}s"
+            
+            # Add gaze data to gazeTimeline
+            timelines['gazeTimeline'][timestamp_key] = entry.get('data', {})
+    
     # Log extraction results for validation
     extraction_summary = {
         'video_id': video_id,
@@ -487,7 +622,8 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
         'scene_changes': len(timelines['sceneChangeTimeline']),
         'poses': len(timelines['personTimeline']),
         'gestures': len(timelines['gestureTimeline']),
-        'expressions': len(timelines['expressionTimeline'])
+        'expressions': len(timelines['expressionTimeline']),
+        'gaze_tracking': len(timelines['gazeTimeline'])
     }
     
     # Check for potential extraction failures
@@ -629,20 +765,26 @@ def compute_person_framing_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, A
     camera_distance_timeline = timelines.get('cameraDistanceTimeline', {})
     person_timeline = timelines.get('personTimeline', {})
     
-    # Extract enhanced human data
-    mediapipe_data = analysis_dict.get('ml_data', {}).get('mediapipe', {}).get('data', {})
-    enhanced_human_data = {
-        'faces': mediapipe_data.get('faces', []),
-        'poses': mediapipe_data.get('poses', [])
-    }
+    # Enhanced human data is no longer used - always empty
+    enhanced_human_data = {}
     
     duration = analysis_dict.get('timeline', {}).get('duration', 0)
+    
+    # Debug logging to check which function is being used
+    logger.info(f"compute_person_framing_metrics module: {compute_person_framing_metrics.__module__}")
+    logger.info(f"personTimeline entries: {len(person_timeline)}")
+    logger.info(f"gazeTimeline entries: {len(timelines.get('gazeTimeline', {}))}")
+    logger.info(f"expressionTimeline entries: {len(expression_timeline)}")
     
     # Get basic metrics first
     basic_result = compute_person_framing_metrics(
         expression_timeline, object_timeline, camera_distance_timeline,
-        person_timeline, enhanced_human_data, duration
+        person_timeline, enhanced_human_data, duration,
+        gaze_timeline=timelines.get('gazeTimeline', {})
     )
+    
+    # Debug logging to check the result
+    logger.info(f"compute_person_framing_metrics result: eye_contact_rate={basic_result.get('eye_contact_rate', 0)}, avg_face_size={basic_result.get('avg_face_size', 0)}")
     
     # Convert to professional 6-block format
     from .precompute_professional_wrappers import ensure_professional_format

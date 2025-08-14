@@ -660,7 +660,7 @@ def compute_creative_density_analysis(timelines, duration):
         'transition': sum(e['transition'] for e in element_types_per_second),
         'object': sum(e['object'] for e in element_types_per_second),
         'gesture': sum(e.get('gesture', 0) for e in element_types_per_second),
-        'expression': sum(e.get('expression', 0) for e in element_types_per_second)
+        'expression': sum(e.get('emotion', 0) for e in element_types_per_second)
     }
     
     # Add scene changes if available
@@ -1191,7 +1191,7 @@ def compute_emotional_metrics(expression_timeline, speech_timeline, gesture_time
     emotion_gesture_sync = []
     for timestamp in emotion_timestamps:
         if timestamp in expression_timeline and timestamp in gesture_timeline:
-            emotion = expression_timeline[timestamp].get('expression', 'neutral')
+            emotion = expression_timeline[timestamp].get('emotion', 'neutral')
             gestures = gesture_timeline[timestamp].get('gestures', [])
             
             # Calculate alignment score for this timestamp
@@ -1222,7 +1222,7 @@ def compute_emotional_metrics(expression_timeline, speech_timeline, gesture_time
         
         for timestamp in emotion_timestamps:
             if timestamp in expression_timeline and timestamp in speech_timeline:
-                visual_emotion = expression_timeline[timestamp].get('expression', 'neutral')
+                visual_emotion = expression_timeline[timestamp].get('emotion', 'neutral')
                 speech_text = speech_timeline[timestamp].get('text', '')
                 
                 # Simple sentiment from speech
@@ -1732,7 +1732,7 @@ def check_intro_person_present(expression_timeline, object_timeline):
     for i in range(3):
         timestamp = f"{i}-{i+1}s"
         # Check expression timeline
-        if timestamp in expression_timeline and expression_timeline[timestamp].get('expression'):
+        if timestamp in expression_timeline and expression_timeline[timestamp].get('emotion'):
             return True
         # Check object timeline
         if timestamp in object_timeline:
@@ -1759,16 +1759,17 @@ def classify_transition_type(from_shot, to_shot):
         return "cut"
 
 
-def compute_detection_coverage(expression_timeline, object_timeline, duration):
+def compute_detection_coverage(expression_timeline, object_timeline, duration, gaze_timeline=None):
     """Compute detection success rates"""
     total_seconds = int(duration) + 1
     face_detected = 0
     person_detected = 0
+    gaze_timeline = gaze_timeline or {}
     
     for i in range(total_seconds):
         timestamp = f"{i}-{i+1}s"
         # Count face detections
-        if timestamp in expression_timeline and expression_timeline[timestamp].get('expression'):
+        if timestamp in expression_timeline and expression_timeline[timestamp].get('emotion'):
             face_detected += 1
         # Count person detections
         if timestamp in object_timeline:
@@ -1779,9 +1780,9 @@ def compute_detection_coverage(expression_timeline, object_timeline, duration):
     return {
         'faceDetectionRate': round(face_detected / total_seconds, 2) if total_seconds > 0 else 0,
         'personDetectionRate': round(person_detected / total_seconds, 2) if total_seconds > 0 else 0,
-        'gazeDataAvailable': False,  # Will be updated based on enhanced_human_data
-        'actionDataAvailable': False,  # Will be updated based on enhanced_human_data
-        'backgroundDataAvailable': False  # Will be updated based on enhanced_human_data
+        'gazeDataAvailable': len(gaze_timeline or {}) > 0,  # Based on actual gaze data
+        'actionDataAvailable': False,  # No action recognition implemented
+        'backgroundDataAvailable': False  # No background analysis implemented
     }
 
 
@@ -1816,7 +1817,7 @@ def analyze_temporal_evolution(expression_timeline, object_timeline, camera_dist
         if second is None:
             continue
             
-        if expression_timeline[timestamp].get('expression'):
+        if expression_timeline[timestamp].get('emotion'):
             if second < third_duration:
                 evolution['first_third']['face_presence'] += 1
             elif second < 2 * third_duration:
@@ -1940,8 +1941,135 @@ def calculate_intent_alignment_risk(intent, face_ratio, volatility, shot_distrib
     return min(1.0, risk_score)
 
 
+# ========== PersonFramingV2 Helper Functions ==========
+def classify_shot_type_simple(face_area_percent):
+    """Simple shot classification for ML training
+    
+    Args:
+        face_area_percent: Face bbox area as % of frame
+    
+    Returns:
+        Basic shot classification: 'close', 'medium', 'wide', or 'none'
+    """
+    if face_area_percent > 25:
+        return 'close'
+    elif face_area_percent > 8:
+        return 'medium'
+    elif face_area_percent > 0:
+        return 'wide'
+    else:
+        return 'none'
+
+
+def calculate_temporal_framing_simple(person_timeline, duration):
+    """Calculate basic camera distance with bbox validation
+    
+    Args:
+        person_timeline: Dict with keys like "0-1s", "1-2s" from MediaPipe faces merged with poses
+        duration: Video duration in seconds
+        
+    Returns:
+        dict: Framing timeline with shot types, face sizes, and confidence scores
+    """
+    framing_timeline = {}
+    
+    for second in range(int(duration)):
+        timestamp_key = f"{second}-{second+1}s"
+        
+        if timestamp_key in person_timeline:
+            person_data = person_timeline[timestamp_key]
+            face_confidence = person_data.get('face_confidence', 0)
+            
+            if person_data.get('face_bbox'):
+                bbox = person_data['face_bbox']
+                
+                # Validate bbox data
+                width = bbox.get('width', 0)
+                height = bbox.get('height', 0)
+                
+                # Handle corrupted data
+                if (isinstance(width, (int, float)) and 
+                    isinstance(height, (int, float)) and
+                    0 <= width <= 1 and 0 <= height <= 1):
+                    face_area = width * height * 100
+                else:
+                    # Corrupted bbox - treat as no face
+                    face_area = 0
+                
+                shot_type = classify_shot_type_simple(face_area)
+                
+                framing_timeline[timestamp_key] = {
+                    'shot_type': shot_type,
+                    'face_size': face_area,
+                    'confidence': face_confidence
+                }
+            else:
+                # No bbox data
+                framing_timeline[timestamp_key] = {
+                    'shot_type': 'none',
+                    'face_size': 0,
+                    'confidence': 0
+                }
+        else:
+            # No person data for this second
+            framing_timeline[timestamp_key] = {
+                'shot_type': 'none',
+                'face_size': 0,
+                'confidence': 0
+            }
+    
+    return framing_timeline
+
+
+def analyze_framing_progression_simple(framing_timeline):
+    """Simple analysis of framing changes over time
+    
+    Args:
+        framing_timeline: Dict with timestamp keys and shot type data
+        
+    Returns:
+        list: Progression of shot segments
+    """
+    progression = []
+    current_shot = None
+    shot_start = 0
+    
+    # Sort timestamps properly (e.g., "0-1s", "1-2s", etc.)
+    sorted_timestamps = sorted(framing_timeline.keys(), 
+                              key=lambda x: int(x.split('-')[0]))
+    
+    for timestamp_key in sorted_timestamps:
+        shot_type = framing_timeline[timestamp_key]['shot_type']
+        second = int(timestamp_key.split('-')[0])
+        
+        if shot_type != current_shot:
+            if current_shot is not None:
+                progression.append({
+                    'type': current_shot,
+                    'start': shot_start,
+                    'end': second,
+                    'duration': second - shot_start
+                })
+            
+            current_shot = shot_type
+            shot_start = second
+    
+    # Add final shot
+    if current_shot is not None and sorted_timestamps:
+        last_second = int(sorted_timestamps[-1].split('-')[0]) + 1
+        progression.append({
+            'type': current_shot,
+            'start': shot_start,
+            'end': last_second,
+            'duration': last_second - shot_start
+        })
+    
+    return progression
+# ========== End PersonFramingV2 Helper Functions ==========
+
+
 def compute_person_framing_metrics(expression_timeline, object_timeline, camera_distance_timeline,
-                                  person_timeline, enhanced_human_data, duration):
+                                  person_timeline, enhanced_human_data, duration, gaze_timeline=None):
     """Compute person framing metrics for ML-ready analysis
     
     Args:
@@ -1960,9 +2088,12 @@ def compute_person_framing_metrics(expression_timeline, object_timeline, camera_
     face_frames = 0
     person_frames = 0
     
+    # Initialize gaze timeline parameter
+    gaze_timeline = gaze_timeline or {}
+    
     # Count face presence from expression timeline
     for timestamp in expression_timeline:
-        if expression_timeline[timestamp].get('expression'):
+        if expression_timeline[timestamp].get('emotion'):
             face_frames += 1
     
     # Count person presence from object timeline
@@ -2019,7 +2150,7 @@ def compute_person_framing_metrics(expression_timeline, object_timeline, camera_
             face_in_intro = False
             for i in range(min(3, seconds)):
                 timestamp = f"{i}-{i+1}s"
-                if timestamp in expression_timeline and expression_timeline[timestamp].get('expression'):
+                if timestamp in expression_timeline and expression_timeline[timestamp].get('emotion'):
                     face_in_intro = True
                     break
             intro_shot_type = 'face_focused' if face_in_intro else 'no_person'
@@ -2071,7 +2202,7 @@ def compute_person_framing_metrics(expression_timeline, object_timeline, camera_
         person_present = False
         
         # Check expression timeline
-        if timestamp in expression_timeline and expression_timeline[timestamp].get('expression'):
+        if timestamp in expression_timeline and expression_timeline[timestamp].get('emotion'):
             person_present = True
         
         # Check object timeline
@@ -2132,7 +2263,78 @@ def compute_person_framing_metrics(expression_timeline, object_timeline, camera_
     elif person_screen_time_ratio > 0.7 and distance_counts.get('far', 0) > distance_counts.get('close', 0):
         person_framing_pattern_tags.append('full_body_content')
     
-    # Extract data from enhanced_human_data if available
+    # Calculate face metrics from both FEAT emotion timeline and MediaPipe personTimeline
+    face_sizes = []
+    total_frames = int(duration) if duration else 0
+    face_frames = 0
+    
+    # PersonFramingV2: Use MediaPipe faces from person_timeline as authoritative source
+    # (Service boundary: MediaPipe exclusively handles person_framing)
+    max_faces_in_frame = 0  # Track maximum faces detected in any frame
+    if person_timeline:
+        logger.info(f"DEBUG: person_timeline has {len(person_timeline)} entries")
+        for timestamp, person_data in person_timeline.items():
+            logger.info(f"DEBUG: {timestamp}: {person_data}")
+            if person_data.get('face_bbox') and person_data.get('detected'):
+                face_frames += 1
+                # Track face count for multi-person detection
+                face_count = person_data.get('face_count', 1)
+                max_faces_in_frame = max(max_faces_in_frame, face_count)
+                
+                bbox = person_data['face_bbox']
+                logger.info(f"DEBUG: Found face_bbox: {bbox}")
+                if bbox and isinstance(bbox, dict):
+                    # MediaPipe bbox is in relative coordinates (0-1), convert to percentage
+                    face_area = bbox.get('width', 0) * bbox.get('height', 0) * 100
+                    face_sizes.append(face_area)
+                    logger.info(f"DEBUG: Added face_area: {face_area}")
+        logger.info(f"DEBUG: Final face_frames={face_frames}, face_sizes={face_sizes}, max_faces={max_faces_in_frame}")
+    
+    # Calculate face visibility rate
+    face_screen_time_ratio = face_frames / total_frames if total_frames > 0 else 0
+    
+    # Calculate average face size and camera distance
+    avg_face_size = sum(face_sizes) / len(face_sizes) if face_sizes else 0
+    if avg_face_size > 30:
+        avg_camera_distance = 'close-up'
+        dominant_shot_type = 'close_up'
+    elif avg_face_size > 10:
+        avg_camera_distance = 'medium'
+        dominant_shot_type = 'medium_shot'
+    else:
+        avg_camera_distance = 'wide'
+        dominant_shot_type = 'wide_shot'
+    
+    # Calculate eye contact from gaze timeline and collect scores for variance
+    eye_contact_frames = 0
+    eye_contact_scores = []  # Collect all scores for variance calculation
+    
+    for timestamp, gaze_data in gaze_timeline.items():
+        eye_contact_value = gaze_data.get('eye_contact', 0)
+        if eye_contact_value > 0:  # Any valid measurement
+            eye_contact_scores.append(eye_contact_value)
+            if eye_contact_value > 0.5:
+                eye_contact_frames += 1
+    
+    eye_contact_ratio = eye_contact_frames / total_frames if total_frames > 0 else 0
+    
+    # Calculate gaze steadiness from variance of eye contact scores
+    if len(eye_contact_scores) > 1:
+        import statistics
+        gaze_variance = statistics.variance(eye_contact_scores)
+        # Lower variance = steadier gaze
+        if gaze_variance < 0.05:  # Very consistent eye contact
+            calculated_gaze_steadiness = 'high'
+        elif gaze_variance < 0.15:  # Moderate consistency
+            calculated_gaze_steadiness = 'medium'
+        else:  # High variance, unstable gaze
+            calculated_gaze_steadiness = 'low'
+    elif len(eye_contact_scores) == 1:
+        calculated_gaze_steadiness = 'high'  # Single measurement = perfectly steady
+    else:
+        calculated_gaze_steadiness = 'unknown'  # No gaze data
+    
+    # Extract data from enhanced_human_data if available (now mostly unused)
     gaze_analysis = None
     action_recognition = None
     background_analysis = None
@@ -2154,12 +2356,18 @@ def compute_person_framing_metrics(expression_timeline, object_timeline, camera_
         if 'subject_absence_count' in enhanced_human_data:
             subject_absence_count = enhanced_human_data['subject_absence_count']
         
-        # Extract gaze analysis
+        # Extract gaze analysis (prefer enhanced data if available)
         if 'gaze_patterns' in enhanced_human_data:
             gaze_data = enhanced_human_data['gaze_patterns']
             gaze_analysis = {
-                'eye_contact_ratio': gaze_data.get('eye_contact_ratio', 0),
+                'eye_contact_ratio': gaze_data.get('eye_contact_ratio', eye_contact_ratio),
                 'primary_gaze_direction': 'camera' if isinstance(gaze_data.get('primary_gaze_direction'), dict) else gaze_data.get('primary_gaze_direction', 'unknown')
+            }
+        else:
+            # Use calculated gaze data from MediaPipe iris tracking
+            gaze_analysis = {
+                'eye_contact_ratio': eye_contact_ratio,
+                'primary_gaze_direction': 'camera' if eye_contact_ratio > 0.5 else 'away'
             }
         
         # Extract action recognition
@@ -2191,9 +2399,13 @@ def compute_person_framing_metrics(expression_timeline, object_timeline, camera_
                     'avg_change_magnitude': bg_data.get('avg_change_magnitude', 0)
                 }
     
+    # Calculate subject count dynamically from MediaPipe data
+    subject_count = max(1, max_faces_in_frame)  # At least 1, up to max detected
+    primary_subject = 'multiple' if subject_count > 1 else 'single'
+    
     # Build final metrics
     metrics = {
-        'face_screen_time_ratio': round(face_screen_time_ratio, 2),
+        'face_visibility_rate': round(face_screen_time_ratio, 2),
         'person_screen_time_ratio': round(person_screen_time_ratio, 2),
         'avg_camera_distance': avg_camera_distance,
         'framing_volatility': round(framing_volatility, 2),
@@ -2204,7 +2416,11 @@ def compute_person_framing_metrics(expression_timeline, object_timeline, camera_
         'shot_type_distribution': shot_type_distribution,
         'longest_absence_duration': longest_absence_duration,
         'shot_transitions': shot_transitions,
-        'absence_segments': absence_segments
+        'absence_segments': absence_segments,
+        'avg_face_size': avg_face_size,
+        'subject_count': subject_count,  # Calculated from data
+        'primary_subject': primary_subject,  # Derived from subject count
+        'eye_contact_rate': round(eye_contact_ratio, 2)  # Add eye contact rate
     }
     
     # Add optional enhanced metrics
@@ -2222,18 +2438,8 @@ def compute_person_framing_metrics(expression_timeline, object_timeline, camera_
     )
     metrics['video_intent'] = video_intent
     
-    # Add gaze steadiness proxy (using eye contact ratio)
-    if gaze_analysis and 'eye_contact_ratio' in gaze_analysis:
-        # High eye contact suggests steady gaze
-        eye_contact = gaze_analysis['eye_contact_ratio']
-        if eye_contact > 0.7:
-            metrics['gaze_steadiness'] = 'high'
-        elif eye_contact > 0.4:
-            metrics['gaze_steadiness'] = 'medium'
-        else:
-            metrics['gaze_steadiness'] = 'low'
-    else:
-        metrics['gaze_steadiness'] = 'unknown'
+    # Use the calculated gaze steadiness from actual variance (bypassing dead enhanced_human_data)
+    metrics['gaze_steadiness'] = calculated_gaze_steadiness
     
     # === NEW COMPUTATIONS ===
     
@@ -2280,7 +2486,7 @@ def compute_person_framing_metrics(expression_timeline, object_timeline, camera_
         ml_tags.append("high_action_diversity")
     
     # 6. Compute detection coverage
-    detection_coverage = compute_detection_coverage(expression_timeline, object_timeline, duration)
+    detection_coverage = compute_detection_coverage(expression_timeline, object_timeline, duration, gaze_timeline)
     # Update availability flags based on enhanced data
     detection_coverage['gazeDataAvailable'] = bool(gaze_analysis)
     detection_coverage['actionDataAvailable'] = bool(action_recognition)
@@ -2339,6 +2545,23 @@ def compute_person_framing_metrics(expression_timeline, object_timeline, camera_
             'overall': overall_confidence
         }
     })
+    
+    # ========== PersonFramingV2 Temporal Analysis ==========
+    # Add temporal framing analysis if duration and person_timeline available
+    if duration > 0 and person_timeline:
+        framing_timeline = calculate_temporal_framing_simple(person_timeline, duration)
+        framing_progression = analyze_framing_progression_simple(framing_timeline)
+        
+        # Calculate basic temporal metrics
+        framing_changes = len(framing_progression) - 1 if len(framing_progression) > 1 else 0
+        
+        # Add temporal data to metrics
+        metrics.update({
+            'framing_timeline': framing_timeline,
+            'framing_progression': framing_progression,
+            'framing_changes': framing_changes
+        })
+    # ========== End PersonFramingV2 Temporal Analysis ==========
     
     return metrics
 
@@ -3413,7 +3636,7 @@ def compute_speech_analysis_metrics(speech_timeline, transcript, speech_segments
         for timestamp, expr_data in expression_timeline.items():
             expr_time = parse_timestamp_to_seconds(timestamp)
             if expr_time and segment.get('start', 0) <= expr_time <= segment.get('end', 0):
-                expressions_during_speech.add(expr_data.get('expression', 'unknown'))
+                expressions_during_speech.add(expr_data.get('emotion', 'unknown'))
     
     expression_variety_during_speech = len(expressions_during_speech) / 10  # Normalize to 0-1
     
@@ -3622,7 +3845,7 @@ def clean_timeline_for_api(timeline, timeline_type):
         elif timeline_type == 'expression':
             # For expression timeline, remove verbose descriptions
             cleaned[timestamp] = {
-                'expression': data.get('expression', ''),
+                'expression': data.get('emotion', ''),
                 'confidence': round(data.get('confidence', 0), 2) if 'confidence' in data else None
             }
             
@@ -3916,7 +4139,8 @@ def extract_real_ml_data(unified_data, prompt_name, video_id=None):
             camera_distance_timeline=timelines.get('cameraDistanceTimeline', {}),
             person_timeline=timelines.get('personTimeline', {}),
             enhanced_human_data=enhanced_human_data,
-            duration=unified_data.get('duration_seconds', 30)
+            duration=unified_data.get('duration_seconds', 30),
+            gaze_timeline=timelines.get('gazeTimeline', {})
         )
         
         # Add metrics to context data

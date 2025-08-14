@@ -140,6 +140,7 @@ def convert_to_person_framing_professional(basic_metrics: Dict[str, Any]) -> Dic
             "eyeContactRate": basic_metrics.get('eye_contact_rate', 0)
         },
         "personFramingDynamics": {
+            "gazeSteadiness": basic_metrics.get('gaze_steadiness', 'unknown'),  # ADD: From GazeFix.md Step 2D
             "framingProgression": basic_metrics.get('framing_progression', []),
             "distanceVariation": basic_metrics.get('distance_variation', 0),
             "framingTransitions": basic_metrics.get('framing_transitions', 0),
@@ -184,9 +185,9 @@ def convert_to_scene_pacing_professional(basic_metrics: Dict[str, Any]) -> Dict[
     
     return {
         "scenePacingCoreMetrics": {
-            "totalScenes": basic_metrics.get('total_scenes', 0),
-            "averageSceneDuration": basic_metrics.get('avg_scene_duration', 0),
-            "scenesPerMinute": basic_metrics.get('scenes_per_minute', 0),
+            "totalScenes": basic_metrics.get('total_shots', basic_metrics.get('total_scenes', 0)),
+            "averageSceneDuration": basic_metrics.get('avg_shot_duration', basic_metrics.get('avg_scene_duration', 0)),
+            "scenesPerMinute": basic_metrics.get('shots_per_minute', basic_metrics.get('scenes_per_minute', 0)),
             "pacingScore": basic_metrics.get('pacing_score', 0),
             "rhythmConsistency": basic_metrics.get('rhythm_consistency', 0),
             "transitionSmoothing": basic_metrics.get('transition_smoothness', 0.8)

@@ -1,0 +1,76 @@
+[
+  {
+    "test_name": "Continuous Person Presence",
+    "passed": true,
+    "timeline_size": 10,
+    "progression_size": 1,
+    "shot_distribution": {
+      "medium": 10
+    },
+    "errors": []
+  },
+  {
+    "test_name": "Intermittent Person Presence",
+    "passed": true,
+    "timeline_size": 10,
+    "progression_size": 10,
+    "shot_distribution": {
+      "wide": 5,
+      "none": 5
+    },
+    "errors": []
+  },
+  {
+    "test_name": "No Person Detected",
+    "passed": true,
+    "timeline_size": 10,
+    "progression_size": 1,
+    "shot_distribution": {
+      "none": 10
+    },
+    "errors": []
+  },
+  {
+    "test_name": "Corrupted Data Handling",
+    "passed": true,
+    "timeline_size": 12,
+    "progression_size": 8,
+    "shot_distribution": {
+      "medium": 4,
+      "none": 8
+    },
+    "errors": []
+  },
+  {
+    "test_name": "Varying Shot Sizes",
+    "passed": true,
+    "timeline_size": 8,
+    "progression_size": 8,
+    "shot_distribution": {
+      "close": 2,
+      "medium": 4,
+      "wide": 2
+    },
+    "errors": []
+  },
+  {
+    "test_name": "Single Frame Video",
+    "passed": true,
+    "timeline_size": 1,
+    "progression_size": 1,
+    "shot_distribution": {
+      "medium": 1
+    },
+    "errors": []
+  },
+  {
+    "test_name": "Long Video (60s)",
+    "passed": true,
+    "timeline_size": 60,
+    "progression_size": 1,
+    "shot_distribution": {
+      "medium": 60
+    },
+    "errors": []
+  }
+]

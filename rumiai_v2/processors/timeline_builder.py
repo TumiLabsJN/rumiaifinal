@@ -258,7 +258,26 @@ class TimelineBuilder:
             
             timeline.add_entry(entry)
         
-        # Add face data if available
+        # Add gaze data if available (replaces face data)
+        gaze_data = mediapipe_data.get('gaze', [])
+        for gaze in gaze_data:
+            timestamp = self._extract_timestamp_from_annotation(gaze)
+            if not timestamp:
+                continue
+            
+            entry = TimelineEntry(
+                start=timestamp,
+                end=None,
+                entry_type='gaze',
+                data={
+                    'eye_contact': gaze.get('eye_contact', 0.0),
+                    'gaze_direction': gaze.get('gaze_direction', 'unknown')
+                }
+            )
+            
+            timeline.add_entry(entry)
+        
+        # Add face data - THE MISSING PIPELINE
         faces = mediapipe_data.get('faces', [])
         for face in faces:
             timestamp = self._extract_timestamp_from_annotation(face)
@@ -268,11 +287,12 @@ class TimelineBuilder:
             entry = TimelineEntry(
                 start=timestamp,
                 end=None,
-                entry_type='face',
+                entry_type='face',  # New entry type for MediaPipe faces
                 data={
-                    'landmarks': face.get('landmarks', []),
-                    'emotion': face.get('emotion', 'neutral'),
-                    'gaze_direction': face.get('gaze_direction', 'unknown')
+                    'bbox': face.get('bbox', {}),
+                    'confidence': face.get('confidence', 0),
+                    'count': face.get('count', 1),  # Multi-person support
+                    'source': 'mediapipe'  # Clear data lineage
                 }
             )
             
@@ -298,7 +318,7 @@ class TimelineBuilder:
             
             timeline.add_entry(entry)
         
-        logger.info(f"MediaPipe: Added {len(poses)} poses, {len(faces)} faces, {len(gestures)} gestures")
+        logger.info(f"MediaPipe: Added {len(poses)} poses, {len(gaze_data)} gaze, {len(faces)} faces, {len(gestures)} gestures")
     
     def _add_scene_entries(self, timeline: Timeline, scene_data: Dict[str, Any]) -> None:
         """Add scene detection entries."""

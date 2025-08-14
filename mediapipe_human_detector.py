@@ -48,13 +48,6 @@ class MediaPipeHumanDetector:
             min_detection_confidence=0.5
         )
         
-        # Face expression landmarks
-        self.expression_landmarks = {
-            'left_eye': [33, 133, 157, 158, 159, 160, 161, 163],
-            'right_eye': [362, 263, 387, 388, 389, 390, 391, 393],
-            'mouth': [61, 84, 17, 314, 405, 291, 375, 321, 308, 324, 318],
-            'eyebrows': [46, 53, 52, 65, 55, 70, 63, 105, 66, 107]
-        }
         
         # Gesture patterns
         self.gesture_patterns = {
@@ -75,86 +68,53 @@ class MediaPipeHumanDetector:
             'arms_crossed': self._check_arms_crossed
         }
     
-    def detect_faces_and_expressions(self, image):
-        """Detect faces and analyze expressions"""
+    def detect_gaze_only(self, image):
+        """Extract iris landmarks for eye contact detection only"""
         results = self.face_mesh.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        face_data = []
+        if not results.multi_face_landmarks:
+            return []
         
-        if results.multi_face_landmarks:
-            for face_landmarks in results.multi_face_landmarks:
-                # Get face bounding box
-                h, w = image.shape[:2]
-                x_coords = [landmark.x * w for landmark in face_landmarks.landmark]
-                y_coords = [landmark.y * h for landmark in face_landmarks.landmark]
+        gaze_data = []
+        for face_landmarks in results.multi_face_landmarks:
+            try:
+                # Verify all required landmarks exist
+                required_indices = [468, 473, 133, 33, 362, 263]  # Iris + eye corners
+                if len(face_landmarks.landmark) < max(required_indices) + 1:
+                    continue
                 
-                bbox = {
-                    'x1': int(min(x_coords)),
-                    'y1': int(min(y_coords)),
-                    'x2': int(max(x_coords)),
-                    'y2': int(max(y_coords))
-                }
+                # Get iris centers for both eyes
+                left_iris = face_landmarks.landmark[468]
+                right_iris = face_landmarks.landmark[473]
                 
-                # Analyze expression
-                expression = self._analyze_expression(face_landmarks.landmark, w, h)
+                # Eye corners for normalization
+                left_inner = face_landmarks.landmark[133]
+                left_outer = face_landmarks.landmark[33]
+                right_inner = face_landmarks.landmark[362]
+                right_outer = face_landmarks.landmark[263]
                 
-                face_data.append({
-                    'type': 'face',
-                    'bbox': bbox,
-                    'expression': expression,
-                    'confidence': 0.9
+                # Calculate normalized positions (0=inner, 1=outer)
+                left_width = abs(left_outer.x - left_inner.x)
+                left_pos = (left_iris.x - left_inner.x) / left_width if left_width > 0 else 0.5
+                
+                right_width = abs(right_outer.x - right_inner.x)
+                right_pos = (right_iris.x - right_inner.x) / right_width if right_width > 0 else 0.5
+                
+                # Average both eyes
+                avg_position = (left_pos + right_pos) / 2
+                
+                # Eye contact when iris is centered (0.35-0.65 range)
+                eye_contact = 1.0 if 0.35 <= avg_position <= 0.65 else 0.0
+                
+                gaze_data.append({
+                    'eye_contact': eye_contact,
+                    'gaze_direction': 'camera' if eye_contact > 0.5 else 'away'
                 })
+            except (IndexError, AttributeError):
+                # Skip this face if landmarks are missing or malformed
+                continue
         
-        return face_data
+        return gaze_data
     
-    def _analyze_expression(self, landmarks, w, h):
-        """Analyze facial expression from landmarks"""
-        expression_scores = {
-            'neutral': 0,
-            'happy': 0,
-            'sad': 0,
-            'surprised': 0,
-            'angry': 0
-        }
-        
-        # Analyze mouth
-        mouth_landmarks = [landmarks[idx] for idx in self.expression_landmarks['mouth']]
-        mouth_height = abs(landmarks[13].y - landmarks[14].y) * h
-        mouth_width = abs(landmarks[61].x - landmarks[291].x) * w
-        
-        # Smile detection
-        mouth_corner_left = landmarks[61].y
-        mouth_corner_right = landmarks[291].y
-        mouth_center = landmarks[13].y
-        
-        if mouth_corner_left < mouth_center and mouth_corner_right < mouth_center:
-            expression_scores['happy'] += 2
-        
-        # Mouth open (surprise)
-        if mouth_height > mouth_width * 0.5:
-            expression_scores['surprised'] += 2
-        
-        # Eye analysis
-        left_eye_height = abs(landmarks[159].y - landmarks[145].y) * h
-        right_eye_height = abs(landmarks[386].y - landmarks[374].y) * h
-        
-        # Wide eyes (surprise)
-        if left_eye_height > 10 and right_eye_height > 10:
-            expression_scores['surprised'] += 1
-        
-        # Eyebrow position (raised = surprised, lowered = angry/sad)
-        eyebrow_height = landmarks[70].y
-        eye_height = landmarks[33].y
-        
-        if eyebrow_height < eye_height - 0.02:
-            expression_scores['surprised'] += 1
-        elif eyebrow_height > eye_height + 0.01:
-            expression_scores['angry'] += 1
-        
-        # Determine dominant expression
-        max_score = max(expression_scores.values())
-        if max_score > 0:
-            return max(expression_scores, key=expression_scores.get)
-        return 'neutral'
     
     def detect_hands_and_gestures(self, image):
         """Detect hands and recognize gestures"""
@@ -375,24 +335,24 @@ class MediaPipeHumanDetector:
             return {}
         
         # Run all detections
-        faces = self.detect_faces_and_expressions(image)
+        gaze = self.detect_gaze_only(image)
         hands = self.detect_hands_and_gestures(image)
         poses = self.detect_body_pose(image)
         
         # Compile results
         results = {
             'frame': os.path.basename(image_path),
-            'faces': faces,
+            'gaze': gaze,
             'hands': hands,
             'poses': poses,
             'summary': {
-                'face_count': len(faces),
+                'gaze_count': len(gaze),
                 'hand_count': len(hands),
                 'body_count': len(poses),
-                'expressions': [f['expression'] for f in faces],
+                'eye_contact': [g['eye_contact'] for g in gaze],
                 'gestures': [h['gesture'] for h in hands],
                 'poses': [p['pose'] for p in poses],
-                'has_interaction': len(hands) > 0 or any(f['expression'] != 'neutral' for f in faces)
+                'has_interaction': len(hands) > 0 or any(g['eye_contact'] > 0.5 for g in gaze)
             }
         }
         
@@ -404,12 +364,16 @@ class MediaPipeHumanDetector:
         if image is None:
             return
         
-        # Draw face detections
-        for face in detections.get('faces', []):
-            bbox = face['bbox']
-            cv2.rectangle(image, (bbox['x1'], bbox['y1']), (bbox['x2'], bbox['y2']), (0, 255, 0), 2)
-            cv2.putText(image, f"Face: {face['expression']}", (bbox['x1'], bbox['y1']-10),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+        # Draw gaze indicators (eye contact)
+        for gaze in detections.get('gaze', []):
+            h, w = image.shape[:2]
+            # Simple indicator at top of frame
+            if gaze['eye_contact'] > 0.5:
+                cv2.putText(image, "Eye Contact", (10, 30),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            else:
+                cv2.putText(image, "Looking Away", (10, 30),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         
         # Draw hand detections
         for hand in detections.get('hands', []):

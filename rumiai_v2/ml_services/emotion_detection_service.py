@@ -156,7 +156,8 @@ class EmotionDetectionService:
                         'confidence': detection['confidence'],
                         'all_scores': detection['emotion_scores'],
                         'action_units': detection['action_units'],
-                        'au_intensities': detection['au_intensities']
+                        'au_intensities': detection['au_intensities'],
+                        'face_bbox': detection.get('face_bbox', [0, 0, 0, 0])  # Format: [x, y, width, height]
                     })
                     
                     # Store Action Units

@@ -1,0 +1,208 @@
+{
+  "corrupted_data": [
+    {
+      "case": 0,
+      "bbox": "{'width': -0.5, 'height': 0.3}",
+      "face_area": 0,
+      "status": "Corrupted (treated as 0)"
+    },
+    {
+      "case": 1,
+      "bbox": "{'width': 1.5, 'height': 2.0}",
+      "face_area": 0,
+      "status": "Corrupted (treated as 0)"
+    },
+    {
+      "case": 2,
+      "bbox": "{'width': nan, 'height': 0.3}",
+      "face_area": 0,
+      "status": "Corrupted (treated as 0)"
+    },
+    {
+      "case": 3,
+      "bbox": "{'width': None, 'height': 0.3}",
+      "face_area": 0,
+      "status": "Corrupted (treated as 0)"
+    },
+    {
+      "case": 4,
+      "bbox": "{'height': 0.3}",
+      "face_area": 0.0,
+      "status": "Valid"
+    },
+    {
+      "case": 5,
+      "bbox": "{}",
+      "face_area": 0,
+      "status": "Valid"
+    },
+    {
+      "case": 6,
+      "bbox": "{'width': '0.3', 'height': '0.4'}",
+      "face_area": 0,
+      "status": "Corrupted (treated as 0)"
+    },
+    {
+      "case": 7,
+      "bbox": "{'width': inf, 'height': 0.3}",
+      "face_area": 0,
+      "status": "Corrupted (treated as 0)"
+    }
+  ],
+  "timeline_gaps": [
+    {
+      "scenario": "sparse_data",
+      "input_entries": 3,
+      "output_entries": 10,
+      "expected_entries": 10,
+      "continuous": true,
+      "none_count": 7
+    },
+    {
+      "scenario": "missing_middle",
+      "input_entries": 4,
+      "output_entries": 10,
+      "expected_entries": 10,
+      "continuous": true,
+      "none_count": 6
+    },
+    {
+      "scenario": "only_start_end",
+      "input_entries": 2,
+      "output_entries": 30,
+      "expected_entries": 30,
+      "continuous": true,
+      "none_count": 28
+    },
+    {
+      "scenario": "completely_empty",
+      "input_entries": 0,
+      "output_entries": 10,
+      "expected_entries": 10,
+      "continuous": true,
+      "none_count": 10
+    }
+  ],
+  "boundary_conditions": [
+    {
+      "face_area": 0,
+      "expected": "none",
+      "actual": "none",
+      "matches": true
+    },
+    {
+      "face_area": 0.01,
+      "expected": "wide",
+      "actual": "wide",
+      "matches": true
+    },
+    {
+      "face_area": 8.0,
+      "expected": "wide",
+      "actual": "wide",
+      "matches": true
+    },
+    {
+      "face_area": 8.01,
+      "expected": "medium",
+      "actual": "medium",
+      "matches": true
+    },
+    {
+      "face_area": 25.0,
+      "expected": "medium",
+      "actual": "medium",
+      "matches": true
+    },
+    {
+      "face_area": 25.01,
+      "expected": "close",
+      "actual": "close",
+      "matches": true
+    },
+    {
+      "face_area": 100.0,
+      "expected": "close",
+      "actual": "close",
+      "matches": true
+    }
+  ],
+  "extreme_durations": [
+    {
+      "duration_seconds": 0,
+      "duration_readable": "0h 0m 0s",
+      "timeline_entries": 0,
+      "memory_estimate_kb": 0.0,
+      "feasible": true
+    },
+    {
+      "duration_seconds": 1,
+      "duration_readable": "0h 0m 1s",
+      "timeline_entries": 1,
+      "memory_estimate_kb": 0.1,
+      "feasible": true
+    },
+    {
+      "duration_seconds": 3600,
+      "duration_readable": "1h 0m 0s",
+      "timeline_entries": 3600,
+      "memory_estimate_kb": 360.0,
+      "feasible": true
+    },
+    {
+      "duration_seconds": 7200,
+      "duration_readable": "2h 0m 0s",
+      "timeline_entries": 7200,
+      "memory_estimate_kb": 720.0,
+      "feasible": true
+    }
+  ],
+  "rapid_transitions": {
+    "timeline_duration": 30,
+    "unique_shots": 4,
+    "total_segments": 30,
+    "avg_segment_duration": 1.0
+  },
+  "confidence_variations": [
+    {
+      "input": 0.0,
+      "processed": 0.0,
+      "validity": "Valid"
+    },
+    {
+      "input": 0.5,
+      "processed": 0.5,
+      "validity": "Valid"
+    },
+    {
+      "input": 0.75,
+      "processed": 0.75,
+      "validity": "Valid"
+    },
+    {
+      "input": 0.95,
+      "processed": 0.95,
+      "validity": "Valid"
+    },
+    {
+      "input": 1.0,
+      "processed": 1.0,
+      "validity": "Valid"
+    },
+    {
+      "input": -0.5,
+      "processed": 0,
+      "validity": "Invalid (defaulted to 0)"
+    },
+    {
+      "input": 1.5,
+      "processed": 0,
+      "validity": "Invalid (defaulted to 0)"
+    },
+    {
+      "input": null,
+      "processed": 0,
+      "validity": "Missing (defaulted to 0)"
+    }
+  ]
+}

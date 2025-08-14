@@ -86,7 +86,7 @@ class UnifiedMLServices:
             
             # Load models in thread to avoid blocking
             def load_mp():
-                return {
+                models = {
                     'pose': mp.solutions.pose.Pose(
                         min_detection_confidence=0.5,
                         min_tracking_confidence=0.5
@@ -97,8 +97,20 @@ class UnifiedMLServices:
                     'hands': mp.solutions.hands.Hands(
                         min_detection_confidence=0.5,
                         min_tracking_confidence=0.5
+                    ),
+                    'face_mesh': mp.solutions.face_mesh.FaceMesh(
+                        max_num_faces=5,  # Support multi-person detection
+                        refine_landmarks=True,  # Enable iris landmarks (468-477)
+                        min_detection_confidence=0.5,
+                        min_tracking_confidence=0.5
                     )
                 }
+                
+                # Fail-fast: Verify FaceMesh loaded successfully
+                if not models['face_mesh']:
+                    raise RuntimeError("FaceMesh failed to initialize - failing fast")
+                
+                return models
             
             return await asyncio.to_thread(load_mp)
         except Exception as e:
@@ -294,6 +306,7 @@ class UnifiedMLServices:
         all_poses = []
         all_faces = []
         all_hands = []
+        all_gaze = []  # ADD: Collect gaze data from batches
         
         for i in range(0, len(mp_frames), batch_size):
             batch = mp_frames[i:i+batch_size]
@@ -305,11 +318,13 @@ class UnifiedMLServices:
             all_poses.extend(batch_results['poses'])
             all_faces.extend(batch_results['faces'])
             all_hands.extend(batch_results['hands'])
+            all_gaze.extend(batch_results.get('gaze', []))  # ADD: Aggregate gaze data
         
         result = {
             'poses': all_poses,
             'faces': all_faces,
             'hands': all_hands,
+            'gaze': all_gaze,  # ADD: Include gaze in result
             'gestures': [],  # Would need additional processing
             'presence_percentage': (len(all_poses) / len(mp_frames) * 100) if mp_frames else 0,
             'frames_with_people': len(all_poses),
@@ -318,7 +333,8 @@ class UnifiedMLServices:
                 'processed': True,
                 'poses_detected': len(all_poses),
                 'faces_detected': len(all_faces),
-                'hands_detected': len(all_hands)
+                'hands_detected': len(all_hands),
+                'gaze_detected': len(all_gaze)  # ADD: Track gaze detections
             }
         }
         
@@ -337,6 +353,7 @@ class UnifiedMLServices:
         poses = []
         faces = []
         hands = []
+        gaze_data = []  # ADD: Gaze detection results
         
         for frame_data in frames:
             # Convert BGR to RGB
@@ -353,16 +370,36 @@ class UnifiedMLServices:
                         'visibility': sum(lm.visibility for lm in pose_results.pose_landmarks.landmark) / 33
                     })
                     
-            # Process face
+            # Process face with bbox extraction (FIX 2A)
             if models['face']:
                 face_results = models['face'].process(rgb_frame)
                 if face_results.detections:
+                    detection = face_results.detections[0]
+                    bbox = detection.location_data.relative_bounding_box
+                    
                     faces.append({
                         'timestamp': frame_data.timestamp,
                         'frame_number': frame_data.frame_number,
                         'count': len(face_results.detections),
-                        'confidence': face_results.detections[0].score[0] if face_results.detections else 0
+                        'confidence': detection.score[0],
+                        'bbox': {  # ADD: Capture actual bbox data
+                            'x': bbox.xmin,
+                            'y': bbox.ymin,
+                            'width': bbox.width,
+                            'height': bbox.height
+                        }
                     })
+                    
+                    # Process gaze using FaceMesh (only if face detected - early exit optimization)
+                    if models.get('face_mesh'):
+                        mesh_results = models['face_mesh'].process(rgb_frame)
+                        if mesh_results.multi_face_landmarks:
+                            gaze_info = self._compute_gaze_from_mesh(
+                                mesh_results.multi_face_landmarks[0],
+                                frame_data.timestamp
+                            )
+                            if gaze_info:
+                                gaze_data.append(gaze_info)
                     
             # Process hands
             if models['hands']:
@@ -374,7 +411,87 @@ class UnifiedMLServices:
                         'count': len(hand_results.multi_hand_landmarks)
                     })
                     
-        return {'poses': poses, 'faces': faces, 'hands': hands}
+        return {'poses': poses, 'faces': faces, 'hands': hands, 'gaze': gaze_data}
+    
+    def _compute_gaze_from_mesh(self, face_landmarks, timestamp):
+        """Compute gaze direction from MediaPipe FaceMesh landmarks
+        
+        Note: Requires refine_landmarks=True for iris detection (landmarks 468-477)
+        """
+        
+        # VERIFIED MediaPipe FaceMesh landmark indices
+        # Iris landmarks (only available with refine_landmarks=True)
+        LEFT_IRIS_CENTER = 468   # Center of left iris (landmark 468)
+        RIGHT_IRIS_CENTER = 473  # Center of right iris (landmark 473)
+        
+        # Eye corner landmarks for calculating eye center
+        LEFT_EYE_INNER = 133     # Inner corner of left eye
+        LEFT_EYE_OUTER = 33      # Outer corner of left eye  
+        RIGHT_EYE_INNER = 362    # Inner corner of right eye
+        RIGHT_EYE_OUTER = 263    # Outer corner of right eye
+        
+        try:
+            # Get iris positions (requires refine_landmarks=True)
+            left_iris = face_landmarks.landmark[LEFT_IRIS_CENTER]
+            right_iris = face_landmarks.landmark[RIGHT_IRIS_CENTER]
+            
+            # Calculate eye centers from eye corners
+            left_eye_inner = face_landmarks.landmark[LEFT_EYE_INNER]
+            left_eye_outer = face_landmarks.landmark[LEFT_EYE_OUTER]
+            left_eye_center_x = (left_eye_inner.x + left_eye_outer.x) / 2
+            left_eye_center_y = (left_eye_inner.y + left_eye_outer.y) / 2
+            
+            right_eye_inner = face_landmarks.landmark[RIGHT_EYE_INNER]
+            right_eye_outer = face_landmarks.landmark[RIGHT_EYE_OUTER]
+            right_eye_center_x = (right_eye_inner.x + right_eye_outer.x) / 2
+            right_eye_center_y = (right_eye_inner.y + right_eye_outer.y) / 2
+            
+            # Calculate gaze offset: iris position relative to eye center
+            left_gaze_offset_x = left_iris.x - left_eye_center_x
+            left_gaze_offset_y = left_iris.y - left_eye_center_y
+            right_gaze_offset_x = right_iris.x - right_eye_center_x
+            right_gaze_offset_y = right_iris.y - right_eye_center_y
+            
+            # Average horizontal and vertical offsets
+            avg_gaze_offset_x = (left_gaze_offset_x + right_gaze_offset_x) / 2
+            avg_gaze_offset_y = (left_gaze_offset_y + right_gaze_offset_y) / 2
+            
+            # Calculate total gaze offset magnitude (both axes)
+            gaze_magnitude = (avg_gaze_offset_x**2 + avg_gaze_offset_y**2) ** 0.5
+            
+            # Classify eye contact based on offset magnitude
+            # Small offset = looking at camera, large offset = looking away
+            eye_contact_threshold = 0.02  # Tunable parameter (in normalized coordinates)
+            is_looking_at_camera = gaze_magnitude < eye_contact_threshold
+            
+            # Determine gaze direction (considering both axes)
+            if is_looking_at_camera:
+                gaze_direction = 'camera'
+                eye_contact_score = max(0, 1.0 - gaze_magnitude / eye_contact_threshold)
+            else:
+                # Determine primary gaze direction
+                if abs(avg_gaze_offset_x) > abs(avg_gaze_offset_y):
+                    # Horizontal gaze is stronger
+                    gaze_direction = 'right' if avg_gaze_offset_x > 0 else 'left'
+                else:
+                    # Vertical gaze is stronger
+                    gaze_direction = 'down' if avg_gaze_offset_y > 0 else 'up'
+                eye_contact_score = 0.0
+            
+            return {
+                'timestamp': timestamp,
+                'eye_contact': eye_contact_score,
+                'gaze_direction': gaze_direction,
+                'gaze_offset_x': avg_gaze_offset_x,
+                'gaze_offset_y': avg_gaze_offset_y,
+                'gaze_magnitude': gaze_magnitude,
+                'confidence': 0.8  # Can be enhanced with landmark visibility scores
+            }
+            
+        except (IndexError, AttributeError):
+            # No face/landmarks detected - return None (not an error)
+            # Calling code will handle empty gaze data
+            return None
         
     async def _run_ocr_on_frames(self,
                                 frames: List[FrameData],

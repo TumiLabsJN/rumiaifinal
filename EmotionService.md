@@ -1,316 +1,446 @@
-# Emotion Service Integration Manual - Architectural Lessons Learned
+# Emotional Journey Analysis Architecture
 
 ## Overview
-This document captures critical learnings from integrating FEAT (Facial Expression Analysis Toolkit) emotion detection into the RumiAI pipeline. It serves as a guide for future ML service integrations and highlights architectural patterns that must be respected.
+The emotional_journey flow uses FEAT (Facial Expression Analysis Toolkit) for real emotion detection, replacing the previous fake emotion mappings. The system exhibits complex integration patterns with multiple transformation layers and both synchronous/asynchronous execution.
 
-**Purpose**: Enable a fresh Claude instance to understand the architecture and avoid common pitfalls when integrating new ML services.
+## Current Architecture Flow
 
-## Core Architecture Understanding
-
-### 1. The Three-Layer Data Flow Pattern
-
-RumiAI follows a strict three-layer pattern for ML data:
-
+### 1. Video Processing Pipeline
 ```
-ML Service → Timeline Builder → Timeline Entries → Precompute Functions
-     ↓              ↓                    ↓                    ↓
-  Raw Output   Validation &        Unified          Extracted for
-               Transformation       Storage          Analysis
+video_analyzer.py → _run_emotion_detection() → EmotionDetectionService
+                                              ↓
+                            FEAT ResNet-50 (87% accuracy on AffectNet)
+                                              ↓
+                        emotions: [{timestamp: 0, emotion: "joy", confidence: 0.87}]
 ```
 
-**CRITICAL**: Never bypass this flow. Services like `audio_energy` that bypass timeline_builder create inconsistencies and technical debt.
+**Implementation Details** (`emotion_detection_service.py`):
+- Uses ResNet-50 model for emotion + Action Units detection
+- Adaptive sampling: 0.5-2 FPS based on video duration
+- GPU acceleration: 2-4 FPS processing on consumer GPUs
+- Graceful B-roll handling (videos without faces)
 
-### 2. Service Integration Checklist
-
-When integrating a new ML service, you MUST touch these files in order:
-
-1. **`/rumiai_v2/ml_services/[service_name]_service.py`**
-   - Implements the actual ML processing
-   - Outputs to service-specific directory
-   - Maps service output to RumiAI's expected format
-
-2. **`/rumiai_v2/core/validators/ml_data_validator.py`**
-   - Add `validate_[service]_data()` method
-   - FAIL-FAST principle: Raise exceptions, don't normalize bad data
-   - Trust the validator downstream (no redundant checks)
-
-3. **`/rumiai_v2/processors/timeline_builder.py`**
-   - Add service to `builders` dictionary
-   - Implement `_add_[service]_entries()` method
-   - Transform validated data into TimelineEntry objects
-
-4. **`/rumiai_v2/processors/precompute_functions.py`**
-   - Extract timeline entries to specialized timelines
-   - Build service-specific timeline dictionaries
-   - NO direct ml_data access (that's an anti-pattern)
-
-## Critical Architectural Principles
-
-### 1. Fail-Fast Philosophy
-
+### 2. Timeline Integration
 ```python
-# ✅ CORRECT - Fail immediately on bad data
-if 'required_field' not in data:
-    raise ValueError(f"FATAL: Missing required_field for video {video_id}")
-
-# ❌ WRONG - Silent normalization
-if 'required_field' not in data:
-    data['required_field'] = 'default_value'  # Creates hidden bugs
-```
-
-**Why**: Silent failures cascade into mysterious bugs. Better to crash early with clear error messages.
-
-### 2. Trust the Validator Pattern
-
-```python
-# In timeline_builder.py after validation:
-timestamp = emotion_entry['timestamp']  # ✅ No .get(), no default
-
-# NOT:
-timestamp = emotion_entry.get('timestamp', 0)  # ❌ Redundant defensive coding
-```
-
-**Why**: If validator passes bad data, that's a validator bug. Don't hide it with defaults.
-
-### 3. Timeline Entry Structure
-
-TimelineEntry has exactly these fields:
-- `start`: Timestamp object
-- `end`: Optional[Timestamp] 
-- `entry_type`: str
-- `data`: Dict[str, Any]
-
-**COMMON BUG**: Adding extra parameters
-```python
-# ❌ WRONG - This will crash
-entry = TimelineEntry(
-    entry_type='emotion',
-    confidence=0.9,  # NO! TimelineEntry doesn't have this
-    metadata={...}   # NO! This doesn't exist either
-)
-
-# ✅ CORRECT - Everything goes in data dict
-entry = TimelineEntry(
-    entry_type='emotion',
-    start=Timestamp(timestamp),
-    end=Timestamp(timestamp + 1),
-    data={
-        'confidence': 0.9,
-        'metadata': {...}
-    }
-)
-```
-
-### 4. Service Name Consistency
-
-The service name must be IDENTICAL across all layers:
-- ML service output key: `'emotion_detection'`
-- Timeline builder key: `'emotion_detection': self._add_emotion_entries`
-- Entry type: `'emotion'` (can be different, but document it)
-
-**GOTCHA**: FEAT outputs 'happiness' but RumiAI uses 'joy'. Map this in the service layer, not downstream.
-
-## Common Integration Pitfalls
-
-### Pitfall 1: Checking Wrong Documentation
-
-**Problem**: Line 16 of FEATFIX.md said "7 basic emotions (anger, disgust, fear, happiness...)" but the actual JSON output had "joy" not "happiness".
-
-**Solution**: ALWAYS check actual output files:
-```bash
-# Don't trust documentation, verify actual output
-cat emotion_detection_outputs/*/[video_id]_emotions.json | head -50
-```
-
-### Pitfall 2: Duplicate Service Patterns
-
-**Problem**: Audio energy bypasses timeline_builder, going directly from ml_results to precompute.
-
-**Why This Is Bad**:
-- Inconsistent with other services
-- Hidden dependency in precompute_functions.py
-- Can't query audio energy from timeline
-- Testing is more complex
-
-**Solution**: Follow the standard pattern even if it seems like overhead.
-
-### Pitfall 3: Import Path Assumptions
-
-**Problem**: Assumed relative imports without checking existing patterns.
-
-**Solution**: Check how timeline_builder.py already imports:
-```python
-# timeline_builder.py already has:
-from ..core.validators import MLDataValidator
-
-# So use the existing instance:
-self.ml_validator.validate_emotion_data(...)  # ✅
-
-# Not:
-from ..core.validators import MLDataValidator  # ❌ Redundant
-```
-
-### Pitfall 4: MediaPipe Expression Confusion
-
-**Problem**: MediaPipe also populates expressionTimeline with basic face data.
-
-**Solution**: Services should be prioritized:
-1. Check if better service (FEAT) has data
-2. Only fall back to MediaPipe if FEAT unavailable
-3. Mark data source: `'source': 'feat'` vs `'source': 'mediapipe'`
-
-## Testing Integration
-
-### Essential Test Coverage
-
-1. **Validator Test**: Does it reject bad data?
-```python
-# Should raise ValueError
-bad_data = {'emotions': [{'timestamp': -1}]}  # Invalid timestamp
-validator.validate_emotion_data(bad_data)
-```
-
-2. **Timeline Builder Test**: Does it create proper entries?
-```python
-timeline = Timeline(video_id='test', duration=60)
-builder._add_emotion_entries(timeline, feat_data)
-emotion_entries = [e for e in timeline.entries if e.entry_type == 'emotion']
-assert emotion_entries[0].data['source'] == 'feat'
-```
-
-3. **Extraction Test**: Does it populate the right timeline?
-```python
-timelines = _extract_timelines_from_analysis(analysis_dict)
-assert 'feat' in timelines['expressionTimeline']['0-1s'].get('source')
-```
-
-### Integration Test Pattern
-
-Always test the full flow:
-```bash
-# Real video with existing service output
-python3 scripts/rumiai_runner.py "test_video.mp4"
-grep "expressionTimeline" insights/*/emotional_journey/*.json
-```
-
-## Debugging Workflow
-
-When integration fails, check in this order:
-
-1. **Is the service running?**
-   ```bash
-   ls -la [service]_outputs/
-   ```
-
-2. **Is it in video_analyzer.py?**
-   ```bash
-   grep -n "emotion_detection" rumiai_v2/api/video_analyzer.py
-   ```
-
-3. **Is it in timeline_builder.py builders dict?**
-   ```bash
-   grep -n "builders = {" rumiai_v2/processors/timeline_builder.py -A 10
-   ```
-
-4. **Is the validator being called?**
-   ```bash
-   grep -n "validate_emotion_data" rumiai_v2/processors/timeline_builder.py
-   ```
-
-5. **Is extraction happening?**
-   ```bash
-   grep -n "entry_type.*emotion" rumiai_v2/processors/precompute_functions.py
-   ```
-
-## Service Discovery Process
-
-To understand how a service should integrate:
-
-1. **Find existing examples**:
-   ```bash
-   # See how YOLO is integrated (it's a good pattern)
-   grep -r "_add_yolo_entries" .
-   ```
-
-2. **Check the data flow**:
-   ```bash
-   # Trace from service to timeline
-   grep -r "yolo" --include="*.py" | grep -E "(timeline|Timeline)"
-   ```
-
-3. **Verify the models**:
-   ```bash
-   # Understand TimelineEntry structure
-   grep "class TimelineEntry" -A 20 rumiai_v2/core/models/timeline.py
-   ```
-
-## Architectural Invariants
-
-These must NEVER be violated:
-
-1. **All ML services go through timeline_builder.py**
-   - Exception: None should exist
-
-2. **Validators fail fast with exceptions**
-   - Never return normalized/default data
-
-3. **Timeline entries use only defined fields**
-   - start, end, entry_type, data
-
-4. **Service names are consistent across layers**
-   - Same key in ml_results, builders dict
-
-5. **Data source is marked when multiple services provide similar data**
-   - e.g., 'source': 'feat' vs 'source': 'mediapipe'
-
-## Quick Reference: Adding New Service
-
-```bash
-# 1. Check if service already runs
-ls -la ml_outputs/ | grep [service]
-ls -la [service]_outputs/
-
-# 2. Find where services are listed
-grep "builders = {" timeline_builder.py -A 10
-
-# 3. Add to builders dict
-'new_service': self._add_new_service_entries,
-
-# 4. Implement method (copy pattern from _add_yolo_entries)
-def _add_new_service_entries(self, timeline: Timeline, service_data: Dict[str, Any]) -> None:
-    # Validate
-    service_data = self.ml_validator.validate_new_service_data(service_data, timeline.video_id)
-    
-    # Transform to entries
-    for item in service_data.get('items', []):
+# timeline_builder.py
+def _add_emotion_entries(self, timeline: Timeline, emotion_data: Dict):
+    for emotion_entry in emotion_data.get('emotions', []):
         entry = TimelineEntry(
-            entry_type='new_type',
-            start=Timestamp(item['timestamp']),
-            end=None,  # or Timestamp(item['timestamp'] + duration)
-            data={...}
+            entry_type='emotion',
+            start=Timestamp(timestamp),
+            end=Timestamp(timestamp + 1),
+            data={
+                'emotion': emotion_entry['emotion'],
+                'confidence': emotion_entry.get('confidence', 0.0),
+                'action_units': emotion_entry.get('action_units', []),
+                'source': 'feat'
+            }
         )
-        timeline.add_entry(entry)
-
-# 5. Add validator
-@staticmethod
-def validate_new_service_data(data: Dict[str, Any], video_id: Optional[str] = None) -> Dict[str, Any]:
-    if 'required_field' not in data:
-        raise ValueError(f"FATAL: Missing required_field for video {video_id}")
-    return data
-
-# 6. Extract in precompute_functions.py
-for entry in timeline_entries:
-    if entry.get('entry_type') == 'new_type':
-        # Extract and add to appropriate timeline
 ```
 
-## Final Wisdom
+### 3. Timeline Extraction
+```python
+# precompute_functions.py:576-597
+for entry in timeline_entries:
+    if entry.get('entry_type') == 'emotion':
+        timestamp_key = f"{int(start)}-{int(end)}s"
+        timelines['expressionTimeline'][timestamp_key] = entry.get('data', {})
+```
 
-1. **Read the actual code, not just documentation**
-2. **Check actual output files, not assumed formats**
-3. **Follow existing patterns, don't create new ones**
-4. **Fail fast and loud, never silent**
-5. **Test with real data, not just mocks**
-6. **When in doubt, grep the codebase for examples**
+**Output Format**:
+```json
+"expressionTimeline": {
+    "0-1s": {
+        "emotion": "joy",
+        "confidence": 0.87,
+        "action_units": [6, 12],  // AU06, AU12
+        "source": "feat"
+    }
+}
+```
 
-Remember: The architecture exists for a reason. Respect it, and it will respect you back with fewer bugs and easier maintenance.
+### 4. Professional Processing
+```python
+# precompute_professional.py:315-369
+def compute_emotional_journey_analysis_professional(timelines, duration, frames=None):
+    # CRITICAL ISSUE: Potential FEAT re-processing
+    if frames is not None and os.getenv('USE_PYTHON_ONLY_PROCESSING') == 'true':
+        # Runs FEAT AGAIN even if already processed!
+        loop = asyncio.new_event_loop()
+        emotion_data = loop.run_until_complete(
+            detector.detect_emotions_batch(frames, timestamps)
+        )
+        # Overwrites existing expressionTimeline
+        timelines['expressionTimeline'] = expression_timeline
+```
+
+### 5. Output Structure (6-Block Professional Format)
+```json
+{
+    "emotionalCoreMetrics": {
+        "uniqueEmotions": 3,
+        "dominantEmotion": "joy",
+        "emotionTransitions": 5,
+        "emotionalIntensity": 0.85
+    },
+    "emotionalDynamics": {
+        "emotionProgression": [...],
+        "emotionalArc": "dynamic",
+        "peakEmotionMoments": [...]
+    },
+    "emotionalInteractions": {...},
+    "emotionalKeyEvents": {...},
+    "emotionalPatterns": {...},
+    "emotionalQuality": {...}
+}
+```
+
+## Identified Issues
+
+### 1. **FEAT Processing Duplication** (HIGH PRIORITY)
+**Problem**: FEAT may run twice - once in video_analyzer, again in professional wrapper
+```python
+# Line 323-368 in precompute_professional.py
+if frames is not None:  # This condition causes re-processing
+    # Runs FEAT again, overwriting previous results
+```
+**Impact**: 2x processing time, potential data inconsistency
+
+### 2. **Synchronous AsyncIO Anti-Pattern**
+**Problem**: Creates new event loop in synchronous context
+```python
+# Line 341-362
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+emotion_data = loop.run_until_complete(...)  # Blocking
+loop.close()
+```
+**Impact**: Thread blocking, potential deadlocks
+
+### 3. **Hardcoded Emotion Mappings**
+**Still Present** (but necessary for FEAT compatibility):
+```python
+# emotion_detection_service.py
+self.emotion_mapping = {
+    'happiness': 'joy',  # FEAT uses 'happiness', RumiAI uses 'joy'
+    'sadness': 'sadness',
+    # ...
+}
+```
+
+### 4. **Dead Emotion Mapping Code**
+**Successfully Removed**:
+- ✅ EMOTION_VALENCE dictionary (fake confidence scores)
+- ✅ MediaPipe emotion inference logic
+- ✅ Placeholder emotion generation
+
+**Still Present** (should be removed):
+```python
+# precompute_professional.py:483-495
+contrasts = {
+    'happy': ['sad', 'angry', 'fear'],  # Hardcoded contrast definitions
+    'sad': ['happy', 'surprise'],
+    # ...
+}
+```
+
+### 5. **Multiple Timeline Format Conversions**
+```
+FEAT output → Timeline Entry → expressionTimeline → Professional format
+    ↓              ↓                ↓                    ↓
+  JSON dict    TimelineEntry    "X-Ys" format      6-block structure
+```
+Each conversion adds overhead and potential data loss.
+
+## Safe Optimization Strategy
+
+### CRITICAL DISCOVERY: Frames Never Passed in Production!
+
+After comprehensive analysis, I discovered:
+- **Production flow NEVER passes frames** to compute_emotional_journey_analysis_professional
+- The `frames` parameter is ONLY used in test code (test_p0_fixes.py:278)
+- The FEAT re-processing code (lines 322-368) is **DEAD CODE in production**
+
+**The actual production flow**:
+```python
+# rumiai_runner.py:287
+result = func(unified_analysis.to_dict())  # No frames passed!
+
+# precompute_functions.py:681
+return compute_emotional_metrics(expression_timeline, speech_timeline, gesture_timeline, duration)
+
+# precompute_functions.py:186 (wrapper)
+return compute_emotional_journey_analysis_professional(timelines, duration)  # No frames!
+```
+
+### Phase 1: Remove Dead FEAT Re-processing Code (Zero Risk)
+**Goal**: Clean up the dead code that never executes in production
+
+**File**: `/home/jorge/rumiaifinal/rumiai_v2/processors/precompute_professional.py`
+**Lines to DELETE**: 322-368 (entire FEAT re-processing block)
+
+```python
+def compute_emotional_journey_analysis_professional(timelines: Dict[str, Any], duration: float, 
+                                                   frames: Optional[List] = None, 
+                                                   timestamps: Optional[List] = None) -> Dict[str, Any]:
+    """
+    Professional emotional journey analysis
+    """
+    import os
+    
+    # DELETE LINES 322-368 - This entire block is dead code in production
+    # frames is NEVER passed in production flow
+    
+    # START actual function at line 370
+    # Extract relevant timelines (already has FEAT data from video_analyzer)
+    expression_timeline = timelines.get('expressionTimeline', {})
+    gesture_timeline = timelines.get('gestureTimeline', {})
+    # ... rest of function
+```
+
+**Why this is safe**:
+- Frames parameter is NEVER provided in production
+- FEAT already runs once in video_analyzer._run_emotion_detection()
+- Expression timeline already populated via timeline_builder
+- Only test code uses frames parameter
+
+### Phase 2: AsyncIO Pattern is Also Dead Code! (No Action Needed)
+**Discovery**: Since frames are never passed in production, the AsyncIO code NEVER RUNS
+
+The problematic AsyncIO pattern (lines 341-362) is inside the dead code block:
+```python
+# This ENTIRE block never executes in production
+if frames is not None and timestamps is not None:  # frames is always None!
+    # Lines 341-362: AsyncIO code that NEVER RUNS
+    loop = asyncio.new_event_loop()  # Dead code
+    emotion_data = loop.run_until_complete(...)  # Dead code
+```
+
+**Action**: Will be removed along with Phase 1 deletion
+
+### Phase 3: Simplify Emotion Contrasts (Low Risk)
+**Goal**: Remove verbose hardcoded contrasts dictionary
+
+**Current Implementation** (lines 478-496):
+```python
+# Lines 483-489: Hardcoded contrasts dictionary
+contrasts = {
+    'happy': ['sad', 'angry', 'fear'],
+    'sad': ['happy', 'surprise'],
+    'angry': ['happy', 'calm'],
+    'surprise': ['neutral', 'sad'],
+    'fear': ['happy', 'confident']
+}
+
+# Line 491: Used to detect contrasting emotions
+if current_emotion in contrasts and next_emotion in contrasts[current_emotion]:
+    emotional_contrast_moments.append(...)
+```
+
+**Issue**: The contrasts dictionary IS used but only contains 5 of 7 emotions. Missing: 'neutral', 'disgust'
+
+**Simplified Implementation**:
+```python
+# Define emotion valence for contrast detection
+positive_emotions = {'happy', 'joy', 'surprise'}
+negative_emotions = {'sad', 'angry', 'fear', 'disgust'}
+neutral_emotions = {'neutral', 'calm'}
+
+# Detect contrasts by valence change
+is_contrast = (
+    (current_emotion in positive_emotions and next_emotion in negative_emotions) or
+    (current_emotion in negative_emotions and next_emotion in positive_emotions)
+)
+
+if is_contrast:
+    emotional_contrast_moments.append({
+        "timestamp": f"{int(emotion_timestamps[i][0])}-{int(emotion_timestamps[i+1][0])}s",
+        "fromEmotion": current_emotion,
+        "toEmotion": next_emotion
+    })
+```
+
+**Benefits**:
+- Covers all emotions, not just 5
+- Clearer logic based on valence
+- More maintainable
+
+## What NOT to Change
+
+### Keep These (Working Well):
+1. **FEAT Integration** - 87% accuracy, production-ready
+2. **Action Units Detection** - Valuable facial muscle data
+3. **Adaptive Sampling** - Smart frame rate adjustment
+4. **6-Block Output Format** - Required for compatibility
+
+### Keep These Mappings (Necessary):
+1. **FEAT → RumiAI emotion mapping** ('happiness' → 'joy')
+2. **Valence mapping for analysis** (used in emotional arc)
+3. **Emotion archetype classification** (steady_state, complex_journey, etc.)
+
+## Testing Strategy
+
+### Verify No Double Processing:
+```bash
+# Add logging before FEAT calls
+grep -n "Running FEAT" logs/*.log | wc -l
+# Should see exactly 1 per video, not 2
+```
+
+### Check Timeline Consistency:
+```python
+# Verify source field is preserved
+assert all(
+    entry.get('source') == 'feat'
+    for entry in expression_timeline.values()
+)
+```
+
+### Performance Validation:
+```bash
+# Time FEAT processing
+time python -c "
+from emotion_detection_service import get_emotion_detector
+detector = get_emotion_detector()
+# Process test frames
+"
+```
+
+## Expected Improvements
+
+### Performance Gains:
+- **Phase 1**: 50% reduction in FEAT processing (avoid duplication)
+- **Phase 2**: Better thread management, reduced blocking
+- **Phase 3**: Cleaner code, less confusion
+
+### Memory Savings:
+- Avoid storing duplicate emotion data
+- Single timeline format instead of multiple conversions
+
+## Critical Rules (NEVER VIOLATE)
+
+### 1. FEAT is ONLY for emotional_journey
+- Never use FEAT for person_framing or scene_pacing
+- MediaPipe handles all face detection for framing
+
+### 2. Preserve Source Field
+- Always mark `'source': 'feat'` in emotion entries
+- Allows fallback to MediaPipe if FEAT unavailable
+
+### 3. Standard ML Service Flow
+```
+video_analyzer → MLAnalysisResult → timeline_builder → precompute
+```
+FEAT is not special - it follows this exact pattern.
+
+### 4. Action Units Are Valuable
+- Don't remove AU data even if not currently used
+- Future features may leverage facial muscle analysis
+
+## Complete Implementation Guide
+
+### Step 1: Delete Dead FEAT Re-processing Code
+**File**: `/home/jorge/rumiaifinal/rumiai_v2/processors/precompute_professional.py`
+
+**Delete lines 322-368** (entire block starting with `if frames is not None`):
+```bash
+# Line numbers to delete
+sed -i '322,368d' rumiai_v2/processors/precompute_professional.py
+```
+
+This removes:
+- Dead FEAT re-processing code that never runs
+- Problematic AsyncIO pattern that never executes
+- Unnecessary frame handling logic
+
+### Step 2: Simplify Emotion Contrasts
+**File**: `/home/jorge/rumiaifinal/rumiai_v2/processors/precompute_professional.py`
+
+**Replace lines 483-489** with valence-based approach:
+```python
+# Old: Lines 483-489 (verbose dictionary)
+# New: Cleaner valence-based detection
+positive_emotions = {'happy', 'joy', 'surprise'}
+negative_emotions = {'sad', 'angry', 'fear', 'disgust'}
+
+# Update line 491 logic
+is_contrast = (
+    (current_emotion in positive_emotions and next_emotion in negative_emotions) or
+    (current_emotion in negative_emotions and next_emotion in positive_emotions)
+)
+```
+
+### Step 3: Update Function Signature (Optional)
+Since frames are never used in production, consider removing the parameters:
+
+```python
+# Current signature (line 315)
+def compute_emotional_journey_analysis_professional(
+    timelines: Dict[str, Any], 
+    duration: float, 
+    frames: Optional[List] = None,  # Never used in production
+    timestamps: Optional[List] = None  # Never used in production
+) -> Dict[str, Any]:
+
+# Simplified signature
+def compute_emotional_journey_analysis_professional(
+    timelines: Dict[str, Any], 
+    duration: float
+) -> Dict[str, Any]:
+```
+
+**Note**: Keep parameters if test code needs them, just document they're test-only.
+
+## Testing After Changes
+
+### 1. Verify FEAT Still Works:
+```bash
+python scripts/rumiai_runner.py "https://tiktok.com/test_video"
+grep "emotion" unified_analysis/*.json
+# Should see emotion entries with source: "feat"
+```
+
+### 2. Check Emotion Contrasts:
+```python
+# Verify contrast detection still works
+grep "emotionalContrastMoments" insights/*/emotional_journey/*.json
+```
+
+### 3. Performance Check:
+```bash
+# Time before and after changes
+time python scripts/rumiai_runner.py "test_video.mp4"
+# Should be same or faster (less code to execute)
+```
+
+## Summary of Changes
+
+### What We're Removing:
+1. **46 lines of dead FEAT re-processing code** (never executes)
+2. **Problematic AsyncIO pattern** (inside dead code)
+3. **Incomplete contrasts dictionary** (missing 2 emotions)
+
+### What We're Keeping:
+1. **FEAT integration in video_analyzer** (works perfectly)
+2. **Timeline builder emotion entries** (correct flow)
+3. **6-block professional format** (required)
+4. **Action Units data** (valuable for future)
+
+### Impact:
+- **Code reduction**: ~50 lines removed
+- **Performance**: No change (dead code never ran)
+- **Clarity**: Much clearer what actually happens
+- **Maintainability**: Simpler emotion contrast logic
+
+## Conclusion
+
+The major discovery is that the "FEAT re-processing problem" doesn't actually exist in production - it's dead code that only runs in tests. The emotional_journey flow is actually quite clean:
+
+1. FEAT runs once in video_analyzer
+2. Data flows through timeline_builder
+3. Professional wrapper just formats the data
+
+The recommended changes are:
+1. **Delete the dead FEAT re-processing code** (zero risk)
+2. **Simplify emotion contrasts** (low risk improvement)
+3. **Document that frames parameter is test-only** (clarity)

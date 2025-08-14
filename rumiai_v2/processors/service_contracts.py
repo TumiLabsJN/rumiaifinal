@@ -51,8 +51,8 @@ def validate_timeline_structure(timeline_dict: Dict, timeline_name: str) -> None
             end = float(parts[1])
             if start < 0 or end < 0:
                 raise ValueError("Negative timestamps not allowed")
-            if start >= end:
-                raise ValueError("Start must be less than end")
+            if start > end:  # Allow start == end for edge cases
+                raise ValueError("Start must not be greater than end")
         except (ValueError, IndexError) as e:
             raise ServiceContractViolation(
                 f"CONTRACT VIOLATION: {timeline_name} timestamp '{timestamp}' "
