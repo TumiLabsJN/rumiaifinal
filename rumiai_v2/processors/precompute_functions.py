@@ -143,16 +143,9 @@ def stdev(values: List[float]) -> float:
 
 
 # Import the actual functions
-try:
-    # Import new creative density implementation
-    from .precompute_creative_density import compute_creative_density_analysis
-    logger.info("Successfully imported new creative_density implementation")
-except ImportError as e:
-    logger.error(f"Failed to import creative_density: {e}")
-    # Fallback to placeholder
-    def compute_creative_density_analysis(*args, **kwargs):
-        logger.warning("Using placeholder for compute_creative_density_analysis")
-        return {}
+# Import creative density implementation (no fallback needed - primary implementation is stable)
+from .precompute_creative_density import compute_creative_density_analysis
+logger.info("Successfully imported creative_density implementation")
 
 # Import professional functions first, fallback to basic implementations
 try:
