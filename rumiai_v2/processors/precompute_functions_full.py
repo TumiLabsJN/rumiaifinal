@@ -1411,10 +1411,30 @@ def compute_metadata_analysis_metrics(static_metadata, metadata_summary, video_d
     import re
     from datetime import datetime
     
-    # Extract core data
-    caption_text = static_metadata.get('captionText', '')
+    # Extract core data - FIX: Use correct field names
+    # Primary source: metadata_summary (already processed)
+    caption_text = metadata_summary.get('description', '')
+    if not caption_text:  # Fallback to static_metadata
+        caption_text = static_metadata.get('text', '')
+    
+    # Get engagement metrics from metadata_summary (correct source)
+    view_count = metadata_summary.get('views', 0)
+    like_count = metadata_summary.get('likes', 0)
+    comment_count = metadata_summary.get('comments', 0)
+    share_count = metadata_summary.get('shares', 0)
+    
+    # Error handling for engagement metrics
+    if view_count == 0 and 'playCount' in static_metadata:
+        view_count = static_metadata.get('playCount', 0)
+    if like_count == 0 and 'diggCount' in static_metadata:
+        like_count = static_metadata.get('diggCount', 0)
+    if comment_count == 0 and 'commentCount' in static_metadata:
+        comment_count = static_metadata.get('commentCount', 0)
+    if share_count == 0 and 'shareCount' in static_metadata:
+        share_count = static_metadata.get('shareCount', 0)
+    
+    # Other metadata
     hashtags = static_metadata.get('hashtags', [])
-    stats = static_metadata.get('stats', {})
     create_time_str = static_metadata.get('createTime', '')
     author = static_metadata.get('author', {})
     
@@ -1431,13 +1451,16 @@ def compute_metadata_analysis_metrics(static_metadata, metadata_summary, video_d
     words = caption_text.split()
     word_count = len(words)
     
-    # Emoji detection
+    # Emoji detection - FIX: Add missing Unicode ranges
     emoji_pattern = re.compile(
         "["
         "\U0001F600-\U0001F64F"  # emoticons
-        "\U0001F300-\U0001F5FF"  # symbols & pictographs
+        "\U0001F300-\U0001F5FF"  # symbols & pictographs (includes 🌺)
         "\U0001F680-\U0001F6FF"  # transport & map symbols
         "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+        "\U0001F900-\U0001F9FF"  # Supplemental Symbols and Pictographs
+        "\U00002600-\U000027BF"  # Miscellaneous symbols
+        "\U0001FA70-\U0001FAFF"  # Symbols and Pictographs Extended-A
         "\U00002702-\U000027B0"
         "\U000024C2-\U0001F251"
         "]+", flags=re.UNICODE)
@@ -1470,107 +1493,50 @@ def compute_metadata_analysis_metrics(static_metadata, metadata_summary, video_d
         else:
             niche_count += 1
     
-    # Readability approximation (simple version)
-    avg_word_length = sum(len(word) for word in words) / word_count if word_count > 0 else 0
-    sentence_endings = caption_text.count('.') + caption_text.count('!') + caption_text.count('?')
-    sentence_count = max(sentence_endings, 1)
-    avg_sentence_length = word_count / sentence_count
-    
-    # Simple readability score (0-1, higher is easier)
-    readability_score = min(1.0, max(0.0, 1.0 - (avg_word_length - 4) * 0.1 - (avg_sentence_length - 15) * 0.02))
-    
-    # Sentiment analysis (basic)
-    positive_words = ['love', 'amazing', 'great', 'awesome', 'best', 'perfect', 'beautiful', 'excellent', 'happy', 'good']
-    negative_words = ['hate', 'bad', 'worst', 'terrible', 'awful', 'horrible', 'ugly', 'sad', 'angry', 'poor']
-    
+    # Simplified analysis
     caption_lower = caption_text.lower()
-    positive_count = sum(1 for word in positive_words if word in caption_lower)
-    negative_count = sum(1 for word in negative_words if word in caption_lower)
     
-    sentiment_polarity = (positive_count - negative_count) / max(word_count, 1)
-    if sentiment_polarity > 0.1:
-        sentiment_category = 'positive'
-    elif sentiment_polarity < -0.1:
-        sentiment_category = 'negative'
-    else:
-        sentiment_category = 'neutral'
+    # Hook detection - simplified to binary
+    has_hook = int(any(pattern in caption_lower for pattern in [
+        'wait for it', 'watch till', "won't believe", 'pov:', 
+        'story time', "here's how", 'the secret'
+    ]))
     
-    # Urgency detection
-    urgency_high = ['now', 'today', 'last chance', 'ends soon', 'limited time', 'hurry']
-    urgency_medium = ['limited', "don't miss", 'quick', 'fast', 'soon']
-    
-    has_high_urgency = any(phrase in caption_lower for phrase in urgency_high)
-    has_medium_urgency = any(phrase in caption_lower for phrase in urgency_medium)
-    
-    if has_high_urgency:
-        urgency_level = 'high'
-    elif has_medium_urgency:
-        urgency_level = 'medium'
-    else:
-        urgency_level = 'none'
-    
-    # Hook detection
-    hook_patterns = [
-        'wait for it', 'watch till end', 'you won\'t believe', 'this is how',
-        'the secret to', 'why you should', 'how to', 'what happens when'
-    ]
-    
-    hooks = []
-    for pattern in hook_patterns:
-        if pattern in caption_lower:
-            position = caption_lower.find(pattern)
-            relative_position = position / len(caption_text) if caption_text else 0
-            if relative_position < 0.2:
-                position_label = 'start'
-            elif relative_position > 0.8:
-                position_label = 'end'
-            else:
-                position_label = 'middle'
-            
-            hooks.append({
-                'text': pattern,
-                'position': position_label,
-                'type': 'curiosity' if 'believe' in pattern or 'wait' in pattern else 'promise',
-                'strength': 0.8 if position_label == 'start' else 0.5
-            })
-    
-    # CTA detection
-    cta_patterns = {
-        'follow': ['follow for more', 'follow me', 'hit follow'],
-        'like': ['drop a like', 'hit like', 'like if', 'double tap'],
-        'comment': ['comment below', 'let me know', 'tell me', 'drop a comment'],
-        'share': ['share this', 'tag someone', 'send this to']
+    # ML-ready CTA detection with urgency merged
+    cta_features = {
+        'hasCTA': 0,
+        'ctaFollow': 0,
+        'ctaLike': 0,
+        'ctaComment': 0,
+        'ctaShare': 0,
+        'ctaUrgency': 0,
+        'ctaCount': 0
     }
     
-    ctas = []
-    for cta_type, patterns in cta_patterns.items():
-        for pattern in patterns:
-            if pattern in caption_lower:
-                ctas.append({
-                    'text': pattern,
-                    'type': cta_type,
-                    'explicitness': 'direct',
-                    'urgency': urgency_level
-                })
+    # Check each CTA type
+    if any(p in caption_lower for p in ['follow me', 'follow for', 'hit follow']):
+        cta_features['ctaFollow'] = 1
+    if any(p in caption_lower for p in ['drop a like', 'hit like', 'double tap', 'like if']):
+        cta_features['ctaLike'] = 1
+    if any(p in caption_lower for p in ['comment below', 'let me know', 'drop a comment', 'tell me']):
+        cta_features['ctaComment'] = 1
+    if any(p in caption_lower for p in ['share this', 'tag someone', 'send this to']):
+        cta_features['ctaShare'] = 1
+    if any(p in caption_lower for p in ['limited time', 'act now', 'last chance', 'today only', 'ends soon']):
+        cta_features['ctaUrgency'] = 1
     
-    # Linguistic markers
-    question_count = caption_text.count('?')
-    exclamation_count = caption_text.count('!')
-    caps_words = len([w for w in words if w.isupper() and len(w) > 1])
-    personal_pronouns = ['i', 'me', 'my', 'you', 'your', 'we', 'our']
-    pronoun_count = sum(1 for word in words if word.lower() in personal_pronouns)
+    cta_features['ctaCount'] = sum([
+        cta_features['ctaFollow'], cta_features['ctaLike'],
+        cta_features['ctaComment'], cta_features['ctaShare'],
+        cta_features['ctaUrgency']
+    ])
+    cta_features['hasCTA'] = int(cta_features['ctaCount'] > 0)
     
-    # Caption style classification
-    if word_count < 10:
-        caption_style = 'minimal'
-    elif question_count > 0 and caption_text.strip().endswith('?'):
-        caption_style = 'question'
-    elif sentence_count > 3:
-        caption_style = 'storytelling'
-    elif any(str(i) in caption_text for i in range(1, 10)):
-        caption_style = 'list'
-    else:
-        caption_style = 'direct'
+    # Linguistic markers - simplified to binary
+    has_question = int('?' in caption_text)
+    has_exclamation = int('!' in caption_text)
+    
+    # Caption style removed - word_count is sufficient
     
     # Hashtag strategy
     if hashtag_count == 0:
@@ -1584,146 +1550,69 @@ def compute_metadata_analysis_metrics(static_metadata, metadata_summary, video_d
     else:
         hashtag_strategy = 'spam'
     
-    # Engagement calculations
-    view_count = stats.get('views', 0)
-    like_count = stats.get('likes', 0)
-    comment_count = stats.get('comments', 0)
-    share_count = stats.get('shares', 0)
+    # Engagement calculations - already extracted at top of function
     
     engagement_rate = ((like_count + comment_count + share_count) / view_count * 100) if view_count > 0 else 0
     likes_to_views = like_count / view_count if view_count > 0 else 0
     comments_to_views = comment_count / view_count if view_count > 0 else 0
     shares_to_views = share_count / view_count if view_count > 0 else 0
     
-    # Viral potential score (0-1)
-    viral_score = 0
-    if engagement_rate > 15:
-        viral_score += 0.3
-    elif engagement_rate > 10:
-        viral_score += 0.2
-    elif engagement_rate > 5:
-        viral_score += 0.1
+    # Calculate emoji and mention densities
+    emoji_density = round(emoji_count / word_count if word_count > 0 else 0, 2)
+    mention_density = round(mention_count / word_count if word_count > 0 else 0, 2)
     
-    if hooks:
-        viral_score += 0.2
-    if hashtag_strategy == 'moderate':
-        viral_score += 0.1
-    if caption_style in ['question', 'storytelling']:
-        viral_score += 0.1
-    if urgency_level != 'none':
-        viral_score += 0.1
-    if sentiment_category == 'positive':
-        viral_score += 0.1
-    if emoji_count > 0 and emoji_count < 5:
-        viral_score += 0.1
-    
-    viral_score = min(1.0, viral_score)
-    
-    # Caption and hashtag quality
-    if word_count > 10 and readability_score > 0.7:
-        caption_quality = 'high'
-    elif word_count > 5 and readability_score > 0.5:
-        caption_quality = 'medium'
-    elif word_count > 0:
-        caption_quality = 'low'
-    else:
-        caption_quality = 'empty'
-    
-    if generic_count > hashtag_count * 0.5:
-        hashtag_quality = 'spammy'
-    elif hashtag_count == 0:
-        hashtag_quality = 'none'
-    elif generic_count <= 2:
-        hashtag_quality = 'relevant'
-    else:
-        hashtag_quality = 'mixed'
-    
-    # Structure the output
+    # Structure the output in 6-block format (required by professional wrapper)
     return {
-        # Core metrics
-        'caption_length': len(caption_text),
-        'word_count': word_count,
-        'hashtag_count': hashtag_count,
-        'emoji_count': emoji_count,
-        'emoji_list': emojis,
-        'mention_count': mention_count,
-        'mention_list': mentions,
-        'link_present': link_present,
-        'video_duration': video_duration,
-        'publish_hour': publish_hour,
-        'publish_day_of_week': publish_day_of_week,
-        'view_count': view_count,
-        'like_count': like_count,
-        'comment_count': comment_count,
-        'share_count': share_count,
-        'engagement_rate': round(engagement_rate, 2),
-        
-        # Dynamics
-        'hashtag_strategy': hashtag_strategy,
-        'caption_style': caption_style,
-        'emoji_density': round(emoji_count / word_count if word_count > 0 else 0, 2),
-        'mention_density': round(mention_count / word_count if word_count > 0 else 0, 2),
-        'readability_score': round(readability_score, 2),
-        'sentiment_polarity': round(sentiment_polarity, 2),
-        'sentiment_category': sentiment_category,
-        'urgency_level': urgency_level,
-        'viral_potential_score': round(viral_score, 2),
-        
-        # Interactions
-        'hashtag_counts': {
-            'niche_count': niche_count,
-            'generic_count': generic_count
+        'metadataCoreMetrics': {
+            'captionLength': len(caption_text),
+            'wordCount': word_count,
+            'hashtagCount': hashtag_count,
+            'emojiCount': emoji_count,
+            'mentionCount': mention_count,
+            'engagementRate': round(engagement_rate, 2),
+            'viewCount': view_count,
+            'videoDuration': video_duration
         },
-        'engagement_alignment': {
-            'likes_to_views_ratio': round(likes_to_views, 4),
-            'comments_to_views_ratio': round(comments_to_views, 4),
-            'shares_to_views_ratio': round(shares_to_views, 4),
-            'above_average_engagement': engagement_rate > 5.0
+        'metadataDynamics': {
+            'hashtagStrategy': hashtag_strategy,
+            'emojiDensity': emoji_density,
+            'mentionDensity': mention_density,
+            'publishHour': publish_hour,
+            'publishDayOfWeek': publish_day_of_week
+            # REMOVED: captionStyle, readabilityScore, sentimentPolarity, urgencyLevel, viralPotential
         },
-        'creator_context': {
-            'username': author.get('username', 'unknown'),
-            'verified': author.get('verified', False)
+        'metadataInteractions': {
+            'likeCount': like_count,
+            'commentCount': comment_count,
+            'shareCount': share_count
+            # REMOVED: saveCount, engagementVelocity
         },
-        
-        # Key events
-        'hashtags_detailed': [
-            {
-                'tag': f"#{name}",
-                'position': i + 1,
-                'type': 'generic' if name.lower() in generic_hashtags else 'niche',
-                'estimated_reach': 'high' if name.lower() in generic_hashtags else 'medium'
-            }
-            for i, name in enumerate(hashtag_names[:10])  # Limit to 10
-        ],
-        'emojis_detailed': [
-            {
-                'emoji': emoji,
-                'count': emojis.count(emoji),
-                'sentiment': 'positive',  # Simplified
-                'emphasis': True if emojis.count(emoji) > 1 else False
-            }
-            for emoji in set(emojis[:5])  # Unique emojis, limit to 5
-        ],
-        'hooks': hooks,
-        'call_to_actions': ctas,
-        'linguistic_markers': {
-            'question_count': question_count,
-            'exclamation_count': exclamation_count,
-            'caps_lock_words': caps_words,
-            'personal_pronoun_count': pronoun_count
+        'metadataKeyEvents': {
+            'hashtags': hashtag_names,  # ALL hashtags - no limit
+            'keyMentions': mentions[:3],
+            'primaryEmojis': emojis[:3],
+            'hasHook': has_hook,
+            'callToAction': cta_features['hasCTA']  # Binary instead of list
         },
-        'hashtag_patterns': {
-            'lead_with_generic': hashtag_names[0].lower() in generic_hashtags if hashtag_names else False,
-            'all_caps': any(tag.isupper() for tag in hashtag_names)
+        'metadataPatterns': {
+            'hashtagBreakdown': {  # FIX: Add missing generic/niche data
+                'total': hashtag_count,
+                'generic': generic_count,
+                'niche': niche_count,
+                'genericRatio': round(generic_count / hashtag_count if hashtag_count > 0 else 0, 2),
+                'strategy': hashtag_strategy
+            },
+            'ctaFeatures': cta_features,  # ML-ready CTA detection
+            'hasQuestion': has_question,
+            'hasExclamation': has_exclamation
+            # REMOVED: sentimentCategory, urgencyLevel, viralPotential
         },
-        
-        # Quality
-        'caption_quality': caption_quality,
-        'hashtag_quality': hashtag_quality,
-        
-        # Caption text for validation
-        'caption_text': caption_text,
-        'hashtag_list': hashtag_names
+        'metadataQuality': {
+            'wordCount': word_count,  # Keep only this
+            'hasCaption': int(word_count > 0),
+            'linkPresent': int(link_present)
+            # REMOVED: readabilityScore, sentimentPolarity, hashtagRelevance, captionQuality, etc.
+        }
     }
 
 

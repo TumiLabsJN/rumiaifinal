@@ -50,8 +50,8 @@ Transform raw video analysis data (432+ features per video) into **duration-spec
    - Generate bucket-specific insights (no universal patterns across durations)
 
 4. **Creative Report Generation**
-   - Output 5 separate reports (one per duration bucket)
-   - Each report contains bucket-specific creative patterns
+   - Output 10 creative strategy reports
+   - Multiple perspectives and strategies for content creators
    - Format: "What works for 15-second #nutrition videos" (not generic advice)
    - Include bucket performance metrics for strategic content planning
 
@@ -1018,13 +1018,13 @@ def adapt_report_for_audience(base_pattern, audience_type):
 - Combines multiple formats for comprehensive coverage
 - Provides both strategic understanding and tactical execution
 
-#### 10 Creative Reports per Duration Bucket
+#### 10 Creative Strategy Reports per Hashtag Analysis
 
 ```json
 {
   "report_package": "nutrition_creative_guides_2025-01-13",
   "client": "Stateside Grower",
-  "reports_generated": 10,  // Expanded from 5 to 10 for testing
+  "reports_generated": 10,  // 10 comprehensive creative strategies
   "testing_strategy": "A/B test formats with Billo before affiliate distribution",
   "bucket_specific_reports": {
     "0-15s": {
@@ -2589,6 +2589,476 @@ async def process_video_for_ml(video_data):
 - A video with zero gestures but high engagement teaches the model that gestures aren't always necessary
 
 This simplified approach reduces code complexity and focuses on the actual ML logic rather than defensive programming.
+
+### 6.12 Pattern Aggregation via Claude API
+
+#### The Role of Claude in Pattern Generation
+
+After ML training, Claude serves as our pattern aggregation engine, transforming statistical insights into actionable creative strategies.
+
+```python
+def prepare_patterns_for_claude(model, features, engagement_rates):
+    """
+    Prepare ML results for Claude to interpret into 10 creative reports
+    """
+    # Statistical summaries from ML models
+    pattern_data = {
+        "feature_importance": dict(zip(feature_names, model.feature_importances_)),
+        "top_20_features": get_top_features(model, 20),
+        "engagement_tiers": {
+            "top_10_percent": analyze_tier(features, engagement_rates, 90, 100),
+            "top_20_percent": analyze_tier(features, engagement_rates, 80, 90),
+            "average_performers": analyze_tier(features, engagement_rates, 40, 60)
+        },
+        "cluster_analysis": {
+            "num_clusters": 5,
+            "cluster_summaries": get_cluster_characteristics(features, model.clustering)
+        },
+        "duration_bucket_patterns": analyze_by_duration_bucket(features, engagement_rates)
+    }
+    
+    # Request to Claude
+    pattern_data["request"] = """
+    Based on these ML insights, generate 10 distinct creative strategy reports:
+    1. Hook Optimization Strategy
+    2. CTA Effectiveness Guide  
+    3. Pacing & Rhythm Patterns
+    4. Visual Element Coordination
+    5. Emotional Journey Mapping
+    6. Text Overlay Best Practices
+    7. Trend-Jacking Opportunities
+    8. Duration-Specific Tactics
+    9. Engagement Acceleration Techniques
+    10. Viral Replication Framework
+    
+    Each report should include:
+    - Specific, actionable recommendations
+    - Statistical backing from the data
+    - Examples from top performers
+    - Clear do's and don'ts
+    """
+    
+    return pattern_data
+
+async def generate_creative_reports(hashtag_id):
+    """
+    Complete flow from ML to creative reports via Claude
+    """
+    # 1. Load ML results
+    model = load_model(hashtag_id)
+    features = load_features(hashtag_id)
+    engagement_rates = load_engagement_data(hashtag_id)
+    
+    # 2. Prepare pattern data
+    pattern_data = prepare_patterns_for_claude(model, features, engagement_rates)
+    
+    # 3. Send to Claude for interpretation
+    reports = await claude_api.generate_strategies(
+        pattern_data,
+        num_reports=10,
+        report_style="actionable_creative_guide"
+    )
+    
+    # 4. Save reports
+    save_creative_reports(hashtag_id, reports)
+    
+    return reports
+```
+
+#### Why Claude for Pattern Aggregation?
+
+**We provide the statistics:**
+- Feature importance scores
+- Cluster assignments
+- Performance tier comparisons
+- Statistical correlations
+
+**Claude provides the interpretation:**
+- Translates statistics into creative language
+- Identifies non-obvious pattern combinations
+- Generates actionable recommendations
+- Creates narrative structure for reports
+
+**Benefits:**
+- No complex aggregation logic needed in our code
+- Claude's language skills create better reports
+- Flexible report generation based on findings
+- Natural language output ready for clients
+
+### 6.13 Engagement Data Source
+
+#### Engagement Metrics from Apify
+
+All engagement data comes directly from Apify's TikTok scraper output:
+
+```python
+# Apify provides these metrics for each video:
+{
+    "playCount": 3200000,      # → views
+    "diggCount": 346500,       # → likes  
+    "commentCount": 872,        # → comments
+    "shareCount": 15500         # → shares
+}
+
+# We calculate engagement rate as our ML target variable:
+engagement_rate = (likes + comments + shares) / views
+# Example: (346500 + 872 + 15500) / 3200000 = 11.34%
+```
+
+#### Data Flow for Engagement Metrics
+
+```python
+# 1. Apify scrapes TikTok video
+apify_data = await apify_client.scrape_video(video_url)
+
+# 2. Parse into VideoMetadata
+video = VideoMetadata.from_apify_data(apify_data)
+# Automatically maps: playCount→views, diggCount→likes, etc.
+
+# 3. Calculate engagement rate during metadata analysis
+metadata_analysis = {
+    "CoreMetrics": {
+        "engagementRate": 11.34,  # Calculated
+        "viewCount": 3200000,      # From Apify
+    },
+    "Interactions": {
+        "likeCount": 346500,       # From Apify
+        "commentCount": 872,        # From Apify
+        "shareCount": 15500         # From Apify
+    }
+}
+
+# 4. Use as ML target variable
+X = extract_432_features(video_analyses)
+y = [video["engagementRate"] for video in metadata_analyses]
+model.fit(X, y)  # Predict engagement rate
+```
+
+#### Engagement Data Characteristics
+
+**Reliability:**
+- ✅ Apify always provides these metrics (core TikTok data)
+- ✅ If missing, video is skipped (not processed)
+- ✅ Service contracts ensure valid numbers (0 if truly zero)
+
+**Freshness:**
+- Point-in-time snapshot when scraped
+- Sufficient for MVP (analyzing established patterns)
+- No need to track changes over time initially
+
+**Usage in ML Pipeline:**
+```python
+def select_top_videos_by_engagement(videos):
+    """
+    Primary selection criterion for "top performing" videos
+    """
+    for video in videos:
+        # Calculate engagement rate from Apify data
+        engagement_rate = (
+            video.likes + 
+            video.comments + 
+            video.shares
+        ) / video.views
+        
+        video.engagement_rate = engagement_rate
+    
+    # Select top 50 per bucket by engagement rate
+    return sorted(videos, key=lambda x: x.engagement_rate, reverse=True)[:50]
+```
+
+This engagement rate becomes the target variable that our ML models learn to predict based on the 432 creative features.
+
+### 6.14 Data Storage Architecture
+
+#### MVP: File-Based Storage (Recommended)
+
+For the MVP phase, use structured file storage to avoid database complexity:
+
+```python
+class MVPDataStore:
+    """
+    Simple file-based storage for MVP
+    No database required, human-readable JSON files
+    """
+    def __init__(self, base_path="data"):
+        self.base_path = Path(base_path)
+    
+    def save_video_features(self, client, hashtag, video_id, features):
+        """Save extracted features for a video"""
+        path = self.base_path / client / hashtag / "features" / f"{video_id}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        
+        feature_record = {
+            "video_id": video_id,
+            "features": features,
+            "extraction_date": datetime.now().isoformat(),
+            "feature_version": "v1.0"
+        }
+        
+        with open(path, 'w') as f:
+            json.dump(feature_record, f, indent=2)
+    
+    def load_hashtag_features(self, client, hashtag):
+        """Load all features for ML training"""
+        path = self.base_path / client / hashtag / "features"
+        features = []
+        
+        for file in sorted(path.glob("*.json")):
+            with open(file) as f:
+                features.append(json.load(f))
+        
+        return features
+    
+    def save_ml_model(self, client, hashtag, models, scaler):
+        """Save trained models and scaler"""
+        model_path = self.base_path / client / hashtag / "models"
+        model_path.mkdir(parents=True, exist_ok=True)
+        
+        # Save each model
+        for name, model in models.items():
+            joblib.dump(model, model_path / f"{name}_model.pkl")
+        
+        # Save scaler
+        joblib.dump(scaler, model_path / "feature_scaler.pkl")
+        
+        # Save metadata
+        metadata = {
+            "training_date": datetime.now().isoformat(),
+            "model_version": "v1.0",
+            "feature_count": 432,
+            "video_count": len(list((self.base_path / client / hashtag / "features").glob("*.json")))
+        }
+        
+        with open(model_path / "metadata.json", 'w') as f:
+            json.dump(metadata, f, indent=2)
+    
+    def save_patterns(self, client, hashtag, patterns):
+        """Save discovered patterns"""
+        pattern_path = self.base_path / client / hashtag / "patterns"
+        pattern_path.mkdir(parents=True, exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        with open(pattern_path / f"patterns_{timestamp}.json", 'w') as f:
+            json.dump(patterns, f, indent=2)
+```
+
+**Directory Structure:**
+```
+data/
+├── nutritional_supplements/           # Client
+│   └── nutrition/                    # Hashtag
+│       ├── features/                 # Extracted features
+│       │   ├── 7274651255392210219.json
+│       │   ├── 7274651255392210220.json
+│       │   └── ... (200 videos)
+│       ├── models/                   # Trained ML models
+│       │   ├── random_forest_model.pkl
+│       │   ├── decision_tree_model.pkl
+│       │   ├── linear_model.pkl
+│       │   ├── clustering_model.pkl
+│       │   ├── feature_scaler.pkl
+│       │   └── metadata.json
+│       └── patterns/                 # Discovered patterns
+│           └── patterns_20250115_143022.json
+```
+
+**Benefits for MVP:**
+- ✅ **Zero setup** - Start immediately, no database required
+- ✅ **Human readable** - JSON files can be inspected/edited
+- ✅ **Git friendly** - Can version control data and models
+- ✅ **Easy debugging** - See exactly what's stored
+- ✅ **Simple backup** - Just copy files
+
+#### Production: PostgreSQL with JSONB (Future)
+
+For production scale, migrate to PostgreSQL:
+
+```sql
+-- Future production schema
+CREATE TABLE clients (
+    client_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    industry VARCHAR(100),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE hashtags (
+    hashtag_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(client_id),
+    name VARCHAR(255) NOT NULL,
+    tiktok_url VARCHAR(500),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE videos (
+    video_id VARCHAR(50) PRIMARY KEY,
+    hashtag_id UUID REFERENCES hashtags(hashtag_id),
+    duration_segment VARCHAR(20),  -- '0-15s', '16-30s', etc.
+    engagement_metrics JSONB,      -- views, likes, shares, etc.
+    extracted_features JSONB,      -- All 432 ML features
+    processing_date TIMESTAMP,
+    INDEX idx_segment (duration_segment),
+    INDEX idx_hashtag (hashtag_id)
+);
+
+CREATE TABLE ml_models (
+    model_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hashtag_id UUID REFERENCES hashtags(hashtag_id),
+    model_type VARCHAR(50),        -- 'random_forest', 'kmeans', etc.
+    model_binary BYTEA,            -- Serialized model
+    performance_metrics JSONB,
+    feature_importance JSONB,
+    training_date TIMESTAMP DEFAULT NOW(),
+    model_version VARCHAR(20)
+);
+
+CREATE TABLE discovered_patterns (
+    pattern_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hashtag_id UUID REFERENCES hashtags(hashtag_id),
+    pattern_type VARCHAR(100),
+    pattern_data JSONB,
+    confidence_score FLOAT,
+    videos_supporting INTEGER,
+    discovered_date TIMESTAMP DEFAULT NOW()
+);
+```
+
+**Migration Path:**
+1. **MVP Phase**: Use file-based storage
+2. **Validation Phase**: Prove ML value with real clients
+3. **Scale Phase**: Migrate to PostgreSQL when handling multiple clients
+4. **Migration Script**: Simple script to load JSON files into database
+
+**Why This Approach:**
+- Start simple, scale when needed
+- Avoid premature optimization
+- Focus on ML value first, infrastructure later
+- Easy migration path when ready
+
+### 6.15 Statistical Significance & Pattern Validation
+
+#### Sample-Size-Adjusted Significance Thresholds
+
+**Challenge**: Small datasets are naturally harder to achieve statistical significance, but we shouldn't penalize genuine patterns just because we have limited data.
+
+**Solution**: Adjust p-value thresholds based on available sample size while maintaining meaningful effect size requirements.
+
+```python
+def classify_pattern_strength(p_value, effect_size, sample_size):
+    """
+    Sample-size-adjusted pattern classification
+    Prevents small datasets from being unfairly penalized
+    """
+    # Always require meaningful business impact
+    if abs(effect_size) < 0.15:  # Less than 15% improvement
+        return "NEGLIGIBLE - Too small to matter"
+    
+    # Adjust significance thresholds based on sample reality
+    if sample_size >= 80:
+        # Large sample: strict academic standards
+        thresholds = {"high": 0.01, "moderate": 0.05, "preliminary": 0.10}
+    elif sample_size >= 40:
+        # Medium sample: relaxed thresholds
+        thresholds = {"high": 0.05, "moderate": 0.10, "preliminary": 0.15}
+    else:
+        # Small sample: very relaxed but still meaningful
+        thresholds = {"high": 0.10, "moderate": 0.15, "preliminary": 0.20}
+    
+    # Classify based on adjusted thresholds
+    if p_value < thresholds["high"]:
+        return f"HIGH CONFIDENCE ({sample_size} videos)"
+    elif p_value < thresholds["moderate"]:
+        return f"MODERATE CONFIDENCE ({sample_size} videos)"
+    elif p_value < thresholds["preliminary"]:
+        return f"PRELIMINARY ({sample_size} videos)"
+    else:
+        return f"INCONCLUSIVE ({sample_size} videos)"
+```
+
+#### Cross-Validation Strategy
+
+**Adaptive approach** based on available data per bucket:
+
+```python
+def select_validation_method(n_samples):
+    """
+    Choose appropriate validation based on sample size
+    """
+    if n_samples >= 50:
+        return "StratifiedKFold", {"n_splits": 5}
+    elif n_samples >= 30:
+        return "StratifiedKFold", {"n_splits": 3}
+    elif n_samples >= 20:
+        return "Bootstrap", {"n_iterations": 100}
+    else:
+        return "LeaveOneOut", {}
+```
+
+#### Pattern Confidence Reporting
+
+**Clear communication** to end users about pattern reliability:
+
+```python
+# Example output format
+pattern_report = {
+    "pattern": "Videos with 4+ text overlays",
+    "effect": "+28% engagement increase",
+    "confidence": "HIGH CONFIDENCE (85 videos)",
+    "p_value": 0.003,
+    "effect_size": 0.28,
+    "recommendation": "IMPLEMENT - Strong evidence supports this strategy"
+}
+
+preliminary_report = {
+    "pattern": "Hook timing at 2-3 seconds",
+    "effect": "+19% share increase", 
+    "confidence": "PRELIMINARY (34 videos)",
+    "p_value": 0.08,
+    "effect_size": 0.19,
+    "recommendation": "TEST CAREFULLY - Promising but needs more data"
+}
+```
+
+#### Statistical Test Selection
+
+**Appropriate tests** for different pattern types:
+
+```python
+def test_pattern_significance(pattern_type, data_high, data_low):
+    """
+    Select appropriate statistical test based on data type
+    """
+    if pattern_type == "continuous":
+        # T-test for numeric features (overlay count, timing, etc.)
+        from scipy.stats import ttest_ind
+        statistic, p_value = ttest_ind(data_high, data_low)
+        
+    elif pattern_type == "categorical":
+        # Chi-square for categorical features (strategy types, etc.)
+        from scipy.stats import chi2_contingency
+        statistic, p_value, _, _ = chi2_contingency(data_high, data_low)
+        
+    elif pattern_type == "proportion":
+        # Proportion test for binary outcomes
+        from statsmodels.stats.proportion import proportions_ztest
+        statistic, p_value = proportions_ztest(data_high, data_low)
+    
+    return statistic, p_value
+```
+
+#### Implementation Priority
+
+**MVP Requirements:**
+- ✅ Effect size threshold (15% minimum)
+- ✅ Sample-size-adjusted p-values
+- ✅ Clear confidence reporting
+- ✅ Adaptive cross-validation
+
+**Benefits:**
+- **Fair evaluation** regardless of sample size
+- **Business-focused** pattern detection
+- **Transparent confidence** communication
+- **Scientific rigor** without over-conservatism
 
 ---
 
