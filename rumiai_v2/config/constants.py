@@ -66,8 +66,8 @@ FILE_PATTERNS = {
     'scene': '{video_id}_scenes.json',
     'temporal': '{video_id}_temporal_markers.json',
     'unified': '{video_id}.json',
-    'prompt_result': '{prompt_type}_result_{timestamp}.json',
-    'prompt_complete': '{prompt_type}_complete_{timestamp}.json'
+    'analysis_result': '{analysis_type}_result_{timestamp}.json',
+    'analysis_complete': '{analysis_type}_complete_{timestamp}.json'
 }
 
 # Timeline entry types
@@ -125,10 +125,10 @@ PROCESSING_LIMITS = {
     'api_timeout': 300  # 5 minutes
 }
 
-# Cost tracking
+# Cost tracking (legacy - kept for reference)
 COST_ESTIMATES = {
-    'claude_haiku_input': 0.25 / 1_000_000,   # $ per token
-    'claude_haiku_output': 1.25 / 1_000_000,  # $ per token
+    # 'claude_haiku_input': 0.25 / 1_000_000,   # $ per token (removed - Python-only)
+    # 'claude_haiku_output': 1.25 / 1_000_000,  # $ per token (removed - Python-only)
     'apify_video_scrape': 0.001,              # $ per video
     'storage_gb_month': 0.02                  # $ per GB per month
 }

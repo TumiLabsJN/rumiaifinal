@@ -147,10 +147,13 @@ class RumiAIRunner:
             
             # 2. Create _complete file content
             complete_data = {
-                "prompt_type": analysis_type,
+                "analysis_type": analysis_type,
                 "success": True,
-                "response": json.dumps(result_data),
-                "parsed_response": ml_data
+                "result": json.dumps(result_data),
+                "parsed_response": ml_data,
+                "source": "python_precompute",
+                "processing_mode": "python_only",
+                "version": "2.0"
             }
             
             # 3. Generate file paths with same timestamp

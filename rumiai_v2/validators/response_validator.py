@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class ResponseValidator:
-    """Validates Claude responses for 6-block ML output format."""
+    """Validates analysis results for 6-block ML output format."""
     
     # Expected blocks in 6-block format (generic names)
     EXPECTED_BLOCKS = [
@@ -116,8 +116,8 @@ class ResponseValidator:
         Validate a 6-block format response.
         
         Args:
-            response_text: Raw response text from Claude
-            prompt_type: Type of prompt for context
+            response_text: Raw result text from analysis
+            analysis_type: Type of analysis for context
             
         Returns:
             Tuple of (is_valid, parsed_data, errors)

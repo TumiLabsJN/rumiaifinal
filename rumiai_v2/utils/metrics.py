@@ -98,8 +98,8 @@ class VideoProcessingMetrics:
         self.videos_processed = 0
         self.videos_failed = 0
         self.ml_analysis_times = defaultdict(list)
-        self.prompt_times = defaultdict(list)
-        self.prompt_costs = defaultdict(float)
+        self.analysis_times = defaultdict(list)
+        # self.prompt_costs = defaultdict(float)  # Removed - Python-only processing
         self.total_cost = 0.0
     
     def record_video(self, success: bool) -> None:
@@ -113,14 +113,14 @@ class VideoProcessingMetrics:
         """Record ML analysis time."""
         self.ml_analysis_times[model].append(time_seconds)
     
-    def record_prompt_time(self, prompt_type: str, time_seconds: float) -> None:
-        """Record prompt processing time."""
-        self.prompt_times[prompt_type].append(time_seconds)
+    def record_analysis_time(self, analysis_type: str, time_seconds: float) -> None:
+        """Record analysis processing time."""
+        self.analysis_times[analysis_type].append(time_seconds)
     
-    def record_prompt_cost(self, prompt_type: str, cost: float) -> None:
-        """Record prompt cost."""
-        self.prompt_costs[prompt_type] += cost
-        self.total_cost += cost
+    # def record_prompt_cost(self, prompt_type: str, cost: float) -> None:
+    #     """Record prompt cost."""
+    #     self.prompt_costs[prompt_type] += cost
+    #     self.total_cost += cost
     
     def get_summary(self) -> Dict[str, Any]:
         """Get processing summary."""
@@ -132,10 +132,10 @@ class VideoProcessingMetrics:
             if times:
                 avg_ml_times[model] = sum(times) / len(times)
         
-        avg_prompt_times = {}
-        for prompt, times in self.prompt_times.items():
+        avg_analysis_times = {}
+        for analysis, times in self.analysis_times.items():
             if times:
-                avg_prompt_times[prompt] = sum(times) / len(times)
+                avg_analysis_times[analysis] = sum(times) / len(times)
         
         return {
             'total_videos': total_videos,
@@ -143,8 +143,8 @@ class VideoProcessingMetrics:
             'failed': self.videos_failed,
             'success_rate': self.videos_processed / total_videos if total_videos > 0 else 0,
             'average_ml_times': avg_ml_times,
-            'average_prompt_times': avg_prompt_times,
-            'prompt_costs': dict(self.prompt_costs),
-            'total_cost': self.total_cost,
-            'cost_per_video': self.total_cost / total_videos if total_videos > 0 else 0
+            'average_analysis_times': avg_analysis_times,
+            # 'prompt_costs': dict(self.prompt_costs),  # Removed - Python-only
+            # 'total_cost': self.total_cost,  # Removed - Python-only
+            # 'cost_per_video': self.total_cost / total_videos if total_videos > 0 else 0  # Removed
         }

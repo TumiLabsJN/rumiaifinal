@@ -119,7 +119,6 @@ During PersonFramingV2 implementation, I (Claude) was confused multiple times:
 The system has THREE layers of unnecessary transformation:
 1. **COMPUTE_FUNCTIONS** return clean dicts → Good ✅
 2. **Wrapping in fake Claude format** → Bad ❌
-3. **Saving 3 redundant files** → Wasteful ❌
 
 ### The Right Fix: Simplify the Architecture
 
@@ -355,23 +354,6 @@ python scripts/validate_coreblocks.py
 - Easy to add Claude back if needed
 - Can support multiple computation sources
 - Clear versioning
-
-## Migration Path
-
-### Phase 1: Dual Support
-- Add new format alongside old
-- Flag to choose format: `USE_LEGACY_FORMAT=true/false`
-- Gradual migration of consumers
-
-### Phase 2: Deprecation
-- Mark old format as deprecated
-- Convert existing tools to new format
-- Warning messages for legacy usage
-
-### Phase 3: Removal
-- Remove Claude mimicry code
-- Clean up transformation layers
-- Simplify data pipeline
 
 ## Impact Assessment
 
@@ -638,57 +620,6 @@ After each phase:
 - `rumiai_v2/processors/precompute_functions.py` - Line 748 (always empty)
 - `rumiai_v2/processors/precompute_functions_full.py` - Lines 2317-2340 (dead override logic)
 - Function signatures throughout codebase carry unused parameters
-
-**Action**: Remove all `enhanced_human_data` parameters, calls, and conditional logic
-
-### 3. Comprehensive Flow Analysis - Additional Orphaned Legacy Code
-
-After thorough subagent analysis of all 8 analysis flows, found extensive additional dead code:
-
-#### A. Creative Density Flow - Duplicate Implementations
-- **Dead file**: `precompute_functions_full.py:504-700` - Legacy implementation (200+ lines)
-- **Placeholder**: `precompute_functions.py:153-155` - Returns empty dict with warning
-- **Disabled validation**: `precompute_creative_density.py:335-336` - Output contract validation commented out
-- **Professional wrapper inefficiency**: Multiple transformation layers for same data
-
-#### B. Emotional Journey Flow - FEAT Integration Issues  
-- **Dead placeholder**: `compute_emotional_metrics()` placeholder that logs warnings
-- **Complex fallback logic**: FEAT integration with multiple exception handlers (50+ lines)
-- **Hard-coded emotion mapping**: Redundant emotion classification alongside FEAT
-- **Synchronous AsyncIO**: Creates new event loop in sync context (performance issue)
-
-#### C. Metadata Analysis Flow - Over-Engineering
-- **Hashtag classification**: Complex generic/niche logic barely used (20+ lines)
-- **CTA detection**: 4-category processing with minimal value (20+ lines) 
-- **Unused timestamp fields**: `publish_hour`, `publish_day_of_week` calculated but never used
-- **Music analysis redundancy**: Complex processing for often-empty metadata
-
-#### D. Scene Pacing Flow - Claude API Optimization Remnants
-- **Payload compression**: Optimizes for Claude API limits but Claude not used (Lines 4200-4217)
-- **FPS manager**: Imported but never used in computation (Lines 4178-4183)
-- **Over-engineered timestamps**: Supports 1000 changes/second for theoretical edge case
-- **Terminology confusion**: "shots" vs "scenes" inconsistency causing field mapping bugs
-
-#### E. Speech Analysis Flow - Redundant Processing
-- **Multiple audio extraction**: 3 different audio processing paths
-- **Dead environment checks**: `USE_PYTHON_ONLY_PROCESSING` checks (system always Python-only)
-- **JSON stringify/parse cycles**: Unnecessary string conversion then parsing
-- **Extensive try-catch blocks**: Elaborate error handling for unused features
-
-#### F. Temporal Markers Flow - Clean Implementation  
-- **Status**: ✅ **CLEANEST FLOW** - No significant Claude remnants
-- **Minor issues**: Missing integration in precompute system, undefined `self.use_claude_sonnet`
-
-#### G. Visual Overlay Analysis Flow - OCR Redundancy
-- **OCR detection redundancy**: Complex deduplication logic for same data
-- **YOLO redundancy**: Multiple object detection implementations
-- **Sticker processing**: Complex pipeline for minimal functionality
-- **Professional wrapper overhead**: Unnecessary transformation layers
-
-**Files for Complete Removal:**
-- `ml_data_extractor.py` (598 lines of dead code)
-- `precompute_functions_full.py` lines 504-700 (creative density legacy)
-- All `enhanced_human_data` conditional logic (100+ lines across multiple files)
 
 ### 4. Configuration Issues
 

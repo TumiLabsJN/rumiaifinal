@@ -16,7 +16,7 @@ class TimelineEntry:
     """
     Single entry in a timeline.
     
-    CRITICAL: This is used by all ML processors and Claude prompts.
+    CRITICAL: This is used by all ML processors and analysis functions.
     """
     start: Timestamp
     end: Optional[Timestamp]  # None for instantaneous events
@@ -63,7 +63,7 @@ class Timeline:
     """
     Unified timeline structure.
     
-    CRITICAL PATH: This model is used by ALL 7 Claude prompts.
+    CRITICAL PATH: This model is used by ALL 7 analysis types.
     Any failure here affects everything.
     """
     video_id: str

@@ -1968,7 +1968,7 @@ def analyze_framing_progression_simple(framing_timeline):
 
 
 def compute_person_framing_metrics(expression_timeline, object_timeline, camera_distance_timeline,
-                                  person_timeline, enhanced_human_data, duration, gaze_timeline=None):
+                                  person_timeline, duration, gaze_timeline=None):
     """Compute person framing metrics for ML-ready analysis
     
     Args:
@@ -1976,7 +1976,7 @@ def compute_person_framing_metrics(expression_timeline, object_timeline, camera_
         object_timeline: Timeline of detected objects
         camera_distance_timeline: Timeline of camera distances
         person_timeline: Timeline of person detections (currently unused)
-        enhanced_human_data: Enhanced human analysis data from metadata
+        # enhanced_human_data: Enhanced human analysis data (feature removed)
         duration: Video duration in seconds
         
     Returns:
@@ -2238,7 +2238,7 @@ def compute_person_framing_metrics(expression_timeline, object_timeline, camera_
     action_recognition = None
     background_analysis = None
     
-    if enhanced_human_data:
+    if False:  # enhanced_human_data feature removed - always empty dict
         # Use enhanced data if available
         if 'face_screen_time_ratio' in enhanced_human_data:
             face_screen_time_ratio = enhanced_human_data['face_screen_time_ratio']

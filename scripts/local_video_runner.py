@@ -327,9 +327,9 @@ class LocalVideoRunner:
             complete_file = output_dir / f"{analysis_type}_complete_{timestamp}.json"
             with open(complete_file, 'w') as f:
                 json.dump({
-                    'prompt_type': analysis_type,
+                    'analysis_type': analysis_type,
                     'success': True,
-                    'response': json.dumps(result),  # Keep prefixed format in response string
+                    'result': json.dumps(result),  # Keep prefixed format in result string
                     'parsed_response': ml_data  # Use GENERIC names like production!
                 }, f, indent=2)
             
@@ -352,9 +352,9 @@ class LocalVideoRunner:
             tm_complete = tm_dir / f"temporal_markers_complete_{timestamp}.json"
             with open(tm_complete, 'w') as f:
                 json.dump({
-                    'prompt_type': 'temporal_markers',
+                    'analysis_type': 'temporal_markers',
                     'success': True,
-                    'response': json.dumps(temporal_markers),
+                    'result': json.dumps(temporal_markers),
                     'parsed_response': temporal_markers  # temporal_markers doesn't need conversion
                 }, f, indent=2)
             

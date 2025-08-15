@@ -226,7 +226,7 @@ except ImportError as e:
         return {}
     
     def compute_person_framing_metrics(expression_timeline, object_timeline, camera_distance_timeline,
-                                      person_timeline, enhanced_human_data, duration, gaze_timeline=None):
+                                      person_timeline, duration, gaze_timeline=None):
         """Compute person framing metrics using MediaPipe face data from person_timeline"""
         
         # Initialize metrics
@@ -794,8 +794,7 @@ def compute_person_framing_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, A
     speech_timeline = timelines.get('speechTimeline', {})
     gesture_timeline = timelines.get('gestureTimeline', {})  # ADD: Extract gesture timeline
     
-    # Enhanced human data is no longer used - always empty
-    enhanced_human_data = {}
+    # Note: Enhanced human data feature was removed (always empty dict)
     
     duration = analysis_dict.get('timeline', {}).get('duration', 0)
     
@@ -808,7 +807,7 @@ def compute_person_framing_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, A
     # Get basic metrics first
     basic_result = compute_person_framing_metrics(
         expression_timeline, object_timeline, camera_distance_timeline,
-        person_timeline, enhanced_human_data, duration,
+        person_timeline, duration,
         gaze_timeline=timelines.get('gazeTimeline', {})
     )
     

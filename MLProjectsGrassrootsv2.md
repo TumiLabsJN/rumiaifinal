@@ -3672,6 +3672,110 @@ CREATE TABLE pattern_validation_results (
 4. **Claude Integration**: Use for all insights or just final formatting?
 5. **Batch Size Limits**: Hard limit at 200 or allow flexibility?
 6. **Historical Data**: ✅ RESOLVED - Start fresh for ML training pipeline
+7. **Apify Search & Filter**: ✅ RESOLVED - Two-stage filtering approach required
+
+### 7. Apify Search & Filter Capabilities - RESOLVED
+
+**Research Findings**: Apify TikTok scrapers have significant filtering limitations:
+
+#### ❌ What Apify CANNOT Filter:
+- Duration ranges (0-15s, 16-30s, etc.)
+- Engagement thresholds (minimum likes/views) 
+- Sort by engagement rate vs views
+- Combined filters (hashtag AND duration AND date)
+- Date filtering for hashtag searches (profiles only)
+
+#### ✅ What Apify CAN Do:
+- Hashtag search: `#nutrition`
+- Profile usernames: `@username`
+- Keyword search queries
+- Basic output limits (max videos, max comments)
+- Multiple output formats (JSON, CSV, XML, Excel)
+
+#### 🔧 Solution: Two-Stage Filtering Approach
+
+```python
+# Stage 1: Over-collect from Apify
+def collect_videos_from_apify(hashtag, target_total=250):
+    """
+    Collect 3-4x more videos than needed to allow local filtering
+    """
+    apify_results = apify_client.run_actor(
+        "clockworks/tiktok-scraper",
+        run_input={
+            "hashtags": [hashtag],
+            "resultsPerPage": 800,  # Over-collect significantly
+            "addNotFetchedVideos": False
+        }
+    )
+    return apify_results
+
+# Stage 2: Local filtering for duration buckets
+def filter_videos_locally(videos, duration_buckets):
+    """
+    Post-process Apify results to create duration-specific buckets
+    """
+    buckets = {
+        "0-15s": [],
+        "16-30s": [],
+        "31-60s": [],
+        "61-90s": [],
+        "91-120s": []
+    }
+    
+    for video in videos:
+        duration = video.get('video', {}).get('duration', 0)
+        engagement = calculate_engagement_rate(video)
+        
+        # Duration bucketing
+        if 0 <= duration <= 15:
+            bucket = "0-15s"
+        elif 16 <= duration <= 30:
+            bucket = "16-30s"
+        elif 31 <= duration <= 60:
+            bucket = "31-60s"
+        elif 61 <= duration <= 90:
+            bucket = "61-90s"
+        elif 91 <= duration <= 120:
+            bucket = "91-120s"
+        else:
+            continue  # Skip videos outside range
+        
+        # Engagement filtering
+        if engagement >= 1.0:  # Minimum 1% engagement rate
+            buckets[bucket].append(video)
+    
+    return buckets
+
+def calculate_engagement_rate(video):
+    """Calculate engagement rate: (likes + comments + shares) / views * 100"""
+    stats = video.get('stats', {})
+    likes = stats.get('diggCount', 0)
+    comments = stats.get('commentCount', 0) 
+    shares = stats.get('shareCount', 0)
+    views = stats.get('playCount', 1)  # Avoid division by zero
+    
+    return ((likes + comments + shares) / views) * 100
+```
+
+#### Implementation Strategy:
+1. **Over-collect**: Request 800 videos from Apify per hashtag
+2. **Local filter**: Use Python to sort into duration buckets
+3. **Quality check**: Apply engagement rate minimums
+4. **Target distribution**: Aim for 40-50 videos per bucket
+5. **Fallback**: If insufficient videos in any bucket, collect from multiple hashtags
+
+**Benefits**:
+- ✅ Works around Apify's filtering limitations
+- ✅ Gives us exact duration bucket control
+- ✅ Allows custom engagement thresholds
+- ✅ Enables date filtering if createTime available
+- ✅ Scales to multiple hashtags if needed
+
+**Trade-offs**:
+- ⚠️ Higher Apify usage (over-collecting)
+- ⚠️ Additional processing time for local filtering
+- ⚠️ May need multiple hashtag searches for rare buckets (91-120s)
 
 ---
 

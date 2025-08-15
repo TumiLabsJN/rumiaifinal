@@ -53,13 +53,13 @@ class MLAnalysisError(RumiAIError):
         super().__init__(message, video_id)
 
 
-class PromptError(RumiAIError):
-    """Prompt processing error."""
+class AnalysisError(RumiAIError):
+    """Analysis processing error."""
     
-    def __init__(self, prompt_type: str, reason: str, video_id: Optional[str] = None):
-        self.prompt_type = prompt_type
+    def __init__(self, analysis_type: str, reason: str, video_id: Optional[str] = None):
+        self.analysis_type = analysis_type
         self.reason = reason
-        message = f"Prompt '{prompt_type}' failed: {reason}"
+        message = f"Analysis '{analysis_type}' failed: {reason}"
         super().__init__(message, video_id)
 
 

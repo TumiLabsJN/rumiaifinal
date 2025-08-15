@@ -23,8 +23,8 @@ class Settings:
         # API Keys
         self.apify_token = os.getenv('APIFY_API_TOKEN', '')
         
-        # Model settings
-        default_model = 'claude-3-5-sonnet-20241022'
+        # Model settings (legacy - not used in Python-only mode)
+        # default_model = 'claude-3-5-sonnet-20241022'  # Removed - Python-only processing
         
         # Paths
         self.output_dir = Path(os.getenv('RUMIAI_OUTPUT_DIR', 'outputs'))
@@ -47,8 +47,8 @@ class Settings:
         self.use_ml_precompute = True  # HARDCODED
         self.output_format_version = "v2"  # HARDCODED
         
-        # Precompute settings - control which prompts use precompute
-        self.precompute_enabled_prompts = {
+        # Precompute settings - control which analyses use precompute
+        self.precompute_enabled_analyses = {
             'creative_density': True,  # HARDCODED
             'emotional_journey': True,  # HARDCODED
             'person_framing': True,  # HARDCODED
@@ -101,7 +101,7 @@ class Settings:
             'strict_mode': self.strict_mode,
             'cleanup_video': self.cleanup_video,
             'use_ml_precompute': self.use_ml_precompute,
-            'use_claude_sonnet': self.use_claude_sonnet,
+            'processing_mode': 'python_only',
             'output_format_version': self.output_format_version,
             'precompute_enabled_prompts': self.precompute_enabled_prompts,
             'enable_cost_monitoring': self.enable_cost_monitoring

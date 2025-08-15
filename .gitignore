@@ -13,6 +13,8 @@ speech_transcriptions/
 local_analysis_outputs/
 analysis_results/
 prompts_outputs/
+audio_energy_outputs/
+emotion_detection_outputs/
 *.pdf
 
 # 🎥 Media files
