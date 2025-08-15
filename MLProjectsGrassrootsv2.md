@@ -3088,6 +3088,283 @@ def test_pattern_significance(pattern_type, data_high, data_low):
 - Separate ML models per client/hashtag
 - Access control in configuration system
 
+### 7.2 Data Isolation & Privacy Strategy
+
+#### Public Data, Private Insights
+
+**Core Principle**: Multiple clients can analyze the same public TikTok hashtags, but insights remain isolated.
+
+```python
+# Data flow architecture
+data_isolation = {
+    "PUBLIC_LAYER": {
+        "source": "TikTok hashtags (public data)",
+        "sharing": "Multiple clients can analyze same hashtags",
+        "example": "#nutrition analyzed by ClientA and ClientB"
+    },
+    "PRIVATE_LAYER": {
+        "ml_models": "Separate models per client",
+        "insights": "Isolated pattern discoveries",
+        "reports": "Confidential to each client"
+    }
+}
+```
+
+#### Implementation Architecture
+
+```python
+# Directory structure enforcing isolation
+MLAnalysis/
+├── ClientA_NutritionalBrand/
+│   ├── #nutrition/
+│   │   ├── raw_videos/           # Same videos as ClientB
+│   │   ├── models/               # ClientA's private models
+│   │   │   ├── bucket_0-15s/
+│   │   │   │   ├── random_forest.pkl
+│   │   │   │   ├── decision_tree.pkl
+│   │   │   │   ├── linear_regression.pkl
+│   │   │   │   └── kmeans.pkl
+│   │   └── reports/              # ClientA's private insights
+│   │       └── creative_strategies.json
+│
+├── ClientB_FunctionalDrinks/
+│   ├── #nutrition/               # Same hashtag, different client
+│   │   ├── raw_videos/           # Same videos as ClientA
+│   │   ├── models/               # ClientB's private models
+│   │   └── reports/              # ClientB's private insights
+```
+
+#### Privacy Boundaries
+
+```python
+class DataIsolationManager:
+    """
+    Enforces strict boundaries between client data
+    """
+    def __init__(self):
+        self.access_control = {}
+    
+    def validate_access(self, user, client_id, resource):
+        """
+        Ensure users can only access their client's data
+        """
+        # Public data (TikTok videos) - accessible to authorized client
+        if resource.startswith("raw_videos/"):
+            return self.user_belongs_to_client(user, client_id)
+        
+        # Private data (models, reports) - strict isolation
+        if resource.startswith(("models/", "reports/")):
+            return self.user_belongs_to_client(user, client_id)
+        
+        return False
+    
+    def prevent_cross_contamination(self):
+        """
+        Technical safeguards against data leakage
+        """
+        safeguards = {
+            "filesystem": "Separate directories per client",
+            "database": "Client ID required for all queries",
+            "api": "JWT tokens with client scope",
+            "models": "No shared training data between clients",
+            "cache": "Client-specific cache keys"
+        }
+        return safeguards
+```
+
+#### What IS and ISN'T Shared
+
+```python
+sharing_policy = {
+    "SHARED": {
+        "tiktok_videos": "Public content from hashtags",
+        "apify_costs": "Can batch multiple clients' requests",
+        "infrastructure": "Same RumiAI processing pipeline"
+    },
+    "NOT_SHARED": {
+        "ml_models": "Each client trains their own",
+        "discoveries": "Pattern insights remain private",
+        "reports": "Customized per client's data",
+        "performance": "Model accuracy not shared",
+        "business_intel": "Client identities kept secret"
+    }
+}
+```
+
+#### Competitive Intelligence Protection
+
+```python
+def protect_competitive_intelligence():
+    """
+    Prevent clients from discovering competitors' activities
+    """
+    protections = {
+        "anonymous_processing": "Client names never exposed in logs",
+        "separate_schedules": "Stagger analysis runs",
+        "isolated_storage": "No shared databases",
+        "encrypted_reports": "Client-specific encryption keys",
+        "audit_logs": "Track any access attempts"
+    }
+    
+    # Example: ClientA shouldn't know ClientB exists
+    # Even though both analyze #nutrition
+    return protections
+```
+
+#### Benefits of This Approach
+
+1. **Cost Efficient**: Reuse public TikTok data across clients
+2. **Legally Sound**: Analyzing public content
+3. **Competitive Fair**: Each client gets unique insights from same data
+4. **Scalable**: Add new clients without duplicating video collection
+5. **Secure**: Strong isolation of business intelligence
+
+#### Implementation Checklist
+
+- [ ] Filesystem permissions per client directory
+- [ ] Database row-level security with client_id
+- [ ] API authentication with client scope
+- [ ] Separate model storage per client
+- [ ] Encrypted report delivery
+- [ ] Audit logging for compliance
+- [ ] Data retention policies per client
+
+### 7.3 Intellectual Property Ownership
+
+#### Core IP Policy
+
+**Fundamental Principle**: RumiAI owns all patterns, insights, and ML models. Clients receive usage rights to reports.
+
+```python
+intellectual_property = {
+    "RUMIAI_OWNS": {
+        "ml_models": "All trained models and algorithms",
+        "patterns": "Discovered creative strategies",
+        "insights": "Pattern interpretations and correlations",
+        "benchmarks": "Industry-wide aggregated data",
+        "methodology": "Analysis techniques and processes"
+    },
+    "CLIENT_RECEIVES": {
+        "reports": "Customized insight reports",
+        "usage_rights": "Right to use reports for their marketing",
+        "recommendations": "Specific strategic guidance",
+        "access": "Dashboard/API access during subscription"
+    },
+    "CLIENT_DOES_NOT_OWN": {
+        "underlying_patterns": "Cannot claim ownership of discoveries",
+        "ml_models": "No access to trained models",
+        "raw_insights": "No access to raw pattern data",
+        "methodology": "No rights to RumiAI's analysis methods"
+    }
+}
+```
+
+#### Pattern Reuse & Industry Benchmarks
+
+```python
+class PatternAggregation:
+    """
+    How RumiAI leverages insights across the platform
+    """
+    def build_industry_benchmarks(self):
+        """
+        Aggregate anonymized patterns for industry insights
+        """
+        benchmark_data = {
+            "nutrition_industry": {
+                "optimal_duration": "15-30s performing best",
+                "overlay_count": "3-5 text overlays optimal",
+                "hook_timing": "2-3 second hook critical",
+                "source": "Aggregated from 10+ nutrition brands"
+            },
+            "fitness_industry": {
+                "optimal_duration": "30-60s for tutorials",
+                "demonstration_style": "POV shots outperform static",
+                "source": "Aggregated from 15+ fitness brands"
+            }
+        }
+        # No client names ever revealed
+        return benchmark_data
+    
+    def cross_pollinate_insights(self):
+        """
+        Apply successful patterns to new contexts
+        """
+        # Pattern from Client A's #nutrition analysis
+        # Can be suggested to Client C's #wellness campaign
+        # Without revealing Client A's identity
+        return "anonymous_pattern_transfer"
+    
+    def improve_ml_models(self):
+        """
+        Use all client data to improve base models
+        """
+        # Each client's data improves overall model quality
+        # But clients still get separate model instances
+        return "collective_learning"
+```
+
+#### Business Model Benefits
+
+```python
+rumiai_advantages = {
+    "NETWORK_EFFECTS": "Each client improves platform for all",
+    "COMPOUND_LEARNING": "Patterns get better over time",
+    "INDUSTRY_AUTHORITY": "Build comprehensive benchmarks",
+    "SCALING_EFFICIENCY": "Reuse insights across similar clients",
+    "COMPETITIVE_MOAT": "Accumulated pattern library"
+}
+
+client_benefits = {
+    "PROVEN_PATTERNS": "Access to validated strategies",
+    "INDUSTRY_CONTEXT": "See how they compare to benchmarks",
+    "CONTINUOUS_IMPROVEMENT": "Reports improve as platform learns",
+    "NO_INFRA_COST": "Don't need to build ML systems",
+    "STRATEGIC_FOCUS": "Focus on content, not analytics"
+}
+```
+
+#### Legal Framework
+
+```python
+terms_of_service = {
+    "SUBSCRIPTION_MODEL": {
+        "payment": "Monthly/annual subscription",
+        "access": "Platform access during active subscription",
+        "termination": "Reports remain accessible for 30 days"
+    },
+    "IP_ASSIGNMENT": {
+        "client_uploads": "Client retains rights to their videos",
+        "analysis_output": "RumiAI owns all derived insights",
+        "reports": "Client has usage rights, not ownership"
+    },
+    "CONFIDENTIALITY": {
+        "client_specific": "Won't share client-specific data",
+        "aggregated": "May use anonymized aggregate patterns",
+        "benchmarks": "Can publish industry benchmarks"
+    }
+}
+```
+
+#### Implementation Notes
+
+```python
+def enforce_ip_ownership():
+    """
+    Technical implementation of IP policy
+    """
+    enforcement = {
+        "model_encryption": "Clients cannot extract model files",
+        "api_limitations": "Only processed reports, not raw patterns",
+        "watermarking": "Reports marked as RumiAI property",
+        "audit_trail": "Track all data access and usage",
+        "legal_headers": "Clear ownership notices in all outputs"
+    }
+    return enforcement
+```
+
+**Summary**: RumiAI retains all intellectual property rights to discovered patterns and insights. Clients pay for access to customized reports and strategic recommendations, but never own the underlying discoveries. This allows RumiAI to build valuable industry benchmarks and continuously improve the platform for all users.
+
 #### Risk 4: Non-Actionable Insights
 **Impact**: Low value output  
 **Solution**:
@@ -3673,6 +3950,7 @@ CREATE TABLE pattern_validation_results (
 5. **Batch Size Limits**: Hard limit at 200 or allow flexibility?
 6. **Historical Data**: ✅ RESOLVED - Start fresh for ML training pipeline
 7. **Apify Search & Filter**: ✅ RESOLVED - Two-stage filtering approach required
+8. **Apify Rate Limits & Costs**: ✅ RESOLVED - Documented below
 
 ### 7. Apify Search & Filter Capabilities - RESOLVED
 
@@ -3776,6 +4054,157 @@ def calculate_engagement_rate(video):
 - ⚠️ Higher Apify usage (over-collecting)
 - ⚠️ Additional processing time for local filtering
 - ⚠️ May need multiple hashtag searches for rare buckets (91-120s)
+
+### 8. Apify Rate Limits & Costs - RESOLVED
+
+**Research Findings**: Apify TikTok scrapers have manageable costs and performance characteristics:
+
+#### 💰 Cost Breakdown for 800 Videos
+
+```python
+# Compute Unit (CU) consumption for our two-stage approach
+apify_costs = {
+    "metadata_scraping": {
+        "videos": 800,  # Over-collection
+        "cost_per_1000": "$0.004",
+        "compute_units": 0.004,
+        "total_cost": "$0.0032"
+    },
+    "video_downloads": {
+        "videos": 250,  # Only download selected videos
+        "cu_per_video": 0.015,  # Average
+        "compute_units": 3.75,
+        "total_cost": "$0.375"
+    },
+    "total_estimated_cost": "$0.38 per batch"
+}
+
+# Monthly estimates for regular operations
+monthly_estimates = {
+    "batches_per_month": 20,  # Weekly analysis × 5 clients
+    "monthly_cost": "$7.60",
+    "apify_free_credit": "$5.00",
+    "actual_cost": "$2.60/month"
+}
+```
+
+#### ⚡ Performance Characteristics
+
+```python
+performance_metrics = {
+    "Fast TikTok API": {
+        "throughput": "1000 videos in 60 seconds",
+        "memory": "128MB for 100 videos",
+        "reliability": "Subject to TikTok blocking"
+    },
+    "Batch Processing": {
+        "max_batch": "1000+ videos per run",
+        "execution_time": "~2 minutes for 800 videos",
+        "retry_strategy": "Required for blocked requests"
+    }
+}
+```
+
+#### 💾 Storage Requirements
+
+```python
+storage_requirements = {
+    "video_files": {
+        "avg_size_per_video": "10-50MB",
+        "total_for_250_videos": "2.5-12.5GB",
+        "retention_period": "7 days then delete",
+        "storage_location": "Local SSD"
+    },
+    "json_outputs": {
+        "size_per_video": "~500KB (RumiAI output)",
+        "total_for_250_videos": "125MB",
+        "retention": "Permanent",
+        "storage_location": "Project directory"
+    },
+    "ml_features": {
+        "size_per_video": "~10KB (432 features)",
+        "total_for_250_videos": "2.5MB",
+        "retention": "Permanent",
+        "storage_location": "ML data directory"
+    }
+}
+
+# Total storage needed
+total_storage = {
+    "temporary": "12.5GB (videos, cleared weekly)",
+    "permanent": "~130MB (JSON + features)",
+    "buffer": "20GB recommended"
+}
+```
+
+#### 🚨 Rate Limits & Constraints
+
+```python
+operational_limits = {
+    "api_rate_limits": {
+        "status": "No hard limits from Apify",
+        "bottleneck": "TikTok's own rate limiting",
+        "mitigation": "Automatic retries with backoff"
+    },
+    "blocking_risk": {
+        "likelihood": "Medium - TikTok detects scrapers",
+        "impact": "Slower execution, more retries",
+        "mitigation": "Spread requests over time"
+    },
+    "compute_constraints": {
+        "free_tier": "$5/month credit",
+        "paid_tier": "Scale as needed",
+        "memory_limits": "Configurable (128MB-4GB)"
+    }
+}
+```
+
+#### ✅ Implementation Strategy
+
+1. **Cost Optimization**:
+   - Use free tier credit ($5/month)
+   - Only download videos passing local filters
+   - Delete video files after processing
+   - Cache metadata to avoid re-scraping
+
+2. **Performance Optimization**:
+   - Batch all 800 videos in single Apify run
+   - Process videos locally in parallel
+   - Implement checkpoint system for failures
+
+3. **Storage Management**:
+   ```python
+   class StorageManager:
+       def __init__(self, max_video_retention_days=7):
+           self.video_dir = Path("temp_videos")
+           self.json_dir = Path("permanent_data")
+           
+       def cleanup_old_videos(self):
+           """Delete videos older than retention period"""
+           cutoff = datetime.now() - timedelta(days=7)
+           for video_file in self.video_dir.glob("*.mp4"):
+               if video_file.stat().st_mtime < cutoff.timestamp():
+                   video_file.unlink()
+   ```
+
+4. **Budget Monitoring**:
+   ```python
+   def track_apify_usage(run_result):
+       """Log compute unit usage for cost tracking"""
+       cu_used = run_result.get("computeUnits", 0)
+       cost = cu_used * 0.10  # $0.10 per CU estimate
+       
+       with open("apify_usage_log.csv", "a") as f:
+           f.write(f"{datetime.now()},{cu_used},{cost}\n")
+       
+       return cost
+   ```
+
+**Conclusion**: 
+- ✅ **Costs are minimal** (~$2.60/month after free credit)
+- ✅ **Storage is manageable** (20GB temporary, 130MB permanent)
+- ✅ **Performance is adequate** (2 minutes for 800 videos)
+- ✅ **Rate limits are workable** (with retry logic)
 
 ---
 

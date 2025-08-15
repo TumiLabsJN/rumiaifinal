@@ -20,17 +20,30 @@ class AudioEnergyService:
         self.sample_rate = 16000  # Standard rate for audio processing
         self.window_seconds = 5  # 5-second windows for energy analysis
         
-    async def analyze(self, audio_path: Path) -> Dict[str, Any]:
+    async def analyze(self, audio_path: Path, video_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Analyze audio energy from WAV file
         
         Args:
-            audio_path: Path to audio file (WAV format)
+            audio_path: Path to audio file (WAV format) or video file
+            video_id: Optional video ID for shared extraction caching
             
         Returns:
             Dictionary with energy metrics
         """
         try:
+            # Use SharedAudioExtractor if video_id provided (indicates video processing)
+            if video_id:
+                from rumiai_v2.api.shared_audio_extractor import SharedAudioExtractor
+                
+                logger.info(f"Using SharedAudioExtractor for video {video_id}")
+                # Get the shared audio file (will extract only once across all services)
+                audio_path = await SharedAudioExtractor.extract_once(
+                    str(audio_path), 
+                    video_id, 
+                    service_name="audio_energy"
+                )
+            
             # Import librosa here to avoid startup penalty if not used
             import librosa
             

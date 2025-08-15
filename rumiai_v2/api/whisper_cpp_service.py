@@ -318,7 +318,8 @@ class WhisperCppTranscriber:
     
     async def transcribe_with_preprocessing(self,
                                            audio_path: Path,
-                                           language: Optional[str] = None) -> Dict[str, Any]:
+                                           language: Optional[str] = None,
+                                           video_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Transcribe with audio preprocessing for better results
         
@@ -326,7 +327,27 @@ class WhisperCppTranscriber:
         - 16kHz sample rate
         - Mono channel
         - WAV format
+        
+        Args:
+            audio_path: Path to audio file or video file
+            language: Optional language code (en, es, fr, etc.)
+            video_id: Optional video ID for shared extraction caching
         """
+        # Use SharedAudioExtractor if video_id provided (indicates video processing)
+        if video_id:
+            from .shared_audio_extractor import SharedAudioExtractor
+            
+            logger.info(f"Using SharedAudioExtractor for video {video_id}")
+            # Get the shared audio file (will extract only once across all services)
+            audio_path = await SharedAudioExtractor.extract_once(
+                str(audio_path), 
+                video_id, 
+                service_name="whisper_cpp"
+            )
+            # SharedAudioExtractor always returns WAV format, so directly transcribe
+            return await self.transcribe(audio_path, language)
+        
+        # Legacy path for non-video audio files
         # Check if audio needs conversion
         if audio_path.suffix.lower() != '.wav':
             # Convert to WAV

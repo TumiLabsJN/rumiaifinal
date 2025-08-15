@@ -306,6 +306,14 @@ class RumiAIRunner:
             print("📊 completed... (100%)")
             logger.info(f"✅ Processing complete! Total time: {self.metrics.get_time('total_processing'):.1f}s")
             
+            # Cleanup SharedAudioExtractor cache for this video
+            try:
+                from rumiai_v2.api.shared_audio_extractor import SharedAudioExtractor
+                SharedAudioExtractor.cleanup(video_id)
+                logger.info(f"♻️ Cleaned up shared audio cache for {video_id}")
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to cleanup audio cache: {cleanup_error}")
+            
             # Return result in format expected by Node.js
             return {
                 'success': True,
@@ -323,6 +331,14 @@ class RumiAIRunner:
         except Exception as e:
             logger.error(f"Processing failed: {str(e)}", exc_info=True)
             self.video_metrics.record_video(success=False)
+            
+            # Cleanup on failure too
+            try:
+                from rumiai_v2.api.shared_audio_extractor import SharedAudioExtractor
+                if 'video_id' in locals():
+                    SharedAudioExtractor.cleanup(video_id)
+            except:
+                pass  # Ignore cleanup errors on failure
             
             return {
                 'success': False,

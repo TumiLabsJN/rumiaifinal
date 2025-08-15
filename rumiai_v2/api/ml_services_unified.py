@@ -663,33 +663,41 @@ class UnifiedMLServices:
                                  video_path: Path,
                                  video_id: str,
                                  output_dir: Path) -> tuple[Dict[str, Any], Dict[str, Any]]:
-        """Run Whisper and Audio Energy services on shared audio file"""
-        # Extract audio once for both services
-        logger.info(f"Extracting audio for {video_id}")
-        temp_audio = None
+        """Run Whisper and Audio Energy services using SharedAudioExtractor"""
+        from .shared_audio_extractor import SharedAudioExtractor
+        
+        # Both services will use SharedAudioExtractor internally
+        logger.info(f"Running audio services for {video_id} with shared extraction")
         
         try:
-            temp_audio = await extract_audio_simple(video_path)
-            
             # Load both services
             transcriber = await self._ensure_model_loaded('whisper')
             energy_service = await self._ensure_model_loaded('audio_energy')
+            
+            # Note: We pass video_id to services so they use SharedAudioExtractor
             
             if not transcriber:
                 logger.warning("Whisper model not available")
                 whisper_result = self._empty_whisper_result()
             else:
-                # Transcribe using the extracted audio directly
+                # Import WhisperCppTranscriber directly for video_id support
+                from .whisper_cpp_service import WhisperCppTranscriber
+                
+                # Create instance with video_id support
+                whisper_cpp = WhisperCppTranscriber(model='base')
+                
+                # Transcribe with video_id for shared extraction
                 logger.info(f"Running Whisper transcription on {video_id}")
-                whisper_result = await transcriber.transcriber.transcribe(
-                    temp_audio,
-                    timeout=600
+                whisper_result = await whisper_cpp.transcribe_with_preprocessing(
+                    video_path,
+                    video_id=video_id  # Pass video_id to enable shared extraction
                 )
                 whisper_result['metadata'] = {
                     'model': 'whisper.cpp-base',
                     'processed': True,
                     'success': True,
-                    'backend': 'whisper.cpp'
+                    'backend': 'whisper.cpp',
+                    'shared_extraction': True
                 }
                 
                 # Save Whisper results
@@ -702,23 +710,26 @@ class UnifiedMLServices:
                 logger.warning("Audio energy service not available")
                 energy_result = self._empty_audio_energy_result()
             else:
-                # Analyze energy using the same audio file
+                # Analyze energy with video_id for shared extraction
                 logger.info(f"Running audio energy analysis on {video_id}")
-                energy_result = await energy_service.analyze(temp_audio)
+                energy_result = await energy_service.analyze(
+                    video_path, 
+                    video_id=video_id  # Pass video_id to enable shared extraction
+                )
                 
                 # Save energy results
                 await energy_service.save_results(energy_result, video_id, output_dir)
             
+            # Log extraction stats
+            extraction_stats = SharedAudioExtractor.get_stats()
+            if extraction_stats['total_extractions_prevented'] > 0:
+                logger.info(f"🎯 SharedAudioExtractor prevented {extraction_stats['total_extractions_prevented']} redundant extractions")
+            
             return whisper_result, energy_result
             
         finally:
-            # Clean up temporary audio file after BOTH services complete
-            if temp_audio and temp_audio.exists():
-                try:
-                    temp_audio.unlink()
-                    logger.debug(f"Cleaned up temporary audio file: {temp_audio}")
-                except Exception as e:
-                    logger.warning(f"Failed to clean up temp audio: {e}")
+            # Cleanup is now handled by SharedAudioExtractor at the end of video processing
+            pass
         
     def _empty_results(self) -> Dict[str, Any]:
         """Return empty results for all services"""

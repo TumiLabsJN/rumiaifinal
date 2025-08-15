@@ -332,10 +332,10 @@ class VideoAnalyzer:
                 if result.returncode != 0:
                     raise Exception(f"Audio extraction failed: {result.stderr}")
             
-            # Run audio energy analysis
+            # Run audio energy analysis with video_id for shared extraction
             from rumiai_v2.ml_services.audio_energy_service import AudioEnergyService
             service = AudioEnergyService()
-            data = await service.analyze(audio_path)
+            data = await service.analyze(audio_path, video_id=video_id)
             
             # Save results
             output_dir.mkdir(parents=True, exist_ok=True)
