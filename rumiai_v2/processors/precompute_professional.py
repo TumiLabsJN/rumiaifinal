@@ -497,8 +497,6 @@ def compute_emotional_journey_analysis_professional(timelines: Dict[str, Any], d
     
     emotional_interactions = {
         "gestureReinforcement": round(gesture_emotion_alignment, 2),
-        "audioMoodCongruence": 0.0,
-        "captionEmotionAlignment": 0.0,
         "multimodalCoherence": round(multimodal_coherence, 2),
         "emotionalContrastMoments": emotional_contrast_moments[:2],
         "confidence": 0.75

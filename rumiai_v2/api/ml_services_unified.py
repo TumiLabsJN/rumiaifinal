@@ -28,12 +28,14 @@ class UnifiedMLServices:
     def __init__(self):
         self.frame_manager = get_frame_manager()
         self._models = {}  # Models loaded on demand
+        self._gesture_service = None  # Add gesture service instance
         self._model_locks = {
             'yolo': asyncio.Lock(),
             'mediapipe': asyncio.Lock(),
             'ocr': asyncio.Lock(),
             'whisper': asyncio.Lock(),
-            'audio_energy': asyncio.Lock()
+            'audio_energy': asyncio.Lock(),
+            'gesture': asyncio.Lock()  # Add lock for gesture service
         }
         
     async def _ensure_model_loaded(self, model_name: str):
@@ -306,7 +308,8 @@ class UnifiedMLServices:
         all_poses = []
         all_faces = []
         all_hands = []
-        all_gaze = []  # ADD: Collect gaze data from batches
+        all_gaze = []  # Collect gaze data from batches
+        all_gestures = []  # Collect gesture data from batches
         
         for i in range(0, len(mp_frames), batch_size):
             batch = mp_frames[i:i+batch_size]
@@ -318,14 +321,15 @@ class UnifiedMLServices:
             all_poses.extend(batch_results['poses'])
             all_faces.extend(batch_results['faces'])
             all_hands.extend(batch_results['hands'])
-            all_gaze.extend(batch_results.get('gaze', []))  # ADD: Aggregate gaze data
+            all_gaze.extend(batch_results.get('gaze', []))
+            all_gestures.extend(batch_results.get('gestures', []))  # ADD: Aggregate gestures
         
         result = {
             'poses': all_poses,
             'faces': all_faces,
             'hands': all_hands,
-            'gaze': all_gaze,  # ADD: Include gaze in result
-            'gestures': [],  # Would need additional processing
+            'gaze': all_gaze,
+            'gestures': all_gestures,  # Now populated from batches!
             'presence_percentage': (len(all_poses) / len(mp_frames) * 100) if mp_frames else 0,
             'frames_with_people': len(all_poses),
             'metadata': {
@@ -334,7 +338,8 @@ class UnifiedMLServices:
                 'poses_detected': len(all_poses),
                 'faces_detected': len(all_faces),
                 'hands_detected': len(all_hands),
-                'gaze_detected': len(all_gaze)  # ADD: Track gaze detections
+                'gaze_detected': len(all_gaze),
+                'gestures_detected': len(all_gestures)  # ADD: Track gesture detections
             }
         }
         
@@ -353,7 +358,8 @@ class UnifiedMLServices:
         poses = []
         faces = []
         hands = []
-        gaze_data = []  # ADD: Gaze detection results
+        gaze_data = []  # Gaze detection results
+        gestures = []  # Gesture detection results
         
         for frame_data in frames:
             # Convert BGR to RGB
@@ -411,7 +417,26 @@ class UnifiedMLServices:
                         'count': len(hand_results.multi_hand_landmarks)
                     })
                     
-        return {'poses': poses, 'faces': faces, 'hands': hands, 'gaze': gaze_data}
+                    # Process gestures when hands detected (all frames for maximum coverage)
+                    # No sampling - 360ms extra processing is negligible for full gesture detection
+                    # Lazy load gesture service
+                    if self._gesture_service is None:
+                        from .gesture_recognizer_service import GestureRecognizerService
+                        self._gesture_service = GestureRecognizerService()
+                    
+                    # Recognize gestures
+                    frame_gestures = self._gesture_service.recognize_frame(
+                        rgb_frame,  # Already in RGB format from line 362
+                        timestamp_ms=int(frame_data.timestamp * 1000)  # Convert seconds to ms
+                    )
+                    
+                    # Add to results with frame info
+                    for gesture in frame_gestures:
+                        gesture['frame_number'] = frame_data.frame_number
+                        gesture['timestamp'] = frame_data.timestamp  # Keep seconds for consistency
+                    gestures.extend(frame_gestures)
+                    
+        return {'poses': poses, 'faces': faces, 'hands': hands, 'gaze': gaze_data, 'gestures': gestures}
     
     def _compute_gaze_from_mesh(self, face_landmarks, timestamp):
         """Compute gaze direction from MediaPipe FaceMesh landmarks

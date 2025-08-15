@@ -557,11 +557,7 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
                 'face_count': face.get('count', 1)  # Add face count
             }
     
-    # Transform gestures to timeline
-    for gesture in mediapipe_data.get('gestures', []):
-        timestamp = gesture.get('timestamp', 0)
-        timestamp_key = f"{int(timestamp)}-{int(timestamp)+1}s"
-        timelines['gestureTimeline'][timestamp_key] = gesture
+    # Gestures are now extracted from timeline entries below (no longer from MediaPipe data directly)
     
     # Extract gaze data from MediaPipe (new from FaceMesh iris detection)
     for gaze in mediapipe_data.get('gaze', []):
@@ -611,6 +607,37 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
             
             # Add gaze data to gazeTimeline
             timelines['gazeTimeline'][timestamp_key] = entry.get('data', {})
+    
+    # Extract gesture entries from timeline
+    for entry in timeline_entries:
+        if entry.get('entry_type') == 'gesture':
+            timestamp = entry.get('start', 0)
+            if isinstance(timestamp, str) and timestamp.endswith('s'):
+                timestamp = float(timestamp[:-1])
+            elif hasattr(timestamp, 'seconds'):
+                timestamp = timestamp.seconds
+            else:
+                timestamp = float(timestamp)
+            
+            timestamp_key = f"{int(timestamp)}-{int(timestamp)+1}s"
+            
+            # Initialize if not exists
+            if timestamp_key not in timelines['gestureTimeline']:
+                timelines['gestureTimeline'][timestamp_key] = {
+                    'gestures': [],
+                    'confidence': 0
+                }
+            
+            # Add gesture to list
+            gesture_type = entry.get('data', {}).get('type', 'unknown')
+            if gesture_type not in timelines['gestureTimeline'][timestamp_key]['gestures']:
+                timelines['gestureTimeline'][timestamp_key]['gestures'].append(gesture_type)
+            
+            # Update confidence (keep highest)
+            timelines['gestureTimeline'][timestamp_key]['confidence'] = max(
+                timelines['gestureTimeline'][timestamp_key]['confidence'],
+                entry.get('data', {}).get('confidence', 0)
+            )
     
     # Log extraction results for validation
     extraction_summary = {
@@ -764,6 +791,8 @@ def compute_person_framing_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, A
     object_timeline = timelines.get('objectTimeline', {})
     camera_distance_timeline = timelines.get('cameraDistanceTimeline', {})
     person_timeline = timelines.get('personTimeline', {})
+    speech_timeline = timelines.get('speechTimeline', {})
+    gesture_timeline = timelines.get('gestureTimeline', {})  # ADD: Extract gesture timeline
     
     # Enhanced human data is no longer used - always empty
     enhanced_human_data = {}
@@ -785,6 +814,24 @@ def compute_person_framing_wrapper(analysis_dict: Dict[str, Any]) -> Dict[str, A
     
     # Debug logging to check the result
     logger.info(f"compute_person_framing_metrics result: eye_contact_rate={basic_result.get('eye_contact_rate', 0)}, avg_face_size={basic_result.get('avg_face_size', 0)}")
+    
+    # ADD: Compute gesture sync ratio for person framing
+    if gesture_timeline and speech_timeline:
+        # Simple gesture-speech overlap calculation
+        speech_with_gesture = 0
+        total_speech_segments = len(speech_timeline)
+        
+        for speech_timestamp in speech_timeline:
+            # Check if any gesture occurs during this speech
+            if speech_timestamp in gesture_timeline:
+                speech_with_gesture += 1
+        
+        gesture_sync_ratio = speech_with_gesture / total_speech_segments if total_speech_segments > 0 else 0
+    else:
+        gesture_sync_ratio = 0
+    
+    # Add gesture sync to basic result
+    basic_result['speech_gesture_alignment'] = gesture_sync_ratio
     
     # Convert to professional 6-block format
     from .precompute_professional_wrappers import ensure_professional_format

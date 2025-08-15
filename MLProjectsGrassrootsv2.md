@@ -3671,7 +3671,7 @@ CREATE TABLE pattern_validation_results (
 3. **Report Format**: JSON vs PDF vs Interactive Dashboard?
 4. **Claude Integration**: Use for all insights or just final formatting?
 5. **Batch Size Limits**: Hard limit at 200 or allow flexibility?
-6. **Historical Data**: Import existing analyses or start fresh?
+6. **Historical Data**: ✅ RESOLVED - Start fresh for ML training pipeline
 
 ---
 

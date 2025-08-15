@@ -323,8 +323,6 @@ The actual analysis data is in the `response` field as a **stringified JSON**.
   
   "emotionalInteractions": {
     "gestureReinforcement": float,
-    "audioMoodCongruence": float,
-    "captionEmotionAlignment": float,
     "multimodalCoherence": float,
     "emotionalContrastMoments": [],   // Conflicting signals
     "confidence": float

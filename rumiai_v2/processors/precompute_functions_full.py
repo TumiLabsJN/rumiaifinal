@@ -181,7 +181,15 @@ def compute_visual_overlay_metrics(text_overlay_timeline, sticker_timeline, gest
     for timestamp, data in text_overlay_timeline.items():
         text = data.get('text', '').lower()
         if any(keyword in text for keyword in cta_keywords):
-            has_gesture = timestamp in gesture_timeline
+            # Check for gestures within 1 second window
+            text_sec = parse_timestamp_to_seconds(timestamp)
+            has_gesture = False
+            if text_sec is not None:
+                for gesture_ts in gesture_timeline:
+                    gesture_sec = parse_timestamp_to_seconds(gesture_ts)
+                    if gesture_sec is not None and abs(text_sec - gesture_sec) <= 1.0:
+                        has_gesture = True
+                        break
             has_sticker = timestamp in sticker_timeline
             
             if has_gesture and has_sticker:
@@ -275,9 +283,10 @@ def compute_visual_overlay_metrics(text_overlay_timeline, sticker_timeline, gest
                 gesture_sec = parse_timestamp_to_seconds(gesture_ts)
                 if gesture_sec is not None and abs(text_sec - gesture_sec) < 1.0:
                     gesture_data = gesture_timeline[gesture_ts]
-                    if any(g in str(gesture_data).lower() for g in ['point', 'tap', 'swipe']):
+                    gestures_list = gesture_data.get('gestures', [])
+                    if any(g in gestures_list for g in ['pointing', 'thumbs_up']):
                         text_gesture_coordination['aligned'] += 1
-                    else:
+                    elif gestures_list:  # Any other gesture
                         text_gesture_coordination['neutral'] += 1
                     gesture_found = True
                     break
@@ -333,7 +342,8 @@ def compute_visual_overlay_metrics(text_overlay_timeline, sticker_timeline, gest
                 gesture_sec = parse_timestamp_to_seconds(gesture_ts)
                 if gesture_sec is not None and abs(text_sec - gesture_sec) < 0.5:
                     gesture_data = gesture_timeline[gesture_ts]
-                    if 'point' in str(gesture_data).lower() and any(kw in text.lower() for kw in cta_keywords):
+                    gestures_list = gesture_data.get('gestures', [])
+                    if any(g in gestures_list for g in ['pointing', 'thumbs_up']) and any(kw in text.lower() for kw in cta_keywords):
                         key_alignment_moments.append({
                             'timestamp': round(text_sec, 1),
                             'type': 'text_gesture_sync',
