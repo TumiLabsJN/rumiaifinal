@@ -312,62 +312,16 @@ def compute_visual_overlay_analysis_professional(timelines: Dict[str, Any], dura
         "visualOverlayQuality": visual_overlay_quality
     }
 
-def compute_emotional_journey_analysis_professional(timelines: Dict[str, Any], duration: float, frames: Optional[List] = None, timestamps: Optional[List] = None) -> Dict[str, Any]:
+def compute_emotional_journey_analysis_professional(timelines: Dict[str, Any], duration: float) -> Dict[str, Any]:
     """
     Professional emotional journey analysis with FEAT integration
     Called during precompute phase in Python-only flow
+    
+    NOTE: Removed frames/timestamps parameters (2025-08-15) - never used in production
+    FEAT already runs once in video_analyzer._run_emotion_detection()
     """
-    import os
     
-    # If frames provided and Python-only mode, run FEAT emotion detection
-    if frames is not None and timestamps is not None and os.getenv('USE_PYTHON_ONLY_PROCESSING') == 'true':
-        try:
-            import asyncio
-            from ..ml_services.emotion_detection_service import get_emotion_detector
-            
-            # Run FEAT emotion detection
-            detector = get_emotion_detector()
-            
-            # Convert to proper format if needed
-            import numpy as np
-            if frames and len(frames) > 0:
-                # Ensure frames are numpy arrays
-                if not isinstance(frames[0], np.ndarray):
-                    logger.warning("Frames not in numpy array format, skipping FEAT")
-                else:
-                    logger.info(f"Running FEAT on {len(frames)} frames for emotional journey")
-                    
-                    # Run FEAT detection synchronously (we're in a sync context)
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    try:
-                        emotion_data = loop.run_until_complete(
-                            detector.detect_emotions_batch(frames, timestamps)
-                        )
-                        
-                        # Build expression timeline from FEAT results
-                        expression_timeline = {}
-                        for emotion_entry in emotion_data['emotions']:
-                            time_key = f"{int(emotion_entry['timestamp'])}-{int(emotion_entry['timestamp'])+1}s"
-                            expression_timeline[time_key] = {
-                                'emotion': emotion_entry['emotion'],
-                                'confidence': emotion_entry['confidence']
-                            }
-                        
-                        # Update timelines with FEAT results
-                        timelines['expressionTimeline'] = expression_timeline
-                        logger.info(f"FEAT detected emotions in {len(expression_timeline)} time windows")
-                        
-                    finally:
-                        loop.close()
-                        
-        except ImportError:
-            logger.warning("FEAT not available, using existing expression timeline")
-        except Exception as e:
-            logger.error(f"FEAT emotion detection failed: {e}")
-            # Continue with existing timeline - don't fail the entire analysis
-    
-    # Extract relevant timelines (now potentially updated with FEAT data)
+    # Extract relevant timelines (already has FEAT data from video_analyzer)
     expression_timeline = timelines.get('expressionTimeline', {})
     gesture_timeline = timelines.get('gestureTimeline', {})
     speech_timeline = timelines.get('speechTimeline', {})
@@ -479,16 +433,18 @@ def compute_emotional_journey_analysis_professional(timelines: Dict[str, Any], d
         current_emotion = emotion_timestamps[i][1]
         next_emotion = emotion_timestamps[i + 1][1]
         
-        # Define contrasting emotions
-        contrasts = {
-            'happy': ['sad', 'angry', 'fear'],
-            'sad': ['happy', 'surprise'],
-            'angry': ['happy', 'calm'],
-            'surprise': ['neutral', 'sad'],
-            'fear': ['happy', 'confident']
-        }
+        # Valence-based contrast detection (covers all 7 emotions)
+        positive_emotions = {'happy', 'joy', 'surprise'}
+        negative_emotions = {'sad', 'sadness', 'angry', 'anger', 'fear', 'disgust'}
+        neutral_emotions = {'neutral', 'calm'}
         
-        if current_emotion in contrasts and next_emotion in contrasts[current_emotion]:
+        # Detect contrasts by valence change
+        is_contrast = (
+            (current_emotion in positive_emotions and next_emotion in negative_emotions) or
+            (current_emotion in negative_emotions and next_emotion in positive_emotions)
+        )
+        
+        if is_contrast:
             emotional_contrast_moments.append({
                 "timestamp": f"{int(emotion_timestamps[i][0])}-{int(emotion_timestamps[i+1][0])}s",
                 "fromEmotion": current_emotion,
