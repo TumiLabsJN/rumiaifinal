@@ -100,10 +100,10 @@ def compute_creative_density_analysis(timelines: Dict[str, Any], duration: Union
     std_deviation = np.std(density_per_second) if density_per_second else 0
     
     # Step 3.4: Count elements by type
+    
     element_counts = {
         "text": sum(len(v) for v in text_timeline.values()),
         "sticker": sum(len(v) for v in sticker_timeline.values()),
-        "effect": 0,  # Not tracked yet
         "transition": len(scene_timeline),
         "object": sum(v.get('total_objects', 0) for v in object_timeline.values() if isinstance(v, dict)),
         "gesture": sum(len(v) for v in gesture_timeline.values()),
@@ -196,7 +196,6 @@ def compute_creative_density_analysis(timelines: Dict[str, Any], duration: Union
                 "elementBreakdown": {
                     "text": len(text_timeline.get(timestamp, [])),
                     "sticker": len(sticker_timeline.get(timestamp, [])),
-                    "effect": 0,
                     "transition": scene_by_second[second],
                     "scene_change": scene_by_second[second]
                 }
@@ -321,7 +320,6 @@ def compute_creative_density_analysis(timelines: Dict[str, Any], duration: Union
             "detectionReliability": {
                 "textOverlay": 0.95,
                 "sticker": 0.92,
-                "effect": 0.0,  # Not implemented
                 "transition": 0.85,
                 "sceneChange": 0.85,
                 "object": 0.88,

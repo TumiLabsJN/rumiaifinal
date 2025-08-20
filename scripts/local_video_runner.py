@@ -210,101 +210,40 @@ class LocalVideoRunner:
         
         return results
     
-    def convert_to_ml_format(self, prefixed_data: dict, analysis_type: str) -> dict:
-        """Convert prefixed format to ML format by removing type prefix (matching production)."""
-        if analysis_type == 'temporal_markers':
+    def get_prefix_for_type(self, insight_type: str) -> str:
+        """Get the prefix used in RESULT format for each insight type."""
+        prefix_map = {
+            'creative_density': 'density',
+            'emotional_journey': 'emotional',
+            'person_framing': 'personFraming',
+            'scene_pacing': 'scenePacing', 
+            'speech_analysis': 'speech',
+            'visual_overlay_analysis': 'visualOverlay',
+            'metadata_analysis': 'metadata',
+            'temporal_markers': None  # No prefix needed
+        }
+        return prefix_map.get(insight_type, insight_type)
+    
+    def convert_to_ml_format(self, prefixed_data: dict, insight_type: str) -> dict:
+        """Convert prefixed format to ML format by removing type prefix."""
+        if insight_type == 'temporal_markers':
             return prefixed_data  # No conversion needed
         
         ml_data = {}
+        prefix = self.get_prefix_for_type(insight_type)  # e.g., "density", "emotional"
         
-        # Direct mapping of known prefixed keys to generic keys
-        key_mappings = {
-            # Creative density
-            'densityCoreMetrics': 'CoreMetrics',
-            'densityDynamics': 'Dynamics',
-            'densityInteractions': 'Interactions',
-            'densityKeyEvents': 'KeyEvents',
-            'densityPatterns': 'Patterns',
-            'densityQuality': 'Quality',
-            
-            # Emotional journey
-            'emotionalCoreMetrics': 'CoreMetrics',
-            'emotionalDynamics': 'Dynamics',
-            'emotionalInteractions': 'Interactions',
-            'emotionalKeyEvents': 'KeyEvents',
-            'emotionalPatterns': 'Patterns',
-            'emotionalQuality': 'Quality',
-            
-            # Person framing (camelCase)
-            'personFramingCoreMetrics': 'CoreMetrics',
-            'personFramingDynamics': 'Dynamics',
-            'personFramingInteractions': 'Interactions',
-            'personFramingKeyEvents': 'KeyEvents',
-            'personFramingPatterns': 'Patterns',
-            'personFramingQuality': 'Quality',
-            
-            # Scene pacing (camelCase)
-            'scenePacingCoreMetrics': 'CoreMetrics',
-            'scenePacingDynamics': 'Dynamics',
-            'scenePacingInteractions': 'Interactions',
-            'scenePacingKeyEvents': 'KeyEvents',
-            'scenePacingPatterns': 'Patterns',
-            'scenePacingQuality': 'Quality',
-            
-            # Speech analysis
-            'speechCoreMetrics': 'CoreMetrics',
-            'speechDynamics': 'Dynamics',
-            'speechInteractions': 'Interactions',
-            'speechKeyEvents': 'KeyEvents',
-            'speechPatterns': 'Patterns',
-            'speechQuality': 'Quality',
-            
-            # Visual overlay (camelCase)
-            'visualOverlayCoreMetrics': 'CoreMetrics',
-            'visualOverlayDynamics': 'Dynamics',
-            'visualOverlayInteractions': 'Interactions',
-            'visualOverlayKeyEvents': 'KeyEvents',
-            'visualOverlayPatterns': 'Patterns',
-            'visualOverlayQuality': 'Quality',
-            
-            # Metadata analysis
-            'metadataCoreMetrics': 'CoreMetrics',
-            'metadataDynamics': 'Dynamics',
-            'metadataInteractions': 'Interactions',
-            'metadataKeyEvents': 'KeyEvents',
-            'metadataPatterns': 'Patterns',
-            'metadataQuality': 'Quality',
-            
-            # Person framing alternative names
-            'framingCoreMetrics': 'CoreMetrics',
-            'framingDynamics': 'Dynamics',
-            'framingInteractions': 'Interactions',
-            'framingKeyEvents': 'KeyEvents',
-            'framingPatterns': 'Patterns',
-            'framingQuality': 'Quality',
-            
-            # Scene pacing alternative names  
-            'pacingCoreMetrics': 'CoreMetrics',
-            'pacingDynamics': 'Dynamics',
-            'pacingInteractions': 'Interactions',
-            'pacingKeyEvents': 'KeyEvents',
-            'pacingPatterns': 'Patterns',
-            'pacingQuality': 'Quality',
-            
-            # Visual overlay alternative names
-            'overlayCoreMetrics': 'CoreMetrics',
-            'overlayDynamics': 'Dynamics',
-            'overlayInteractions': 'Interactions',
-            'overlayKeyEvents': 'KeyEvents',
-            'overlayPatterns': 'Patterns',
-            'overlayQuality': 'Quality',
-        }
+        if not prefix:
+            return prefixed_data
         
-        # Convert using the mapping
         for key, value in prefixed_data.items():
-            new_key = key_mappings.get(key, key)
-            ml_data[new_key] = value
-                
+            if key.startswith(prefix):
+                # Remove prefix and capitalize first letter
+                new_key = key[len(prefix):]
+                new_key = new_key[0].upper() + new_key[1:] if new_key else key
+                ml_data[new_key] = value
+            else:
+                ml_data[key] = value
+        
         return ml_data
 
     def save_results(self, video_id: str, results: Dict, temporal_markers: Dict):
@@ -314,8 +253,11 @@ class LocalVideoRunner:
         
         # Save each analysis type with 3 files (complete, ml, result)
         for analysis_type, result in results.items():
+            # Skip failed analyses (matching production behavior)
             if isinstance(result, dict) and 'error' in result:
-                continue  # Skip failed analyses
+                continue  # Skip failed analyses - don't create files
+            if not result:  # Also skip empty results
+                continue
                 
             output_dir = base_dir / analysis_type
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -323,14 +265,17 @@ class LocalVideoRunner:
             # Convert to ML format (generic field names) for ml file
             ml_data = self.convert_to_ml_format(result, analysis_type)
             
-            # 1. Save complete file (full response with metadata)
+            # 1. Save complete file (full response with metadata - matching production exactly)
             complete_file = output_dir / f"{analysis_type}_complete_{timestamp}.json"
             with open(complete_file, 'w') as f:
                 json.dump({
                     'analysis_type': analysis_type,
                     'success': True,
                     'result': json.dumps(result),  # Keep prefixed format in result string
-                    'parsed_response': ml_data  # Use GENERIC names like production!
+                    'parsed_response': ml_data,  # Use GENERIC names like production!
+                    'source': 'python_precompute',
+                    'processing_mode': 'python_only',
+                    'version': '2.0'
                 }, f, indent=2)
             
             # 2. Save ML file (with generic field names like production)

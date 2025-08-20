@@ -30,6 +30,53 @@ These production changes propagate automatically:
 - Temporal marker processing updates
 - Core analysis algorithm changes
 
+## 🔬 Why Output Content Is Identical Between Production and Test
+
+### Shared Architecture Ensures Consistency
+
+Both production (`rumiai_runner.py`) and test (`local_video_runner.py`) flows produce identical analysis content because they share the same core processing components:
+
+#### 1. **Shared ML Services**
+Both runners use the exact same ML service implementations:
+- Same `MLServices` class from `rumiai_v2.api`
+- Same `VideoAnalyzer` from `rumiai_v2.processors.video_analyzer`
+- Same `COMPUTE_FUNCTIONS` from `rumiai_v2.processors`
+
+#### 2. **New Modules Are Encapsulated**
+When production adds new ML capabilities (librosa, FEAT, WhisperCPP), these are automatically available to test flow:
+- `librosa` → Used inside `rumiai_v2/ml_services/audio_energy_service.py`
+- `FEAT` → Used inside `rumiai_v2/ml_services/emotion_detection_service.py`
+- `WhisperCPP` → Part of the Whisper service implementation
+- `SharedAudioExtractor` → Shared audio caching service
+
+Since both runners call `VideoAnalyzer.analyze_video()`, they get identical ML results.
+
+#### 3. **Precompute Functions Are Shared**
+Both use the same `COMPUTE_FUNCTIONS` dictionary:
+```python
+# Both production and test do this:
+from rumiai_v2.processors import COMPUTE_FUNCTIONS
+for func_name, func in COMPUTE_FUNCTIONS.items():
+    result = func(analysis.to_dict())  # Same function, same input, same output
+```
+
+### What Requires Updates vs What Doesn't
+
+| Component | Requires Update? | Why |
+|-----------|-----------------|-----|
+| **ML Processing Logic** | ❌ No | Shared modules handle this |
+| **Analysis Algorithms** | ❌ No | Same COMPUTE_FUNCTIONS used |
+| **New ML Libraries** | ❌ No | Encapsulated in shared services |
+| **File Structure/Format** | ✅ Yes | Runner-specific implementation |
+| **Field Naming Patterns** | ✅ Yes | convert_to_ml_format differs |
+| **Output Metadata** | ✅ Yes | complete_data structure differs |
+
+### Key Insight
+The test flow automatically inherits all ML improvements and algorithm updates from production. You only need to update the test runner when:
+1. Output file structure changes (not content)
+2. Field naming conventions change
+3. New metadata fields are added to output files
+
 ## 🛠️ How to Update
 
 ### Step 1: Run Synchronization Check

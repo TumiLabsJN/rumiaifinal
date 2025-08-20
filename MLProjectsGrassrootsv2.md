@@ -29,6 +29,85 @@ Transform raw video analysis data (432+ features per video) into **duration-spec
 
 ---
 
+## 📌 1.5 Document Scope & Boundaries
+
+### In Scope - Technical Architecture Focus
+This High Level Design document focuses on:
+- ML pipeline architecture and data flow
+- Technical implementation details
+- Processing capabilities and performance metrics
+- Feature engineering and model training approach
+- System components and integration points
+- Operational costs for processing ($0.38/batch)
+
+### Explicitly Out of Scope - Business Strategy Elements
+The following business elements are **intentionally excluded** from this technical HLD:
+
+#### Revenue & Pricing Strategy
+- **Not necessary for this HLD** - Client pricing structure (monthly/per-report/per-video) is a business decision to be determined separately based on market testing and value validation
+- **Not necessary for this HLD** - Free vs paid tiers and Enterprise vs SMB pricing models are business/marketing decisions outside the technical architecture scope
+- **Not necessary for this HLD** - Value chain clarity (who pays vs who receives reports) and stakeholder relationship diagrams are business model decisions that don't impact the technical pipeline design. The system processes data and generates reports regardless of the commercial relationships
+
+#### Customer Acquisition & Sales
+- **Not necessary for this HLD** - Customer acquisition strategy, sales processes, and pilot programs are business/marketing concerns that don't impact technical design
+- **Not necessary for this HLD** - Onboarding processes from a sales perspective (technical onboarding is covered in implementation)
+
+#### Customer Pain Points & Problem Statement
+- **Not necessary for this HLD** - Specific customer pain points and problem statements are business/market research concerns that don't impact technical architecture design
+- **Not necessary for this HLD** - Cost of customer pain and ROI justification are business case elements maintained in separate business planning documents
+- **Not necessary for this HLD** - Analysis of why customers haven't solved this already (build vs buy decisions) is a market positioning concern outside the technical scope
+
+### Rationale for Scope Boundaries
+This document serves as a technical blueprint for the ML training pipeline. Business strategy elements, while important for overall success, are maintained in separate business planning documents to:
+1. Keep technical design focused and actionable
+2. Allow business strategy to evolve independently without requiring technical redesign
+3. Enable different stakeholders to focus on their areas of expertise
+
+---
+
+## 📊 1.6 Stakeholder Model & Value Flow
+
+### Primary Customer: Brands/Clients
+- **Definition**: Companies (e.g., nutritional supplement brands, functional drink companies) who pay for our ML-driven content strategy services
+- **What they receive**: Executive-level reports showcasing analysis depth and strategic insights
+- **Role**: Pay for service, receive high-level insights, but DO NOT execute content strategies themselves
+- **Relationship**: All interactions with content creators flow through Tumi Labs (no direct brand-creator relationship)
+
+### Value Delivery Chain
+```
+Tumi Labs (ML Analysis & Intermediary) → Brands/Clients (Pay) → UGC Factories/Content Creators (Execute)
+                     ↑__________________________|
+                     All communication flows through Tumi Labs
+```
+
+### Content Execution Partners
+1. **UGC Factories** (User Generated Content Factories)
+   - Professional content production companies
+   - Receive identical PDF reports as individual creators
+   - Execute content strategies at scale
+
+2. **Content Creators/Affiliates** (terms used interchangeably)
+   - Individual creators who promote brands
+   - Receive identical PDF reports as UGC factories
+   - Implement viral content strategies based on our ML insights
+
+### Deliverable Differentiation
+- **For Brands/Clients**: High-level executive reports demonstrating research depth and ROI potential
+- **For UGC/Creators**: Actionable PDF reports with specific creative strategies to test and implement (identical for both UGC and individual creators)
+- **Key Distinction**: Brands receive insights for strategic understanding; Creators receive instructions for tactical execution
+
+### Business Model Clarification
+- **Model Type**: B2B2C with Tumi Labs as complete intermediary
+- **Revenue Source**: Brands/Clients pay Tumi Labs
+- **Value Creation**: ML insights enable creators to produce higher-performing content
+- **Success Metric**: Increased viral/popular content rates for brand-affiliated creators
+- **Communication Flow**: All brand-creator interactions managed through Tumi Labs
+
+### Future Considerations (Post-MVP)
+- **Performance Feedback Loop**: Potential Phase 2 feature to collect creator performance data and improve ML models based on actual implementation results
+
+---
+
 ## 📐 2. System Architecture
 
 ### 2.1 Goals - Core Functionalities
@@ -1167,65 +1246,6 @@ class ReportFormatOptimizer:
 
 #### Example: Same Pattern, Two Audiences
 
-**For Billo Creators (Clear but Human)**:
-```markdown
-# The Energy Crash Hook - Test Version 4
-*Goal: Capture that relatable tired moment we all have*
-
-## Your 15-Second Story:
-
-**Opening (first 2 seconds):**
-Start with a tired/exhausted expression - really sell it!
-Add text: "2pm crash?" (big, bright yellow works best)
-
-**Product Reveal (seconds 3-5):**
-Hold up the product naturally, like you just remembered you have it
-Show the label clearly to camera
-
-**The Promise (seconds 6-14):**
-Your energy starts shifting - show the transformation beginning
-Add text: "Natural energy boost" when you're explaining
-Keep the product visible while you talk
-
-**Strong Finish (final second):**
-End with confidence - you've found your solution
-Final text: Your personal testimony (e.g., "Game changer!")
-
-## Key Elements We're Testing:
-✓ That tired-to-energized transformation 
-✓ Product visible about half the video
-✓ 3 text overlays that reinforce your story
-✓ Upbeat music that matches your energy shift
-✓ Your authentic enthusiasm (but keep it high energy!)
-
-## What We Need From You:
-- Film 3 versions with slightly different energy levels
-- Keep it exactly 15 seconds (14-16 is fine)
-- Vertical format for TikTok
-- Use trending audio if you know one that fits!
-```
-
-**For Affiliate Creators (Inspiration Guide)**:
-```markdown
-# The "Afternoon Slump" Formula 
-*Why it works: Everyone relates to energy crashes*
-
-## The Flow That's Getting 100K+ Views:
-Start with that moment we ALL know (2pm slump, pre-workout drag, morning struggle - pick YOUR moment). Show the product as your personal discovery. Share the ONE benefit that changed things for you.
-
-## Make It Yours:
-- YOUR tired moment (make it real)
-- YOUR energy style (hyped or calm)
-- YOUR words (don't script it)
-
-## What The Algorithm Loves:
-✓ Problem in first 2 seconds (they relate instantly)
-✓ Product appears early (builds trust)
-✓ Clear transformation (before/after energy)
-
-## Creators Crushing It:
-@fitnessmom: "Mom life exhaustion" angle → 150K views
-@officegrind: "Corporate zombie" approach → 89K views
 
 Time: 30 min to film, 15 min to edit
 ```
@@ -1810,33 +1830,9 @@ def calculate_pattern_confidence(pattern_data):
 
 ---
 
-## 📦 6. Technical Dependencies
+## 🔧 6. Feature Engineering Pipeline
 
-### 6.1 Existing RumiAI Components (Already Implemented)
-- ✅ `rumiai_runner.py` - Main orchestration script
-- ✅ `ml_services_unified.py` - ML model implementations (YOLO, Whisper, etc.)
-- ✅ `precompute_professional.py` - 432+ feature generation
-- ✅ `apify_client.py` - TikTok video acquisition
-- ✅ Python-only processing pipeline ($0.00 cost)
-
-### 6.2 New Components Required
-- 🔨 `ml_training_orchestrator.py` - Batch processing controller
-- 🔨 `checkpoint_manager.py` - Failure recovery system
-- 🔨 `client_config_manager.py` - Multi-tenant configuration
-- 🔨 `pattern_recognition.py` - ML model training with ensemble consensus
-- 🔨 `creative_report_generator.py` - Insight formatting
-
-**Note**: Feature engineering not required - `precompute_professional.py` already outputs 432+ ML-ready features
-
-### 6.3 External Dependencies
-- **ML Libraries**: scikit-learn, pandas, numpy (ensemble models and basic data handling)
-- **Claude API**: For final insight generation (optional)
-- **Storage**: Local filesystem or S3 for checkpoint/result storage
-- **Database**: SQLite/PostgreSQL for client/hashtag configuration
-
-**Simplified Requirements**: No complex feature engineering needed since RumiAI's precompute functions already output ML-ready numeric features
-
-### 6.4 Feature Engineering Pipeline: Variable-Length Timeline Handling
+### 6.1 Variable-Length Timeline Handling
 
 #### The Challenge: Complex Nested Structures
 
@@ -1921,7 +1917,7 @@ features = statistical_features + window_features + key_moment_features
 
 This comprehensive approach ensures our ML models can learn both the **what** (elements used) and the **when** (timing patterns) of viral creative strategies.
 
-### 6.5 Dynamic Keys Problem: Inconsistent Feature Schema
+### 6.2 Dynamic Keys Problem: Inconsistent Feature Schema
 
 #### The Challenge: Sparse Co-occurrence Data
 
@@ -2070,7 +2066,7 @@ flows_to_audit = [
 
 **Timeline**: 2-3 days for complete audit and standardization
 
-### 6.7 Categorical String Encoding Strategy
+### 6.3 Categorical String Encoding Strategy
 
 #### Reality Check: Only 17 Categorical Fields
 
@@ -2112,7 +2108,7 @@ def encode_categoricals(features):
 - Tree-based models (RandomForest, XGBoost) handle it well
 - Standard sklearn implementation
 
-### 6.8 Complete Feature Engineering Pipeline
+### 6.4 Complete Feature Engineering Pipeline
 
 #### Feature Breakdown (432 Total)
 
@@ -2166,7 +2162,7 @@ def extract_all_432_features(raw_output):
 - **50 (11%)**: One-hot encoded categoricals
 - **0 (0%)**: Other strings dropped for MVP
 
-### 6.9 Checkpoint & Resume System for Sequential Processing
+### 6.5 Checkpoint & Resume System for Sequential Processing
 
 #### The Challenge
 
@@ -2320,7 +2316,7 @@ Processing video 80/200: 7374651255392210219
 ✅ Successfully processed all 200 videos!
 ```
 
-### 6.10 Feature Scaling Strategy for Ensemble Models
+### 6.6 Feature Scaling Strategy for Ensemble Models
 
 #### Why Scaling is Required
 
@@ -2471,7 +2467,7 @@ def predict_new_video(video_features, hashtag_id):
 3. **Robust to Outliers**: Viral videos won't distort scaling
 4. **No Feature Selection**: Use all 432 features (let models decide importance)
 
-### 6.11 Missing Data Handling: Simplified by Service Contracts
+### 6.7 Missing Data Handling: Simplified by Service Contracts
 
 #### Upstream Service Contracts Guarantee Valid Data
 
@@ -2590,7 +2586,7 @@ async def process_video_for_ml(video_data):
 
 This simplified approach reduces code complexity and focuses on the actual ML logic rather than defensive programming.
 
-### 6.12 Pattern Aggregation via Claude API
+### 6.8 Pattern Aggregation via Claude API
 
 #### The Role of Claude in Pattern Generation
 
@@ -2685,7 +2681,7 @@ async def generate_creative_reports(hashtag_id):
 - Flexible report generation based on findings
 - Natural language output ready for clients
 
-### 6.13 Engagement Data Source
+### 6.9 Engagement Data Source
 
 #### Engagement Metrics from Apify
 
@@ -2768,7 +2764,7 @@ def select_top_videos_by_engagement(videos):
 
 This engagement rate becomes the target variable that our ML models learn to predict based on the 432 creative features.
 
-### 6.14 Data Storage Architecture
+### 6.10 Data Storage Architecture
 
 #### MVP: File-Based Storage (Recommended)
 
@@ -2935,7 +2931,7 @@ CREATE TABLE discovered_patterns (
 - Focus on ML value first, infrastructure later
 - Easy migration path when ready
 
-### 6.15 Statistical Significance & Pattern Validation
+### 6.11 Statistical Significance & Pattern Validation
 
 #### Sample-Size-Adjusted Significance Thresholds
 
@@ -3062,9 +3058,235 @@ def test_pattern_significance(pattern_type, data_high, data_low):
 
 ---
 
-## ⚠️ 7. Risk Mitigation & Complexity Management
+## 📦 7. Technical Dependencies
 
-### 7.1 Identified Risks & Solutions
+### 7.1 Existing RumiAI Components (Already Implemented)
+- ✅ `rumiai_runner.py` - Main orchestration script
+- ✅ `ml_services_unified.py` - ML model implementations (YOLO, Whisper, etc.)
+- ✅ `precompute_professional.py` - 432+ feature generation
+- ✅ `apify_client.py` - TikTok video acquisition
+- ✅ Python-only processing pipeline ($0.00 cost)
+
+### 7.2 New Components Required
+- 🔨 `ml_training_orchestrator.py` - Batch processing controller
+- 🔨 `checkpoint_manager.py` - Failure recovery system
+- 🔨 `client_config_manager.py` - Multi-tenant configuration
+- 🔨 `pattern_recognition.py` - ML model training with ensemble consensus
+- 🔨 `creative_report_generator.py` - Insight formatting
+
+### 7.3 External Dependencies
+- **ML Libraries**: scikit-learn, pandas, numpy (ensemble models and basic data handling)
+- **Claude API**: For final insight generation
+- **Storage**: Local filesystem for checkpoint/result storage
+- **Database**: SQLite/PostgreSQL for client/hashtag configuration (future)
+
+---
+
+## 🔄 8. Operational Processes
+
+### 8.1 Update Frequency Strategy
+
+#### Manual Monthly Refresh Approach
+
+**Decision**: Models will be retrained monthly with manual initiation.
+
+```python
+update_strategy = {
+    "FREQUENCY": "Monthly",
+    "METHOD": "Manual initiation",
+    "OWNER": "You will handle this",
+    "DATA_WINDOW": "Decided at runtime based on needs"
+}
+```
+
+#### Implementation Process
+
+```python
+class MonthlyUpdateProcess:
+    """
+    Simple manual monthly refresh workflow
+    """
+    def monthly_refresh_checklist(self):
+        """
+        Manual steps for monthly model refresh
+        """
+        steps = [
+            "1. Review last month's pattern performance",
+            "2. Decide data window (last 30, 60, or 90 days)",
+            "3. Run Apify scraper for each client/hashtag",
+            "4. Process videos through RumiAI pipeline",
+            "5. Retrain all models with new data",
+            "6. Generate updated reports",
+            "7. Archive previous month's models",
+            "8. Notify clients of new insights (if applicable)"
+        ]
+        return steps
+    
+    def data_window_decision_factors(self):
+        """
+        Factors to consider when choosing data window
+        """
+        return {
+            "30_days": "Most fresh, but limited data",
+            "60_days": "Balanced freshness and volume",
+            "90_days": "More patterns, some may be stale",
+            "seasonal": "Adjust for holidays/events"
+        }
+```
+
+#### Model Versioning
+
+```python
+model_storage = {
+    "naming": "models/2024_01_random_forest.pkl",
+    "retention": "Keep 3 months of history",
+    "comparison": "Can compare month-over-month patterns",
+    "rollback": "Can revert if new model underperforms"
+}
+```
+
+#### Benefits of Manual Approach
+
+- **Full control** over when and how to update
+- **Cost conscious** - only run when needed
+- **Flexible** - adjust data window based on context
+- **Quality assurance** - review before deploying
+- **Learn and iterate** - understand what works before automating
+
+### 8.2 Creator Compliance Tracking (Manual MVP)
+
+#### Context
+
+**Key Understanding**: Clients don't directly use recommendations. Content creators working on behalf of clients implement the recommendations.
+
+```python
+relationship_structure = {
+    "RumiAI": "Generates pattern recommendations",
+    "Client": "Brand that hires creators",
+    "Creators": "Actually implement recommendations in videos",
+    "Example": "30 creators work for Brand A, 10 post videos"
+}
+```
+
+#### Manual Compliance Tracking Workflow
+
+```python
+class CreatorComplianceTracker:
+    """
+    Manual system to track which recommendations creators actually implement
+    """
+    
+    def weekly_tracking_spreadsheet(self):
+        """
+        Simple spreadsheet structure for manual tracking
+        """
+        spreadsheet_columns = {
+            "A": "Creator Name",
+            "B": "Video URL",
+            "C": "Rec 1: 3+ Text Overlays (Y/N)",
+            "D": "Rec 2: 2-3s Hook (Y/N)",
+            "E": "Rec 3: CTA at 12-15s (Y/N)",
+            "F": "Rec 4: POV Style (Y/N)",
+            "G": "Rec 5: Trending Audio (Y/N)",
+            "H": "Compliance % (auto-calculated)",
+            "I": "Video Engagement Rate",
+            "J": "Notes"
+        }
+        return spreadsheet_columns
+    
+    def calculate_compliance(self, creator_video):
+        """
+        Manual process to calculate compliance
+        """
+        process = [
+            "1. Watch creator's posted video",
+            "2. Check each recommendation (Y/N)",
+            "3. Count implemented recommendations",
+            "4. Divide by total recommendations",
+            "5. Record engagement metrics"
+        ]
+        
+        # Example calculation
+        example = {
+            "recommendations_given": 5,
+            "actually_implemented": 3,
+            "compliance_rate": "60%",
+            "engagement_rate": "4.2%"
+        }
+        return example
+    
+    def pattern_validation_scoring(self):
+        """
+        Determine which patterns actually work
+        """
+        validation_matrix = {
+            "HIGH_COMPLIANCE_HIGH_ENGAGEMENT": "Pattern validated ✅",
+            "HIGH_COMPLIANCE_LOW_ENGAGEMENT": "Pattern needs revision ⚠️",
+            "LOW_COMPLIANCE_HIGH_ENGAGEMENT": "Creators found better approach 🤔",
+            "LOW_COMPLIANCE_LOW_ENGAGEMENT": "Expected - didn't follow guidance ❌"
+        }
+        return validation_matrix
+```
+
+#### Monthly Summary Analysis
+
+```python
+def monthly_pattern_effectiveness():
+    """
+    Aggregate compliance data to improve recommendations
+    """
+    insights = {
+        "most_implemented": "Which patterns creators actually use",
+        "highest_performing": "Which patterns drive engagement",
+        "most_ignored": "Which patterns are too complex/ineffective",
+        "creator_innovations": "New patterns creators discovered"
+    }
+    
+    # Example monthly summary
+    summary = {
+        "Brand_A": {
+            "total_creators": 30,
+            "creators_posted": 10,
+            "avg_compliance": "45%",
+            "patterns_validated": [
+                "3+ text overlays (8/10 implemented, +15% engagement)",
+                "2-3s hook (7/10 implemented, +22% engagement)"
+            ],
+            "patterns_ignored": [
+                "Complex transitions (2/10 implemented)",
+                "Specific hashtag placement (1/10 implemented)"
+            ]
+        }
+    }
+    return summary
+```
+
+#### Implementation Notes
+
+```python
+tracking_requirements = {
+    "TIME_INVESTMENT": "~5 minutes per video to analyze",
+    "TOOLS_NEEDED": "Google Sheets or Excel",
+    "FREQUENCY": "Weekly tracking, monthly analysis",
+    "FUTURE_AUTOMATION": "Consider VA or automated video analysis later",
+    "DATA_VALUE": "Real feedback loop to improve ML patterns"
+}
+```
+
+**Benefits**:
+- Simple to start immediately
+- Real data on pattern effectiveness
+- Identifies which creators follow guidance
+- Improves future recommendations
+- No complex systems needed
+
+**Future Enhancement**: Once proven, can hire VA or build automated compliance checking system.
+
+---
+
+## ⚠️ 9. Risk Mitigation & Complexity Management
+
+### 9.1 Identified Risks & Solutions
 
 #### Risk 1: Video Processing Failures
 **Impact**: Incomplete dataset for ML training  
@@ -3088,7 +3310,7 @@ def test_pattern_significance(pattern_type, data_high, data_low):
 - Separate ML models per client/hashtag
 - Access control in configuration system
 
-### 7.2 Data Isolation & Privacy Strategy
+### 9.2 Data Isolation & Privacy Strategy
 
 #### Public Data, Private Insights
 
@@ -3229,7 +3451,7 @@ def protect_competitive_intelligence():
 - [ ] Audit logging for compliance
 - [ ] Data retention policies per client
 
-### 7.3 Intellectual Property Ownership
+### 9.3 Intellectual Property Ownership
 
 #### Core IP Policy
 
@@ -3381,7 +3603,7 @@ def enforce_ip_ownership():
 
 ---
 
-## 📊 8. Success Metrics & KPIs
+## 📊 10. Success Metrics & KPIs
 
 ### Business Value Metrics - Human-Actionable Output Quality
 - **Primary Goal**: Creative reports must provide implementable insights that video creators can execute
@@ -3912,7 +4134,7 @@ CREATE TABLE pattern_validation_results (
 
 ---
 
-## 🚀 9. Implementation Roadmap
+## 🚀 11. Implementation Roadmap
 
 ### Week 1-2: Foundation
 - [ ] Create `ml_training_orchestrator.py`
@@ -3941,274 +4163,112 @@ CREATE TABLE pattern_validation_results (
 
 ---
 
-## 📝 10. Open Questions & Decisions Needed
+## 📝 12. Open Questions & Decisions Needed
 
-1. **ML Model Selection**: Random Forest vs XGBoost vs Neural Networks?
-2. **Feature Storage**: Local filesystem vs Database vs Cloud storage?
-3. **Report Format**: JSON vs PDF vs Interactive Dashboard?
-4. **Claude Integration**: Use for all insights or just final formatting?
-5. **Batch Size Limits**: Hard limit at 200 or allow flexibility?
+All major decisions have been resolved:
+
+1. **ML Model Selection**: ✅ RESOLVED - Ensemble approach (RandomForest + DecisionTree + LinearRegression + KMeans)
+2. **Feature Storage**: ✅ RESOLVED - File-based for MVP (see Section 6.10)
+3. **Report Format**: ✅ RESOLVED - PDF for MVP, interactive dashboard later
+4. **Claude Integration**: ✅ RESOLVED - Claude interprets all patterns and generates insights
+5. **Batch Size Limits**: ✅ RESOLVED - Flexible, decided at runtime
 6. **Historical Data**: ✅ RESOLVED - Start fresh for ML training pipeline
-7. **Apify Search & Filter**: ✅ RESOLVED - Two-stage filtering approach required
-8. **Apify Rate Limits & Costs**: ✅ RESOLVED - Documented below
-
-### 7. Apify Search & Filter Capabilities - RESOLVED
-
-**Research Findings**: Apify TikTok scrapers have significant filtering limitations:
-
-#### ❌ What Apify CANNOT Filter:
-- Duration ranges (0-15s, 16-30s, etc.)
-- Engagement thresholds (minimum likes/views) 
-- Sort by engagement rate vs views
-- Combined filters (hashtag AND duration AND date)
-- Date filtering for hashtag searches (profiles only)
-
-#### ✅ What Apify CAN Do:
-- Hashtag search: `#nutrition`
-- Profile usernames: `@username`
-- Keyword search queries
-- Basic output limits (max videos, max comments)
-- Multiple output formats (JSON, CSV, XML, Excel)
-
-#### 🔧 Solution: Two-Stage Filtering Approach
-
-```python
-# Stage 1: Over-collect from Apify
-def collect_videos_from_apify(hashtag, target_total=250):
-    """
-    Collect 3-4x more videos than needed to allow local filtering
-    """
-    apify_results = apify_client.run_actor(
-        "clockworks/tiktok-scraper",
-        run_input={
-            "hashtags": [hashtag],
-            "resultsPerPage": 800,  # Over-collect significantly
-            "addNotFetchedVideos": False
-        }
-    )
-    return apify_results
-
-# Stage 2: Local filtering for duration buckets
-def filter_videos_locally(videos, duration_buckets):
-    """
-    Post-process Apify results to create duration-specific buckets
-    """
-    buckets = {
-        "0-15s": [],
-        "16-30s": [],
-        "31-60s": [],
-        "61-90s": [],
-        "91-120s": []
-    }
-    
-    for video in videos:
-        duration = video.get('video', {}).get('duration', 0)
-        engagement = calculate_engagement_rate(video)
-        
-        # Duration bucketing
-        if 0 <= duration <= 15:
-            bucket = "0-15s"
-        elif 16 <= duration <= 30:
-            bucket = "16-30s"
-        elif 31 <= duration <= 60:
-            bucket = "31-60s"
-        elif 61 <= duration <= 90:
-            bucket = "61-90s"
-        elif 91 <= duration <= 120:
-            bucket = "91-120s"
-        else:
-            continue  # Skip videos outside range
-        
-        # Engagement filtering
-        if engagement >= 1.0:  # Minimum 1% engagement rate
-            buckets[bucket].append(video)
-    
-    return buckets
-
-def calculate_engagement_rate(video):
-    """Calculate engagement rate: (likes + comments + shares) / views * 100"""
-    stats = video.get('stats', {})
-    likes = stats.get('diggCount', 0)
-    comments = stats.get('commentCount', 0) 
-    shares = stats.get('shareCount', 0)
-    views = stats.get('playCount', 1)  # Avoid division by zero
-    
-    return ((likes + comments + shares) / views) * 100
-```
-
-#### Implementation Strategy:
-1. **Over-collect**: Request 800 videos from Apify per hashtag
-2. **Local filter**: Use Python to sort into duration buckets
-3. **Quality check**: Apply engagement rate minimums
-4. **Target distribution**: Aim for 40-50 videos per bucket
-5. **Fallback**: If insufficient videos in any bucket, collect from multiple hashtags
-
-**Benefits**:
-- ✅ Works around Apify's filtering limitations
-- ✅ Gives us exact duration bucket control
-- ✅ Allows custom engagement thresholds
-- ✅ Enables date filtering if createTime available
-- ✅ Scales to multiple hashtags if needed
-
-**Trade-offs**:
-- ⚠️ Higher Apify usage (over-collecting)
-- ⚠️ Additional processing time for local filtering
-- ⚠️ May need multiple hashtag searches for rare buckets (91-120s)
-
-### 8. Apify Rate Limits & Costs - RESOLVED
-
-**Research Findings**: Apify TikTok scrapers have manageable costs and performance characteristics:
-
-#### 💰 Cost Breakdown for 800 Videos
-
-```python
-# Compute Unit (CU) consumption for our two-stage approach
-apify_costs = {
-    "metadata_scraping": {
-        "videos": 800,  # Over-collection
-        "cost_per_1000": "$0.004",
-        "compute_units": 0.004,
-        "total_cost": "$0.0032"
-    },
-    "video_downloads": {
-        "videos": 250,  # Only download selected videos
-        "cu_per_video": 0.015,  # Average
-        "compute_units": 3.75,
-        "total_cost": "$0.375"
-    },
-    "total_estimated_cost": "$0.38 per batch"
-}
-
-# Monthly estimates for regular operations
-monthly_estimates = {
-    "batches_per_month": 20,  # Weekly analysis × 5 clients
-    "monthly_cost": "$7.60",
-    "apify_free_credit": "$5.00",
-    "actual_cost": "$2.60/month"
-}
-```
-
-#### ⚡ Performance Characteristics
-
-```python
-performance_metrics = {
-    "Fast TikTok API": {
-        "throughput": "1000 videos in 60 seconds",
-        "memory": "128MB for 100 videos",
-        "reliability": "Subject to TikTok blocking"
-    },
-    "Batch Processing": {
-        "max_batch": "1000+ videos per run",
-        "execution_time": "~2 minutes for 800 videos",
-        "retry_strategy": "Required for blocked requests"
-    }
-}
-```
-
-#### 💾 Storage Requirements
-
-```python
-storage_requirements = {
-    "video_files": {
-        "avg_size_per_video": "10-50MB",
-        "total_for_250_videos": "2.5-12.5GB",
-        "retention_period": "7 days then delete",
-        "storage_location": "Local SSD"
-    },
-    "json_outputs": {
-        "size_per_video": "~500KB (RumiAI output)",
-        "total_for_250_videos": "125MB",
-        "retention": "Permanent",
-        "storage_location": "Project directory"
-    },
-    "ml_features": {
-        "size_per_video": "~10KB (432 features)",
-        "total_for_250_videos": "2.5MB",
-        "retention": "Permanent",
-        "storage_location": "ML data directory"
-    }
-}
-
-# Total storage needed
-total_storage = {
-    "temporary": "12.5GB (videos, cleared weekly)",
-    "permanent": "~130MB (JSON + features)",
-    "buffer": "20GB recommended"
-}
-```
-
-#### 🚨 Rate Limits & Constraints
-
-```python
-operational_limits = {
-    "api_rate_limits": {
-        "status": "No hard limits from Apify",
-        "bottleneck": "TikTok's own rate limiting",
-        "mitigation": "Automatic retries with backoff"
-    },
-    "blocking_risk": {
-        "likelihood": "Medium - TikTok detects scrapers",
-        "impact": "Slower execution, more retries",
-        "mitigation": "Spread requests over time"
-    },
-    "compute_constraints": {
-        "free_tier": "$5/month credit",
-        "paid_tier": "Scale as needed",
-        "memory_limits": "Configurable (128MB-4GB)"
-    }
-}
-```
-
-#### ✅ Implementation Strategy
-
-1. **Cost Optimization**:
-   - Use free tier credit ($5/month)
-   - Only download videos passing local filters
-   - Delete video files after processing
-   - Cache metadata to avoid re-scraping
-
-2. **Performance Optimization**:
-   - Batch all 800 videos in single Apify run
-   - Process videos locally in parallel
-   - Implement checkpoint system for failures
-
-3. **Storage Management**:
-   ```python
-   class StorageManager:
-       def __init__(self, max_video_retention_days=7):
-           self.video_dir = Path("temp_videos")
-           self.json_dir = Path("permanent_data")
-           
-       def cleanup_old_videos(self):
-           """Delete videos older than retention period"""
-           cutoff = datetime.now() - timedelta(days=7)
-           for video_file in self.video_dir.glob("*.mp4"):
-               if video_file.stat().st_mtime < cutoff.timestamp():
-                   video_file.unlink()
-   ```
-
-4. **Budget Monitoring**:
-   ```python
-   def track_apify_usage(run_result):
-       """Log compute unit usage for cost tracking"""
-       cu_used = run_result.get("computeUnits", 0)
-       cost = cu_used * 0.10  # $0.10 per CU estimate
-       
-       with open("apify_usage_log.csv", "a") as f:
-           f.write(f"{datetime.now()},{cu_used},{cost}\n")
-       
-       return cost
-   ```
-
-**Conclusion**: 
-- ✅ **Costs are minimal** (~$2.60/month after free credit)
-- ✅ **Storage is manageable** (20GB temporary, 130MB permanent)
-- ✅ **Performance is adequate** (2 minutes for 800 videos)
-- ✅ **Rate limits are workable** (with retry logic)
+7. **Apify Search & Filter**: ✅ RESOLVED - Two-stage filtering approach (see Section 4)
+8. **Apify Rate Limits & Costs**: ✅ RESOLVED - Documented in Section 4
 
 ---
 
-## 🔄 11. Next Steps
+## 🔄 13. Next Steps
+
+1. **Technical Review**: Validate approach with ML team
+2. **Resource Allocation**: Assign development resources
+3. **Prototype Development**: Build MVP with single client/hashtag
+4. **Stakeholder Feedback**: Review creative report format with end users
+5. **Infrastructure Setup**: Provision storage and compute resources
+
+---
+
+## Appendix A: File Structure
+
+```
+rumiaifinal/
+├── MLAnalysis/
+│   ├── [Client Name]/
+│   │   ├── [Hashtag Name]/
+│   │   │   ├── bucket_0-15s/
+│   │   │   │   ├── videos/
+│   │   │   │   │   ├── [video_id]_analysis.json
+│   │   │   │   ├── model_0-15s.pkl
+│   │   │   │   ├── patterns_0-15s.json
+│   │   │   │   └── performance_metrics.json
+│   │   │   ├── bucket_16-30s/
+│   │   │   │   ├── videos/
+│   │   │   │   ├── model_16-30s.pkl
+│   │   │   │   └── patterns_16-30s.json
+│   │   │   ├── bucket_31-60s/
+│   │   │   │   ├── videos/
+│   │   │   │   ├── model_31-60s.pkl
+│   │   │   │   └── patterns_31-60s.json
+│   │   │   ├── bucket_61-90s/
+│   │   │   │   └── [similar structure]
+│   │   │   ├── bucket_91-120s/
+│   │   │   │   └── [similar structure]
+│   │   │   ├── reports/
+│   │   │   │   ├── creative_guide_0-15s_[date].json
+│   │   │   │   ├── creative_guide_16-30s_[date].json
+│   │   │   │   ├── creative_guide_31-60s_[date].json
+│   │   │   │   ├── bucket_performance_report_[date].json
+│   │   │   │   └── strategic_summary_[date].json
+│   │   │   └── checkpoints/
+│   │   │       └── progress.json
+├── ml_training/
+│   ├── bucket_ml_orchestrator.py
+│   ├── bucket_feature_engineering.py
+│   ├── duration_pattern_recognition.py
+│   └── bucket_report_generator.py
+└── configs/
+    └── clients/
+        └── [client_name]_config.json
+```
+
+---
+
+## Appendix B: Configuration Schema
+
+```json
+{
+  "client_config": {
+    "client_name": "string",
+    "hashtags": ["string"],
+    "duration_buckets": ["0-15s", "16-30s", "31-60s", "61-90s", "91-120s"],
+    "target_videos_per_bucket": 50,
+    "min_engagement_rate": 1.0,
+    "output_format": "PDF",
+    "refresh_frequency": "monthly"
+  },
+  "ml_config": {
+    "models": ["RandomForest", "DecisionTree", "LinearRegression", "KMeans"],
+    "features_count": 432,
+    "validation_split": 0.2,
+    "min_sample_size": 30,
+    "statistical_thresholds": {
+      "large_sample": {"size": 80, "p_value": 0.01},
+      "medium_sample": {"size": 40, "p_value": 0.05},
+      "small_sample": {"size": 30, "p_value": 0.10}
+    }
+  },
+  "apify_config": {
+    "over_collection_factor": 3,
+    "max_videos_per_request": 800,
+    "retry_attempts": 3,
+    "timeout_seconds": 120
+  }
+}
+```
+
+---
+
+## 🔄 13. Next Steps
 
 1. **Technical Review**: Validate approach with ML team
 2. **Resource Allocation**: Assign development resources
@@ -4281,7 +4341,7 @@ clients:
 
 ---
 
-## ⚡ 12. Potential Concerns & Mitigation Strategies
+## ⚡ 14. Potential Concerns & Mitigation Strategies
 
 ### Celebrity Content & Statistical Outliers
 
@@ -4420,9 +4480,9 @@ def handle_outliers_hybrid(videos):
 
 ---
 
-## 🔮 13. Future Developments
+## 🔮 15. Future Developments
 
-### 13.1 Scaling Considerations
+### 15.1 Scaling Considerations
 
 #### Current MVP Limitations
 
@@ -4630,7 +4690,7 @@ def calculate_scale_costs(monthly_analyses):
 
 **Summary**: Current architecture handles 5-10 clients well. Scale only when business demands it.
 
-### Cross-Hashtag Pattern Analysis System
+### 15.2 Cross-Hashtag Pattern Analysis System
 
 #### Overview
 Analyze patterns across multiple hashtags within the same client to identify universal success factors and hashtag-specific variations for each duration bucket.
