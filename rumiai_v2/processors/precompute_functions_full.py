@@ -2506,12 +2506,12 @@ def compute_scene_pacing_metrics(scene_timeline, video_duration, object_timeline
     
     return {
         # Core metrics
-        'total_shots': total_shots,
-        'avg_shot_duration': round(avg_shot_duration, 2),
-        'shots_per_minute': round(cut_frequency, 2),
-        'shortest_shot': round(min_shot_duration, 2),
-        'longest_shot': round(max_shot_duration, 2),
-        'shot_duration_variance': round(shot_duration_variance, 2),
+        'total_scenes': total_shots,  # Keep variable name for safety, change key
+        'avg_scene_duration': round(avg_shot_duration, 2),  # Keep variable, change key
+        'scenes_per_minute': round(cut_frequency, 2),  # Keep variable, change key
+        'shortest_scene': round(min_shot_duration, 2),  # Keep variable, change key
+        'longest_scene': round(max_shot_duration, 2),  # Keep variable, change key
+        'scene_duration_variance': round(shot_duration_variance, 2),  # Keep variable, change key
         'visual_load_per_scene': visual_load_per_scene,
         'shot_type_changes': shot_type_changes,
         
@@ -3874,128 +3874,3 @@ def extract_real_ml_data(unified_data, prompt_name, video_id=None):
         context_data['metadata_summary'] = unified_data.get('metadata_summary', {})
 
     return context_data
-def update_progress(video_id, prompt_name, status, message=""):
-    """Update progress file for real-time monitoring"""
-    progress_file = f'insights/{video_id}/progress.json'
-    os.makedirs(os.path.dirname(progress_file), exist_ok=True)
-
-    try:
-        if os.path.exists(progress_file):
-            with open(progress_file, 'r') as f:
-                progress = json.load(f)
-        else:
-            progress = {'prompts': {}, 'start_time': datetime.now().isoformat()}
-        
-        progress['prompts'][prompt_name] = {
-            'status': status,
-            'timestamp': datetime.now().isoformat(),
-            'message': message
-        }
-        progress['last_update'] = datetime.now().isoformat()
-        
-        with open(progress_file, 'w') as f:
-            json.dump(progress, f, indent=2)
-    except Exception as e:
-        print(f"⚠️ Failed to update progress file: {e}")
-def run_single_prompt(video_id, prompt_name):
-    """Run a single prompt for a video"""
-    print(f"\n🎬 Running {prompt_name} for video {video_id}")
-    update_progress(video_id, prompt_name, 'started')
-
-    # Check if unified analysis exists
-    unified_path = f'unified_analysis/{video_id}.json'
-    if not os.path.exists(unified_path):
-        print(f"❌ Error: {unified_path} not found!")
-        # Try to list what files are in the directory
-        import glob
-        unified_files = glob.glob('unified_analysis/*.json')
-        if unified_files:
-            print(f"   Available files in unified_analysis/: {', '.join([os.path.basename(f) for f in unified_files[:5]])}")
-        return False
-
-    # Load unified analysis
-    try:
-        with open(unified_path, 'r') as f:
-            unified_data = json.load(f)
-        print(f"✅ Loaded unified analysis: {len(str(unified_data))} characters")
-        update_progress(video_id, prompt_name, 'processing', 'Loaded unified analysis')
-    except Exception as e:
-        print(f"❌ Error loading unified analysis: {str(e)}")
-        update_progress(video_id, prompt_name, 'failed', f'Error loading unified analysis: {str(e)}')
-        return False
-
-    # Extract ML data
-    context_data = extract_real_ml_data(unified_data, prompt_name, video_id)
-
-    # Pre-flight check for large data
-    timelines = unified_data.get('timelines', {})
-    total_timeline_entries = sum(len(t) for t in timelines.values() if isinstance(t, dict))
-    
-    if total_timeline_entries > 1000:
-        print(f"\n⚠️  Large video analysis detected:")
-        print(f"📊 Total timeline entries: {total_timeline_entries:,}")
-        print(f"   Breakdown:")
-        for name, timeline in timelines.items():
-            if isinstance(timeline, dict) and len(timeline) > 50:
-                print(f"   - {name}: {len(timeline)} entries")
-        
-        # Estimate processing time
-        if prompt_name == 'person_framing':
-            object_entries = len(timelines.get('objectTimeline', {}))
-            estimated_time = 90 + (object_entries // 100) * 10
-            print(f"⏱️  Estimated processing time: {estimated_time}s ({estimated_time/60:.1f} minutes)")
-        
-        print("")  # Empty line for readability
-
-    # Load prompt template
-    prompt_template_path = f'prompt_templates/{prompt_name}.txt'
-    if not os.path.exists(prompt_template_path):
-        print(f"❌ Error: Prompt template {prompt_template_path} not found!")
-        return False
-
-    with open(prompt_template_path, 'r') as f:
-        prompt_text = f.read()
-
-    # Add mode to context data
-    context_data['mode'] = 'labeling'
-    
-    # Log payload size
-    payload_size = len(json.dumps(context_data))
-    print(f"📏 Payload size: {payload_size:,} characters")
-    if payload_size > 1_000_000:
-        print(f"   ⚠️  Large payload warning: This may take longer to process")
-    
-    # Run the prompt with enhanced error handling
-    try:
-        result = runner.run_claude_prompt(
-            video_id=video_id,
-            prompt_name=prompt_name,
-            prompt_text=prompt_text,
-            context_data=context_data
-        )
-
-        if result and result.get('success'):
-            print(f"✅ {prompt_name} completed successfully!")
-            update_progress(video_id, prompt_name, 'completed', 'Success')
-            return True
-        else:
-            error_msg = result.get('error', 'Unknown error') if result else 'No result returned'
-            print(f"❌ {prompt_name} failed!")
-            print(f"Error: {error_msg}")
-            
-            # Log additional error details if available
-            if result and 'traceback' in result:
-                print(f"\n📋 Detailed Error Traceback:", file=sys.stderr)
-                print(result['traceback'], file=sys.stderr)
-            
-            update_progress(video_id, prompt_name, 'failed', error_msg)
-            return False
-    except Exception as e:
-        import traceback
-        error_msg = f"{type(e).__name__}: {str(e)}"
-        print(f"❌ {prompt_name} crashed with exception!")
-        print(f"Error: {error_msg}")
-        print(f"\n📋 Exception Traceback:", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
-        update_progress(video_id, prompt_name, 'failed', error_msg)
-        return False

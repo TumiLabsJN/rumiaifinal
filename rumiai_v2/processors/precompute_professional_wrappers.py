@@ -185,9 +185,9 @@ def convert_to_scene_pacing_professional(basic_metrics: Dict[str, Any]) -> Dict[
     
     return {
         "scenePacingCoreMetrics": {
-            "totalScenes": basic_metrics.get('total_shots', basic_metrics.get('total_scenes', 0)),
-            "averageSceneDuration": basic_metrics.get('avg_shot_duration', basic_metrics.get('avg_scene_duration', 0)),
-            "scenesPerMinute": basic_metrics.get('shots_per_minute', basic_metrics.get('scenes_per_minute', 0)),
+            "totalScenes": basic_metrics.get('total_scenes', 0),  # Now uses correct key directly
+            "averageSceneDuration": basic_metrics.get('avg_scene_duration', 0),  # Now uses correct key directly
+            "scenesPerMinute": basic_metrics.get('scenes_per_minute', 0),  # Now uses correct key directly
             "pacingScore": basic_metrics.get('pacing_score', 0),
             "rhythmConsistency": basic_metrics.get('rhythm_consistency', 0),
             "transitionSmoothing": basic_metrics.get('transition_smoothness', 0.8)
