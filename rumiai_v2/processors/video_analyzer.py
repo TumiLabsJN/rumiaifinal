@@ -79,20 +79,7 @@ class VideoAnalyzer:
             output_dir = Path(f"object_detection_outputs/{video_id}")
             output_path = output_dir / f"{video_id}_yolo_detections.json"
             
-            if output_path.exists():
-                logger.info(f"Using existing YOLO output: {output_path}")
-                with open(output_path, 'r') as f:
-                    data = json.load(f)
-                
-                return MLAnalysisResult(
-                    model_name='yolo',
-                    model_version='v8',
-                    success=True,
-                    data=data,
-                    processing_time=0.0
-                )
-            
-            # Run actual YOLO detection via ML services
+            # Always run fresh analysis (cache removed for accuracy)
             logger.info(f"Running YOLO detection on {video_path}")
             data = await self.ml_services.run_yolo_detection(video_path, output_dir)
             
@@ -120,22 +107,9 @@ class VideoAnalyzer:
     async def _run_whisper(self, video_id: str, video_path: Path) -> MLAnalysisResult:
         """Run Whisper speech transcription."""
         try:
-            # Check for existing transcription
+            # Always run fresh analysis (cache removed for accuracy)
             output_dir = Path("speech_transcriptions")
             output_path = output_dir / f"{video_id}_whisper.json"
-            
-            if output_path.exists():
-                logger.info(f"Using existing Whisper output: {output_path}")
-                with open(output_path, 'r') as f:
-                    data = json.load(f)
-                
-                return MLAnalysisResult(
-                    model_name='whisper',
-                    model_version='base',
-                    success=True,
-                    data=data,
-                    processing_time=0.0
-                )
             
             # Run actual Whisper transcription
             logger.info(f"Running Whisper transcription on {video_path}")
@@ -165,22 +139,9 @@ class VideoAnalyzer:
     async def _run_mediapipe(self, video_id: str, video_path: Path) -> MLAnalysisResult:
         """Run MediaPipe human analysis."""
         try:
-            # Check for existing analysis
+            # Always run fresh analysis (cache removed for accuracy)
             output_dir = Path(f"human_analysis_outputs/{video_id}")
             output_path = output_dir / f"{video_id}_human_analysis.json"
-            
-            if output_path.exists():
-                logger.info(f"Using existing MediaPipe output: {output_path}")
-                with open(output_path, 'r') as f:
-                    data = json.load(f)
-                
-                return MLAnalysisResult(
-                    model_name='mediapipe',
-                    model_version='0.10',
-                    success=True,
-                    data=data,
-                    processing_time=0.0
-                )
             
             # Run actual MediaPipe analysis
             logger.info(f"Running MediaPipe analysis on {video_path}")
@@ -210,22 +171,9 @@ class VideoAnalyzer:
     async def _run_ocr(self, video_id: str, video_path: Path) -> MLAnalysisResult:
         """Run OCR text detection."""
         try:
-            # Check for existing OCR results
+            # Always run fresh analysis (cache removed for accuracy)
             output_dir = Path(f"creative_analysis_outputs/{video_id}")
             output_path = output_dir / f"{video_id}_creative_analysis.json"
-            
-            if output_path.exists():
-                logger.info(f"Using existing OCR output: {output_path}")
-                with open(output_path, 'r') as f:
-                    data = json.load(f)
-                
-                return MLAnalysisResult(
-                    model_name='ocr',
-                    model_version='tesseract-5',
-                    success=True,
-                    data=data,
-                    processing_time=0.0
-                )
             
             # Run actual OCR detection
             logger.info(f"Running OCR on {video_path}")
@@ -362,22 +310,9 @@ class VideoAnalyzer:
     async def _run_emotion_detection(self, video_id: str, video_path: Path) -> MLAnalysisResult:
         """Run FEAT emotion detection."""
         try:
-            # Check for existing output
+            # Always run fresh analysis (cache removed for accuracy)
             output_dir = Path(f"emotion_detection_outputs/{video_id}")
             output_path = output_dir / f"{video_id}_emotions.json"
-            
-            if output_path.exists():
-                logger.info(f"Using existing emotion output: {output_path}")
-                with open(output_path, 'r') as f:
-                    data = json.load(f)
-                
-                return MLAnalysisResult(
-                    model_name='emotion_detection',
-                    model_version='feat-0.6.0',
-                    success=True,
-                    data=data,
-                    processing_time=0.0
-                )
             
             # Run actual emotion detection
             logger.info(f"Running FEAT emotion detection on {video_path}")

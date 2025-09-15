@@ -86,9 +86,8 @@ OCR Output Format Error:
   
   Fix:
   1. Check OCR fix was applied: grep -n "bbox_list" rumiai_v2/api/ml_services_unified.py
-  2. Clear OCR cache: rm -rf creative_analysis_outputs/*
-  3. Verify EasyOCR version: pip show easyocr
-  4. Check debug dump for full output structure
+  2. Verify EasyOCR version: pip show easyocr
+  3. Check debug dump for full output structure
             """,
             'yolo': f"""
 YOLO Output Format Error:
@@ -97,9 +96,8 @@ YOLO Output Format Error:
   
   Fix:
   1. Check YOLO model version: yolo version
-  2. Clear detection cache: rm -rf object_detection_outputs/*
-  3. Verify model file: ls -la yolov8n.pt
-  4. Check GPU memory: nvidia-smi
+  2. Verify model file: ls -la yolov8n.pt
+  3. Check GPU memory: nvidia-smi
             """,
             'mediapipe': f"""
 MediaPipe Output Format Error:
@@ -108,8 +106,7 @@ MediaPipe Output Format Error:
   
   Fix:
   1. Check MediaPipe version: pip show mediapipe
-  2. Clear analysis cache: rm -rf human_analysis_outputs/*
-  3. Test with sample image: python -m mediapipe.solutions.pose
+  2. Test with sample image: python -m mediapipe.solutions.pose
             """,
             'whisper': f"""
 Whisper Output Format Error:
@@ -118,8 +115,7 @@ Whisper Output Format Error:
   
   Fix:
   1. Check Whisper.cpp build: whisper.cpp/main --help
-  2. Clear transcription cache: rm -rf speech_transcriptions/*
-  3. Test with sample audio: whisper.cpp/main -m base.bin sample.wav
+  2. Test with sample audio: whisper.cpp/main -m base.bin sample.wav
             """,
             'audio_energy': f"""
 Audio Energy Output Format Error:
@@ -128,8 +124,7 @@ Audio Energy Output Format Error:
   
   Fix:
   1. Check librosa version: pip show librosa
-  2. Clear energy cache: rm -rf ml_outputs/*audio_energy*
-  3. Verify audio extraction: ffmpeg -i video.mp4 -acodec pcm_s16le test.wav
+  2. Verify audio extraction: ffmpeg -i video.mp4 -acodec pcm_s16le test.wav
             """,
             'scene_detection': f"""
 Scene Detection Output Format Error:
@@ -138,8 +133,7 @@ Scene Detection Output Format Error:
   
   Fix:
   1. Check PySceneDetect version: pip show scenedetect
-  2. Clear scene cache: rm -rf scene_detection_outputs/*
-  3. Test detection: scenedetect -i video.mp4 detect-content list-scenes
+  2. Test detection: scenedetect -i video.mp4 detect-content list-scenes
             """,
             'claude': f"""
 Claude Response Format Error:

@@ -38,6 +38,16 @@
 
 4. **Then remove caching from remaining 4 ML services** (see Implementation section)
 
+5. **Fix dependent code** (prevent minor errors):
+   ```bash
+   # Update temporal_markers.py line 439
+   # Change: if 'yolo' in deps and Path(deps['yolo']).exists()
+   # To: if 'yolo' in deps
+   
+   # Update error_handler.py 
+   # Remove any "clear cache" suggestions from error messages
+   ```
+
 ---
 
 ## Problem
@@ -188,6 +198,25 @@ if output_path.exists():
         data=data,
         processing_time=0.0
     )
+```
+
+### Additional Required Changes:
+
+**6. temporal_markers.py** (line 439):
+```python
+# CHANGE FROM:
+if 'yolo' in deps and Path(deps['yolo']).exists():
+    
+# CHANGE TO:
+if 'yolo' in deps:
+```
+
+**7. error_handler.py** (remove cache clearing suggestions):
+```python
+# FIND AND REMOVE lines suggesting:
+# "Try clearing ML cache directories"
+# "Remove files from human_analysis_outputs/"
+# Any similar cache-related troubleshooting advice
 ```
 
 ---

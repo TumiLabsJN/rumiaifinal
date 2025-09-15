@@ -436,7 +436,7 @@ def main():
         ml_results = {}
         
         # Load YOLO data
-        if 'yolo' in deps and Path(deps['yolo']).exists():
+        if 'yolo' in deps:
             with open(deps['yolo'], 'r') as f:
                 yolo_data = json.load(f)
                 ml_results['yolo'] = MLAnalysisResult(

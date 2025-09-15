@@ -4,7 +4,20 @@
 **Status**: Planning Phase  
 **Architecture**: Extension of Python-Only Processing Pipeline
 
+> **Related Documentation**: This document implements the ML pipeline architecture designed in **[MLMVP2.md](./MLMVP2.md)**. While MLMVP2 focuses on the canonical JSON structure and feature engineering architecture, this document covers the end-to-end ML training pipeline implementation.
+
 ---
+
+## 📝 Important Note on Feature Counts
+
+**All feature counts in this document are TO BE CONFIRMED (TBC)**
+- Actual feature count will vary based on temporal window implementation
+- MLMVP2.md targets ~150 canonical features
+- This document uses various estimates as working numbers
+- Final count depends on:
+  - Video duration (adaptive temporal windows)
+  - Feature engineering decisions
+  - Canonical JSON structure finalization
 
 ## 🎯 1. Executive Summary
 
@@ -17,15 +30,31 @@ Build a Machine Learning training pipeline on top of RumiAI's Python-only proces
 - **Value Chain**: We analyze viral content → Generate creative recommendations → Provide reports to affiliates → Affiliates create better promotional content for brands
 
 ### Core Value Proposition
-Transform raw video analysis data (432+ features per video) into **duration-specific** actionable creative insights delivered to brand affiliates, recognizing that successful patterns vary dramatically between 15-second and 120-second content. Each duration bucket receives its own ML model and creative recommendations.
+Transform raw video analysis data (>100 features per video, exact count TBC) into **duration-specific** actionable creative insights delivered to brand affiliates, recognizing that successful patterns vary dramatically between 15-second and 120-second content. Each duration bucket receives its own ML model and creative recommendations.
 
 ### Key Metrics
-- **Input Scale**: Up to 250 videos per analysis batch (50 per duration bucket)
-- **Segmentation**: 5 duration buckets (0-15s, 16-30s, 31-60s, 61-90s, 91-120s)
-- **ML Models**: 20 models total (4 algorithms × 5 duration buckets) with ensemble consensus
+- **Input Scale**: Up to 240 videos per analysis batch (60 per duration bucket: 40 top + 20 bottom)
+- **Segmentation**: 4 duration buckets (0-15s, 16-30s, 31-60s, 61-120s)
+- **ML Models**: 16 models total (4 algorithms × 4 duration buckets) with ensemble consensus
 - **Output**: Duration-specific creative recommendations (5 patterns per bucket)
 - **Processing**: Sequential (one-by-one) with resumption capability
 - **Cost**: $0.00 per video (Python-only processing)
+
+### 📊 Quality Built Into Selection Process
+> **Key Point**: This system automatically selects high-quality videos through:
+> - Top 40 + Bottom 20 videos per duration bucket for contrastive analysis
+> - User-defined date filters for recency control  
+> - Composite scoring (engagement × share boost factor)
+> - No arbitrary thresholds needed - market performance determines quality
+> - Full selection methodology detailed in Section 4
+
+### 🔄 Fail-Fast with Checkpoint/Resume Architecture
+> **Key Design Principle**: This system uses fail-fast with automatic checkpointing:
+> - Processing stops immediately when any analysis fails (no partial results)
+> - Progress automatically saved after each successful video
+> - Resume from exact failure point after fixing issues
+> - No data loss, no need to reprocess completed videos
+> - Full implementation details in Section 6.5
 
 ---
 
@@ -108,13 +137,454 @@ Tumi Labs (ML Analysis & Intermediary) → Brands/Clients (Pay) → UGC Factorie
 
 ---
 
+## 📊 1.7 Technical Success Metrics
+
+### Project Success Definition
+Success for this ML training pipeline is measured through technical and operational achievements, not business ROI metrics (which are tracked separately).
+
+### Success Criteria
+
+1. **Processing Capability**
+   - Successfully analyze up to 300 videos per hashtag in sequential fashion
+   - Support multiple hashtags per client (e.g., 4-10+ hashtags each with 300 videos)
+   - Checkpoint/resume system enables recovery from failures without data loss
+   - Complete end-to-end processing or clear failure identification for debugging
+
+2. **ML Insight Generation**
+   - Generate meaningful trends and patterns from analyzed videos
+   - Include confidence scores and pattern validation for professional credibility
+   - A/B test confidence score presentation in creator reports for optimal reception
+
+3. **Creator Report Delivery**
+   - Produce PDF reports with concise, actionable instructions
+   - Avoid overwhelming numeric/technical ML outputs
+   - Focus on "easy to replicate" format: clear steps without complex data
+   - Identical reports for both UGC Factories and individual creators
+
+4. **Client Executive Reporting**
+   - Generate bird's eye view reports covering minimum 5 hashtags per client
+   - Show scope of analysis: hashtags analyzed, creative insights distributed
+   - Demonstrate value through breadth of research and strategic insights
+   - Top-down view for executive stakeholders
+
+### Out of Scope Success Metrics
+- **Business ROI metrics** (tracked in separate business documents)
+- **Engagement lift measurements** (post-implementation tracking)
+- **Revenue impact** (business performance metrics)
+- **Creator adoption rates** (market validation metrics)
+
+---
+
+## 📈 1.8 Scalability & Growth Planning
+
+### Growth Projection
+- **2026 Q1**: 2 Clients
+- **2026 Q2**: 4 Clients  
+- **2026 Q3**: 6 Clients
+
+### Current Scalability Approach
+With projected growth of 2-6 clients in 2026, the sequential processing architecture is sufficient:
+- **Processing Time**: 2 hours per 300-video batch per hashtag
+- **Daily Capacity**: ~12 hashtag analyses (assuming 24-hour operation)
+- **Monthly Capacity**: ~360 hashtag analyses
+- **Client Support**: Easily handles 6 clients × 10 hashtags × monthly refresh = 60 analyses/month
+
+### Client Data Isolation (MVP Approach)
+Simple directory-based isolation is sufficient for MVP:
+```
+MLAnalysis/
+├── ClientA_StatesideGrower/
+│   ├── nutrition/
+│   ├── fitness/
+│   └── wellness/
+├── ClientB_FunctionalDrinks/
+│   ├── energy/
+│   └── hydration/
+```
+
+### Phase 2 Enhancements (Post-January 2025)
+- **Queue Management System**: Implement when client base exceeds 10
+- **Parallel Processing**: Consider when daily demand exceeds sequential capacity
+- **Advanced Multi-tenancy**: Database-level isolation when handling sensitive competitive data
+- **Temporal Cross-Validation for Cumulative Models**: After 3+ months of data collection
+  * Validate that identified "timeless" patterns actually persist across months
+  * Time-based splits: Train on months 1-3, validate on month 4, test on month 5
+  * Ensures fundamental patterns have predictive power going forward
+  * Separate "Proven Fundamentals" from "Current Trends" in reports
+
+---
+
+## 📦 1.9 Storage Strategy & Data Management
+
+### Storage Requirements
+- **Per Video**: ~100MB (video file + ML analysis + reports)
+- **Per Hashtag**: ~30GB (300 videos × 100MB)
+- **Per Client**: ~150-300GB (5-10 hashtags)
+- **Total System (6 clients)**: ~2TB by end of 2026
+- **Recommended Initial**: 4TB to allow for growth and redundancy
+
+### Data Organization & Isolation
+```
+/data/
+├── clients/                      # Client data isolation
+│   ├── {client_id}/
+│   │   ├── raw_videos/           # Original TikTok videos (30-day retention)
+│   │   ├── ml_analysis/          # RumiAI analysis outputs
+│   │   ├── ml_models/            # Client-specific trained models
+│   │   ├── reports/              # Generated PDF reports
+│   │   └── checkpoints/          # Processing checkpoints
+├── shared/                       # Non-sensitive shared resources
+│   └── ml_base_models/           # Pre-trained model weights
+└── temp/                         # Temporary processing files
+```
+
+### Data Retention Policy
+- **Raw Videos**: 30 days (then delete to save space, can re-download if needed)
+- **ML Analysis**: 6 months (compressed after 30 days)
+- **ML Models**: Keep latest 3 versions per client/hashtag
+- **Reports**: Indefinite (small size, high value)
+- **Checkpoints**: 7 days after successful completion
+
+### Backup & Disaster Recovery
+- **Critical Data** (ML models, reports): Daily backup
+- **Analysis Data**: Weekly backup (can be regenerated if needed)
+- **Raw Videos**: No backup (can re-download from TikTok)
+- **Recovery Time Objective (RTO)**: 4 hours
+- **Recovery Point Objective (RPO)**: 24 hours for critical data
+
+### Storage Cost Optimization
+- **Compression**: Compress ML analysis JSON after 30 days (70% reduction)
+- **Video Deletion**: Remove raw videos after 30 days (saves ~80% of storage)
+- **Deduplication**: Share common videos across hashtags when applicable
+
+---
+
+## 🔍 1.10 Data Quality & Validation Framework
+
+### Training Data Quality Assurance
+
+#### Pre-Processing Validation
+1. **Video Quality Checks**
+   - Maximum video duration: 120 seconds (platform limit)
+   - No minimum duration (5-second videos valid in 0-15s bucket)
+   - Resolution: Accepts whatever quality TikTok provides
+   - Basic file validation: Ensure downloaded file exists and is non-zero size
+
+2. **Video Selection Quality**
+   - **Note**: Video quality is inherently ensured through our selection process (see executive summary and Section 4)
+   - Videos are pre-filtered by highest engagement rate per duration bucket
+   - User-defined date filters control recency as needed
+   - No additional engagement thresholds required - market performance determines quality
+
+3. **ML Analysis Validation**
+   - Confidence thresholds: Only use ML detections with >60% confidence
+   - Completeness check: Ensure all 7 analysis types completed successfully
+     * Uses fail-fast architecture (see executive summary and Section 6.5)
+     * System stops immediately if any analysis fails
+     * Checkpoint saves progress for resume after fix
+     * No partial analysis - all 7 types must complete or processing stops
+   
+   - Outlier detection: Flag and exclude videos with anomalous feature values
+     * Implementation: Statistical detection (values beyond 3 standard deviations)
+     * Example: If average text overlays is 10, flag videos with 100+ overlays
+     * Action: Exclude from ML training and log for review
+     * Reason: Prevents extreme cases from skewing pattern detection
+   
+   - Missing data handling: Flag videos with <70% feature completeness
+     * Implementation: Count non-null features per video (varies by duration)
+     * If <70% of expected features populated, flag with quality warning
+     * Action: Keep in pipeline but note reduced quality score
+     * Common causes: Silent videos, no-person videos, minimal visual elements
+
+### Pattern Validation Strategy
+
+#### Analysis Approach: Contrastive + Prescriptive
+- **Contrastive Method**: Analyze 40 top performers vs 20 bottom performers per bucket
+  * Identifies what differentiates viral from poor-performing content
+  * Finds patterns with largest performance gaps (e.g., 85% in top vs 20% in bottom)
+- **Prescriptive Output**: Convert patterns to actionable recommendations
+  * "Add text within 3 seconds (4x higher viral rate)"
+  * Prioritized by impact magnitude
+
+#### Dual Validation Strategy (Budget-Conscious)
+
+1. **Controlled UGC Testing** ($960/month budget)
+   - Test 3-4 highest-impact patterns per month
+   - 3-4 creators per test (9-12 videos total at $80 each)
+   - Focus on patterns that:
+     * Show largest contrast (70%+ difference)
+     * Apply across multiple duration buckets
+     * Are counterintuitive (need proof)
+   - Provides causal validation: "Proven 2.3x lift"
+
+2. **Organic Creator Tracking** (Free validation)
+   - Monitor if creators naturally adopt recommendations
+   - Track performance when patterns are implemented
+   - Aggregate success data across all creators
+   - Provides observational validation without controlled tests
+
+#### Pattern Confidence Levels
+- **🔬 PROVEN** (Causal): Validated through controlled UGC tests
+- **📊 STATISTICAL** (Correlational): Strong patterns from contrastive analysis
+- **📈 ADOPTED** (Observational): Successfully used by creators organically
+
+#### Month-by-Month Evolution
+- **Month 1**: RumiAI analysis identifies 20-30 patterns, select top 3-4 for testing
+- **Month 2**: UGC test results + organic adoption tracking
+- **Month 3+**: Accumulate proven formulas while continuously finding new patterns
+
+---
+
+## 🤖 1.11 ML Model Strategy & Architecture Decision
+
+### The Challenge: Choosing the Right ML Approach
+
+When designing the ML architecture for viral pattern detection, we evaluated multiple approaches considering our specific constraints:
+- Limited budget ($960/month for UGC testing)
+- Need for interpretable, actionable insights
+- 60 videos per bucket (40 top + 20 bottom for contrastive analysis)
+- Requirement for fast, cost-effective processing
+
+### Options Evaluated (Brainstorming Process)
+
+#### Option 1: Full Ensemble Approach (Initial Consideration)
+**Structure**: 4 algorithms × 4 buckets = 16 models
+- Random Forest + Decision Tree + Linear Regression + KMeans per bucket
+
+**Pros**:
+- Multiple perspectives on same data
+- Consensus validation increases confidence
+- Different algorithms find different insight types
+
+**Cons**:
+- **10x code complexity**: ~200+ lines vs ~20 lines
+- **12x storage**: ~300MB vs ~25MB
+- **4x slower**: Training and prediction time
+- **Debugging nightmare**: Which model caused the issue?
+- **Version control complexity**: Managing 20 models per client
+
+**Decision**: ❌ **Too complex for MVP** - engineering overhead outweighs benefits
+
+#### Option 2: Single Clustering Model (KMeans Only)
+**Structure**: 1 KMeans model per bucket = 4 models total
+
+**Pros**:
+- Simple implementation
+- Good for finding video "styles"
+- Low computational cost
+
+**Cons**:
+- **No contrastive capability**: Doesn't compare top vs bottom
+- **No feature importance**: Can't tell what matters most
+- **Limited actionability**: "You're in cluster 3" isn't helpful
+- **No confidence scores**: No probability of success
+
+**Decision**: ❌ **Too limited** - doesn't leverage our contrastive data structure
+
+#### Option 3: Single Classification Model (Random Forest Only)
+**Structure**: 1 Random Forest per bucket = 4 models total
+
+**Pros**:
+- **Built for contrastive analysis**: Classifies viral vs poor
+- **Feature importance rankings**: Tells you exactly what matters
+- **Actionable insights**: "Text timing = 42% importance"
+- **Confidence scores**: Probability of viral success
+- **Simple but powerful**: ~30 lines of code
+- **Fast training**: 5 seconds per bucket
+
+**Cons**:
+- Doesn't identify style clusters
+- Single perspective on data
+
+**Decision**: ⚠️ **Good but incomplete** - missing style segmentation
+
+#### Option 4: Hybrid ML Ensemble (RF + K-Means) ← **MVP CHOICE**
+**Structure**: 1 RF + 1 K-Means per bucket = 8 models total (but same data)
+
+**Pros**:
+- **Full analytical coverage**: Contrastive + Descriptive + Predictive + Prescriptive
+- **Complementary insights**: Feature importance AND style segments
+- **Same tabular data**: No additional preprocessing needed
+- **Manageable complexity**: ~50 lines of code (only 20% more than RF alone)
+- **Richer reports**: "Educational videos with text at 3s perform 4.2x better"
+
+**Cons**:
+- Slightly more complex than single model
+- Need to manage 2 model types
+
+**Decision**: ✅ **Perfect for MVP** - optimal insight-to-complexity ratio (~20% more code, ~50% more insights)
+
+### Our Phased Approach (Strategic Evolution)
+
+> **📘 Note on Model Selection Logic**: For detailed reasoning behind choosing Classical ML (Random Forest + K-Means) over Deep Learning approaches (Transformers, CNN/LSTM) for our current data scale, see **[MLMVP2.md](./MLMVP2.md)** Section 2 (Model-Specific Feature Requirements). The key decision factors are:
+> - **Data Volume**: 60 videos per bucket favors classical ML
+> - **Interpretability**: RF provides clear feature importance for creators
+> - **Infrastructure**: No GPU requirements with classical approaches
+> - **Temporal Features**: Our sophisticated Hook/Middle/Closing windows extract temporal patterns without needing deep learning
+
+#### Phase 1 (MVP): ML Ensemble with Natural Language Reports
+**ML Approach**: Contrastive-first multi-analytical approach
+- **Contrastive Analysis** (foundation): Random Forest classifies top 40 vs bottom 20
+- **Descriptive Segmentation**: K-Means identifies content style groups
+- **Predictive Scoring**: RF provides viral probability scores
+- **Prescriptive Recommendations**: Convert insights to actionable steps
+- **Natural Language Reports**: Claude API transforms statistical findings into narrative recommendations
+
+```python
+# Unified tabular data feeds both models
+X = features_matrix  # 60 videos x 250 features
+y = [1]*40 + [0]*20  # Contrastive labels
+
+# ML Ensemble
+rf = RandomForestClassifier(n_estimators=100)
+kmeans = KMeans(n_clusters=3)
+
+rf.fit(X, y)  # Contrastive + Predictive
+kmeans.fit(X)  # Descriptive
+
+# Combined insights
+insights = {
+    "feature_importance": rf.feature_importances_,  # What matters
+    "viral_probability": rf.predict_proba(X),       # Confidence
+    "content_styles": kmeans.labels_,               # Segmentation
+    "cluster_centers": kmeans.cluster_centers_      # Style profiles
+}
+
+# Claude transforms to natural language
+report = claude_api.generate_report(insights)
+```
+
+**Output Example**: "Educational content (Cluster 2) shows 4.2x higher viral rate when text appears within 3 seconds (85% confidence). This pattern is strongest in 16-30s videos where early text hooks maintain viewer attention through the educational payload."
+
+**Why This Approach**: 
+- Single tabular dataset serves all models efficiently
+- RF + K-Means provides complementary insights (~20% complexity increase, ~50% insight gain)
+- Claude ensures reports are narrative and actionable for content creators
+- Validated through UGC testing feedback loop
+
+#### Phase 2: Deep Learning Architecture (Future - 1000+ Videos)
+**When to Transition**: Once we have 1000+ videos per bucket (vs current 60)
+
+**Architecture**: Contrastive learning with temporal modeling
+- Direct processing of raw temporal features
+- Multi-modal fusion layers
+- Attention mechanisms for pattern discovery
+- No manual feature engineering needed
+
+```python
+# Future architecture when data scales
+class ViralPatternNet(nn.Module):
+    def __init__(self):
+        self.temporal_encoder = TransformerEncoder()  # Process sequences
+        self.contrastive_head = ContrastiveHead()     # Learn representations
+        self.pattern_decoder = PatternDecoder()       # Extract insights
+    
+    def forward(self, video_features):
+        # Learn directly from raw temporal data
+        # No tabular transformation needed
+        temporal_repr = self.temporal_encoder(video_features)
+        contrastive_loss = self.contrastive_head(temporal_repr)
+        patterns = self.pattern_decoder(temporal_repr)
+        return patterns, contrastive_loss
+```
+
+**Why Wait for Phase 2**:
+- Needs 1000+ videos for effective training
+- Requires GPU infrastructure
+- Less interpretable than RF (harder to explain "why")
+- Current 60 videos perfect for RF + K-Means ensemble
+
+### Critical Trade-offs We're Making
+
+| Trade-off | What We're Giving Up | What We're Getting | Why It's Worth It |
+|-----------|---------------------|-------------------|-------------------|
+| **RF+K-Means vs Full Ensemble** | Some accuracy from 4+ models | 4x simpler than 20 models, manageable complexity | Balance of insights and maintainability |
+| **RF+K-Means vs Deep Learning** | Complex temporal patterns | Full interpretability, no GPU needed | Creators need to understand "why" |
+| **Claude Reports from Day 1** | Initial cost optimization | Professional narrative reports immediately | Quality drives client retention |
+| **60 videos per bucket** | Larger sample statistics | Focused on extremes (top/bottom) | Contrastive analysis needs clear differences |
+
+### Why This Approach is Optimal for Our Use Case
+
+1. **Interpretability Over Accuracy**
+   - Creators need to understand WHY a pattern works
+   - RF provides clear feature importance rankings
+   - Black box models would reduce trust and adoption
+
+2. **Cost-Conscious Scaling**
+   - Minimal ML processing cost (Python RF + K-Means)
+   - Claude API for quality reports (~$0.132/client/month for 4 buckets)
+   - Main budget on UGC testing where it matters most ($960/month)
+
+3. **Progressive Complexity**
+   - Start simple, prove value
+   - Add complexity only when justified by results
+   - Each phase builds on previous success
+
+4. **Contrastive Analysis Focus**
+   - RF is designed for classification (top vs bottom)
+   - Directly answers: "What makes videos viral?"
+   - Not just patterns, but differentiating factors
+
+### Implementation Complexity Comparison
+
+```python
+# MVP (RF + K-Means) - 50 lines
+def train_models(top_40, bottom_20):
+    X = combine_features(top_40, bottom_20)
+    y = [1]*40 + [0]*20
+    
+    # Contrastive analysis
+    rf = RandomForestClassifier()
+    rf.fit(X, y)
+    
+    # Style segmentation
+    kmeans = KMeans(n_clusters=3)
+    kmeans.fit(X)
+    
+    return {
+        "importance": rf.feature_importances_,
+        "clusters": kmeans.labels_,
+        "probabilities": rf.predict_proba(X)
+    }
+
+# Original Full Ensemble - 200+ lines
+def train_full_ensemble(top_40, bottom_20):
+    # Train 4 models × 4 buckets = 16 models
+    # Complex consensus logic
+    # Handle disagreements
+    # Maintain version consistency
+    # ... extensive code ...
+```
+
+### Success Metrics for This Approach
+
+- **Development Time**: 1.5 weeks vs 1 month for full ensemble
+- **Maintenance Burden**: 1 developer can manage both models
+- **Processing Cost**: ~$0.165/client/month for Claude reports
+- **Insight Quality**: Rich insights (importance + segments + narrative)
+- **Client Understanding**: High (Claude translates to plain language)
+
+### Future-Proofing Built In
+
+The architecture supports enhancement without rewrite:
+- Tabular data format works for both current ML and future deep learning
+- RF + K-Means insights can be enhanced with additional models if needed
+- Claude integration allows report sophistication to grow over time
+- Deep learning (Phase 2) can consume same video data when scale permits
+
+### Key Insight for Reviewers
+
+**We chose balanced sophistication**: RF + K-Means ensemble provides the optimal balance of analytical depth and maintainability. This contrastive-first multi-analytical approach delivers comprehensive insights (what works, for which style, with what confidence) while remaining interpretable and manageable. The goal is helping creators make better content with clear, actionable, and contextualized recommendations.
+
+---
+
 ## 📐 2. System Architecture
 
 ### 2.1 Goals - Core Functionalities
 
 #### Primary Goals
 1. **Batch Video Analysis**
-   - Process up to 250 videos sequentially through `rumiai_runner.py`
+   - Process up to 300 videos sequentially through `rumiai_runner.py`
    - Implement checkpoint/resume system for failure recovery
    - Maintain $0.00 processing cost with Python-only pipeline
 
@@ -168,7 +638,7 @@ Tumi Labs (ML Analysis & Intermediary) → Brands/Clients (Pay) → UGC Factorie
 ┌─────────────────────────────────────────────────────────────┐
 │                 RUMIAI ANALYSIS PIPELINE                    │
 │  rumiai_runner.py → ML Services → Python Compute → JSON     │
-│  (432+ features per video at $0.00 cost)                   │
+│  (>100 features per video at $0.00 cost, exact count TBC)  │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -201,7 +671,7 @@ Tumi Labs (ML Analysis & Intermediary) → Brands/Clients (Pay) → UGC Factorie
       "url": "https://www.tiktok.com/search?q=%23nutrition",
       "videos_per_segment": 30,
       "date_filter": "2025-01-05",  // User-defined cutoff: only videos after this date
-      "segments": ["0-15s", "16-30s", "31-60s", "61-90s", "91-120s"]
+      "segments": ["0-15s", "16-30s", "31-60s", "61-120s"]
     }
   ]
 }
@@ -257,13 +727,12 @@ class DurationBucketMLPipeline:
     def __init__(self, client, hashtag):
         self.client = client
         self.hashtag = hashtag
-        # Five independent ML models - one per bucket
+        # Four independent ML models - one per bucket
         self.bucket_models = {
             "0-15s": {"model": None, "patterns": None, "performance": None},
             "16-30s": {"model": None, "patterns": None, "performance": None},
             "31-60s": {"model": None, "patterns": None, "performance": None},
-            "61-90s": {"model": None, "patterns": None, "performance": None},
-            "91-120s": {"model": None, "patterns": None, "performance": None}
+            "61-120s": {"model": None, "patterns": None, "performance": None}
         }
         
     def train_bucket_specific_models(self, videos_by_bucket):
@@ -386,7 +855,8 @@ class DurationBucketMLPipeline:
     
     def extract_ml_ready_features(self, videos, bucket):
         """
-        Extract 432+ ML-ready features from precomputed analysis data
+        Extract ML-ready features from precomputed analysis data
+        Feature count varies by duration: >100 features (exact TBC)
         
         Features are already processed by precompute_professional.py:
         - Scalar values (floats, ints) 
@@ -432,7 +902,7 @@ class DurationBucketMLPipeline:
             metadata = video.analyses.get('metadata_analysis', {})
             features.extend(self.flatten_analysis_block(metadata))
             
-            # Total: ~432 features ready for ML
+            # Total: >100 features ready for ML (varies by duration, exact count TBC)
             feature_matrix.append(features)
             engagement_scores.append(video.engagement_rate)
         
@@ -473,197 +943,326 @@ class DurationBucketMLPipeline:
         
         return features
     
-    def extract_temporal_features(self, timeline_array, timeline_type):
+    def extract_temporal_features(self, timeline_array, timeline_type, video_duration):
         """
-        Hybrid approach for converting variable-length timeline arrays to fixed-size features
-        
-        Combines multiple methods for comprehensive temporal pattern capture:
-        1. Statistical Aggregation - Overall patterns
-        2. Fixed Time Windows - Pacing evolution  
-        3. Key Moment Extraction - Critical timing insights
+        Advanced temporal feature extraction with Hook/Middle/Closing windows
+        Based on MLMVP2 architecture for sophisticated temporal analysis
         """
-        if not timeline_array:
-            return [0] * self.get_expected_temporal_features(timeline_type)
+        features = {}
         
-        all_features = []
+        # Hook Window (0-3s) - Universal scroll decision moment
+        hook_features = self.extract_hook_window(timeline_array[:3], timeline_type)
+        features.update(hook_features)
         
-        # Method 1: Statistical Aggregation (6 features)
-        statistical_features = self.aggregate_timeline_stats(timeline_array, timeline_type)
-        all_features.extend(statistical_features)
-        
-        # Method 2: Fixed Time Windows (duration-dependent, 6-10 features)
-        window_features = self.extract_window_features(timeline_array, timeline_type)
-        all_features.extend(window_features)
-        
-        # Method 3: Key Moments (7 features)  
-        key_moment_features = self.extract_key_moments(timeline_array, timeline_type)
-        all_features.extend(key_moment_features)
-        
-        return all_features
-    
-    def aggregate_timeline_stats(self, timeline_array, timeline_type):
-        """
-        Method 1: Statistical Aggregation
-        Extract overall statistical patterns from timeline
-        """
-        if timeline_type == 'densityCurve':
-            values = [point.get("density", 0) for point in timeline_array]
-        elif timeline_type == 'overlayProgression':
-            values = [point.get("overlayCount", 0) for point in timeline_array]
-        elif timeline_type == 'emotionProgression':
-            values = [point.get("intensity", 0) for point in timeline_array]
+        # Middle Window (3s to -3s) - Narrative development
+        if video_duration > 6:  # Only if middle exists
+            middle_start_idx = 3
+            middle_end_idx = len(timeline_array) - 3 if len(timeline_array) > 6 else len(timeline_array)
+            middle_data = timeline_array[middle_start_idx:middle_end_idx]
+            middle_features = self.extract_middle_window(
+                middle_data, 
+                video_duration - 6,  # Middle duration
+                timeline_type
+            )
+            features.update(middle_features)
         else:
-            values = [1] * len(timeline_array)  # Default: count occurrences
+            # Videos ≤6s have no middle
+            features['middle_is_present'] = False
         
-        if not values:
-            return [0] * 6
+        # Closing Window (Last 3s) - Conversion moment
+        closing_features = self.extract_closing_window(timeline_array[-3:], timeline_type)
+        features.update(closing_features)
+        
+        return features
+    
+    def extract_hook_window(self, hook_data, timeline_type):
+        """
+        Extract 8 standardized hook features (0-3s)
+        Critical for user scroll-decision analysis
+        """
+        if not hook_data:
+            return {f'hook_{k}': 0 for k in ['density', 'surprise', 'has_question', 
+                                               'face_visible', 'motion', 'text_count', 
+                                               'emotion', 'effectiveness']}
+        
+        # Extract values based on timeline type
+        if timeline_type == 'densityCurve':
+            values = [point.get("density", 0) for point in hook_data]
+        else:
+            values = [1] * len(hook_data)  # Default counting
             
+        return {
+            'hook_0to3s_density': np.mean(values) if values else 0,
+            'hook_0to3s_surprise_score': np.std(values) if values else 0,  # Variability = surprise
+            'hook_0to3s_has_question': 1 if any('?' in str(point) for point in hook_data) else 0,
+            'hook_0to3s_face_visible': 1 if 'face' in str(hook_data).lower() else 0,
+            'hook_0to3s_motion_intensity': np.max(values) if values else 0,
+            'hook_0to3s_text_count': sum(1 for p in hook_data if 'text' in str(p).lower()),
+            'hook_0to3s_emotion': 'neutral',  # Placeholder for emotion detection
+            'hook_effectiveness_score': np.mean(values) * 0.8 if values else 0
+        }
+    
+    def extract_middle_window(self, middle_data, middle_duration, timeline_type):
+        """
+        Adaptive middle window analysis based on video duration
+        Collection granularity varies, output schema fixed (3 bins)
+        """
+        features = {
+            'middle_len_sec': middle_duration,
+            'middle_is_present': len(middle_data) > 0
+        }
+        
+        if not middle_data:
+            return features
+        
+        # Extract values for analysis
+        if timeline_type == 'densityCurve':
+            values = [point.get("density", 0) for point in middle_data]
+        else:
+            values = [1] * len(middle_data)
+        
+        # Always: Shape statistics (6 features)
+        features.update(self.calculate_shape_stats(values))
+        
+        # Adaptive bins based on duration
+        if middle_duration >= 13:  # 16s+ videos have 10s+ middle
+            if middle_duration < 28:  # 16-30s: Simple thirds
+                bins = self.calculate_thirds(values)
+            elif middle_duration < 58:  # 31-60s: Quartiles → 3 bins
+                quartiles = self.calculate_quartiles(values)
+                bins = {
+                    'middle_early_density': np.mean([quartiles[0], quartiles[1]]),
+                    'middle_mid_density': quartiles[2],
+                    'middle_late_density': quartiles[3]
+                }
+            else:  # 61-120s: Quintiles → 3 bins
+                quintiles = self.calculate_quintiles(values)
+                bins = {
+                    'middle_early_density': np.mean([quintiles[0], quintiles[1]]),
+                    'middle_mid_density': quintiles[2],
+                    'middle_late_density': np.mean([quintiles[3], quintiles[4]])
+                }
+            features.update(bins)
+        
+        # Add piecewise for 31s+ videos
+        if middle_duration >= 28:
+            features.update(self.calculate_piecewise_fit(values))
+        
+        # Add rhythm for 61s+ videos  
+        if middle_duration >= 58:
+            features.update(self.calculate_rhythm_metrics(values))
+        
+        return features
+    
+    def extract_closing_window(self, closing_data, timeline_type):
+        """
+        Extract 8 standardized closing features (last 3s)
+        Critical for conversion/CTA analysis
+        """
+        if not closing_data:
+            return {f'closing_{k}': 0 for k in ['density', 'has_cta', 'cta_type',
+                                                 'gesture', 'text_count', 'emotion',
+                                                 'face_visible', 'effectiveness']}
+        
+        # Extract values based on timeline type
+        if timeline_type == 'densityCurve':
+            values = [point.get("density", 0) for point in closing_data]
+        else:
+            values = [1] * len(closing_data)
+            
+        return {
+            'closing_3s_density': np.mean(values) if values else 0,
+            'closing_3s_has_cta': 1 if any(word in str(closing_data).lower() 
+                                          for word in ['follow', 'like', 'share']) else 0,
+            'closing_3s_cta_type': 'follow',  # Placeholder for CTA detection
+            'closing_3s_gesture_present': 1 if 'gesture' in str(closing_data).lower() else 0,
+            'closing_3s_text_count': sum(1 for p in closing_data if 'text' in str(p).lower()),
+            'closing_3s_emotion': 'excitement',  # Placeholder
+            'closing_3s_face_visible': 1 if 'face' in str(closing_data).lower() else 0,
+            'closing_effectiveness_score': np.mean(values) * 0.85 if values else 0
+        }
+    
+    def calculate_shape_stats(self, values):
+        """Calculate shape statistics for middle window"""
+        if not values:
+            return {}
+            
+        peak_idx = np.argmax(values)
+        return {
+            'middle_peak_value': np.max(values),
+            'middle_peak_position': peak_idx / len(values) if len(values) > 0 else 0,
+            'middle_oscillations': self.count_peaks(values),
+            'middle_trend_slope': np.polyfit(range(len(values)), values, 1)[0] if len(values) > 1 else 0,
+            'middle_variance': np.var(values),
+            'middle_cv': np.std(values) / np.mean(values) if np.mean(values) != 0 else 0
+        }
+    
+    def calculate_thirds(self, values):
+        """Simple thirds for 16-30s videos"""
+        third_len = len(values) // 3
+        return {
+            'middle_early_density': np.mean(values[:third_len]) if third_len > 0 else 0,
+            'middle_mid_density': np.mean(values[third_len:2*third_len]) if third_len > 0 else 0,
+            'middle_late_density': np.mean(values[2*third_len:]) if third_len > 0 else 0
+        }
+    
+    def calculate_quartiles(self, values):
+        """Calculate quartiles for 31-60s videos"""
+        q_len = len(values) // 4
         return [
-            np.mean(values),                    # Overall average
-            np.max(values),                     # Peak value
-            np.min(values),                     # Valley value  
-            np.std(values),                     # Variation/volatility
-            np.max(values) - np.min(values),    # Range
-            len(timeline_array)                 # Timeline length
+            np.mean(values[:q_len]) if q_len > 0 else 0,
+            np.mean(values[q_len:2*q_len]) if q_len > 0 else 0,
+            np.mean(values[2*q_len:3*q_len]) if q_len > 0 else 0,
+            np.mean(values[3*q_len:]) if q_len > 0 else 0
         ]
     
-    def extract_window_features(self, timeline_array, timeline_type):
-        """
-        Method 2: Fixed Time Windows
-        Capture pacing evolution through video segments
-        """
-        if timeline_type == 'densityCurve':
-            # Duration-dependent windowing
-            max_time = max(point.get("second", 0) for point in timeline_array) if timeline_array else 30
-            if max_time <= 15:
-                windows = 5  # 3-second windows for short videos
-            elif max_time <= 30:
-                windows = 6  # 5-second windows for medium videos
-            else:
-                windows = 10  # Variable windows for long videos
-        else:
-            windows = 6  # Default windowing
-            
-        window_features = []
-        if not timeline_array:
-            return [0] * windows
-            
-        # Divide timeline into windows and extract features
-        for i in range(windows):
-            window_start = (i / windows) * 100  # Percentage-based windows
-            window_end = ((i + 1) / windows) * 100
-            
-            # Find points in this window (implementation depends on timeline_type)
-            window_value = self.calculate_window_value(timeline_array, window_start, window_end, timeline_type)
-            window_features.append(window_value)
-            
-        return window_features
-    
-    def extract_key_moments(self, timeline_array, timeline_type):
-        """
-        Method 3: Key Moment Extraction
-        Identify critical creative timing patterns
-        """
-        if not timeline_array:
-            return [0] * 7
-            
-        if timeline_type == 'densityCurve':
-            values = [point.get("density", 0) for point in timeline_array]
-            times = [point.get("second", 0) for point in timeline_array]
-        else:
-            values = [1] * len(timeline_array)  # Default values
-            times = list(range(len(timeline_array)))
-            
-        if not values:
-            return [0] * 7
-            
-        # Find critical moments
-        max_idx = np.argmax(values)
-        min_idx = np.argmin(values) if len(values) > 1 else 0
-        
-        # Calculate timing-specific features
-        max_time = max(times) if times else 0
-        
+    def calculate_quintiles(self, values):
+        """Calculate quintiles for 61-120s videos"""
+        q_len = len(values) // 5
         return [
-            times[max_idx],                                    # Peak moment timing
-            values[max_idx],                                   # Peak moment intensity
-            times[min_idx],                                    # Valley moment timing  
-            values[min_idx],                                   # Valley moment intensity
-            np.mean([v for i, v in enumerate(values) if times[i] <= max_time * 0.3]),  # Opening energy (first 30%)
-            np.mean([v for i, v in enumerate(values) if times[i] >= max_time * 0.7]),  # Closing energy (last 30%)
-            times[max_idx] / max_time if max_time > 0 else 0   # Peak timing ratio (0-1)
+            np.mean(values[:q_len]) if q_len > 0 else 0,
+            np.mean(values[q_len:2*q_len]) if q_len > 0 else 0,
+            np.mean(values[2*q_len:3*q_len]) if q_len > 0 else 0,
+            np.mean(values[3*q_len:4*q_len]) if q_len > 0 else 0,
+            np.mean(values[4*q_len:]) if q_len > 0 else 0
         ]
+    
+    def calculate_piecewise_fit(self, values):
+        """Piecewise linear fit for 31s+ videos"""
+        if len(values) < 3:
+            return {}
+            
+        third_len = len(values) // 3
+        return {
+            'middle_slope_early': np.polyfit(range(third_len), values[:third_len], 1)[0] if third_len > 1 else 0,
+            'middle_slope_mid': np.polyfit(range(third_len), values[third_len:2*third_len], 1)[0] if third_len > 1 else 0,
+            'middle_slope_late': np.polyfit(range(third_len), values[2*third_len:], 1)[0] if third_len > 1 else 0,
+            'middle_break_pos_1': 0.33,
+            'middle_break_pos_2': 0.67
+        }
+    
+    def calculate_rhythm_metrics(self, values):
+        """Rhythm analysis for 61s+ videos"""
+        if len(values) < 2:
+            return {}
+            
+        # Calculate inter-event intervals
+        diffs = np.diff(values)
+        return {
+            'middle_burstiness': np.var(diffs) / np.mean(diffs) if np.mean(diffs) != 0 else 0,
+            'middle_cut_rate_slope': np.polyfit(range(len(diffs)), diffs, 1)[0] if len(diffs) > 1 else 0,
+            'middle_spectral_centroid': np.mean(np.abs(diffs)) if len(diffs) > 0 else 0
+        }
+    
+    def count_peaks(self, values, prominence_threshold=0.2):
+        """Count oscillations/peaks in the data"""
+        if len(values) < 3:
+            return 0
+            
+        mean_val = np.mean(values)
+        threshold = mean_val * (1 + prominence_threshold)
+        peaks = sum(1 for i in range(1, len(values)-1) 
+                   if values[i] > threshold and values[i] > values[i-1] and values[i] > values[i+1])
+        return peaks
     
     def extract_duration_specific_patterns(self, ensemble_model, videos, bucket):
         """
-        Extract patterns that work for THIS specific duration
+        Extract patterns with awareness of temporal windows
+        Based on MLMVP2 architecture for sophisticated analysis
         """
         patterns = {
-            "bucket": bucket,
-            "context": f"Patterns specific to {bucket} videos",
-            "key_features": [],
-            "success_strategies": []
+            'duration_bucket': bucket,
+            'temporal_insights': {},
+            'success_strategies': [],
+            'expected_completion_rate': None
         }
         
-        # Duration-specific pattern extraction
+        # Analyze hook effectiveness across all videos in bucket
+        hook_importance = self.analyze_feature_importance(
+            ensemble_model, 
+            feature_prefix='hook_'
+        )
+        patterns['temporal_insights']['hook_critical_factors'] = hook_importance
+        
+        # Duration-specific middle window analysis
         if bucket == "0-15s":
-            patterns["success_strategies"] = [
-                "Hook within first 1-2 seconds",
-                "Single clear message/point",
+            patterns['temporal_insights']['middle_strategy'] = "Single peak focus"
+            patterns['temporal_insights']['peak_detection'] = "1-2 peaks max, typically at 67% through middle"
+            patterns['success_strategies'] = [
+                "Hook within first 1-2 seconds (critical for scroll-stop)",
+                "Single clear message/reveal in middle (9s mark typical)",
+                "Quick CTA in final 2 seconds",
                 "High density visual changes (>1 per second)",
-                "Text overlay with key takeaway",
-                "No time for story - pure impact"
+                "No time for complex narrative - pure impact"
             ]
-            patterns["expected_completion_rate"] = "80-90%"
+            patterns['expected_completion_rate'] = "80-90%"
             
         elif bucket == "16-30s":
-            patterns["success_strategies"] = [
+            patterns['temporal_insights']['middle_strategy'] = "Three-act structure"
+            patterns['temporal_insights']['peak_detection'] = "2-3 distinct peaks possible"
+            patterns['temporal_insights']['bin_analysis'] = "Early/mid/late thirds show narrative progression"
+            patterns['success_strategies'] = [
                 "Quick hook (2-3s) then explanation",
-                "Tutorial or tip format works best",
-                "2-3 scene changes maximum",
-                "Clear beginning-middle-end structure",
-                "CTA at 25-second mark"
+                "Tutorial format with intro→demo→recap visible in bins",
+                "2-3 scene changes aligned with middle transitions",
+                "Clear beginning-middle-end structure in density bins",
+                "CTA at 25-second mark in closing window"
             ]
-            patterns["expected_completion_rate"] = "60-70%"
+            patterns['expected_completion_rate'] = "60-70%"
             
         elif bucket == "31-60s":
-            patterns["success_strategies"] = [
-                "Story arc: setup-conflict-resolution",
-                "Multiple scene progression (4-6 changes)",
-                "Build to climax at 45s mark",
-                "Text overlays for key points",
-                "Emotional journey required"
+            patterns['temporal_insights']['middle_strategy'] = "Multi-peak engagement with piecewise transitions"
+            patterns['temporal_insights']['peak_detection'] = "3-4 major peaks with precise timing"
+            patterns['temporal_insights']['piecewise_analysis'] = "Rising→plateau→falling slopes typical"
+            patterns['success_strategies'] = [
+                "Story arc visible in piecewise slopes: setup→conflict→resolution",
+                "Multiple scene progression (4-6 changes) at break points",
+                "Quartile analysis shows engagement distribution",
+                "Build to climax visible in middle_peak_position",
+                "Text overlays synchronized with piecewise transitions",
+                "Emotional journey tracked through middle oscillations"
             ]
-            patterns["expected_completion_rate"] = "40-50%"
+            patterns['expected_completion_rate'] = "40-50%"
             
-        elif bucket == "61-90s":
-            patterns["success_strategies"] = [
-                "Educational or deep-dive content",
-                "Chapter-like structure needed",
-                "Visual variety to maintain attention",
-                "Multiple points/tips format",
-                "Strong hook promise that delivers"
+        elif bucket == "61-120s":
+            patterns['temporal_insights']['middle_strategy'] = "Rhythm and repetition with 5+ peaks"
+            patterns['temporal_insights']['peak_detection'] = "5-6 peaks possible, complex patterns"
+            patterns['temporal_insights']['rhythm_analysis'] = "Burstiness and cut_rate_slope critical"
+            patterns['success_strategies'] = [
+                "Educational content with rhythm metrics showing pacing",
+                "Chapter structure visible in quintile→3-bin mapping",
+                "Visual variety tracked by spectral_centroid",
+                "Multiple points format with 5+ oscillations",
+                "Strong hook promise with high hook_effectiveness_score",
+                "Long-form storytelling visible in piecewise slopes",
+                "Professional production tracked by middle_cv ratio",
+                "Closing window CTAs more critical for retention"
             ]
-            patterns["expected_completion_rate"] = "30-40%"
-            
-        elif bucket == "91-120s":
-            patterns["success_strategies"] = [
-                "Long-form storytelling or education",
-                "Must have compelling narrative",
-                "Professional production value expected",
-                "Multiple engagement peaks throughout",
-                "Only for highly engaged audiences"
-            ]
-            patterns["expected_completion_rate"] = "20-30%"
+            patterns['expected_completion_rate'] = "25-35%"
         
-        # Add ML-discovered patterns
-        feature_importance = model.feature_importances_
-        top_features_idx = np.argsort(feature_importance)[-10:]
-        patterns["ml_discovered_features"] = [
-            self.feature_names[idx] for idx in top_features_idx
-        ]
+        # Analyze closing window effectiveness
+        closing_importance = self.analyze_feature_importance(
+            ensemble_model,
+            feature_prefix='closing_'
+        )
+        patterns['temporal_insights']['closing_critical_factors'] = closing_importance
+        
+        # Add ML-discovered patterns from temporal features
+        patterns['temporal_insights']['discovered_patterns'] = self.discover_temporal_patterns(
+            ensemble_model, videos, bucket
+        )
         
         return patterns
+    
+    def analyze_feature_importance(self, model, feature_prefix):
+        """Analyze importance of features with given prefix"""
+        # Placeholder for actual implementation
+        return f"Analysis of {feature_prefix} features"
+    
+    def discover_temporal_patterns(self, model, videos, bucket):
+        """Discover patterns from temporal window features"""
+        # Placeholder for actual pattern discovery
+        return f"Temporal patterns discovered for {bucket}"
 ```
 
 #### Step 5: Bucket Performance Intelligence Report
@@ -754,7 +1353,7 @@ def get_bucket_verdict(metrics):
 
 **CRITICAL LIMITATION DISCOVERED:**
 - **Hard Limit**: 400-800 videos per hashtag maximum (TikTok platform limitation, not Apify)
-- **Our Requirement**: 250 videos (50 per duration bucket × 5 buckets)
+- **Our Requirement**: 240 videos (60 per duration bucket × 4 buckets: 40 top + 20 bottom each)
 - **Status**: ✅ Within limits, but limited headroom for filtering
 
 #### Date Range Filtering Limitation
@@ -796,12 +1395,12 @@ def select_videos_with_date_constraint(hashtag, min_date, target_per_bucket=50):
 
 **Regular TikTok Hashtag Scraper:**
 - **Cost**: $0.005 per video
-- **250 videos**: $1.25 per hashtag analysis
+- **300 videos**: $1.50 per hashtag analysis
 - **Reliability**: Official Apify scraper, well-tested
 
 **Super TikTok Scraper Alternative:**
 - **Cost**: $0.0005 per video (10x cheaper)
-- **250 videos**: $0.125 per hashtag analysis  
+- **300 videos**: $0.15 per hashtag analysis  
 - **Savings**: 90% cost reduction for production volume
 - **Trade-offs**: Third-party developer, potentially slower, less support
 
@@ -878,7 +1477,7 @@ def select_top_videos_by_engagement(videos, date_cutoff, min_thresholds=True):
 1. **Scrape hashtag**: Get 400-800 videos maximum
 2. **Filter by date**: Apply client-side date constraints  
 3. **Calculate engagement**: Rate all remaining videos
-4. **Segment by duration**: Sort into 5 buckets (0-15s, 16-30s, 31-60s, 61-90s, 91-120s)
+4. **Segment by duration**: Sort into 4 buckets (0-15s, 16-30s, 31-60s, 61-120s)
 5. **Select top 50**: From each bucket by engagement rate
 
 **Risk Mitigation:**
@@ -986,23 +1585,17 @@ def select_top_videos_by_engagement(videos, date_cutoff, min_thresholds=True):
       ],
       "verdict": "MODERATE USE"
     },
-    "61-90s": {
-      "videos_analyzed": 22,
-      "avg_engagement": 0.028,
-      "model_accuracy": 0.68,
+    "61-120s": {
+      "videos_analyzed": 30,
+      "avg_engagement": 0.024,
+      "model_accuracy": 0.62,
       "top_patterns": [
         "Educational deep-dives only",
         "Chapter structure essential",
+        "Long-form storytelling",
         "Multiple engagement points needed"
       ],
       "verdict": "LOW PRIORITY"
-    },
-    "91-120s": {
-      "videos_analyzed": 8,
-      "avg_engagement": 0.019,
-      "model_accuracy": null,
-      "top_patterns": [],
-      "verdict": "INSUFFICIENT DATA"
     }
   },
   "strategic_summary": {
@@ -1010,8 +1603,7 @@ def select_top_videos_by_engagement(videos, date_cutoff, min_thresholds=True):
       "0-15s": "40%",
       "16-30s": "35%",
       "31-60s": "20%",
-      "61-90s": "5%",
-      "91-120s": "0%"
+      "61-120s": "5%"
     },
     "key_insight": "Short-form content (0-30s) drives 75% of engagement for #nutrition"
   }
@@ -1471,7 +2063,7 @@ class PDFReportGenerator:
 │ ANALYSIS SCOPE                                  │
 │ ✓ 5 Hashtags Analyzed: #nutrition, #supplements│
 │   #protein, #wellness, #preworkout             │
-│ ✓ 1,250 Videos Processed (250 per hashtag)     │
+│ ✓ 1,500 Videos Processed (300 per hashtag)     │
 │ ✓ 25 ML Models Trained (5 per hashtag)         │
 │ ✓ 50 Creative Formulas Identified              │
 │                                                 │
@@ -1917,7 +2509,107 @@ features = statistical_features + window_features + key_moment_features
 
 This comprehensive approach ensures our ML models can learn both the **what** (elements used) and the **when** (timing patterns) of viral creative strategies.
 
-### 6.2 Dynamic Keys Problem: Inconsistent Feature Schema
+#### Sophisticated vs Simple Feature Engineering
+
+**Simple Approach (Basic Statistics):**
+```python
+# What others might do - lose all temporal insight
+density_features = {
+    "density_mean": np.mean(density_curve),
+    "density_max": np.max(density_curve),
+    "density_std": np.std(density_curve)
+}
+# Result: 3 features, no temporal understanding
+```
+
+**Our Sophisticated Approach (MLMVP2 Architecture):**
+```python
+# Rich temporal understanding with psychological grounding
+temporal_features = {
+    # Hook (0-3s): Scroll decision moment
+    "hook_0to3s_density": 45,
+    "hook_0to3s_surprise_score": 0.89,
+    "hook_effectiveness_score": 0.84,
+    
+    # Middle: Adaptive narrative analysis
+    "middle_peak_position": 0.58,  # WHERE the climax occurs
+    "middle_oscillations": 3,       # HOW MANY peaks
+    "middle_early_density": 35,     # Story progression
+    "middle_mid_density": 72,
+    "middle_late_density": 41,
+    "middle_slope_early": 2.1,      # Pacing changes
+    "middle_burstiness": 1.8,       # Rhythm patterns
+    
+    # Closing (last 3s): Conversion moment
+    "closing_3s_has_cta": True,
+    "closing_effectiveness_score": 0.79
+}
+# Result: 35+ features capturing narrative arc, pacing, and psychology
+```
+
+The sophisticated approach enables insights like:
+- "Peak at 58% through middle correlates with 2x engagement"
+- "Rising slope in early middle (2.1) indicates successful buildup"
+- "Burstiness > 2.0 maintains attention in 60s+ content"
+
+Simple statistics could never reveal these patterns.
+
+### 6.2 Temporal Window Architecture
+
+#### Three-Window Temporal Architecture
+Recognizing that different parts of videos serve distinct psychological purposes, we implement a sophisticated temporal analysis system:
+
+##### Hook Window (0-3s)
+- **Purpose**: Capture scroll-decision moment (universal across all durations)
+- **Psychology**: Users make watch/skip decisions in first 3 seconds regardless of video length
+- **Features**: 8 standardized metrics
+  - `hook_0to3s_density`: Element density in hook
+  - `hook_0to3s_surprise_score`: Novelty/surprise factor
+  - `hook_0to3s_has_question`: Question posed to viewer
+  - `hook_0to3s_face_visible`: Human face present
+  - `hook_0to3s_motion_intensity`: Movement/action level
+  - `hook_0to3s_text_count`: Text overlays in hook
+  - `hook_0to3s_emotion`: Dominant emotion detected
+  - `hook_effectiveness_score`: Composite hook strength
+
+##### Middle Window (3s to last 3s)
+- **Purpose**: Analyze narrative development and content pacing
+- **Adaptive Granularity Strategy**: Collect at appropriate detail, output fixed schema
+
+**Collection Phase** (varies by duration):
+- 16-30s: Divide middle into 3 equal parts
+- 31-60s: Divide middle into 4 quartiles  
+- 61-120s: Divide middle into 5 quintiles
+
+**Mapping Phase** (always outputs 3 bins):
+```
+early_density | mid_density | late_density
+--------------|-------------|-------------
+Thirds:       | third_1     | third_2     | third_3
+Quartiles:    | avg(q1,q2)  | q3          | q4
+Quintiles:    | avg(q1,q2)  | q3          | avg(q4,q5)
+```
+
+**Middle Window Features by Duration**:
+- **0-15s**: Shape statistics only (6 features) - too short for bins
+- **16-30s**: Shape + 3-bin density (9 features)
+- **31-60s**: Shape + bins + piecewise fitting (14 features)
+- **61-120s**: Shape + bins + piecewise + rhythm (17 features)
+
+##### Closing Window (Last 3s)
+- **Purpose**: Capture conversion moment and CTAs
+- **Psychology**: CTAs occur in final 3 seconds regardless of total video length
+- **Features**: 8 standardized metrics
+  - `closing_3s_density`: Element density in closing
+  - `closing_3s_has_cta`: CTA present
+  - `closing_3s_cta_type`: Type (follow/like/share/buy)
+  - `closing_3s_gesture_present`: Pointing/gesture for emphasis
+  - `closing_3s_text_count`: CTA text overlays
+  - `closing_3s_emotion`: Final emotion
+  - `closing_3s_face_visible`: Still engaging vs turned away
+  - `closing_effectiveness_score`: CTA strength composite
+
+### 6.3 Dynamic Keys Problem: Inconsistent Feature Schema
 
 #### The Challenge: Sparse Co-occurrence Data
 
@@ -2072,7 +2764,7 @@ flows_to_audit = [
 
 Analysis of our actual data structure reveals:
 - **17 categorical string fields** with 2-4 enum values each
-- These represent only **4% of our 432 total features**
+- These represent a small percentage of our total features (exact count TBC)
 - One-hot encoding creates ~50 binary features
 
 #### Simple One-Hot Encoding (Recommended)
@@ -2108,15 +2800,59 @@ def encode_categoricals(features):
 - Tree-based models (RandomForest, XGBoost) handle it well
 - Standard sklearn implementation
 
-### 6.4 Complete Feature Engineering Pipeline
+### 6.4 Canonical JSON Architecture
 
-#### Feature Breakdown (432 Total)
+#### Single Source of Truth Design
+Based on MLMVP2 architecture, we implement a canonical JSON structure as the single source of truth for all ML features:
+
+```json
+{
+  "video_id": "abc123",
+  "duration_sec": 60,
+  "duration_bucket": "31-60s",
+  
+  "features_base": {
+    "cd_avgDensity": 24.3,
+    "cd_totalElements": 170,
+    "pf_averageFaceSize": 9.86,
+    "// ... ~150 canonical features ...": 0
+  },
+  
+  "temporal_summaries": {
+    "hook_window": { /* 8 features */ },
+    "middle_window": { /* adaptive features */ },
+    "closing_window": { /* 8 features */ }
+  },
+  
+  "audit": {
+    "schema_version": "1.0.0",
+    "extracted_at": "2025-08-26T10:44:17Z"
+  }
+}
+```
+
+**Why Canonical JSON?**
+- **Single source of truth** prevents schema drift
+- **Fixed schema** enables CI/CD validation
+- **Versioning is simple** with audit trail
+- **Model-specific artifacts** can be generated from this base
+
+### 6.5 Complete Feature Engineering Pipeline
+
+#### Feature Breakdown (>100 Features - Exact Count TBC)
+
+**NOTE: Final feature count TO BE CONFIRMED**
+- Will be >100 features, likely in 150-300 range
+- Actual count depends on temporal window implementation
+- MLMVP2 targets ~150 canonical features in the canonical JSON
+- Final count will be determined during canonical JSON finalization
 
 ```python
-def extract_all_432_features(raw_output):
+def extract_all_features(raw_output, video_duration):
     """
     Complete feature extraction pipeline
-    Transforms RumiAI JSON → 432 ML-ready features
+    Transforms RumiAI JSON → ML-ready features
+    Actual count varies by video duration (temporal windows)
     """
     features = {}
     
@@ -2135,15 +2871,24 @@ def extract_all_432_features(raw_output):
         features[f"peak_{i}_count"] = peak.get("overlayCount", 0)
         features[f"peak_{i}_intensity"] = peak.get("intensity", 0)
     
-    # 3. AGGREGATE ARRAYS (8 arrays → 40 features, 9%)
-    # Temporal feature extraction (hybrid approach)
+    # 3. SOPHISTICATED TEMPORAL ENGINEERING (35+ features)
+    # Advanced Hook/Middle/Closing window analysis from MLMVP2
+    # This is where the sophisticated engineering happens:
+    #   - Hook window: Universal 0-3s scroll decision analysis
+    #   - Middle window: Adaptive granularity (shape, bins, piecewise, rhythm)
+    #   - Closing window: Last 3s conversion moment analysis
     for timeline_field in ["densityCurve", "overlayProgression"]:
         if timeline_field in raw_output:
             temporal_features = extract_temporal_features(
                 raw_output[timeline_field], 
-                timeline_field
+                timeline_field,
+                video_duration  # Required for adaptive middle window
             )
             features.update(temporal_features)
+    
+    # The temporal features are the KEY DIFFERENTIATOR:
+    # - Simple approach: Just mean/max/min of timeline
+    # - Our approach: Rich temporal understanding with peaks, slopes, rhythms
     
     # 4. ONE-HOT CATEGORICALS (17 fields → 50 features, 11%)
     categorical_features = encode_categoricals(raw_output)
@@ -2152,7 +2897,7 @@ def extract_all_432_features(raw_output):
     # 5. HANDLE OTHER STRINGS (23 features, 5%)
     # Drop IDs, parse timestamps, ignore free text for MVP
     
-    return features  # Exactly 432 ML-ready numeric features
+    return features  # >100 ML-ready features (varies by duration, exact count TBC)
 ```
 
 **Feature Type Distribution:**
@@ -2166,7 +2911,7 @@ def extract_all_432_features(raw_output):
 
 #### The Challenge
 
-When processing 200 videos (40 per bucket × 5 buckets):
+When processing 160 videos (40 per bucket × 4 buckets):
 - Video #80 fails due to bug (YOLO crash, MediaPipe error, etc.)
 - System fails fast to identify bug
 - After fixing, need to resume from video #81, not restart
@@ -2316,7 +3061,62 @@ Processing video 80/200: 7374651255392210219
 ✅ Successfully processed all 200 videos!
 ```
 
-### 6.6 Feature Scaling Strategy for Ensemble Models
+### 6.6 Temporal Window Data Validation
+
+Before ML training, validate that temporal windows are correctly extracted:
+
+```python
+def validate_temporal_windows(video_features, video_duration):
+    """
+    Ensure temporal windows are correctly extracted based on MLMVP2 architecture
+    """
+    validations = {
+        'hook_present': all(f in video_features for f in [
+            'hook_0to3s_density', 'hook_effectiveness_score'
+        ]),
+        'middle_consistent': (
+            video_duration <= 6 or 'middle_is_present' in video_features
+        ),
+        'closing_present': all(f in video_features for f in [
+            'closing_3s_density', 'closing_3s_has_cta'
+        ])
+    }
+    
+    # Duration-specific validations
+    if video_duration >= 16 and video_duration <= 30:
+        # Should have bins but not piecewise
+        validations['has_bins'] = 'middle_early_density' in video_features
+        validations['no_piecewise'] = 'middle_slope_early' not in video_features
+        
+    elif video_duration >= 31 and video_duration <= 60:
+        # Should have bins AND piecewise
+        validations['has_bins'] = 'middle_early_density' in video_features
+        validations['has_piecewise'] = 'middle_slope_early' in video_features
+        validations['no_rhythm'] = 'middle_burstiness' not in video_features
+        
+    elif video_duration >= 61:
+        # Should have everything
+        validations['has_bins'] = 'middle_early_density' in video_features
+        validations['has_piecewise'] = 'middle_slope_early' in video_features
+        validations['has_rhythm'] = 'middle_burstiness' in video_features
+    
+    # Log validation results
+    if not all(validations.values()):
+        logger.warning(f"Temporal validation failed for {video_duration}s video:")
+        for check, passed in validations.items():
+            if not passed:
+                logger.warning(f"  ❌ {check}")
+    
+    return all(validations.values())
+
+# Usage in pipeline
+for video in videos:
+    features = extract_temporal_features(video.timeline, video.type, video.duration)
+    if not validate_temporal_windows(features, video.duration):
+        raise ValueError(f"Invalid temporal extraction for video {video.id}")
+```
+
+### 6.7 Feature Scaling Strategy for Ensemble Models
 
 #### Why Scaling is Required
 
@@ -2330,7 +3130,7 @@ models = {
 }
 ```
 
-**The Problem**: Our 432 features have wildly different scales:
+**The Problem**: Our features have wildly different scales:
 - `views`: 10,000,000 (millions)
 - `overlayDensity`: 0.448 (fraction)
 - `totalOverlays`: 26 (count)
@@ -2346,11 +3146,11 @@ import numpy as np
 
 def prepare_ml_features(features_list):
     """
-    Scale all 432 features using RobustScaler
+    Scale all features using RobustScaler
     Handles viral outliers common in social media metrics
     
     Args:
-        features_list: List of 432-feature dictionaries from processed videos
+        features_list: List of feature dictionaries from processed videos (>100 features each)
     
     Returns:
         X_scaled: Scaled feature matrix ready for ML
@@ -2399,7 +3199,7 @@ async def train_ensemble_with_scaling(hashtag_id):
     features_list = checkpoint.load_completed_features()
     
     # 2. Extract feature matrix and target
-    X = extract_all_432_features(features_list)
+    X = extract_all_features(features_list)
     y = extract_engagement_targets(features_list)
     
     # 3. Scale features for ensemble
@@ -2444,7 +3244,7 @@ def predict_new_video(video_features, hashtag_id):
     scaler = joblib.load('models/feature_scaler.pkl')
     
     # Scale new video features using same scaler
-    X_new = extract_all_432_features([video_features])
+    X_new = extract_all_features([video_features])
     X_scaled = scaler.transform(X_new)
     
     # Load and predict with each model
@@ -2465,7 +3265,7 @@ def predict_new_video(video_features, hashtag_id):
 1. **Scale Once**: Apply same scaling to all models (simpler pipeline)
 2. **Save Scaler**: Critical for consistent inference on new videos
 3. **Robust to Outliers**: Viral videos won't distort scaling
-4. **No Feature Selection**: Use all 432 features (let models decide importance)
+4. **No Feature Selection**: Use all features (>100, exact count TBC) - let models decide importance
 
 ### 6.7 Missing Data Handling: Simplified by Service Contracts
 
@@ -2586,7 +3386,114 @@ async def process_video_for_ml(video_data):
 
 This simplified approach reduces code complexity and focuses on the actual ML logic rather than defensive programming.
 
-### 6.8 Pattern Aggregation via Claude API
+### 6.8 Temporal Windows in Action: Example Analysis
+
+#### How Temporal Windows Reveal Different Strategies
+
+**15-second Fashion Video Analysis:**
+```json
+{
+  "duration": 15,
+  "temporal_features": {
+    "hook_window": {
+      "hook_0to3s_density": 45,
+      "hook_0to3s_surprise_score": 0.9,
+      "hook_0to3s_has_question": true,
+      "hook_0to3s_text_count": 3,
+      "hook_effectiveness_score": 0.88
+    },
+    "middle_window": {
+      "len_sec": 9,
+      "middle_peak_value": 62,
+      "middle_peak_position": 0.67,  // Peak at 9s mark
+      "middle_oscillations": 1,
+      "middle_trend_slope": 1.2,
+      // No bins, piecewise, or rhythm (too short)
+    },
+    "closing_window": {
+      "closing_3s_density": 38,
+      "closing_3s_has_cta": true,
+      "closing_3s_cta_type": "follow",
+      "closing_effectiveness_score": 0.75
+    }
+  },
+  "ml_insights": "Single peak strategy with outfit reveal at 67% through middle"
+}
+```
+
+**60-second Tutorial Analysis:**
+```json
+{
+  "duration": 60,
+  "temporal_features": {
+    "hook_window": {
+      "hook_0to3s_density": 32,
+      "hook_0to3s_face_visible": true,
+      "hook_0to3s_emotion": "curious",
+      "hook_effectiveness_score": 0.72
+    },
+    "middle_window": {
+      "len_sec": 54,
+      "shape": {
+        "middle_peak_value": 85,
+        "middle_peak_position": 0.33,
+        "middle_oscillations": 3
+      },
+      "bins": {  // Quartiles mapped to 3 bins
+        "middle_early_density": 35,  // avg(q1,q2)
+        "middle_mid_density": 85,    // q3
+        "middle_late_density": 40    // q4
+      },
+      "piecewise": {
+        "middle_slope_early": 3.2,   // Rising action
+        "middle_slope_mid": 0.2,     // Plateau
+        "middle_slope_late": -1.8,   // Falling action
+        "middle_break_pos_1": 0.33,
+        "middle_break_pos_2": 0.67
+      },
+      "rhythm": {
+        "middle_burstiness": 2.1,
+        "middle_cut_rate_slope": 0.15
+      }
+    },
+    "closing_window": {
+      "closing_3s_has_cta": true,
+      "closing_3s_gesture_present": true,
+      "closing_effectiveness_score": 0.82
+    }
+  },
+  "ml_insights": "Three-act structure with main content in middle third, piecewise shows clear tutorial progression"
+}
+```
+
+#### What ML Models Learn from These Features
+
+**For 15s Videos:**
+- Hook effectiveness > 0.85 correlates with 2x engagement
+- Single peak at 0.6-0.7 position optimal for reveals
+- Closing CTAs less critical (people replay anyway)
+
+**For 60s Videos:**
+- Middle bins showing ascending pattern (35→85→40) indicate tutorial format
+- Piecewise slopes reveal pacing: steep rise → plateau → gradual fall
+- Rhythm burstiness > 2.0 keeps attention in longer content
+- Closing window CTA effectiveness critical for conversion
+
+#### Validation Output Example
+```
+Validating 60s video features:
+✓ hook_present: All 8 hook features found
+✓ middle_consistent: middle_is_present = true
+✓ has_bins: middle_early_density present
+✓ has_piecewise: middle_slope_early present  
+✓ has_rhythm: middle_burstiness present
+✓ closing_present: All 8 closing features found
+✅ Temporal validation PASSED
+```
+
+This demonstrates how the temporal window architecture provides rich, duration-appropriate insights that generic feature extraction would miss.
+
+### 6.9 Pattern Aggregation via Claude API
 
 #### The Role of Claude in Pattern Generation
 
@@ -2725,7 +3632,7 @@ metadata_analysis = {
 }
 
 # 4. Use as ML target variable
-X = extract_432_features(video_analyses)
+X = extract_all_features(video_analyses)
 y = [video["engagementRate"] for video in metadata_analyses]
 model.fit(X, y)  # Predict engagement rate
 ```
@@ -2762,7 +3669,7 @@ def select_top_videos_by_engagement(videos):
     return sorted(videos, key=lambda x: x.engagement_rate, reverse=True)[:50]
 ```
 
-This engagement rate becomes the target variable that our ML models learn to predict based on the 432 creative features.
+This engagement rate becomes the target variable that our ML models learn to predict based on the creative features (>100 features, exact count TBC).
 
 ### 6.10 Data Storage Architecture
 
@@ -2821,7 +3728,7 @@ class MVPDataStore:
         metadata = {
             "training_date": datetime.now().isoformat(),
             "model_version": "v1.0",
-            "feature_count": 432,
+            "feature_count": "TBC (>100)",
             "video_count": len(list((self.base_path / client / hashtag / "features").glob("*.json")))
         }
         
@@ -2891,7 +3798,7 @@ CREATE TABLE videos (
     hashtag_id UUID REFERENCES hashtags(hashtag_id),
     duration_segment VARCHAR(20),  -- '0-15s', '16-30s', etc.
     engagement_metrics JSONB,      -- views, likes, shares, etc.
-    extracted_features JSONB,      -- All 432 ML features
+    extracted_features JSONB,      -- All ML features (>100, exact count TBC)
     processing_date TIMESTAMP,
     INDEX idx_segment (duration_segment),
     INDEX idx_hashtag (hashtag_id)
@@ -3063,7 +3970,7 @@ def test_pattern_significance(pattern_type, data_high, data_low):
 ### 7.1 Existing RumiAI Components (Already Implemented)
 - ✅ `rumiai_runner.py` - Main orchestration script
 - ✅ `ml_services_unified.py` - ML model implementations (YOLO, Whisper, etc.)
-- ✅ `precompute_professional.py` - 432+ feature generation
+- ✅ `precompute_professional.py` - Feature generation (>100 features, exact count TBC)
 - ✅ `apify_client.py` - TikTok video acquisition
 - ✅ Python-only processing pipeline ($0.00 cost)
 
@@ -4129,7 +5036,7 @@ CREATE TABLE pattern_validation_results (
 - **Processing Success Rate**: > 95% videos completed
 - **Processing Speed**: < 30 seconds per video (including ML)
 - **Checkpoint Recovery**: 100% resumption success
-- **Feature Coverage**: All 432+ features utilized
+- **Feature Coverage**: All features utilized (>100, exact count TBC)
 - **Report Generation Time**: < 10 minutes for 200 videos
 
 ---
@@ -4209,9 +5116,7 @@ rumiaifinal/
 │   │   │   │   ├── videos/
 │   │   │   │   ├── model_31-60s.pkl
 │   │   │   │   └── patterns_31-60s.json
-│   │   │   ├── bucket_61-90s/
-│   │   │   │   └── [similar structure]
-│   │   │   ├── bucket_91-120s/
+│   │   │   ├── bucket_61-120s/
 │   │   │   │   └── [similar structure]
 │   │   │   ├── reports/
 │   │   │   │   ├── creative_guide_0-15s_[date].json
@@ -4240,7 +5145,7 @@ rumiaifinal/
   "client_config": {
     "client_name": "string",
     "hashtags": ["string"],
-    "duration_buckets": ["0-15s", "16-30s", "31-60s", "61-90s", "91-120s"],
+    "duration_buckets": ["0-15s", "16-30s", "31-60s", "61-120s"],
     "target_videos_per_bucket": 50,
     "min_engagement_rate": 1.0,
     "output_format": "PDF",
@@ -4248,7 +5153,7 @@ rumiaifinal/
   },
   "ml_config": {
     "models": ["RandomForest", "DecisionTree", "LinearRegression", "KMeans"],
-    "features_count": 432,
+    "features_count": "TBC (>100)",
     "validation_split": 0.2,
     "min_sample_size": 30,
     "statistical_thresholds": {
@@ -4299,9 +5204,7 @@ rumiaifinal/
 │   │   │   │   ├── videos/
 │   │   │   │   ├── model_31-60s.pkl
 │   │   │   │   └── patterns_31-60s.json
-│   │   │   ├── bucket_61-90s/
-│   │   │   │   └── [similar structure]
-│   │   │   ├── bucket_91-120s/
+│   │   │   ├── bucket_61-120s/
 │   │   │   │   └── [similar structure]
 │   │   │   ├── reports/
 │   │   │   │   ├── creative_guide_0-15s_[date].json
@@ -4332,7 +5235,7 @@ clients:
         url: "https://www.tiktok.com/search?q=%23nutrition"
         analysis_config:
           videos_per_segment: 30
-          segments: ["0-15s", "16-30s", "31-60s", "61-90s", "91-120s"]
+          segments: ["0-15s", "16-30s", "31-60s", "61-120s"]
           min_date: "2025-01-05"
           ml_models:
             - type: "random_forest"
@@ -4468,7 +5371,7 @@ def handle_outliers_hybrid(videos):
 ```json
 {
   "pattern_source": {
-    "total_analyzed": 250,
+    "total_analyzed": 300,
     "organic_content": 210,
     "celebrity_content": 35,
     "excluded_anomalies": 5
@@ -4487,7 +5390,7 @@ def handle_outliers_hybrid(videos):
 #### Current MVP Limitations
 
 **Designed for:**
-- 200-250 videos per batch
+- 200-300 videos per batch
 - Sequential processing (one-by-one)
 - Single client/hashtag at a time
 - 2-hour processing window
@@ -4726,7 +5629,7 @@ class CrossHashtagAnalyzer:
         }
         
         # Analyze each duration bucket across all hashtags
-        for bucket in ["0-15s", "16-30s", "31-60s", "61-90s", "91-120s"]:
+        for bucket in ["0-15s", "16-30s", "31-60s", "61-120s"]:
             bucket_patterns = self.compare_bucket_across_hashtags(bucket, client_hashtags)
             
             cross_analysis["bucket_insights"][bucket] = {
@@ -5141,7 +6044,7 @@ for handle in competitors["direct_competitors"]:
       "0-15s": "45% of content, 7.2% avg engagement",
       "16-30s": "30% of content, 5.4% avg engagement",
       "31-60s": "20% of content, 4.1% avg engagement",
-      "61-90s": "5% of content, 2.8% avg engagement"
+      "61-120s": "5% of content, 2.8% avg engagement"
     },
     "hashtag_strategy": {
       "top_hashtags": [
@@ -5247,7 +6150,7 @@ Formal classification system for creative elements, patterns, and their hierarch
 #### Current Approach & Why It's Not Critical Yet
 
 **Why We're Skipping Taxonomy Definition**:
-- Our 432+ features already capture creative elements implicitly
+- Our features (>100, exact count TBC) already capture creative elements implicitly
 - ML models find patterns without predefined categories
 - Premature categorization could miss unexpected patterns
 - Clients want actionable insights, not academic classifications
@@ -5374,7 +6277,7 @@ def track_affiliate_compliance(affiliate_id, recommendations, new_video_url):
 #### Implementation Phases
 
 **Phase 1: Core Compliance Detection**
-- Leverage existing RumiAI 432+ features for pattern detection
+- Leverage existing RumiAI features (>100, exact count TBC) for pattern detection
 - Map creative recommendations to measurable video characteristics
 - Build compliance scoring system
 - Create basic dashboard for brands to view affiliate compliance
@@ -5419,6 +6322,27 @@ def analyze_recommendation_effectiveness():
 - **Timeline**: 4-6 weeks after core ML pipeline completion
 
 This system would serve as both a product offering and a validation mechanism for our core ML recommendations, creating a complete feedback loop in the creative optimization process.
+
+---
+
+## 📚 References & Related Documentation
+
+### Internal Documents
+- **[MLMVP2.md](./MLMVP2.md)** - Canonical JSON architecture and feature engineering design
+  - Section 1: Core Architecture Decision (Single Canonical JSON)
+  - Section 2: Model-Specific Feature Requirements (RF vs K-means differences)
+  - Section 3: Temporal Analysis Architecture (Hook/Middle/Closing windows)
+  - Section 4: Duration Buckets (0-15s, 16-30s, 31-60s, 61-120s)
+
+### Architecture Relationships
+- **MLMVP2.md**: Defines the *what* - canonical JSON structure, feature architecture, temporal windows
+- **MLProjectsGrassrootsv2.md** (this document): Defines the *how* - implementation pipeline, ML training, operational processes
+
+### Key Cross-References
+- **Model Selection Logic**: See MLMVP2.md Section 2 for why Random Forest + K-means chosen over deep learning
+- **Temporal Window Implementation**: See MLMVP2.md Section 3 for detailed temporal architecture design
+- **Feature Count Estimates**: Both documents reference ~150 canonical features (exact count TBC)
+- **Duration Buckets**: Both documents use identical 4 buckets for duration-specific analysis
 
 ---
 
