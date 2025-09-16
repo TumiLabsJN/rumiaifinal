@@ -22,13 +22,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+project_root = str(Path(__file__).parent.parent)
+sys.path.insert(0, project_root)
 
 from rumiai_v2.api import ApifyClient, MLServices
 from rumiai_v2.processors import (
     VideoAnalyzer, TimelineBuilder, TemporalMarkerProcessor,
     get_compute_function, COMPUTE_FUNCTIONS
 )
+from rumiai_v2.processors.temporal_compute import compute_temporal_windows
 from rumiai_v2.core.models import VideoMetadata
 from rumiai_v2.config import Settings
 from rumiai_v2.utils import FileHandler, Logger, Metrics, VideoProcessingMetrics
@@ -270,33 +272,44 @@ class RumiAIRunner:
                 ml_results
             )
             
-            # Step 5: Generate temporal markers
-            print("📊 generating_temporal_markers... (60%)")
-            temporal_markers = self.temporal_processor.generate_markers(unified_analysis)
-            unified_analysis.temporal_markers = temporal_markers
-            
-            # Save temporal markers separately for compatibility
-            temporal_path = self.save_analysis_result(video_id, "temporal_markers", temporal_markers)
-            
-            # Step 6: Save unified analysis
-            print("📊 saving_analysis... (65%)")
+            # Step 5: Save unified analysis
+            print("📊 saving_analysis... (60%)")
             unified_path = self.unified_handler.get_path(f"{video_id}.json")
             unified_analysis.save_to_file(str(unified_path))
             
-            print("📊 running_precompute_functions... (70%)")
+            # Step 6: Compute temporal windows
+            print("📊 computing_temporal_windows... (70%)")
             prompt_results = {}
-            for func_name, func in COMPUTE_FUNCTIONS.items():
-                try:
-                    result = func(unified_analysis.to_dict())
-                    prompt_results[func_name] = result
-                    # Save each insight to the insights folder
-                    if result:  # Only save if result is not empty
-                        self.save_analysis_result(video_id, func_name, result)
-                except Exception as e:
-                    logger.error(f"Precompute {func_name} failed: {e}")
-                    prompt_results[func_name] = {}
             
-            # Step 8: Generate final report
+            # Use temporal_compute with unified dict (wrapper handles extraction)
+            try:
+                temporal_windows = compute_temporal_windows(unified_analysis.to_dict())
+                prompt_results['temporal_windows'] = temporal_windows
+                
+                # Save temporal windows as a single JSON file
+                if temporal_windows:
+                    # Save directly as single JSON in insights folder
+                    temporal_path = self.insights_handler.get_path(f"{video_id}_temporal_windows_updated.json")
+                    with open(temporal_path, 'w') as f:
+                        json.dump(temporal_windows, f, indent=2)
+                    logger.info(f"✅ Temporal windows saved to {temporal_path}")
+            except Exception as e:
+                logger.error(f"Temporal windows computation failed: {e}")
+                prompt_results['temporal_windows'] = {}
+            
+            # Optionally still run old compute functions if needed for backward compatibility
+            # Uncomment the following if you need to keep old functions temporarily:
+            # for func_name, func in COMPUTE_FUNCTIONS.items():
+            #     try:
+            #         result = func(unified_analysis.to_dict())
+            #         prompt_results[func_name] = result
+            #         if result:
+            #             self.save_analysis_result(video_id, func_name, result)
+            #     except Exception as e:
+            #         logger.error(f"Precompute {func_name} failed: {e}")
+            #         prompt_results[func_name] = {}
+            
+            # Step 7: Generate final report
             print("📊 generating_report... (95%)")
             report = self._generate_report(unified_analysis, prompt_results)
             

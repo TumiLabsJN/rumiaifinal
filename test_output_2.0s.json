@@ -1,0 +1,49 @@
+{
+  "video_id": "test_video_123",
+  "duration": 2.0,
+  "temporal_windows": {
+    "hook": {
+      "start": 0,
+      "end": 2.0,
+      "duration": 2.0,
+      "text_count": 1,
+      "sticker_count": 1,
+      "object_count": 2,
+      "gesture_count": 1,
+      "expression_count": 1,
+      "scene_count": 1,
+      "element_count": 7,
+      "max_density": 4.0,
+      "min_density": 3.0,
+      "avg_density": 3.5,
+      "changes_per_second": 0.5,
+      "speech_coverage": 0.0,
+      "word_count": 0,
+      "happy_ratio": 1.0,
+      "close_ratio": 1.0,
+      "medium_ratio": 0.0,
+      "wide_ratio": 0.0,
+      "none_ratio": 0.0,
+      "energy_level": 0.506,
+      "energy_variance": 0.05173733333333333,
+      "energy_max": 0.9,
+      "burst_pattern": "back_loaded"
+    },
+    "middle_segments": [],
+    "closing": null
+  },
+  "metadata": {
+    "video_id": "test_video_123",
+    "duration": 2.0,
+    "digg_count": 1250,
+    "play_count": 45000,
+    "collect_count": 320,
+    "share_count": 89,
+    "comment_count": 67,
+    "create_time": 1698765432,
+    "author": "test_creator",
+    "description": "Test video description #test #temporal #windows"
+  },
+  "processing_timestamp": 1757959567.738548,
+  "version": "2.0.0"
+}

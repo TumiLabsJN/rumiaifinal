@@ -125,18 +125,24 @@ class AudioEnergyService:
         # Determine burst pattern
         burst_pattern = self._determine_burst_pattern(window_energies)
         
+        # Calculate frames per second for RMS data
+        frames_per_second = sr / hop_samples
+        
         return {
             "energy_level_windows": energy_windows,
             "energy_variance": energy_variance,
             "climax_timestamp": climax_timestamp,
             "burst_pattern": burst_pattern,
             "duration": duration,
+            "rms_frames": rms.tolist(),  # Add raw RMS frames as per decisions3.md
+            "frames_per_second": float(frames_per_second),  # Add FPS for proper window calculation
             "metadata": {
                 "processed": True,
                 "success": True,
                 "method": "librosa_rms",
                 "sample_rate": sr,
-                "window_seconds": self.window_seconds
+                "window_seconds": self.window_seconds,
+                "hop_length": hop_samples
             }
         }
     

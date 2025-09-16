@@ -2316,25 +2316,25 @@ NEW: insights/{video_id}/
 
 ## Implementation Checklist
 
-### Phase 1: Core Implementation ✅
+### Phase 1: Core Implementation ✅ COMPLETE
 - [x] Implement calculate_temporal_windows function
 - [x] Implement calculate_middle_segments function  
-- [x] Implement is_likely_music function
-- [x] Implement calculate_speech_in_window function
-- [x] Implement count_elements_in_window function
+- [x] Implement is_likely_music function (uses whisper segments)
+- [x] Implement calculate_speech_in_window function (via speech segments)
+- [x] Implement count_elements_in_window function (in process_segment)
 - [x] Implement compute_temporal_windows main function
 - [x] Create comprehensive test cases
-- [x] Add validation scripts
+- [x] Add validation scripts (error checking implemented)
 
-### Phase 2: Integration
-- [ ] Update rumiai_runner.py to use new temporal_compute
+### Phase 2: Integration (40% Complete)
+- [x] Update rumiai_runner.py to use new temporal_compute ✅
 - [ ] Remove old compute functions from precompute_functions.py
-- [ ] Test with real video files (3s, 5s, 10s, 30s, 120s)
-- [ ] Verify JSON output structure matches specification
-- [ ] Validate element_count excludes scene_changes
-- [ ] Confirm speech coverage filters music correctly
+- [ ] Test with real video files (3s, 5s, 10s, 30s, 120s) - only tested one
+- [x] Verify JSON output structure matches specification ✅
+- [ ] Validate element_count excludes scene_changes (needs verification)
+- [ ] Confirm speech coverage filters music correctly (needs verification)
 
-### Phase 3: Cleanup
+### Phase 3: Cleanup (Not Started)
 - [ ] Remove 7-flow architecture files
 - [ ] Delete old JSON outputs from insights folders
 - [ ] Update documentation to reflect new architecture
@@ -2346,11 +2346,18 @@ NEW: insights/{video_id}/
 - [ ] Remove ej_emotionTransitions from global features
 - [ ] Remove global sa_speechCoverage
 
-### Phase 4: Validation
+### Phase 4: Validation (Not Started)
 - [ ] Verify all temporal windows populated correctly
 - [ ] Confirm no global redundancies remain
 - [ ] Test with videos of different durations (15s, 30s, 60s, 90s+)
 - [ ] Validate middle segments adjust correctly based on duration
+
+### Bug Fixes Completed (2025-09-15)
+- [x] Fixed framing ratios (close/medium/wide/none) all showing 0.0
+- [x] Fixed missing emotion ratios (all 7 emotions now included)
+- [x] Fixed type consistency for ML training (all start/end/duration are floats)
+- [x] Fixed audio energy metrics showing 0.0 (now using RMS frames)
+- [x] Fixed metadata engagement metrics showing 0 (mapping corrected)
 
 ## Output Structure Example
 ```json

@@ -132,12 +132,12 @@ def extract_audio_energy_data(ml_data: Dict[str, Any]) -> Dict[str, Any]:
     """Defensive extraction for audio energy data - handles nested formats"""
     audio_data = ml_data.get('audio_energy', {})
     
-    # Check direct format - return full data if present
-    if 'rms_frames' in audio_data or 'energy_level_windows' in audio_data:
+    # Check direct format
+    if 'rms_frames' in audio_data:
         return audio_data
     
     # Check nested format
-    if 'data' in audio_data:
+    if 'data' in audio_data and 'rms_frames' in audio_data['data']:
         return audio_data['data']
     
     # Return empty structure
@@ -229,19 +229,7 @@ def extract_timelines_for_temporal(analysis_dict: Dict[str, Any]) -> Dict[str, A
             })
     timelines['gaze_timeline'] = gaze_timeline
     
-    # Face data from timeline entries (MediaPipe face detections)
-    face_timeline = []
-    for entry in timeline_entries:
-        if entry.get('entry_type') == 'face':
-            face_timeline.append({
-                'timestamp': entry.get('start', 0),
-                'bbox': entry.get('data', {}).get('bbox', {}),
-                'confidence': entry.get('data', {}).get('confidence', 0)
-            })
-    timelines['face_timeline'] = face_timeline
-    
     # Camera distance/framing from timeline entries (calculated from face bbox by timeline_builder)
-    # NOTE: Currently not being created by timeline_builder, so will be empty
     camera_distance_timeline = []
     for entry in timeline_entries:
         if entry.get('entry_type') == 'camera_distance':
@@ -478,8 +466,6 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     text_count = len(segment_text)
     sticker_count = len(segment_stickers)
     object_count = len(segment_objects)
-    # MVP: Count person detections specifically
-    person_count = sum(1 for o in segment_objects if o.get('label') == 'person' or o.get('className') == 'person')
     gesture_count = len(segment_gestures)
     expression_count = len(segment_expressions)
     scene_count = len(segment_scenes)
@@ -547,15 +533,10 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     # Note: Emotion labels are already standardized by timeline_builder.py
     # We can safely count emotions directly since the timeline builder
     # has already mapped any FEAT variations to standard labels.
-    
-    # Initialize all 7 emotions to ensure consistent features for ML
-    all_emotions = ['joy', 'sadness', 'anger', 'fear', 'disgust', 'surprise', 'neutral']
-    emotion_counts = {emotion: 0 for emotion in all_emotions}
-    
+    emotion_counts = {}
     for e in segment_expressions:
         emotion = e.get('emotion', 'neutral')
-        if emotion in emotion_counts:
-            emotion_counts[emotion] += 1
+        emotion_counts[emotion] = emotion_counts.get(emotion, 0) + 1
     
     total_emotions = len(segment_expressions)
     emotion_dist = {
@@ -563,37 +544,16 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         for emotion, count in emotion_counts.items()
     }
     
-    # Calculate framing distribution from face bbox sizes
-    # Since camera_distance entries don't exist, calculate from face entries
+    # Calculate framing distribution from camera distance timeline
+    # Camera distance is calculated by timeline_builder from face bbox size:
     # close (>25% frame), medium (8-25%), wide (<8%), none (no face)
     framing_counts = {'close': 0, 'medium': 0, 'wide': 0, 'none': 0}
+    for c in segment_camera:
+        distance = c.get('distance', 'none')
+        if distance in framing_counts:
+            framing_counts[distance] += 1
     
-    # Get face entries for this segment
-    segment_faces = [f for f in timelines.get('face_timeline', [])
-                    if start <= f.get('timestamp', 0) < end]
-    
-    for face in segment_faces:
-        bbox = face.get('bbox', {})
-        if bbox:
-            # Calculate face area as percentage of frame
-            face_area = bbox.get('width', 0) * bbox.get('height', 0) * 100
-            
-            if face_area > 25:
-                framing_counts['close'] += 1
-            elif face_area > 8:
-                framing_counts['medium'] += 1
-            elif face_area > 0:
-                framing_counts['wide'] += 1
-            else:
-                framing_counts['none'] += 1
-        else:
-            framing_counts['none'] += 1
-    
-    # If no faces in segment, count as 'none'
-    if not segment_faces:
-        framing_counts['none'] = 1
-    
-    total_camera_frames = sum(framing_counts.values()) if sum(framing_counts.values()) > 0 else 1
+    total_camera_frames = len(segment_camera) if segment_camera else 1  # Avoid divide by zero
     framing_dist = {
         f'{frame_type}_ratio': count / total_camera_frames if total_camera_frames > 0 else 0
         for frame_type, count in framing_counts.items()
@@ -635,7 +595,6 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         'text_count': text_count,
         'sticker_count': sticker_count,
         'object_count': object_count,
-        'person_count': person_count,  # MVP: Person-specific count
         'gesture_count': gesture_count,
         'expression_count': expression_count,
         'scene_count': scene_count,
@@ -808,8 +767,7 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     timeline = analysis_dict.get('timeline', {})
     metadata = analysis_dict.get('metadata', {})
     video_duration = analysis_dict.get('duration', 0)
-    # video_id is at top level, not in metadata
-    video_id = analysis_dict.get('video_id', metadata.get('id', 'unknown'))
+    video_id = metadata.get('video_id', 'unknown')
     
     # Now all errors can include video_id for context
     
@@ -925,14 +883,14 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     calculated_metadata = {
         'video_id': video_id,
         'duration': video_duration,
-        'digg_count': metadata.get('likes', 0),  # Field name changed
-        'play_count': metadata.get('views', 0),  # Field name changed
-        'collect_count': metadata.get('saves', 0),  # Field name changed
-        'share_count': metadata.get('shares', 0),
-        'comment_count': metadata.get('comments', 0),
-        'create_time': metadata.get('createTime', metadata.get('createTimeISO', '')),
-        'author': metadata.get('author', {}).get('uniqueId', metadata.get('author', {}).get('name', '')),
-        'description': metadata.get('description', '')
+        'digg_count': metadata.get('diggCount', 0),
+        'play_count': metadata.get('playCount', 0),
+        'collect_count': metadata.get('collectCount', 0),
+        'share_count': metadata.get('shareCount', 0),
+        'comment_count': metadata.get('commentCount', 0),
+        'create_time': metadata.get('createTime', 0),
+        'author': metadata.get('author', {}).get('uniqueId', ''),
+        'description': metadata.get('desc', '')
     }
     
     # ============================================
@@ -961,3 +919,41 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
         logger.warning(f"[Video {video_id}] Slow temporal compute: {total_time:.3f}s for {video_duration:.1f}s video")
     
     return result
+# OLD CODE TO REMOVE (lines 286-297):
+"""
+print("📊 running_precompute_functions... (70%)")
+prompt_results = {}
+for func_name, func in COMPUTE_FUNCTIONS.items():
+    try:
+        result = func(unified_analysis.to_dict())
+        prompt_results[func_name] = result
+        if result:
+            self.save_analysis_result(video_id, func_name, result)
+    except Exception as e:
+        logger.error(f"Precompute {func_name} failed: {e}")
+        prompt_results[func_name] = {}
+"""
+
+# NEW CODE TO ADD:
+print("📊 computing_temporal_windows... (70%)")
+
+# Import the new temporal compute function
+from rumiai_v2.processors.temporal_compute import compute_temporal_windows
+
+try:
+    # Single function call replacing all 7 analyses
+    temporal_result = compute_temporal_windows(unified_analysis.to_dict())
+    
+    # Save single output file
+    output_dir = Path(f"insights/{video_id}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    output_path = output_dir / f"{video_id}_temporal_windows.json"
+    with open(output_path, 'w') as f:
+        json.dump(temporal_result, f, indent=2)
+    
+    logger.info(f"✅ Saved temporal windows to {output_path}")
+    
+except Exception as e:
+    logger.error(f"Temporal compute failed: {e}")
+    raise

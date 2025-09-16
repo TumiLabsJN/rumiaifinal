@@ -1,5 +1,9 @@
 # LocalTestv2 - Temporal Windows Local Video Testing Framework
 
+## IMPORTANT
+Do NOT make any change to production code unless explicitly instructed to. This test flow should not modify the main script python3 scripts/rumiai_runner.py 
+Last test flow we created completely nuked production code and caused us to lose 8 hours of work.
+
 ## Executive Summary
 
 A purpose-built testing framework for validating the new temporal windows architecture against human interpretations of local video files. This framework enables rapid iteration and quality assurance of ML analysis by comparing machine output with human annotations.
@@ -481,3 +485,190 @@ Based on our Q&A session, these are the finalized decisions:
 3. **Build Phase 1**: Get basic functionality working
 4. **Create test videos**: Curate diverse test set (short, long, simple, complex)
 5. **Begin annotation**: Create ground truth for initial test videos
+
+## 16.09 Brainstorm
+
+### Context from Our Learnings
+
+From building `test_temporal_compute_v2.py`, we learned:
+1. **Reuse production components**: Call actual functions, don't duplicate logic
+2. **MLAnalysisResult wrapper needed**: TimelineBuilder expects specific object format
+3. **Mixed strategy is real**: Timeline entries + raw ML data both needed
+4. **Integration point matters**: We inject at TimelineBuilder level for cached ML outputs. This will not work for this test, as we need to inject it at the beginning of the flow
+
+### Architecture Alternatives for ML Service Testing
+
+#### Alternative 1: Full Pipeline with Local Video (Most Authentic)
+```python
+class LocalVideoTestRunner:
+    def process_local_video(self, video_path):
+        # Use REAL VideoAnalyzer to run all ML services
+        video_analyzer = VideoAnalyzer()
+        ml_results = await video_analyzer.analyze_video(video_path)
+        
+        # Use REAL TimelineBuilder
+        timeline_builder = TimelineBuilder()
+        unified_analysis = timeline_builder.build_timeline(
+            video_id, metadata, ml_results
+        )
+        
+        # Use REAL compute_temporal_windows
+        return compute_temporal_windows(unified_analysis.to_dict())
+```
+**Pros**: 
+- Exactly mirrors production after video download
+- Tests actual ML service integration
+- No mock objects needed
+
+**Cons**: 
+- SLOW (3-5 minutes per video for ML services)
+- Requires GPU for some services
+- Can't test with different ML outputs easily
+
+#### Alternative 2: Hybrid with Optional ML Cache (Pragmatic)
+```python
+class HybridTestRunner:
+    def __init__(self, use_cache=True):
+        self.use_cache = use_cache
+        self.cache_dir = Path("ml_cache")
+    
+    def process_video(self, video_path):
+        video_id = self._get_video_id(video_path)
+        
+        if self.use_cache and self._cache_exists(video_id):
+            # Load from cache (like our test_temporal_compute_v2.py)
+            ml_results = self._load_cached_ml_results(video_id)
+        else:
+            # Run actual ML services
+            video_analyzer = VideoAnalyzer()
+            ml_results = await video_analyzer.analyze_video(video_path)
+            
+            if self.use_cache:
+                self._save_to_cache(video_id, ml_results)
+        
+        # Continue with real pipeline
+        timeline_builder = TimelineBuilder()
+        unified_analysis = timeline_builder.build_timeline(...)
+        return compute_temporal_windows(unified_analysis.to_dict())
+```
+**Pros**: 
+- Fast iteration after first run
+- Can force fresh ML analysis when needed
+- Reuses production components
+- Good for regression testing
+
+**Cons**: 
+- First run still slow
+- Cache management complexity
+- Cache can become stale
+
+#### Alternative 3: VideoAnalyzer with Pluggable ML Services
+```python
+class TestableVideoAnalyzer(VideoAnalyzer):
+    """Extends VideoAnalyzer to support loading cached ML results"""
+    
+    def __init__(self, ml_cache_dir=None):
+        super().__init__()
+        self.ml_cache_dir = ml_cache_dir
+    
+    async def _run_yolo(self, video_id, video_path):
+        if self.ml_cache_dir:
+            cached = self._load_cached("yolo", video_id)
+            if cached:
+                return cached
+        return await super()._run_yolo(video_id, video_path)
+    
+    # Similar for other ML services...
+```
+**Pros**: 
+- Minimal changes to production code
+- Can mix cached and fresh ML results
+- Maintains MLAnalysisResult format
+
+**Cons**: 
+- Requires modifying VideoAnalyzer
+- Still need to manage cache
+
+#### Alternative 4: Mock ML Services at Runtime
+```python
+class MockMLServices:
+    """Replaces ml_services module with cached results"""
+    
+    def __init__(self, cache_dir):
+        self.cache_dir = Path(cache_dir)
+    
+    async def run_yolo_detection(self, video_path, output_dir):
+        # Return cached YOLO results
+        video_id = self._extract_video_id(video_path)
+        return self._load_json(f"yolo/{video_id}.json")
+    
+    # Similar for other services...
+
+# Monkey-patch for testing
+video_analyzer.ml_services = MockMLServices("ml_cache/")
+```
+**Pros**: 
+- No production code changes
+- Complete control over ML outputs
+- Can simulate failures
+
+**Cons**: 
+- Monkey-patching feels fragile
+- Need to maintain mock interface
+
+#### Alternative 5: Command-Line Flag in Runner (Cleanest)
+Modify `rumiai_runner.py` to support:
+```bash
+python scripts/rumiai_runner.py local_video.mp4 --use-ml-cache
+```
+
+```python
+# In rumiai_runner.py
+if args.use_ml_cache:
+    ml_results = load_ml_results_from_cache(video_id)
+else:
+    ml_results = await video_analyzer.analyze_video(video_path)
+
+# Continue with normal pipeline
+unified_analysis = timeline_builder.build_timeline(...)
+```
+**Pros**: 
+- Part of production runner
+- Clear separation of concerns
+- Easy to switch between modes
+
+**Cons**: 
+- Modifies production runner
+- Cache loading logic in production code
+
+### Recommendation Based on LocalTestv2.md Goals
+
+Given the requirements in LocalTestv2.md:
+- Need to validate **both ML accuracy AND temporal calculations**
+- Want to process **local MP4 files**
+- Need **rapid iteration** during development
+- Must produce **identical output to production**
+
+**I recommend Alternative 2: Hybrid with Optional ML Cache**
+
+This approach:
+1. **Runs full ML pipeline** when you need fresh analysis (validating ML accuracy)
+2. **Uses cache** for rapid iteration (validating temporal calculations)
+3. **Reuses all production components** after ML stage
+4. **Matches production output exactly**
+
+Implementation would be:
+```python
+# For first run or ML validation
+python temporal_test_runner.py video.mp4 --no-cache --annotations human.yaml
+
+# For rapid temporal logic testing
+python temporal_test_runner.py video.mp4 --use-cache --annotations human.yaml
+```
+
+This is essentially our `test_temporal_compute_v2.py` **plus** the ability to run real ML services, giving us the best of both worlds:
+- Fast iteration when testing temporal logic
+- Full ML validation when needed
+- Complete reuse of production components
+
+The key insight from our learnings: **The injection point is after ML services but before TimelineBuilder**, and we can choose whether to run ML services or load cached results at that point.

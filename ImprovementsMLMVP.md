@@ -9,12 +9,12 @@ This document tracks HOW to implement and improve features for the RumiAI MVP. A
 | Priority | Category | Improvement | Difficulty | Time Est | Explanation of Importance | Technical Debt Resolved | Dependencies | Global Feature | Temporal Feature | Applicable for Both? | RF Transform | RF Difficulty | KM Transform | KM Difficulty |
 |----------|----------|-------------|------------|----------|---------------------------|------------------------|--------------|----------------|------------------|---------------------|--------------|---------------|--------------|---------------|
 | P0 | Architecture | Temporal Windows as Single Source of Truth | Medium | High | Enables consistent temporal pattern detection across all features | Removes 5+ redundant features, fixes mixed architecture | None | NO | YES | NO | None needed | None | None needed | None |
-| P0 | Raw Data | Multimodal Counts in Windows | Easy | Low | Allows ML to discover text-speech-gesture correlations independently | Replaces pre-computed multimodal features | Temporal Windows | NO | YES | NO | None needed | Low | Scale | Low |
-| P0 | Raw Data | Overlay Counts in Windows | Easy | Low | Enables ML to sum totals and discover distribution patterns | Replaces global totalOverlays, totalStickers, totalTextOverlays | Temporal Windows | NO | YES | NO | None needed | Low | Scale | Low |
+| P0 | Raw Data | Multimodal Counts in Windows | Easy | Low | Allows ML to discover text-speech-gesture correlations independently | Replaces pre-computed multimodal features | Temporal Windows | YES | NO | NO | None needed | Low | Scale | Low |
+| P0 | Raw Data | Overlay Counts in Windows | Easy | Low | Enables ML to sum totals and discover distribution patterns | Replaces global totalOverlays, totalStickers, totalTextOverlays | Temporal Windows | YES | NO | NO | None needed | Low | Scale | Low |
 | P0 | Raw Data | Per-Window Density Extremes | Easy | Low | Captures peak and floor creative intensity with temporal localization | Replaces global maxDensity/minDensity with actionable timing context | Temporal Windows | NO | YES | NO | None needed | Low | Scale | Low |
 | P0 | Bug Fix | Missing shortestScene Metric | Easy | Low | Scene pacing missing min value of min/avg/max trio | Completes scene duration distribution metrics | scene_durations already calculated | YES | NO | NO | None needed | Low | Scale | Low |
-| P0 | ML Principle | Remove background_noise_ratio Interpretation | Easy | Low | Violates ML discovery principle with flawed interpretation | Removes pre-computed assumption that variance = noise | None | YES | NO | NO | Remove feature | None | Remove feature | None |
-| P0 | Bug Fix | Missing pacingVariation Implementation | Easy | Low | Referenced in wrapper but never calculated | Provides speaking speed consistency metric | WPM calculations per segment | NO | YES | NO | None needed | Low | Scale | Low |
+| P0 | ML Principle | Remove background_noise_ratio Interpretation | Easy | Low | Violates ML discovery principle with flawed interpretation | Removes pre-computed assumption that variance = noise | None | DONE (temporal_compute uses raw energy_variance) | NO | NO | Remove feature | None | Remove feature | None |
+| P0 | Bug Fix | Missing pacingVariation Implementation | Easy | Low | Referenced in wrapper but never calculated | Provides speaking speed consistency metric | WPM calculations per segment | DONE | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Multi-person Metrics | Medium | Medium | Captures collaboration dynamics critical for viral content | Fixes broken subjectCount, enables group analysis | None | YES | YES | YES | None needed | Low | Scale | Low |
 | P1 | Raw Data | Audio Energy Metrics (avg, peaks) | Easy | Low | Completes speech intensity patterns for emotion detection | Replaces semantic features like burstPattern | None | YES | YES | YES | None needed | Low | Scale | Low |
 | P1 | Raw Data | Pitch and Spectral Voice Metrics | Medium | Medium | Captures emotional expression through acoustic features | Replaces interpretive emotion features | None | YES | YES | YES | None needed | Low | Log transform+scale | Med |
@@ -30,7 +30,7 @@ This document tracks HOW to implement and improve features for the RumiAI MVP. A
 | P1 | Raw Data | Temporal Framing Consistency | Easy | Low | Shows stability patterns through video journey | Replaces global with per-window consistency scores | Temporal Windows, framing_volatility calculation | NO | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Temporal Framing Distribution | Easy | Low | Reveals shot composition evolution through video | Replaces global with per-window shot type percentages | Temporal Windows, shot_type_distribution data | NO | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Temporal Gaze Variance | Easy | Low | Shows eye contact consistency patterns through video | Replaces categorical gazeSteadiness with per-window numerical variance | Temporal Windows, gaze timeline | NO | YES | NO | None needed | Low | Scale | Low |
-| P1 | Raw Data | Temporal Scene Duration Metrics | Easy | Low | Reveals pacing evolution through video journey | Replaces global with per-window scene duration metrics | Temporal Windows, scene boundaries | NO | YES | NO | None needed | Low | Scale | Low |
+| P1 | Raw Data | Temporal Scene Duration Metrics | Easy | Low | Reveals pacing evolution through video journey | Replaces global with per-window scene duration metrics | Temporal Windows, scene boundaries | DONE | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Temporal Speech Rhythm Metrics | Easy | Low | Tracks speech delivery patterns through video journey | Adds per-window avg/longest segment durations | Temporal Windows, speech segments | NO | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Temporal Speech Pacing Variation | Easy | Low | Reveals speaking consistency patterns through video | Shows where steady vs variable pacing occurs | Temporal Windows, speech segments | NO | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Temporal Vocabulary Diversity | Easy | Low | Tracks vocabulary richness evolution through video | Shows scripted vs natural speech patterns per window | Temporal Windows, unique/total words per window | NO | YES | NO | None needed | Low | Scale | Low |
@@ -39,7 +39,7 @@ This document tracks HOW to implement and improve features for the RumiAI MVP. A
 | P1 | Raw Data | Expand Generic Hashtag Detection | Easy | Low | More accurate genericRatio calculations for discovery strategy | Expands from 6 to 14 generic hashtags per documentation | None | YES | NO | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Expand hasHook Pattern Detection | Easy | Low | Better viral hook detection coverage from ~5% to ~40% | Expands from 7 to 50+ proven hook patterns | None | YES | NO | NO | None needed | Low | None needed | None |
 | P1 | ML-Compatible Transformations | Simplify ctaFeatures Structure | Easy | Low | Removes redundancy and flattens for ML consumption | Eliminates hasCTA duplicate and derivable ctaCount | None | YES | NO | NO | None needed | Low | Scale | Low |
-| P2 | Raw Data | Scene Duration Variance | Easy | Low | Reveals pacing consistency within temporal windows | Complements averageSceneDuration with spread | None | NO | YES | NO | None needed | Low | Scale | Low |
+| P2 | Raw Data | Scene Duration Variance | Easy | Low | Reveals pacing consistency within temporal windows | Complements averageSceneDuration with spread | None | DONE | YES | NO | None needed | Low | Scale | Low |
 | P2 | Raw Data | Quiet Period Metrics | Medium | Medium | Captures strategic pauses and cognitive rest patterns | Fixes variable array incompatibility of quietMoments | Temporal Windows | NO | YES | NO | None needed | Low | Scale | Low |
 | P2 | Raw Data | Silence Duration Metrics | Easy | Low | Completes pause pattern analysis with duration info | Replaces silencePeriods variable array | None | YES | YES | YES | None needed | Low | Scale | Low |
 | P2 | Raw Data | Enhanced Emotion Metrics | Easy | Low | Captures emotional complexity without sequence challenges | Adds variety and depth beyond dominant emotion | None | YES | NO | NO | None needed | Low | Scale | Low |
@@ -68,14 +68,15 @@ This document tracks HOW to implement and improve features for the RumiAI MVP. A
 | Umb | Umbrella Entry | averageFaceSize | NONE | NONE | Temporal Face Size Metrics | | | NO | YES | NO | None needed | Low | Scale | Low |
 | Umb | Umbrella Entry | avgSegmentDuration | NONE | NONE | Temporal Speech Rhythm Metrics | | | NO | YES | NO | None needed | Low | Log transform + scale | Low |
 | Umb | Umbrella Entry | longestSegment | NONE | NONE | Temporal Speech Rhythm Metrics | | | NO | YES | NO | None needed | Low | Log transform + scale | Low |
+| Umb | Umbrella Entry | shortestScene | NONE | NONE | Temporal Scene Duration Metrics | | | DONE | YES | NO | None needed | Low | Log transform + scale | Low |
 | Umb | Umbrella Entry | shortestSegment | NONE | NONE | Temporal Speech Rhythm Metrics | | | NO | YES | NO | None needed | Low | Log transform + scale | Low |
 | Umb | Umbrella Entry | speechCoverage | NONE | NONE | Temporal Windows as Single Source of Truth | | | NO | YES | NO | None needed | Low | Already [0,1] | Low |
-| Umb | Umbrella Entry | averageSceneDuration | NONE | NONE | Temporal Scene Duration Metrics | | | NO | YES | NO | None needed | Low | Log transform + scale | Low |
-| Umb | Umbrella Entry | longestScene | NONE | NONE | Temporal Scene Duration Metrics | | | NO | YES | NO | None needed | Low | Log transform + scale | Low |
+| Umb | Umbrella Entry | averageSceneDuration | NONE | NONE | Temporal Scene Duration Metrics | | | SKIP (deterministic) | YES | NO | None needed | Low | Log transform + scale | Low |
+| Umb | Umbrella Entry | longestScene | NONE | NONE | Temporal Scene Duration Metrics | | | DONE | YES | NO | None needed | Low | Log transform + scale | Low |
 | Umb | Umbrella Entry | faceSizeVariance | NONE | NONE | Temporal Face Size Metrics | | | NO | YES | NO | None needed | Low | Scale | Low |
 | Umb | Umbrella Entry | framingChanges | NONE | NONE | Temporal Framing Changes | | | NO | YES | NO | None needed | Low | Scale | Low |
 | Umb | Umbrella Entry | framingDistribution | NONE | NONE | Temporal Framing Distribution | | | NO | YES | NO | None needed (3 values) | Low | Already normalized [0,1] | Low |
-| Umb | Umbrella Entry | energyVariance | NONE | NONE | Remove background_noise_ratio Interpretation | | | YES | NO | NO | None needed | Low | Scale | Low |
+| Umb | Umbrella Entry | energyVariance | NONE | NONE | Remove background_noise_ratio Interpretation | | | DONE (raw metric) | NO | NO | None needed | Low | Scale | Low |
 | Umb | Umbrella Entry | vocabularyDiversity | NONE | NONE | Temporal Vocabulary Diversity | | | NO | YES | NO | None needed | Low | Already [0,1] | Low |
 | Umb | Umbrella Entry | avgOverlayDuration | NONE | NONE | Temporal Overlay Metrics | | | NO | YES | NO | None needed | Low | Scale | Low |
 | Umb | Umbrella Entry | uniqueOverlayCount | NONE | NONE | Temporal Overlay Metrics | | | NO | YES | NO | None needed | Low | Scale | Low |
@@ -340,7 +341,7 @@ metrics['pacing_std'] = calculate_pacing_variation(speech_segments)
 
 ---
 
-### Multimodal Counts in Windows
+### Multimodal Counts in Windows ✅ DONE
 
 #### Problem Statement
 - ML cannot discover text-speech-gesture correlations
@@ -364,8 +365,8 @@ metrics['pacing_std'] = calculate_pacing_variation(speech_segments)
 ```python
 # Add to each window:
 "hook_window": {
-  "hook_speech_present": true,
-  "hook_speech_words": 12,
+  "hook_speech_coverage": 0.67,  # Changed from speech_present to match implementation
+  "hook_word_count": 12,  # Changed from speech_words to match implementation
   "hook_gesture_count": 2,
   "hook_text_count": 4  # Already exists
 },
@@ -387,7 +388,7 @@ metrics['pacing_std'] = calculate_pacing_variation(speech_segments)
 
 ---
 
-### Overlay Counts in Windows
+### Overlay Counts in Windows ✅ DONE
 
 #### Problem Statement
 - Global overlay counts (totalOverlays, totalStickers, totalTextOverlays) exist outside temporal framework
@@ -414,11 +415,11 @@ metrics['pacing_std'] = calculate_pacing_variation(speech_segments)
 - vo_totalStickers  
 - vo_totalTextOverlays
 
-# Add to temporal windows:
+# Add to temporal windows (IMPLEMENTED):
 "hook_window": {
-  "hook_overlay_count": 4,        # Total overlays (text + stickers)
-  "hook_text_overlay_count": 3,   # Just text overlays
-  "hook_sticker_count": 1         # Just stickers
+  "hook_text_count": 3,       # Text overlays
+  "hook_sticker_count": 1     # Stickers
+  # NOTE: overlay_count omitted to avoid deterministic feature (sum of above)
 },
 "middle_window": {
   # Overall middle counts
