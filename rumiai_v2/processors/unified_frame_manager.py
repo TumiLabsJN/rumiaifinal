@@ -46,7 +46,7 @@ class FrameSamplingConfig:
     
     CONFIGS = {
         'yolo': {
-            'max_frames': 100,  # ~2 FPS for 60s video (matches doc line 206)
+            'max_frames': 300,  # Dynamic limit: covers up to 5min at 1fps, 60s at 5fps
             'strategy': 'uniform',
             'rationale': 'Object detection needs consistent temporal coverage'
         },

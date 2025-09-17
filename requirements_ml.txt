@@ -25,3 +25,12 @@ scipy>=1.10.0  # Scientific computing
 
 # Audio (already installed from main requirements)
 # whisper.cpp is used via subprocess, not a Python package
+
+# Gender Detection for Pitch Normalization
+# Python 3.12.3 compatible versions
+deepface>=0.0.92  # Gender detection from faces
+tensorflow>=2.16.1,<2.17  # TF 2.16.x for Python 3.12 support
+tf-keras>=2.16.0  # Keras backend for TF 2.16+
+
+# Optional: For better performance
+# tensorflow[and-cuda]>=2.16.1  # Uncomment for GPU support

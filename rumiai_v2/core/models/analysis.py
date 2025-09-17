@@ -67,7 +67,7 @@ class UnifiedAnalysis:
     
     def is_complete(self) -> bool:
         """Check if all required analyses are complete."""
-        required_models = ['yolo', 'whisper', 'mediapipe', 'ocr', 'scene_detection', 'audio_energy']
+        required_models = ['yolo', 'whisper', 'mediapipe', 'ocr', 'scene_detection', 'audio_energy', 'emotion_detection', 'deepface_gender']
         return all(
             model in self.ml_results and self.ml_results[model].success
             for model in required_models
@@ -75,7 +75,7 @@ class UnifiedAnalysis:
     
     def get_completion_status(self) -> Dict[str, bool]:
         """Get detailed completion status for each model."""
-        required_models = ['yolo', 'whisper', 'mediapipe', 'ocr', 'scene_detection', 'audio_energy']
+        required_models = ['yolo', 'whisper', 'mediapipe', 'ocr', 'scene_detection', 'audio_energy', 'emotion_detection', 'deepface_gender']
         return {
             model: (model in self.ml_results and self.ml_results[model].success)
             for model in required_models
@@ -125,7 +125,7 @@ class UnifiedAnalysis:
         
         # Add ml_data field that precompute functions expect
         # This provides a clean, consistent interface for ML data access
-        required_models = ['yolo', 'whisper', 'mediapipe', 'ocr', 'scene_detection', 'audio_energy']
+        required_models = ['yolo', 'whisper', 'mediapipe', 'ocr', 'scene_detection', 'audio_energy', 'emotion_detection', 'deepface_gender']
         
         # Log any unexpected services (validation)
         for service in self.ml_results:
@@ -139,7 +139,16 @@ class UnifiedAnalysis:
                 result['ml_data'][service] = self.ml_results[service].data
             else:
                 result['ml_data'][service] = {}
-        
+
+        # Add convenience fields for important static metadata
+        # Gender detection for pitch normalization
+        if 'deepface_gender' in result['ml_data'] and result['ml_data']['deepface_gender']:
+            result['gender_detection'] = {
+                'gender': result['ml_data']['deepface_gender'].get('gender'),
+                'confidence': result['ml_data']['deepface_gender'].get('confidence'),
+                'method': result['ml_data']['deepface_gender'].get('method', 'deepface')
+            }
+
         return result
     
     def save_to_file(self, file_path: str, legacy_mode: bool = False) -> None:

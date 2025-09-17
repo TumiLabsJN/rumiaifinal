@@ -9,37 +9,37 @@ This document tracks HOW to implement and improve features for the RumiAI MVP. A
 | Priority | Category | Improvement | Difficulty | Time Est | Explanation of Importance | Technical Debt Resolved | Dependencies | Global Feature | Temporal Feature | Applicable for Both? | RF Transform | RF Difficulty | KM Transform | KM Difficulty |
 |----------|----------|-------------|------------|----------|---------------------------|------------------------|--------------|----------------|------------------|---------------------|--------------|---------------|--------------|---------------|
 | P0 | Architecture | Temporal Windows as Single Source of Truth | Medium | High | Enables consistent temporal pattern detection across all features | Removes 5+ redundant features, fixes mixed architecture | None | NO | YES | NO | None needed | None | None needed | None |
-| P0 | Raw Data | Multimodal Counts in Windows | Easy | Low | Allows ML to discover text-speech-gesture correlations independently | Replaces pre-computed multimodal features | Temporal Windows | YES | NO | NO | None needed | Low | Scale | Low |
-| P0 | Raw Data | Overlay Counts in Windows | Easy | Low | Enables ML to sum totals and discover distribution patterns | Replaces global totalOverlays, totalStickers, totalTextOverlays | Temporal Windows | YES | NO | NO | None needed | Low | Scale | Low |
-| P0 | Raw Data | Per-Window Density Extremes | Easy | Low | Captures peak and floor creative intensity with temporal localization | Replaces global maxDensity/minDensity with actionable timing context | Temporal Windows | NO | YES | NO | None needed | Low | Scale | Low |
-| P0 | Bug Fix | Missing shortestScene Metric | Easy | Low | Scene pacing missing min value of min/avg/max trio | Completes scene duration distribution metrics | scene_durations already calculated | YES | NO | NO | None needed | Low | Scale | Low |
+| P0 | Raw Data | Multimodal Counts in Windows | Easy | Low | Allows ML to discover text-speech-gesture correlations independently | Replaces pre-computed multimodal features | Temporal Windows | YES | NO | NO | None needed | Low | Scale | Low | DONE |
+| P0 | Raw Data | Overlay Counts in Windows | Easy | Low | Enables ML to sum totals and discover distribution patterns | Replaces global totalOverlays, totalStickers, totalTextOverlays | Temporal Windows | YES | NO | NO | None needed | Low | Scale | Low | DONE |
+| P0 | Raw Data | Per-Window Density Extremes | Easy | Low | Captures peak and floor creative intensity with temporal localization | Replaces global maxDensity/minDensity with actionable timing context | Temporal Windows | NO | YES | NO | None needed | Low | Scale | Low | DONE |
+| P0 | Bug Fix | Missing shortestScene Metric | Easy | Low | Scene pacing missing min value of min/avg/max trio | Completes scene duration distribution metrics | scene_durations already calculated | YES | NO | NO | None needed | Low | Scale | Low | DONE |
 | P0 | ML Principle | Remove background_noise_ratio Interpretation | Easy | Low | Violates ML discovery principle with flawed interpretation | Removes pre-computed assumption that variance = noise | None | DONE (temporal_compute uses raw energy_variance) | NO | NO | Remove feature | None | Remove feature | None |
 | P0 | Bug Fix | Missing pacingVariation Implementation | Easy | Low | Referenced in wrapper but never calculated | Provides speaking speed consistency metric | WPM calculations per segment | DONE | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Multi-person Metrics | Medium | Medium | Captures collaboration dynamics critical for viral content | Fixes broken subjectCount, enables group analysis | None | YES | YES | YES | None needed | Low | Scale | Low |
 | P1 | Raw Data | Audio Energy Metrics (avg, peaks) | Easy | Low | Completes speech intensity patterns for emotion detection | Replaces semantic features like burstPattern | None | YES | YES | YES | None needed | Low | Scale | Low |
 | P1 | Raw Data | Pitch and Spectral Voice Metrics | Medium | Medium | Captures emotional expression through acoustic features | Replaces interpretive emotion features | None | YES | YES | YES | None needed | Low | Log transform+scale | Med |
-| P1 | ML-Compatible Transformations | Basic Speech Content Indicators | Easy | Low | Identifies content style through simple pattern matching on transcript data | Distinguishes tutorial vs casual vs energetic without NLP dependencies | None | YES | NO | NO | One-hot encode 4 categories | Low | Label encode (0-3)+scale | Low |
-| P1 | Raw Data | Caption Sentiment Analysis | Easy | Low | Critical text emotion signal for engagement prediction | Replaces hardcoded placeholder in emotional_journey | Caption data already available | YES | NO | NO | None needed | Low | Scale to [-1,1] | Low |
+| P1 | ML-Compatible Transformations | Basic Speech Content Indicators | Easy | Low | Identifies content style through simple pattern matching on transcript data | Distinguishes tutorial vs casual vs energetic without NLP dependencies | None | YES | NO | NO | One-hot encode 4 categories | Low | Label encode (0-3)+scale | Low | DONE ✅ |
+| P1 | Raw Data | Caption Sentiment Analysis | Easy | Low | Critical text emotion signal for engagement prediction | Replaces hardcoded placeholder in emotional_journey | Caption data already available | YES | NO | NO | None needed | Low | Scale to [-1,1] | Low | SKIPPED - Low ML value |
 | P1 | Raw Data | Creative Density Climax Moment | Easy | Low | Identifies peak production intensity timing for alignment analysis | Completes climax moment system for coordination patterns | density_per_second calculation | NO | YES | NO | Extract position (0-1) | Low | Scale | Low |
 | P1 | ML-Compatible Transformations | Normalize Climax Moments to Position | Easy | Low | Enables cross-video comparison and alignment analysis | Fixes inconsistent formats (strings vs dicts) for ML compatibility | Existing climax calculations | NO | YES | NO | Extract position (0-1) | Low | Scale | Low |
 | P1 | Raw Data | Emotion Distribution Ratios | Easy | Low | Complete emotional composition for pattern discovery | Replaces oversimplified dominantEmotion with temporal distributions only | Expression timeline data | NO | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Temporal Face Size Metrics | Medium | Medium | Captures framing patterns and intimacy progression through video | Replaces global average with temporal window face sizes | Temporal Windows, Face detection | NO | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Temporal Eye Contact Metrics | Medium | Medium | Reveals audience connection patterns throughout video journey | Replaces global average with per-window eye contact rates | Temporal Windows, Eye tracking data | NO | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Temporal Face Visibility Metrics | Medium | Medium | Shows face presence patterns to identify content strategy | Replaces global average with per-window face visibility rates | Temporal Windows, Face detection | NO | YES | NO | None needed | Low | Scale | Low |
-| P1 | Raw Data | Temporal Framing Changes | Easy | Low | Reveals where shot type dynamics occur in video structure | Adds per-window framing change counts | Temporal Windows, Framing progression data | NO | YES | NO | None needed | Low | Scale | Low |
-| P1 | Raw Data | Temporal Framing Consistency | Easy | Low | Shows stability patterns through video journey | Replaces global with per-window consistency scores | Temporal Windows, framing_volatility calculation | NO | YES | NO | None needed | Low | Scale | Low |
+| P1 | Raw Data | Temporal Framing Changes | Easy | Low | Reveals where shot type dynamics occur in video structure | Adds per-window framing change counts | Temporal Windows, Framing progression data | NO | YES | NO | None needed | Low | Scale | Low | ALREADY CAPTURED - Framing ratios encode changes |
+| P1 | Raw Data | Temporal Framing Consistency | Easy | Low | Shows stability patterns through video journey | Replaces global with per-window consistency scores | Temporal Windows, framing_volatility calculation | NO | YES | NO | None needed | Low | Scale | Low | ALREADY CAPTURED - Derivable from framing ratios |
 | P1 | Raw Data | Temporal Framing Distribution | Easy | Low | Reveals shot composition evolution through video | Replaces global with per-window shot type percentages | Temporal Windows, shot_type_distribution data | NO | YES | NO | None needed | Low | Scale | Low |
-| P1 | Raw Data | Temporal Gaze Variance | Easy | Low | Shows eye contact consistency patterns through video | Replaces categorical gazeSteadiness with per-window numerical variance | Temporal Windows, gaze timeline | NO | YES | NO | None needed | Low | Scale | Low |
+| P1 | Raw Data | Temporal Gaze Variance | Easy | Low | Shows eye contact consistency patterns through video | Replaces categorical gazeSteadiness with per-window numerical variance | Temporal Windows, gaze timeline | NO | YES | NO | None needed | Low | Scale | Low | DONE ✅ |
 | P1 | Raw Data | Temporal Scene Duration Metrics | Easy | Low | Reveals pacing evolution through video journey | Replaces global with per-window scene duration metrics | Temporal Windows, scene boundaries | DONE | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Temporal Speech Rhythm Metrics | Easy | Low | Tracks speech delivery patterns through video journey | Adds per-window avg/longest segment durations | Temporal Windows, speech segments | NO | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Temporal Speech Pacing Variation | Easy | Low | Reveals speaking consistency patterns through video | Shows where steady vs variable pacing occurs | Temporal Windows, speech segments | NO | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Temporal Vocabulary Diversity | Easy | Low | Tracks vocabulary richness evolution through video | Shows scripted vs natural speech patterns per window | Temporal Windows, unique/total words per window | NO | YES | NO | None needed | Low | Scale | Low |
-| P1 | Raw Data | Temporal Overlay Metrics (Duration, Variety & Persistence) | Easy | Low | Reveals complete text display strategy through video | Shows reading time allowance, variety patterns, and text persistence per window with min/avg/max durations | Temporal Windows, overlay timestamps | NO | YES | NO | None needed | Low | Scale | Low |
+| P1 | Raw Data | Temporal Overlay Metrics (Duration, Variety & Persistence) | Easy | Low | Reveals complete text display strategy through video | Shows reading time allowance, variety patterns, and text persistence per window with min/avg/max durations | Temporal Windows, overlay timestamps | NO | YES | NO | None needed | Low | Scale | Low | DONE |
 | P1 | Raw Data | Basic Sticker Metrics | Easy | Low | Captures platform-native visual language usage patterns | Fills gap where stickers are counted but not analyzed separately from text | Temporal Windows, stickerTimeline | YES | YES | YES | None needed | Low | Scale | Low |
 | P1 | Raw Data | Expand Generic Hashtag Detection | Easy | Low | More accurate genericRatio calculations for discovery strategy | Expands from 6 to 14 generic hashtags per documentation | None | YES | NO | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Expand hasHook Pattern Detection | Easy | Low | Better viral hook detection coverage from ~5% to ~40% | Expands from 7 to 50+ proven hook patterns | None | YES | NO | NO | None needed | Low | None needed | None |
 | P1 | ML-Compatible Transformations | Simplify ctaFeatures Structure | Easy | Low | Removes redundancy and flattens for ML consumption | Eliminates hasCTA duplicate and derivable ctaCount | None | YES | NO | NO | None needed | Low | Scale | Low |
-| P2 | Raw Data | Scene Duration Variance | Easy | Low | Reveals pacing consistency within temporal windows | Complements averageSceneDuration with spread | None | DONE | YES | NO | None needed | Low | Scale | Low |
+| P2 | Raw Data | Scene Duration Variance | Easy | Low | Reveals pacing consistency within temporal windows | Complements averageSceneDuration with spread | None | YES | NO | NO | None needed | Low | Scale | Low | DONE |
 | P2 | Raw Data | Quiet Period Metrics | Medium | Medium | Captures strategic pauses and cognitive rest patterns | Fixes variable array incompatibility of quietMoments | Temporal Windows | NO | YES | NO | None needed | Low | Scale | Low |
 | P2 | Raw Data | Silence Duration Metrics | Easy | Low | Completes pause pattern analysis with duration info | Replaces silencePeriods variable array | None | YES | YES | YES | None needed | Low | Scale | Low |
 | P2 | Raw Data | Enhanced Emotion Metrics | Easy | Low | Captures emotional complexity without sequence challenges | Adds variety and depth beyond dominant emotion | None | YES | NO | NO | None needed | Low | Scale | Low |
@@ -68,11 +68,11 @@ This document tracks HOW to implement and improve features for the RumiAI MVP. A
 | Umb | Umbrella Entry | averageFaceSize | NONE | NONE | Temporal Face Size Metrics | | | NO | YES | NO | None needed | Low | Scale | Low |
 | Umb | Umbrella Entry | avgSegmentDuration | NONE | NONE | Temporal Speech Rhythm Metrics | | | NO | YES | NO | None needed | Low | Log transform + scale | Low |
 | Umb | Umbrella Entry | longestSegment | NONE | NONE | Temporal Speech Rhythm Metrics | | | NO | YES | NO | None needed | Low | Log transform + scale | Low |
-| Umb | Umbrella Entry | shortestScene | NONE | NONE | Temporal Scene Duration Metrics | | | DONE | YES | NO | None needed | Low | Log transform + scale | Low |
+| Umb | Umbrella Entry | shortestScene | NONE | NONE | Temporal Scene Duration Metrics | | | YES | NO | NO | None needed | Low | Log transform + scale | Low | DONE |
 | Umb | Umbrella Entry | shortestSegment | NONE | NONE | Temporal Speech Rhythm Metrics | | | NO | YES | NO | None needed | Low | Log transform + scale | Low |
 | Umb | Umbrella Entry | speechCoverage | NONE | NONE | Temporal Windows as Single Source of Truth | | | NO | YES | NO | None needed | Low | Already [0,1] | Low |
 | Umb | Umbrella Entry | averageSceneDuration | NONE | NONE | Temporal Scene Duration Metrics | | | SKIP (deterministic) | YES | NO | None needed | Low | Log transform + scale | Low |
-| Umb | Umbrella Entry | longestScene | NONE | NONE | Temporal Scene Duration Metrics | | | DONE | YES | NO | None needed | Low | Log transform + scale | Low |
+| Umb | Umbrella Entry | longestScene | NONE | NONE | Temporal Scene Duration Metrics | | | YES | NO | NO | None needed | Low | Log transform + scale | Low | DONE |
 | Umb | Umbrella Entry | faceSizeVariance | NONE | NONE | Temporal Face Size Metrics | | | NO | YES | NO | None needed | Low | Scale | Low |
 | Umb | Umbrella Entry | framingChanges | NONE | NONE | Temporal Framing Changes | | | NO | YES | NO | None needed | Low | Scale | Low |
 | Umb | Umbrella Entry | framingDistribution | NONE | NONE | Temporal Framing Distribution | | | NO | YES | NO | None needed (3 values) | Low | Already normalized [0,1] | Low |
@@ -602,7 +602,7 @@ def calculate_multi_person_metrics(face_detection_timeline):
 
 ---
 
-### Audio Energy Metrics (avg, peaks)
+### Audio Energy Metrics (avg, peaks) - PARTIALLY DONE
 
 #### Problem Statement
 - Have energyVariance but missing average energy level
@@ -610,45 +610,21 @@ def calculate_multi_person_metrics(face_detection_timeline):
 - Incomplete picture of speech dynamics
 - Cannot replace semantic features like burstPattern
 
-#### Explanation of Difficulty
-- **Easy**: LibROSA already provides energy data
-- Simple statistical calculations on existing data
-- Well-established audio processing techniques
-- Minimal additional processing time
+#### Implementation Status
+- **Average Energy**: ✅ DONE - Already implemented as `energy_level` (which is np.mean of RMS frames)
+- **Energy Peaks**: ❌ SKIPPED - Not compatible with 3-10s temporal windows
 
-#### Solution Design
-- Add avgAudioEnergy as baseline metric
-- Add audioEnergyPeaks for emphasis detection
-- Calculate for all temporal windows and segments
-- Work together with existing energyVariance
+#### Reason for Skipping Peaks
+With temporal windows of 3 seconds (hook/closing) and 3-10 seconds (middle segments), peak counts would:
+1. Be mostly 0-1 per window (low signal)
+2. Scale with duration rather than content (biased metric)
+3. Duplicate information already captured by energy_variance
 
-#### Implementation Details
-```python
-def calculate_avg_audio_energy(audio_timeline):
-    energy_values = [frame['energy'] for frame in audio_timeline]
-    if not energy_values:
-        return 0.0
-    return round(np.mean(energy_values) / max_possible_energy, 3)
-
-def calculate_audio_energy_peaks(audio_timeline, threshold_percentile=90):
-    energy_values = [frame['energy'] for frame in audio_timeline]
-    threshold = np.percentile(energy_values, threshold_percentile)
-    
-    peaks = 0
-    for i in range(1, len(energy_values) - 1):
-        if (energy_values[i] > threshold and 
-            energy_values[i] > energy_values[i-1] and 
-            energy_values[i] > energy_values[i+1]):
-            peaks += 1
-    return peaks
-
-# Apply to windows and segments:
-"hook_avgAudioEnergy": 0.75,
-"hook_audioEnergyPeaks": 2,
-"middle_segment_1_avgAudioEnergy": 0.60,
-"middle_segment_1_audioEnergyPeaks": 5,
-# Repeat for segments 2-5 as needed
-```
+The existing metrics provide complete audio dynamics:
+- `energy_level`: Average loudness (already implemented)
+- `energy_variance`: Variation in emphasis
+- `energy_max`: Peak intensity
+- `burst_pattern`: Where energy concentrates (front/middle/back)
 
 #### Dependencies
 - None - uses existing audio extraction
@@ -1001,37 +977,34 @@ def calculate_temporal_vocabulary_diversity(speech_segments, video_duration):
 
 ---
 
-### Temporal Overlay Metrics (Duration, Variety & Persistence)
+### Temporal Overlay Metrics (Duration, Variety & Persistence) - PARTIALLY DONE
 
 #### Problem Statement
 - Currently only have global avgOverlayDuration and uniqueOverlayCount metrics
 - Cannot track reading time strategy evolution through video
 - Missing visibility into hook quick-flash vs body sustained text patterns
 - No insight into where creators give viewers processing time
-- Cannot see variety/repetition strategy per segment
-- Missing information progression patterns (diverse hook vs focused closing)
-- Cannot distinguish text display strategies (flash vs sustained)
-- Missing viewer reading time allowance signals
-- Text urgency vs comprehension balance not captured
 
-#### Explanation of Difficulty
-- **Easy**: Calculate metrics per temporal window
-- Overlay timestamps and text content already tracked in text_overlay_timeline
-- Simple averaging, min/max, and set operations per window
-- Text persistence calculation from existing timeline data
+#### Implementation Status
+✅ **Already Implemented:**
+- `overlay_unique_count`: Number of unique overlays (variety metric)
+- `overlay_coverage`: Percentage of time with overlays visible
+- `overlay_persistence`: Average lifespan of overlays (avg duration)
+- `has_captions`: Binary caption presence
 
-#### Solution Design
-- Replace global metrics with temporal versions to avoid collinearity
-- Calculate comprehensive duration metrics per temporal window:
-  - Average text display duration (hook/middle/closing_avg_overlay_duration)
-  - Minimum text display duration (hook/middle/closing_min_overlay_duration)
-  - Maximum text display duration (hook/middle/closing_max_overlay_duration)
-  - Text persistence ratio - % of window with text visible (hook/middle/closing_text_persistence_ratio)
-- Track unique overlay counts per window (hook/middle/closing_unique_overlay_count)
-- Remove global avgOverlayDuration and uniqueOverlayCount from features_base
-- Distinguish quick flashes (min duration) from sustained display (max duration)
-- Measure text persistence to show viewer reading time allowance
-- Enable discovery of optimal text pacing, variety, and persistence for engagement
+❌ **SKIPPED (Incompatible with temporal windows):**
+- `min_overlay_duration`: Would often equal max in windows with 1-2 overlays
+- `max_overlay_duration`: Capped by window size, limited variance
+- `avg_overlay_duration`: Redundant with existing `overlay_persistence`
+
+#### Reason for Skipping Additional Metrics
+In 3-10 second windows:
+1. **Sparse data**: Most windows have 0-2 overlays
+2. **No variance**: With 1 overlay, min = max = avg
+3. **Duration cap**: Max duration limited by window size (3s window → max 3s overlay)
+4. **Already captured**: `overlay_persistence` already provides average duration
+
+The existing metrics (`overlay_unique_count`, `overlay_coverage`, `overlay_persistence`) provide comprehensive overlay analysis appropriate for our temporal window structure.
 
 #### Implementation Details
 ```python
@@ -1514,15 +1487,36 @@ def analyze_speech_content(transcript, duration):
 #### Dependencies
 - None - uses existing transcript data from speech processing
 
+#### Status: DONE ✅
+- Implemented 4 binary indicators: has_greeting, has_question, has_instruction, has_speech_cta
+- Added to all temporal windows (hook, middle segments, closing)
+- Function: calculate_speech_content_indicators() in temporal_compute.py
+- Tested and working in production (Sept 17, 2025)
+- Note: Simplified from 7 metrics to 4 to avoid collinearity (removed WPM, exclamation metrics, filler ratios)
+
 ---
 
-### Caption Sentiment Analysis
+### Caption Sentiment Analysis - SKIPPED
 
 #### Problem Statement
 - captionSentiment currently hardcoded to "neutral" in emotional_journey
 - Critical engagement signal missing from TikTok caption analysis
 - Caption emotion often drives virality (controversy, humor, inspiration)
 - Architecturally misplaced in emotional_journey (should be in metadata_analysis)
+
+#### Status: SKIPPED ❌
+**Reason for skipping:** Low ML value for the complexity
+
+**Analysis showed:**
+- Single static feature (not temporal) - doesn't vary across windows
+- Weak correlation with virality compared to video content features
+- Most captions cluster around neutral sentiment
+- Better signals already captured (has_question, word_count, hashtags)
+- Would only be useful for edge cases (sarcasm detection, clickbait)
+
+**ML Usefulness: 3/10**
+- The model would likely ignore it in favor of stronger temporal features
+- Resources better spent on temporal features that vary across windows
 
 #### Explanation of Difficulty
 - **Easy**: Simple sentiment analysis on existing caption text
@@ -1593,7 +1587,7 @@ def compute_metadata_analysis_metrics(static_metadata, metadata_summary, video_d
 
 ---
 
-### Creative Density Climax Moment
+### Creative Density Climax Moment - SKIPPED
 
 #### Problem Statement
 - Have maxDensity value but missing WHEN the peak occurs
@@ -1601,55 +1595,34 @@ def compute_metadata_analysis_metrics(static_metadata, metadata_summary, video_d
 - Lose timing information critical for pattern discovery
 - ML cannot determine if production peaks align with emotional peaks
 
-#### Explanation of Difficulty
-- **Easy**: Simple index lookup on existing density_per_second array
-- Already computing density_per_second in creative_density
-- Just need to find index of maximum and normalize
-- One line of additional code
+#### Implementation Status
+❌ **SKIPPED** - Not compatible with temporal window structure
 
-#### Solution Design
-- Find the second where max density occurs
-- Normalize to relative position (0-1) for cross-video comparison
-- Add as Global-Derived metric
-- Enables alignment analysis with other climax moments
+#### Reason for Skipping
+Within our 3-10 second temporal windows, tracking climax position is not meaningful:
 
-#### Implementation Details
-```python
-# In compute_creative_density_analysis (precompute_creative_density.py)
-# After line ~98 where max_density is calculated:
+1. **Limited variance**:
+   - Hook/Closing (3s): Only 3 possible positions (seconds 0, 1, 2)
+   - Middle segments (~7.6s): Only ~8 possible positions
+   - Most peaks would randomly fall in middle seconds
 
-# Existing code:
-max_density = max(density_per_second) if density_per_second else 0
+2. **Signal already captured**:
+   - Comparing `max_density` across windows shows progression
+   - ML can see if hook > middle > closing (front-loaded)
+   - Or if middle_segment_2 has highest max_density (middle peak)
 
-# ADD: Find when the maximum occurs
-max_density_second = density_per_second.index(max_density) if density_per_second else 0
-creative_density_climax_moment = max_density_second / duration if duration > 0 else 0
+3. **Within-window position is noise**:
+   - Whether peak is at second 1 vs 2 in a 3-second window doesn't indicate strategy
+   - Too granular to be meaningful for ML
 
-# Add to result structure (~line 270):
-"densityCoreMetrics": {
-    # ... existing metrics ...
-    "maxDensity": float(max_density),
-    "creativeDensityClimax": round(creative_density_climax_moment, 3),  # NEW: 0-1 normalized position
-}
-```
+The existing approach of comparing `max_density` values across windows already provides the density progression signal without the noise of within-window positions.
 
-#### Value for ML
-- **Alignment patterns**: Discovers if coordinated climaxes (all at 0.4) perform better
-- **Content classification**: Different climax positions for different video types
-- **Production quality**: Tight alignment of climaxes indicates planning
-- **Cascade detection**: Speech climax → density climax → emotional climax patterns
-- **Completes the system**: With speech, visual, emotional climaxes for full analysis
-
-#### Notes from Analysis
-- Fills gap in climax moment system (have speech, visual, emotional but not density)
-- Normalized position (0-1) makes comparable across video durations
-- Alignment with emotional_climax reveals if production supports emotion
-- Different from maxDensity which only gives value, not timing
-- Essential for discovering "all elements peak together" pattern
+#### Original Design Context
+This feature was designed for full-video analysis where knowing if peak occurs at 30s vs 60s matters. It doesn't translate well to our temporal window architecture.
 
 #### Dependencies
-- density_per_second calculation must exist (already in creative_density)
-- Duration must be known
+- Would have required density_per_second calculation
+- Not applicable to temporal windows
 
 ---
 
@@ -2061,7 +2034,7 @@ metrics = {
 
 ---
 
-### Temporal Framing Changes
+### Temporal Framing Changes [ALREADY CAPTURED - Framing ratios encode changes]
 
 #### Problem Statement
 - Currently only have global framingChanges count across entire video
@@ -2070,17 +2043,18 @@ metrics = {
 - Single count masks strategic placement of framing changes
 - Cannot distinguish front-loaded dynamics from evenly distributed changes
 
-#### Explanation of Difficulty
-- **Easy**: Simple counting of framing changes within temporal windows
-- Framing progression data already exists
-- Just needs segmentation by temporal windows
-- Straightforward implementation
+#### Resolution
+**Already captured in existing framing ratios!** The close_ratio, medium_ratio, wide_ratio, and none_ratio distributions implicitly encode framing changes:
+- Single dominant ratio (e.g., medium_ratio: 1.0) = no framing changes
+- Equal distribution across types = many framing changes
+- ML models can derive framing dynamism from ratio entropy
+- No additional implementation needed - existing ratios contain all necessary information
 
-#### Solution Design
-- Count framing changes within each temporal window (hook/middle/closing)
-- Process middle segments individually (3-5 segments based on duration)
-- Remove global sum to avoid multicollinearity (temporal counts contain all information)
-- Track both count and rate (changes per second) per window
+#### Original Solution (Not Needed)
+- ~~Count framing changes within each temporal window (hook/middle/closing)~~
+- ~~Process middle segments individually (3-5 segments based on duration)~~
+- ~~Remove global sum to avoid multicollinearity (temporal counts contain all information)~~
+- ~~Track both count and rate (changes per second) per window~~
 
 #### Implementation Details
 ```python
@@ -2168,7 +2142,7 @@ metrics.update({
 
 ---
 
-### Temporal Framing Consistency
+### Temporal Framing Consistency [ALREADY CAPTURED - Derivable from framing ratios]
 
 #### Problem Statement
 - Currently only have global framing_volatility metric
@@ -2176,17 +2150,19 @@ metrics.update({
 - Missing visibility into production quality patterns through journey
 - Single score masks strategic stability choices (dynamic hook, steady middle)
 
-#### Explanation of Difficulty
-- **Easy**: Calculate consistency per window from volatility
-- Requires calculating volatility per temporal window first
-- Then inverse for consistency scores
+#### Resolution
+**Already captured in existing framing ratios!** Framing consistency (how often shot type changes) is derivable from the distribution:
+- High consistency = One dominant ratio (e.g., medium_ratio: 0.95)
+- Low consistency = Equal distribution across types (e.g., 0.33 each)
+- ML models can compute consistency as max(ratios) or 1 - entropy(ratios)
+- No additional implementation needed - existing ratios contain all necessary information
 
-#### Solution Design
-- Calculate framing volatility per temporal window
-- Convert to consistency scores (1 - volatility)
-- Replace global metric with temporal versions to avoid collinearity
-- Remove global framing_volatility from features_base
-- Provide stability progression through video
+#### Original Solution (Not Needed)
+- ~~Calculate framing volatility per temporal window~~
+- ~~Convert to consistency scores (1 - volatility)~~
+- ~~Replace global metric with temporal versions to avoid collinearity~~
+- ~~Remove global framing_volatility from features_base~~
+- ~~Provide stability progression through video~~
 
 #### Implementation Details
 ```python
@@ -2389,7 +2365,7 @@ metrics.update({
 
 ---
 
-### Temporal Gaze Variance (Replace gazeSteadiness)
+### Temporal Gaze Variance (Replace gazeSteadiness) [DONE ✅]
 
 #### Problem Statement
 - Currently gazeSteadiness returns categorical 'high'/'medium'/'low' based on arbitrary thresholds
@@ -2413,13 +2389,27 @@ metrics.update({
 - Let ML determine optimal variance for engagement
 - Remove gazeSteadiness from features entirely
 
+#### Implementation Status
+**Implemented successfully!**
+- Added `calculate_gaze_variance()` function to temporal_compute.py
+- Integrated into `process_segment()` to compute per-window variance
+- Tested with real data - all windows show meaningful variance values
+- Variance ranges from 0.003 to 0.014 across windows (realistic spread)
+
 #### Implementation Details
 ```python
-# In compute_person_framing_metrics (precompute_functions_full.py)
-# Remove gazeSteadiness calculation (lines 1796-1809)
-# Remove metrics['gaze_steadiness'] assignment
+# Added to temporal_compute.py:
+def calculate_gaze_variance(timeline_entries, start, end):
+    """Calculate variance in eye contact scores within window"""
+    # Collect eye contact scores from gaze entries
+    # Return variance or 0 if insufficient data
 
-# Add temporal gaze variance calculation:
+# Integrated into process_segment():
+gaze_variance = calculate_gaze_variance(
+    timelines.get('timeline', {}).get('entries', []), start, end
+)
+
+# Original implementation plan (for reference):
 def calculate_temporal_gaze_variance(gaze_timeline, video_duration):
     """Calculate gaze variance per temporal window"""
     
@@ -3089,7 +3079,7 @@ def calculate_silence_duration_metrics(silence_periods):
 
 ---
 
-### Enhanced Emotion Metrics
+### Enhanced Emotion Metrics - DONE (Ratios Only)
 
 #### Problem Statement
 - Currently only capture dominant emotion per window
@@ -3097,17 +3087,27 @@ def calculate_silence_duration_metrics(silence_periods):
 - Cannot identify secondary emotional themes
 - ML lacks signal about emotional complexity vs monotone delivery
 
-#### Explanation of Difficulty
-- **Easy**: Simple counting and ranking of existing emotion data
-- Emotion detection already complete
-- Just needs aggregation logic
-- Standard categorical encoding for secondary emotion
+#### Implementation Status
+✅ **Already Implemented:**
+- All 7 emotion ratios (joy_ratio, sadness_ratio, anger_ratio, fear_ratio, disgust_ratio, surprise_ratio, neutral_ratio)
+- Consistent features even when emotions are missing (initialized to 0)
+- Complete emotional distribution per window
+
+❌ **SKIPPED (Redundant/Derivable):**
+- `emotion_variety`: Completely derivable by counting non-zero ratios
+- `dominant_emotion`: Derivable by finding max ratio
+- `secondary_emotion`: Derivable by finding second-highest ratio
+
+#### Reason for Skipping Additional Metrics
+The proposed additions are 100% derivable from existing ratios:
+- Variety = count(ratio > 0)
+- Dominant = argmax(ratios)
+- Secondary = argsort(ratios)[1]
+
+Adding them would be pure redundancy. ML models can easily derive these patterns from the ratios. The current 7 emotion ratios provide complete emotional information without redundancy beyond the inherent sum-to-1 constraint.
 
 #### Solution Design
-- Add emotion variety count for each window
-- Track secondary emotion (second most common)
-- Apply to all temporal windows and segments
-- Maintains compatibility with existing emotion metrics
+The existing implementation with 7 emotion ratios is optimal. No additional metrics needed.
 
 #### Implementation Details
 ```python

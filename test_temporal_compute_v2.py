@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-Test script for temporal compute using existing ML outputs.
-This script follows the EXACT same flow as the production pipeline,
-using real TimelineBuilder and compute_temporal_windows functions.
+Test script for temporal compute using production unified_analysis.
+This script is a TRUE MIRROR of the production pipeline.
 
-Option 3 Architecture:
-1. Load ML outputs from disk (manual but unavoidable)
-2. Call real TimelineBuilder.build_timeline()
-3. Call real compute_temporal_windows()
+Production Mirror Architecture:
+1. Load the unified_analysis file that production created
+2. Call compute_temporal_windows() with the exact same data
+3. Compare results with production output
 
-This ensures any fixes to production code automatically apply to tests.
+This ensures the test uses identical inputs and processing as production.
 """
 
 import json
@@ -17,303 +16,37 @@ import sys
 from pathlib import Path
 from typing import Dict, Any
 
-# Import ACTUAL production components - not duplicating any logic
-from rumiai_v2.processors import TimelineBuilder
+# Import ONLY the production compute function
 from rumiai_v2.processors.temporal_compute import compute_temporal_windows
-from rumiai_v2.core.models.analysis import MLAnalysisResult
 
 
-class MLOutputLoader:
+def load_unified_analysis(video_id: str) -> Dict[str, Any]:
     """
-    Loads pre-computed ML outputs from disk.
-    This is the ONLY manual part - everything else uses production code.
+    Load the unified_analysis file that production created.
+    This ensures we use the EXACT same data as production.
     """
+    unified_path = Path(f"unified_analysis/{video_id}.json")
     
-    def __init__(self, video_id: str):
-        self.video_id = video_id
-        self.ml_results = {}
-        self.metadata = {}
-        
-    def load_all_ml_outputs(self) -> Dict[str, Any]:
-        """
-        Load all ML service outputs from their respective directories.
-        Returns ml_results dict in the exact format VideoAnalyzer would produce.
-        """
-        print(f"\n📂 Loading ML outputs for video: {self.video_id}")
-        
-        # Load each ML service output
-        self._load_yolo()
-        self._load_whisper()
-        self._load_ocr()
-        self._load_mediapipe()
-        self._load_scene_detection()
-        self._load_audio_energy()
-        self._load_emotion_detection()
-        
-        # Load metadata
-        self._load_metadata()
-        
-        return self.ml_results
+    if not unified_path.exists():
+        print(f"❌ Error: {unified_path} not found!")
+        print("Run production pipeline first: python3 scripts/rumiai_runner.py")
+        sys.exit(1)
     
-    def _load_yolo(self):
-        """Load YOLO object detection results."""
-        paths = [
-            Path(f"object_detection_outputs/{self.video_id}/{self.video_id}_yolo_detections.json"),
-            Path(f"object_detection_outputs/{self.video_id}/{self.video_id}_objects.json"),
-        ]
-        
-        for path in paths:
-            if path.exists():
-                print(f"  ✓ YOLO: {path}")
-                with open(path) as f:
-                    data = json.load(f)
-                self.ml_results['yolo'] = MLAnalysisResult(
-                    model_name='yolo',
-                    model_version='v8',
-                    success=True,
-                    data=data
-                )
-                return
-        
-        print(f"  ✗ YOLO: Not found, using empty results")
-        self.ml_results['yolo'] = MLAnalysisResult(
-            model_name='yolo',
-            model_version='v8',
-            success=True,
-            data={"objectAnnotations": []}
-        )
+    print(f"📂 Loading production unified_analysis from {unified_path}")
+    with open(unified_path) as f:
+        unified_dict = json.load(f)
     
-    def _load_whisper(self):
-        """Load Whisper speech transcription results."""
-        paths = [
-            Path(f"speech_transcriptions/{self.video_id}_whisper.json"),
-            Path(f"whisper_outputs/{self.video_id}/{self.video_id}_transcription.json"),
-            Path(f"speech_transcription_outputs/{self.video_id}/{self.video_id}_whisper.json"),
-        ]
-        
-        for path in paths:
-            if path.exists():
-                print(f"  ✓ Whisper: {path}")
-                with open(path) as f:
-                    data = json.load(f)
-                self.ml_results['whisper'] = MLAnalysisResult(
-                    model_name='whisper',
-                    model_version='base',
-                    success=True,
-                    data=data
-                )
-                return
-        
-        print(f"  ✗ Whisper: Not found, using empty results")
-        self.ml_results['whisper'] = MLAnalysisResult(
-            model_name='whisper',
-            model_version='base',
-            success=True,
-            data={"segments": []}
-        )
+    # Display what we loaded
+    timeline_entries = unified_dict.get('timeline', {}).get('entries', [])
+    ml_data_keys = list(unified_dict.get('ml_data', {}).keys())
     
-    def _load_ocr(self):
-        """Load OCR text detection results."""
-        paths = [
-            Path(f"ocr_outputs/{self.video_id}/{self.video_id}_ocr.json"),
-            Path(f"text_detection_outputs/{self.video_id}/{self.video_id}_text.json"),
-        ]
-        
-        for path in paths:
-            if path.exists():
-                print(f"  ✓ OCR: {path}")
-                with open(path) as f:
-                    data = json.load(f)
-                self.ml_results['ocr'] = MLAnalysisResult(
-                    model_name='ocr',
-                    model_version='v1',
-                    success=True,
-                    data=data
-                )
-                return
-        
-        print(f"  ✗ OCR: Not found, using empty results")
-        self.ml_results['ocr'] = MLAnalysisResult(
-            model_name='ocr',
-            model_version='v1',
-            success=True,
-            data={"textAnnotations": [], "stickers": []}
-        )
+    print(f"  ✓ Loaded unified analysis:")
+    print(f"    - Video ID: {unified_dict.get('video_id')}")
+    print(f"    - Duration: {unified_dict.get('duration')} seconds")
+    print(f"    - Timeline entries: {len(timeline_entries)}")
+    print(f"    - ML data sources: {ml_data_keys}")
     
-    def _load_mediapipe(self):
-        """Load MediaPipe human analysis results."""
-        paths = [
-            Path(f"human_analysis_outputs/{self.video_id}/{self.video_id}_human_analysis.json"),
-            Path(f"mediapipe_outputs/{self.video_id}/{self.video_id}_mediapipe.json"),
-        ]
-        
-        for path in paths:
-            if path.exists():
-                print(f"  ✓ MediaPipe: {path}")
-                with open(path) as f:
-                    data = json.load(f)
-                self.ml_results['mediapipe'] = MLAnalysisResult(
-                    model_name='mediapipe',
-                    model_version='v1',
-                    success=True,
-                    data=data
-                )
-                return
-        
-        print(f"  ✗ MediaPipe: Not found, using empty results")
-        self.ml_results['mediapipe'] = MLAnalysisResult(
-            model_name='mediapipe',
-            model_version='v1',
-            success=True,
-            data={
-                "poses": [],
-                "faces": [],
-                "hands": [],
-                "gaze": [],
-                "gestures": []
-            }
-        )
-    
-    def _load_scene_detection(self):
-        """Load scene detection results."""
-        paths = [
-            Path(f"scene_detection_outputs/{self.video_id}/{self.video_id}_scenes.json"),
-            Path(f"pyscenedetect_outputs/{self.video_id}/{self.video_id}_scenes.json"),
-        ]
-        
-        for path in paths:
-            if path.exists():
-                print(f"  ✓ Scene Detection: {path}")
-                with open(path) as f:
-                    data = json.load(f)
-                self.ml_results['scene_detection'] = MLAnalysisResult(
-                    model_name='scene_detection',
-                    model_version='v1',
-                    success=True,
-                    data=data
-                )
-                return
-        
-        print(f"  ✗ Scene Detection: Not found, using empty results")
-        self.ml_results['scene_detection'] = MLAnalysisResult(
-            model_name='scene_detection',
-            model_version='v1',
-            success=True,
-            data={"scenes": [], "scene_changes": []}
-        )
-    
-    def _load_audio_energy(self):
-        """Load audio energy analysis results."""
-        paths = [
-            Path(f"audio_energy_outputs/{self.video_id}/{self.video_id}_energy.json"),
-            Path(f"audio_analysis_outputs/{self.video_id}/{self.video_id}_audio.json"),
-        ]
-        
-        for path in paths:
-            if path.exists():
-                print(f"  ✓ Audio Energy: {path}")
-                with open(path) as f:
-                    data = json.load(f)
-                self.ml_results['audio_energy'] = MLAnalysisResult(
-                    model_name='audio_energy',
-                    model_version='v1',
-                    success=True,
-                    data=data
-                )
-                return
-        
-        print(f"  ✗ Audio Energy: Not found, using empty results")
-        self.ml_results['audio_energy'] = MLAnalysisResult(
-            model_name='audio_energy',
-            model_version='v1',
-            success=True,
-            data={
-                "rms_frames": [],
-                "frames_per_second": 30.0,
-                "energy_variance": 0.0,
-                "burst_pattern": "steady"
-            }
-        )
-    
-    def _load_emotion_detection(self):
-        """Load emotion detection results."""
-        paths = [
-            Path(f"emotion_detection_outputs/{self.video_id}/{self.video_id}_emotions.json"),
-            Path(f"feat_outputs/{self.video_id}/{self.video_id}_feat.json"),
-        ]
-        
-        for path in paths:
-            if path.exists():
-                print(f"  ✓ Emotion Detection: {path}")
-                with open(path) as f:
-                    data = json.load(f)
-                self.ml_results['emotion_detection'] = MLAnalysisResult(
-                    model_name='emotion_detection',
-                    model_version='feat',
-                    success=True,
-                    data=data
-                )
-                return
-        
-        print(f"  ✗ Emotion Detection: Not found, using empty results")
-        self.ml_results['emotion_detection'] = MLAnalysisResult(
-            model_name='emotion_detection',
-            model_version='feat',
-            success=True,
-            data={"emotions": [], "timeline": {}}
-        )
-    
-    def _load_metadata(self):
-        """Load video metadata."""
-        # First check if we have a unified analysis file with duration
-        unified_path = Path(f"unified_analysis/{self.video_id}.json")
-        if unified_path.exists():
-            with open(unified_path) as f:
-                unified = json.load(f)
-                duration = unified.get('duration', 35.0)
-        # Otherwise try to get duration from scene detection
-        elif 'scene_detection' in self.ml_results and self.ml_results['scene_detection'].success:
-            scenes = self.ml_results['scene_detection'].data.get('scenes', [])
-            if scenes and 'end_time' in scenes[-1]:
-                duration = scenes[-1]['end_time']
-            else:
-                duration = 35.0  # Default
-        else:
-            duration = 35.0
-        
-        # Try to load existing metadata if available
-        metadata_paths = [
-            Path(f"insights/{self.video_id}_metadata.json"),
-            Path(f"metadata/{self.video_id}.json"),
-        ]
-        
-        for path in metadata_paths:
-            if path.exists():
-                print(f"  ✓ Metadata: {path}")
-                with open(path) as f:
-                    self.metadata = json.load(f)
-                    self.metadata['video_duration'] = duration
-                    return
-        
-        # Create minimal metadata if not found
-        print(f"  ℹ Metadata: Using defaults")
-        self.metadata = {
-            'video_id': self.video_id,
-            'video_duration': duration,
-            'duration': duration,
-            'likes': 0,
-            'views': 0,
-            'saves': 0,
-            'shares': 0,
-            'comments': 0,
-            'username': 'test_user',
-            'description': '',
-            'create_time': '2024-01-01T00:00:00Z'
-        }
-    
-    def get_metadata(self) -> Dict[str, Any]:
-        """Get loaded metadata."""
-        return self.metadata
+    return unified_dict
 
 
 def validate_temporal_windows(result: Dict[str, Any]) -> None:
@@ -326,7 +59,9 @@ def validate_temporal_windows(result: Dict[str, Any]) -> None:
     
     # Expected features based on our implementation
     expected_features = {
-        'P0 Core': ['text_count', 'sticker_count', 'object_count', 
+        'P0 Core': ['unique_text_count', 'max_simultaneous_texts', 'text_appearance_count',
+                    'text_coverage', 'avg_text_lifespan', 'text_change_count',
+                    'sticker_count', 'object_count', 
                     'gesture_count', 'expression_count', 'scene_count', 
                     'element_count'],
         'P0 Density': ['max_density', 'min_density', 'avg_density'],
@@ -373,83 +108,113 @@ def validate_temporal_windows(result: Dict[str, Any]) -> None:
         print(f"\n⚠️  Unexpected features found: {unexpected}")
 
 
+def compare_with_production(test_result: Dict[str, Any], prod_path: Path) -> None:
+    """
+    Compare test output with production output.
+    """
+    print(f"\n🔍 Comparing with production output...")
+    
+    with open(prod_path) as f:
+        prod_result = json.load(f)
+    
+    # Compare hook window as sample
+    test_hook = test_result['temporal_windows']['hook']
+    prod_hook = prod_result['temporal_windows']['hook']
+    
+    # Key metrics to compare
+    key_metrics = ['unique_text_count', 'text_coverage', 'sticker_count', 'object_count', 
+                   'element_count', 'speech_coverage', 'joy_ratio',
+                   'shortest_scene', 'scene_duration_variance']
+    
+    discrepancies = []
+    matches = []
+    
+    for metric in key_metrics:
+        test_val = test_hook.get(metric)
+        prod_val = prod_hook.get(metric)
+        
+        # Handle float comparison with tolerance
+        if isinstance(test_val, float) and isinstance(prod_val, float):
+            if abs(test_val - prod_val) < 0.0001:
+                matches.append(f"  ✓ {metric}: {test_val:.4f}")
+            else:
+                discrepancies.append(f"  ✗ {metric}: test={test_val:.4f}, prod={prod_val:.4f}")
+        elif test_val == prod_val:
+            matches.append(f"  ✓ {metric}: {test_val}")
+        else:
+            discrepancies.append(f"  ✗ {metric}: test={test_val}, prod={prod_val}")
+    
+    # Display results
+    if matches:
+        print("\nMatching metrics:")
+        for m in matches:
+            print(m)
+    
+    if discrepancies:
+        print("\n⚠️  Discrepancies found:")
+        for d in discrepancies:
+            print(d)
+    else:
+        print("\n✅ All key metrics match production!")
+
+
 def main():
     """
     Main test flow that mirrors production pipeline exactly.
+    This is a TRUE MIRROR - same data, same function, should get same output.
     """
     # Get video ID from command line or use default
     video_id = sys.argv[1] if len(sys.argv) > 1 else "7430952519439846698"
     
     print("="*60)
-    print("🚀 TEMPORAL COMPUTE TEST - Production Pipeline Mirror")
+    print("🚀 TEMPORAL COMPUTE TEST - True Production Mirror")
     print("="*60)
     print(f"Video ID: {video_id}")
+    print()
     
-    # Step 1: Load ML outputs from disk (only manual part)
-    loader = MLOutputLoader(video_id)
-    ml_results = loader.load_all_ml_outputs()
-    metadata = loader.get_metadata()
+    # Step 1: Load the EXACT unified_analysis that production created
+    unified_dict = load_unified_analysis(video_id)
     
-    # Step 2: Use REAL TimelineBuilder from production
-    print(f"\n🔨 Building timeline with production TimelineBuilder...")
-    timeline_builder = TimelineBuilder()
-    
-    # This is the EXACT call from rumiai_runner.py line 270-273
-    unified_analysis = timeline_builder.build_timeline(
-        video_id=video_id,
-        video_metadata=metadata,
-        ml_results=ml_results
-    )
-    
-    print(f"  ✓ Timeline built with {len(unified_analysis.timeline.entries)} entries")
-    
-    # Step 3: Use REAL compute_temporal_windows from production
+    # Step 2: Call compute_temporal_windows EXACTLY like production
+    # This matches rumiai_runner.py line 286: compute_temporal_windows(unified_analysis.to_dict())
     print(f"\n⚙️  Computing temporal windows with production function...")
     
-    # This is the EXACT call from rumiai_runner.py line 293
-    result = compute_temporal_windows(unified_analysis.to_dict())
+    try:
+        result = compute_temporal_windows(unified_dict)
+        print(f"  ✓ Temporal windows computed successfully")
+    except Exception as e:
+        print(f"  ✗ Error computing temporal windows: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
     
-    print(f"  ✓ Temporal windows computed")
-    
-    # Step 4: Validate results
+    # Step 3: Validate the output has all expected features
     validate_temporal_windows(result)
     
-    # Step 5: Save results for comparison
+    # Step 4: Save test results
     output_path = Path(f"test_outputs/{video_id}_temporal_windows_test.json")
     output_path.parent.mkdir(exist_ok=True)
     
     with open(output_path, 'w') as f:
         json.dump(result, f, indent=2)
     
-    print(f"\n💾 Results saved to: {output_path}")
+    print(f"\n💾 Test results saved to: {output_path}")
     
-    # Step 6: Compare with original if exists
-    original_path = Path(f"insights/{video_id}_temporal_windows.json")
-    if original_path.exists():
-        with open(original_path) as f:
-            original = json.load(f)
-        
-        print(f"\n🔍 Comparing with original temporal windows...")
-        
-        # Compare a few key metrics
-        orig_hook = original['temporal_windows']['hook']
-        test_hook = result['temporal_windows']['hook']
-        
-        metrics_to_compare = ['element_count', 'speech_coverage', 'joy_ratio', 
-                             'shortest_scene', 'scene_duration_variance']
-        
-        for metric in metrics_to_compare:
-            orig_val = orig_hook.get(metric, 'N/A')
-            test_val = test_hook.get(metric, 'N/A')
-            match = "✓" if orig_val == test_val else "✗"
-            print(f"  {match} {metric}: orig={orig_val}, test={test_val}")
+    # Step 5: Compare with production output if it exists
+    prod_path = Path(f"insights/{video_id}_temporal_windows_updated.json")
+    if prod_path.exists():
+        compare_with_production(result, prod_path)
+    else:
+        print(f"\n⚠️  No production output found at {prod_path}")
+        print("Run production first: python3 scripts/rumiai_runner.py")
     
-    print("\n✅ Test complete!")
-    print("\nThis test uses the EXACT production pipeline:")
-    print("  1. ML outputs loaded from disk (only manual step)")
-    print("  2. Real TimelineBuilder.build_timeline()")
-    print("  3. Real compute_temporal_windows()")
-    print("\nAny fixes to production code automatically apply here! 🎉")
+    print("\n" + "="*60)
+    print("✅ Test complete!")
+    print("\nThis test is a TRUE MIRROR of production:")
+    print("  1. Uses exact same unified_analysis data")
+    print("  2. Calls exact same compute_temporal_windows function")
+    print("  3. Should produce identical output")
+    print("="*60)
 
 
 if __name__ == "__main__":

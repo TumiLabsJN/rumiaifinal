@@ -21,11 +21,13 @@ class VideoAnalyzer:
     def __init__(self, ml_services):
         """
         Initialize with ML services.
-        
+
         Args:
             ml_services: ML service client for running analyses
         """
         self.ml_services = ml_services
+        # Decision Point 11: Add DeepFace service attribute
+        self.deepface_service = None  # Lazy load DeepFace service
     
     async def analyze_video(self, video_id: str, video_path: Path) -> Dict[str, MLAnalysisResult]:
         """
@@ -43,7 +45,8 @@ class VideoAnalyzer:
             'ocr': self._run_ocr,
             'scene_detection': self._run_scene_detection,
             'audio_energy': self._run_audio_energy,
-            'emotion_detection': self._run_emotion_detection  # NEW - FEAT integration
+            'emotion_detection': self._run_emotion_detection,  # NEW - FEAT integration
+            'deepface_gender': self._run_deepface_gender  # NEW - DeepFace gender detection
         }
         
         # Run analyses in parallel
@@ -382,6 +385,57 @@ class VideoAnalyzer:
             return MLAnalysisResult(
                 model_name='emotion_detection',
                 model_version='feat-0.6.0',
+                success=False,
+                error=str(e)
+            )
+
+    async def _run_deepface_gender(self, video_id: str, video_path: Path) -> MLAnalysisResult:
+        """
+        Run DeepFace gender detection.
+        Decision Point 8: Runs in parallel with audio service.
+        FIXED: Uses subprocess isolation to avoid memory corruption.
+        """
+        try:
+            # Initialize service if needed
+            if self.deepface_service is None:
+                # Use simple subprocess version to avoid memory corruption
+                from rumiai_v2.ml_services.deepface_gender_service_simple import (
+                    DeepFaceGenderServiceSimple
+                )
+                self.deepface_service = DeepFaceGenderServiceSimple()
+
+            # Run gender detection
+            logger.info(f"Running DeepFace gender detection on {video_path}")
+            result = await self.deepface_service.analyze(str(video_path))
+
+            # Save results to output directory
+            output_dir = Path(f"gender_detection_outputs/{video_id}")
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_path = output_dir / f"{video_id}_gender.json"
+
+            with open(output_path, 'w') as f:
+                json.dump(result, f, indent=2)
+
+            logger.info(f"Gender detection saved to {output_path}")
+
+            return MLAnalysisResult(
+                model_name='deepface_gender',
+                model_version='deepface-0.0.92',
+                success=True,
+                data=result,
+                processing_time=result.get('processing_ms', 0) / 1000.0
+            )
+
+        except (FileNotFoundError, VideoLoadError, ModelInitializationError) as e:
+            # Decision Point 3: Critical errors should propagate
+            logger.error(f"Critical error in gender detection for {video_path}: {e}")
+            raise
+        except Exception as e:
+            # Decision Point 3: Expected failures return empty result
+            logger.warning(f"Gender detection returned no result for {video_path}: {e}")
+            return MLAnalysisResult(
+                model_name='deepface_gender',
+                model_version='deepface-0.0.92',
                 success=False,
                 error=str(e)
             )
