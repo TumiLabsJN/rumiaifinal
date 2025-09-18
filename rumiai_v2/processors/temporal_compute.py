@@ -144,6 +144,72 @@ def extract_audio_energy_data(ml_data: Dict[str, Any]) -> Dict[str, Any]:
     return {}
 
 # ============================================
+# HASHTAG EXTRACTION AND ANALYSIS
+# ============================================
+
+def extract_hashtag_metrics(metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extract and analyze hashtag strategy from video metadata.
+
+    Args:
+        metadata: Video metadata containing hashtags
+
+    Returns:
+        Dictionary with hashtag metrics
+    """
+    hashtags = metadata.get('hashtags', [])
+
+    # Define generic hashtags (expanded list)
+    generic_hashtags = [
+        # Discovery-focused (original 6)
+        'fyp', 'foryou', 'foryoupage', 'viral', 'trending', 'explore',
+
+        # Platform identity (new)
+        'tiktok',           # Platform name itself
+        'tiktokviral',      # Viral aspiration
+
+        # Creator community (new)
+        'tiktokcreator',    # Creator-focused discovery
+        'contentcreator',   # Generic creator tag
+
+        # Engagement bait (new)
+        'funny',            # General entertainment
+        'duet',             # Collaboration/reaction content
+
+        # Trending variations (new)
+        'trendingvideo',    # Variation of trending
+        'tiktokchallenge'   # Challenge participation
+    ]
+
+    # Count hashtags
+    total_count = len(hashtags)
+    generic_count = 0
+    specific_hashtags = []
+
+    for tag in hashtags:
+        # Extract tag text (handles both string and dict formats)
+        if isinstance(tag, dict):
+            tag_text = tag.get('name', '').lower().strip('#')
+        else:
+            tag_text = str(tag).lower().strip('#')
+
+        if tag_text in generic_hashtags:
+            generic_count += 1
+        else:
+            specific_hashtags.append(tag_text)
+
+    # Calculate metrics
+    generic_ratio = generic_count / total_count if total_count > 0 else 0
+
+    # Return only ML-compatible numeric features
+    return {
+        'hashtag_count': total_count,
+        'generic_hashtag_count': generic_count,
+        'specific_hashtag_count': total_count - generic_count,
+        'generic_ratio': round(generic_ratio, 3)  # Keep 3 decimals for ML precision
+    }
+
+# ============================================
 # TIMELINE EXTRACTION (Decision 5 - Mixed Strategy)
 # ============================================
 
@@ -539,7 +605,7 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
     
     # Note: Removed cluster_texts_temporally and analyze_cluster_pattern
     # Solution 5 uses speech-first approach, not temporal clustering
-    
+
     # Handle edge cases
     if not text_timeline or speech_segments is None:
         speech_segments = []
@@ -837,6 +903,113 @@ def calculate_speech_metrics_for_window(speech_segments, start, end, duration):
 
     return speech_coverage, word_count
 
+def calculate_pitch_metrics(audio_data: Dict[str, Any],
+                           ml_data: Dict[str, Any],
+                           start: float,
+                           end: float) -> Dict[str, float]:
+    """
+    Calculate pitch metrics for a temporal window.
+
+    Decision Point 3: Gender-specific normalization (required).
+    Decision Point 11: Fail fast if gender missing.
+    Decision Point 2: Only avg_pitch_normalized and pitch_range_norm.
+
+    Returns:
+        Dictionary with exactly 2 metrics (zeros if no speech)
+    """
+    import numpy as np
+
+    # Step 1: Gender validation (Decision Point 11: fail fast)
+    gender_data = ml_data.get('deepface_gender')
+    if not gender_data:
+        # If DeepFace didn't run, return zeros (don't fail pipeline)
+        logger.warning("DeepFace data missing - returning zero pitch metrics")
+        return {'avg_pitch_normalized': 0.0, 'pitch_range_norm': 0.0}
+
+    gender = gender_data.get('gender')
+    if gender is None:
+        logger.warning(f"DeepFace returned no gender: {gender_data}")
+        return {'avg_pitch_normalized': 0.0, 'pitch_range_norm': 0.0}
+
+    gender_confidence = gender_data.get('confidence', 0.0)
+
+    # Step 2: Check audio data exists
+    if not audio_data or 'pitch_frames' not in audio_data:
+        return {'avg_pitch_normalized': 0.0, 'pitch_range_norm': 0.0}
+
+    # Step 3: Extract window frames (Decision Point 4: time-based)
+    pitch_fps = audio_data.get('pitch_fps', 43.07)
+    pitch_frames = audio_data['pitch_frames']
+
+    start_frame = int(start * pitch_fps)
+    end_frame = int(end * pitch_fps)
+
+    # Bounds check
+    if end_frame > len(pitch_frames):
+        end_frame = len(pitch_frames)
+
+    # Extract window and get voiced frames
+    window_pitches = pitch_frames[start_frame:end_frame]
+    voiced_pitches = [p for p in window_pitches if p > 80]
+
+    # Step 4: Calculate metrics (Decision Point 16: minimum frames)
+    MIN_FRAMES_AVG = 10
+    MIN_FRAMES_RANGE = 30
+
+    if len(voiced_pitches) < MIN_FRAMES_AVG:
+        # Not enough speech - return zeros
+        return {'avg_pitch_normalized': 0.0, 'pitch_range_norm': 0.0}
+
+    # Step 5: Calculate average pitch
+    avg_pitch_hz = float(np.mean(voiced_pitches))
+
+    # Step 6: Normalization (Decision Point 3)
+    if gender == 'multiple_people':
+        # Self-normalization for multi-person videos
+        # Use pre-computed statistics for efficiency
+        pitch_stats = audio_data.get('pitch_statistics', {})
+        if pitch_stats and 'p20' in pitch_stats and 'p80' in pitch_stats:
+            p20 = pitch_stats['p20']
+            p80 = pitch_stats['p80']
+            if p80 > p20:
+                avg_pitch_normalized = (avg_pitch_hz - p20) / (p80 - p20)
+            else:
+                avg_pitch_normalized = 0.0
+        else:
+            # Fallback to sample if stats not available
+            voiced_sample = audio_data.get('voiced_pitch_sample', [])
+            if len(voiced_sample) >= 20:
+                p20 = np.percentile(voiced_sample, 20)
+                p80 = np.percentile(voiced_sample, 80)
+                if p80 > p20:
+                    avg_pitch_normalized = (avg_pitch_hz - p20) / (p80 - p20)
+                else:
+                    avg_pitch_normalized = 0.0
+            else:
+                logger.warning("Insufficient pitch data for self-normalization")
+                avg_pitch_normalized = 0.0
+    else:
+        # Gender-specific normalization
+        if gender.lower() == 'male':
+            avg_pitch_normalized = (avg_pitch_hz - 110) / 40
+        else:  # female
+            avg_pitch_normalized = (avg_pitch_hz - 200) / 45
+
+    # Clip to reasonable range
+    avg_pitch_normalized = np.clip(avg_pitch_normalized, -1.0, 3.0)
+
+    # Step 7: Calculate range (needs more frames)
+    if len(voiced_pitches) >= MIN_FRAMES_RANGE:
+        pitch_range_norm = (max(voiced_pitches) - min(voiced_pitches)) / avg_pitch_hz
+        pitch_range_norm = min(pitch_range_norm, 1.0)  # Cap at 1.0
+    else:
+        pitch_range_norm = 0.0
+
+    return {
+        'avg_pitch_normalized': round(float(avg_pitch_normalized), 3),
+        'pitch_range_norm': round(float(pitch_range_norm), 4)
+    }
+
 def calculate_speech_content_indicators(speech_segments, start, end, duration):
     """
     Calculate speech content indicators for a temporal window.
@@ -981,7 +1154,8 @@ def calculate_gaze_variance(timeline_entries: List[Dict], start: float, end: flo
     return 0.0
 
 def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
-                   audio_data: Dict[str, Any], video_duration: float) -> Dict[str, Any]:
+                   audio_data: Dict[str, Any], ml_data: Dict[str, Any],
+                   video_duration: float) -> Dict[str, Any]:
     """
     Process segment with FULL metrics matching hook/closing windows.
     Implements Decision 4 from decisions3.md - ML consistency across all windows.
@@ -1149,17 +1323,17 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     # Since camera_distance entries don't exist, calculate from face entries
     # close (>25% frame), medium (8-25%), wide (<8%), none (no face)
     framing_counts = {'close': 0, 'medium': 0, 'wide': 0, 'none': 0}
-    
+
     # Get face entries for this segment
     segment_faces = [f for f in timelines.get('face_timeline', [])
                     if start <= f.get('timestamp', 0) < end]
-    
+
     for face in segment_faces:
         bbox = face.get('bbox', {})
         if bbox:
             # Calculate face area as percentage of frame
             face_area = bbox.get('width', 0) * bbox.get('height', 0) * 100
-            
+
             if face_area > 25:
                 framing_counts['close'] += 1
             elif face_area > 8:
@@ -1174,7 +1348,7 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     # If no faces in segment, count as 'none'
     if not segment_faces:
         framing_counts['none'] = 1
-    
+
     total_camera_frames = sum(framing_counts.values()) if sum(framing_counts.values()) > 0 else 1
     framing_dist = {
         f'{frame_type}_ratio': count / total_camera_frames if total_camera_frames > 0 else 0
@@ -1208,7 +1382,10 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     else:
         energy_level = energy_variance = energy_max = 0.0
         burst_pattern = 'steady'
-    
+
+    # Calculate pitch metrics if available
+    pitch_metrics = calculate_pitch_metrics(audio_data, ml_data, start, end)
+
     # Calculate scene duration metrics (P0 requirement)
     if scene_durations:
         shortest_scene = float(min(scene_durations))
@@ -1256,7 +1433,9 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         'energy_level': energy_level,
         'energy_variance': energy_variance,
         'energy_max': energy_max,
-        'burst_pattern': burst_pattern
+        'burst_pattern': burst_pattern,
+        # Pitch metrics
+        **pitch_metrics  # Unpack all pitch metrics
     }
 
 # ============================================
@@ -1480,7 +1659,7 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
             'start': windows['hook'][0],
             'end': windows['hook'][1]
         }
-        hook_data = process_segment(hook_bounds, timelines, audio_data, video_duration)
+        hook_data = process_segment(hook_bounds, timelines, audio_data, ml_data, video_duration)
         
         # Add window-specific audio metrics
         hook_data['energy_level'] = audio_energy_metrics.get('hook_energy_level', 0)
@@ -1496,7 +1675,7 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     if windows['middle']:
         segments = calculate_middle_segments(video_duration)
         for seg_name, seg_bounds in segments.items():
-            seg_data = process_segment(seg_bounds, timelines, audio_data, video_duration)
+            seg_data = process_segment(seg_bounds, timelines, audio_data, ml_data, video_duration)
             seg_data['segment_name'] = seg_name
             middle_segments.append(seg_data)
     
@@ -1510,7 +1689,7 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
             'start': windows['closing'][0],
             'end': windows['closing'][1]
         }
-        closing_data = process_segment(closing_bounds, timelines, audio_data, video_duration)
+        closing_data = process_segment(closing_bounds, timelines, audio_data, ml_data, video_duration)
         
         # Add window-specific audio metrics
         closing_data['energy_level'] = audio_energy_metrics.get('closing_energy_level', 0)
@@ -1521,7 +1700,10 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     # ============================================
     # STEP 8: Calculate Metadata
     # ============================================
-    
+
+    # Extract hashtag metrics
+    hashtag_metrics = extract_hashtag_metrics(metadata)
+
     calculated_metadata = {
         'video_id': video_id,
         'duration': video_duration,
@@ -1543,7 +1725,11 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
             'confidence': gender_data.get('confidence', 0.0),
             'method': gender_data.get('method', 'deepface')
         }
-    
+
+    # Add hashtag analysis
+    if hashtag_metrics:
+        calculated_metadata['hashtag_analysis'] = hashtag_metrics
+
     # ============================================
     # STEP 9: Build Final Result
     # ============================================

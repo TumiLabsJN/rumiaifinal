@@ -340,8 +340,3 @@ class AudioEnergyService:
             result['error'] = error
 
         return result
-
-
-def get_audio_energy_service() -> AudioEnergyService:
-    """Get audio energy service instance with pitch extraction capabilities"""
-    return AudioEnergyService()

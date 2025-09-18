@@ -23,7 +23,7 @@ This document tracks HOW to implement and improve features for the RumiAI MVP. A
 | P1 | Raw Data | Creative Density Climax Moment | Easy | Low | Identifies peak production intensity timing for alignment analysis | Completes climax moment system for coordination patterns | density_per_second calculation | NO | YES | NO | Extract position (0-1) | Low | Scale | Low |
 | P1 | ML-Compatible Transformations | Normalize Climax Moments to Position | Easy | Low | Enables cross-video comparison and alignment analysis | Fixes inconsistent formats (strings vs dicts) for ML compatibility | Existing climax calculations | NO | YES | NO | Extract position (0-1) | Low | Scale | Low |
 | P1 | Raw Data | Emotion Distribution Ratios | Easy | Low | Complete emotional composition for pattern discovery | Replaces oversimplified dominantEmotion with temporal distributions only | Expression timeline data | NO | YES | NO | None needed | Low | Scale | Low |
-| P1 | Raw Data | Temporal Face Size Metrics | Medium | Medium | Captures framing patterns and intimacy progression through video | Replaces global average with temporal window face sizes | Temporal Windows, Face detection | NO | YES | NO | None needed | Low | Scale | Low |
+| P1 | Raw Data | Temporal Face Size Metrics | Medium | Medium | Captures framing patterns and intimacy progression through video | Replaces global average with temporal window face sizes | Temporal Windows, Face detection | NO | YES | NO | None needed | Low | Scale | Low | SKIPPED - Redundant with framing ratios (RF learns variance) |
 | P1 | Raw Data | Temporal Eye Contact Metrics | Medium | Medium | Reveals audience connection patterns throughout video journey | Replaces global average with per-window eye contact rates | Temporal Windows, Eye tracking data | NO | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Temporal Face Visibility Metrics | Medium | Medium | Shows face presence patterns to identify content strategy | Replaces global average with per-window face visibility rates | Temporal Windows, Face detection | NO | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Temporal Framing Changes | Easy | Low | Reveals where shot type dynamics occur in video structure | Adds per-window framing change counts | Temporal Windows, Framing progression data | NO | YES | NO | None needed | Low | Scale | Low | ALREADY CAPTURED - Framing ratios encode changes |
@@ -31,22 +31,22 @@ This document tracks HOW to implement and improve features for the RumiAI MVP. A
 | P1 | Raw Data | Temporal Framing Distribution | Easy | Low | Reveals shot composition evolution through video | Replaces global with per-window shot type percentages | Temporal Windows, shot_type_distribution data | NO | YES | NO | None needed | Low | Scale | Low |
 | P1 | Raw Data | Temporal Gaze Variance | Easy | Low | Shows eye contact consistency patterns through video | Replaces categorical gazeSteadiness with per-window numerical variance | Temporal Windows, gaze timeline | NO | YES | NO | None needed | Low | Scale | Low | DONE ✅ |
 | P1 | Raw Data | Temporal Scene Duration Metrics | Easy | Low | Reveals pacing evolution through video journey | Replaces global with per-window scene duration metrics | Temporal Windows, scene boundaries | DONE | YES | NO | None needed | Low | Scale | Low |
-| P1 | Raw Data | Temporal Speech Rhythm Metrics | Easy | Low | Tracks speech delivery patterns through video journey | Adds per-window avg/longest segment durations | Temporal Windows, speech segments | NO | YES | NO | None needed | Low | Scale | Low |
-| P1 | Raw Data | Temporal Speech Pacing Variation | Easy | Low | Reveals speaking consistency patterns through video | Shows where steady vs variable pacing occurs | Temporal Windows, speech segments | NO | YES | NO | None needed | Low | Scale | Low |
-| P1 | Raw Data | Temporal Vocabulary Diversity | Easy | Low | Tracks vocabulary richness evolution through video | Shows scripted vs natural speech patterns per window | Temporal Windows, unique/total words per window | NO | YES | NO | None needed | Low | Scale | Low |
+| P1 | Raw Data | Temporal Speech Rhythm Metrics | Easy | Low | Tracks speech delivery patterns through video journey | Adds per-window avg/longest segment durations | Temporal Windows, speech segments | NO | YES | NO | None needed | Low | Scale | Low | SKIPPED - Redundant with speech_coverage/word_count |
+| P1 | Raw Data | Temporal Speech Pacing Variation | Easy | Low | Reveals speaking consistency patterns through video | Shows where steady vs variable pacing occurs | Temporal Windows, speech segments | NO | YES | NO | None needed | Low | Scale | Low | SKIPPED - Insufficient samples for variance in 3-10s windows |
+| P1 | Raw Data | Temporal Vocabulary Diversity | Easy | Low | Tracks vocabulary richness evolution through video | Shows scripted vs natural speech patterns per window | Temporal Windows, unique/total words per window | NO | YES | NO | None needed | Low | Scale | Low | SKIPPED - Sample too small (10-30 words, need 100+) |
 | P1 | Raw Data | Temporal Overlay Metrics (Duration, Variety & Persistence) | Easy | Low | Reveals complete text display strategy through video | Shows reading time allowance, variety patterns, and text persistence per window with min/avg/max durations | Temporal Windows, overlay timestamps | NO | YES | NO | None needed | Low | Scale | Low | DONE |
-| P1 | Raw Data | Basic Sticker Metrics | Easy | Low | Captures platform-native visual language usage patterns | Fills gap where stickers are counted but not analyzed separately from text | Temporal Windows, stickerTimeline | YES | YES | YES | None needed | Low | Scale | Low |
-| P1 | Raw Data | Expand Generic Hashtag Detection | Easy | Low | More accurate genericRatio calculations for discovery strategy | Expands from 6 to 14 generic hashtags per documentation | None | YES | NO | NO | None needed | Low | Scale | Low |
-| P1 | Raw Data | Expand hasHook Pattern Detection | Easy | Low | Better viral hook detection coverage from ~5% to ~40% | Expands from 7 to 50+ proven hook patterns | None | YES | NO | NO | None needed | Low | None needed | None |
-| P1 | ML-Compatible Transformations | Simplify ctaFeatures Structure | Easy | Low | Removes redundancy and flattens for ML consumption | Eliminates hasCTA duplicate and derivable ctaCount | None | YES | NO | NO | None needed | Low | Scale | Low |
+| P1 | Raw Data | Basic Sticker Metrics | Easy | Low | Captures platform-native visual language usage patterns | Fills gap where stickers are counted but not analyzed separately from text | Temporal Windows, stickerTimeline | YES | YES | YES | None needed | Low | Scale | Low | SKIPPED - HSV sticker detection too unreliable |
+| P1 | Raw Data | Expand Generic Hashtag Detection | Easy | Low | More accurate genericRatio calculations for discovery strategy | Expands from 6 to 14 generic hashtags per documentation | None | YES | NO | NO | None needed | Low | Scale | Low | DONE ✅ - Fixed orphaned bug + expanded to 14 |
+| P1 | Raw Data | Expand hasHook Pattern Detection | Easy | Low | Better viral hook detection coverage from ~5% to ~40% | Expands from 7 to 50+ proven hook patterns | None | YES | NO | NO | None needed | Low | None needed | None | SKIPPED - Low reliability due to transcript dependency |
+| P1 | ML-Compatible Transformations | Simplify ctaFeatures Structure | Easy | Low | Removes redundancy and flattens for ML consumption | Eliminates hasCTA duplicate and derivable ctaCount | None | YES | NO | NO | None needed | Low | Scale | Low | SKIPPED - Same verbatim text matching issues as hook detection |
 | P2 | Raw Data | Scene Duration Variance | Easy | Low | Reveals pacing consistency within temporal windows | Complements averageSceneDuration with spread | None | YES | NO | NO | None needed | Low | Scale | Low | DONE |
 | P2 | Raw Data | Quiet Period Metrics | Medium | Medium | Captures strategic pauses and cognitive rest patterns | Fixes variable array incompatibility of quietMoments | Temporal Windows | NO | YES | NO | None needed | Low | Scale | Low |
-| P2 | Raw Data | Silence Duration Metrics | Easy | Low | Completes pause pattern analysis with duration info | Replaces silencePeriods variable array | None | YES | YES | YES | None needed | Low | Scale | Low |
+| P2 | Raw Data | Silence Duration Metrics | Easy | Low | Completes pause pattern analysis with duration info | Replaces silencePeriods variable array | None | YES | YES | YES | None needed | Low | Scale | Low | SKIPPED - Insufficient variance in 3-10s windows (0-1 pauses) |
 | P2 | Raw Data | Enhanced Emotion Metrics | Easy | Low | Captures emotional complexity without sequence challenges | Adds variety and depth beyond dominant emotion | None | YES | NO | NO | None needed | Low | Scale | Low |
-| P2 | Raw Data | Enhanced Gesture Metrics | Easy | Low | Captures gesture diversity and communication style | Adds variety and types beyond simple count | None | YES | NO | NO | None needed | Low | Scale | Low |
+| P2 | Raw Data | Enhanced Gesture Metrics | Easy | Low | Captures gesture diversity and communication style | Adds variety and types beyond simple count | None | YES | NO | NO | None needed | Low | Scale | Low | SKIPPED - Gesture classification broken + minimal variance in 3-10s windows |
 | P2 | Raw Data | Enhanced Object Metrics | Medium | Medium | Enables content type classification through objects | Identifies viral niches (pets, food, tech) | None | YES | NO | NO | One-hot encode categories | Med | Label encode+scale | Med |
-| P2 | ML-Compatible Transformations | Text Content Classification Metrics | Easy | Low | Distinguishes marketing patterns and content styles through multi-instance classification | Counts text types instead of losing quantity with binary flags | None | YES | NO | NO | None needed | Low | Scale | Low |
-| P3 | Raw Data | Speech Segmentation Metrics | Easy | Low | Reveals speaking rhythm and delivery style patterns | Partially overlaps with silentMoments but adds segment perspective | Quiet Period Metrics (P2) | YES | YES | YES | None needed | Low | Scale | Low |
+| P2 | ML-Compatible Transformations | Text Content Classification Metrics | Easy | Low | Distinguishes marketing patterns and content styles through multi-instance classification | Counts text types instead of losing quantity with binary flags | None | YES | NO | NO | None needed | Low | Scale | Low | SKIPPED - Verbatim matching + low variance in 3-10s windows |
+| P3 | Raw Data | Speech Segmentation Metrics | Easy | Low | Reveals speaking rhythm and delivery style patterns | Partially overlaps with silentMoments but adds segment perspective | Quiet Period Metrics (P2) | YES | YES | YES | None needed | Low | Scale | Low | SKIPPED - Arbitrary Whisper segmentation + low variance |
 | P4 | Transferred - No | accelerationPattern | NONE | NONE | Captures overall pacing patterns across windows | NONE | NONE | YES | NO | NO | One-hot encode 4 categories | Low | Label encode (0-3) + scale | Low |
 | P4 | Transferred - No | stdDeviation | NONE | NONE | Measures consistency vs variation in density across entire video | NONE | NONE | YES | NO | NO | None needed | Low | Scale/normalize | Low |
 | P4 | Transferred - No | emojiCount | NONE | NONE | Total emoji usage in caption | NONE | NONE | YES | NO | NO | None needed | Low | Scale | Low |
@@ -631,7 +631,7 @@ The existing metrics provide complete audio dynamics:
 
 ---
 
-### Temporal Speech Rhythm Metrics
+### Temporal Speech Rhythm Metrics [SKIPPED - Redundant with speech_coverage/word_count]
 
 #### Problem Statement
 - Currently only have global avgSegmentDuration across entire video
@@ -639,7 +639,15 @@ The existing metrics provide complete audio dynamics:
 - Missing visibility into hook speaking rhythm vs body vs closing pace
 - No insight into whether speaker accelerates or maintains steady rhythm
 
-#### Explanation of Difficulty
+#### Resolution - SKIPPED
+**Not implementing - redundant with existing features:**
+- Speech rhythm is already captured by `speech_coverage` + `word_count`
+- Average segment duration measures Whisper's arbitrary segmentation, not actual rhythm
+- Real speech pace = word_count / (duration * speech_coverage)
+- In 3-7s windows, only 1-2 segments = statistically meaningless averages
+- ML can derive all rhythm patterns from existing features
+
+#### Original Explanation of Difficulty
 - **Easy**: Simple calculation of average segment duration per window
 - Speech segments already tracked with timestamps
 - Just needs aggregation to temporal windows
@@ -747,7 +755,7 @@ def calculate_temporal_speech_rhythm(speech_segments, video_duration):
 
 ---
 
-### Temporal Speech Pacing Variation
+### Temporal Speech Pacing Variation [SKIPPED - Insufficient samples for variance]
 
 #### Problem Statement
 - Currently only have global pacingVariation (once P0 implemented)
@@ -755,7 +763,16 @@ def calculate_temporal_speech_rhythm(speech_segments, video_duration):
 - Missing visibility into steady hooks vs variable middles vs climactic endings
 - No insight into pacing strategy evolution
 
-#### Explanation of Difficulty
+#### Resolution - SKIPPED
+**Not implementing - statistically flawed for our window sizes:**
+- Variance requires ≥5 samples for meaningful calculation
+- 3-second windows have only 1-2 speech segments
+- 7-second windows have only 2-3 speech segments
+- Standard deviation of 1-3 values is statistically meaningless
+- Pacing changes already visible from word_count differences between windows
+- Rule: Variation only works when `Event Frequency × Window Duration ≥ 5`
+
+#### Original Explanation of Difficulty
 - **Easy**: Calculate standard deviation of WPM per temporal window
 - Speech segments already have timestamps and word counts
 - Statistical calculation per window
@@ -842,7 +859,7 @@ def calculate_temporal_pacing_variation(speech_segments, video_duration):
 
 ---
 
-### Temporal Vocabulary Diversity
+### Temporal Vocabulary Diversity [SKIPPED - Sample too small]
 
 #### Problem Statement
 - Currently only have global vocabularyDiversity metric
@@ -850,7 +867,16 @@ def calculate_temporal_pacing_variation(speech_segments, video_duration):
 - Missing visibility into scripted vs natural speech patterns per window
 - No insight into where vocabulary complexity changes (simple hook, complex middle, etc.)
 
-#### Explanation of Difficulty
+#### Resolution - SKIPPED
+**Not implementing - sample size too small for meaningful metric:**
+- Vocabulary diversity requires 100+ words for statistical stability (Zipf's Law)
+- Hook has only ~11 words, segments have ~30 words
+- Unique/total ratio swings wildly with each word at this scale
+- Example: 10 words all unique = 1.0, add one repeat = 0.91 (10% swing from 1 word!)
+- Word count already captures vocabulary opportunity implicitly
+- Would produce noise, not signal
+
+#### Original Explanation of Difficulty
 - **Easy**: Calculate unique/total word ratio per temporal window
 - Word counts already available from speech transcripts
 - Simple ratio calculation per window

@@ -1,21 +1,31 @@
 # Speech Analysis - Complete Architecture Documentation
 
-**Date Created**: 2025-08-14  
-**Last Updated**: 2025-08-15  
-**System Version**: RumiAI Final v2 (Python-Only Processing)  
-**Analysis Type**: speech_analysis  
-**Processing Cost**: $0.00 (No API usage)  
-**Processing Time**: ~25-35 seconds (optimized with SharedAudioExtractor)  
-**Status**: ✅ OPTIMIZED - SharedAudioExtractor implemented, 40% performance improvement achieved  
+**Date Created**: 2025-08-14
+**Last Updated**: 2025-09-18
+**System Version**: RumiAI Final v3 (Temporal Compute Architecture)
+**Analysis Type**: Integrated within temporal_windows computation
+**New Features**: ✅ Pitch extraction and gender-normalized pitch metrics
+**Processing Cost**: $0.00 (No API usage)
+**Processing Time**: ~2 minutes (full pipeline with 8 ML models)
+**Status**: ✅ PRODUCTION - Temporal compute with pitch analysis  
 
 ---
 
 ## Changelog
 
+### 2025-09-18 - Temporal Compute & Pitch Analysis Implementation
+- **Implemented**: Extended AudioEnergyService with pitch extraction capabilities
+- **Added**: calculate_pitch_metrics() function in temporal_compute.py
+- **Added**: Gender-specific pitch normalization (Male/Female/Multi-person)
+- **Optimized**: Single audio load at 22050Hz, resample to 16000Hz (30% I/O savings)
+- **Updated**: process_segment() to include pitch metrics in all temporal windows
+- **Result**: Pitch metrics now in production with ~2.5s overhead for 44s video
+- **Author**: Claude with Jorge
+
 ### 2025-08-15 - SharedAudioExtractor Implementation
 - **Implemented**: SharedAudioExtractor class for single audio extraction
 - **Updated**: WhisperCppTranscriber to use shared extraction with video_id parameter
-- **Updated**: AudioEnergyService to use shared extraction with video_id parameter  
+- **Updated**: AudioEnergyService to use shared extraction with video_id parameter
 - **Updated**: UnifiedMLServices._run_audio_services() for shared extraction
 - **Added**: Cleanup in main pipeline (rumiai_runner.py)
 - **Tested**: Videos 7231141058246216965, 7275140292322463022
@@ -31,13 +41,14 @@
 
 ## Executive Summary
 
-The Speech Analysis system is a **multi-service audio processing pipeline** that performs comprehensive analysis of speech content, audio energy patterns, and vocal delivery characteristics. The system currently operates through **pure Python processing** with zero API costs but suffers from **significant architectural redundancy** across multiple processing paths.
+The Speech Analysis system is a **unified temporal compute pipeline** that performs comprehensive analysis of speech content, audio energy patterns, pitch dynamics, and vocal delivery characteristics. The system operates through **pure Python processing** with zero API costs and has been optimized with SharedAudioExtractor and integrated pitch analysis.
 
 **Key Capabilities:**
 - Whisper.cpp-based speech transcription with high accuracy
-- LibROSA-powered audio energy analysis and pattern detection  
-- Multi-modal interaction analysis (speech + gestures + emotions)
-- Professional 6-block CoreBlocks output format
+- LibROSA-powered audio energy analysis with integrated pitch extraction
+- Gender-normalized pitch metrics for voice analysis
+- Multi-modal interaction analysis (speech + gestures + emotions + pitch)
+- Temporal windows computation (hook, middle segments, closing)
 - Advanced vocal delivery and engagement metrics
 - Real-time processing with comprehensive error handling
 
@@ -49,42 +60,66 @@ The Speech Analysis system is a **multi-service audio processing pipeline** that
 
 ---
 
-## System Architecture Overview
+## New Temporal Compute Architecture
 
 ```
-┌─────────────────┐    ┌──────────────────────────────────────────┐    ┌─────────────────┐
-│   Video Input   │───▶│           ML Services                    │───▶│  Audio Extract  │
-│                 │    │  ┌─────────────┐  ┌─────────────────────┐│    │  (4 PATHS!)     │
-│                 │    │  │   Whisper   │  │   Audio Energy      ││    │                 │
-│                 │    │  │   Service   │  │   Analysis          ││    │                 │
-│                 │    │  │             │  │   (LibROSA)         ││    │                 │
-│                 │    │  └─────────────┘  └─────────────────────┘│    │                 │
-└─────────────────┘    └──────────────────────────────────────────┘    └─────────────────┘
-                                                 │                               │
-                                                 ▼                               │
-                       ┌─────────────────┐    ┌──────────────────┐              │
-                       │ Timeline        │    │  Speech Timeline │              │
-                       │ Extraction      │◀───│  Builder         │◀─────────────┘
-                       │ (3 LAYERS!)     │    │                  │
-                       └─────────────────┘    └──────────────────┘
-                                 │                       │
-                                 ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Speech Analysis │◀───│ Professional     │◀───│ COMPUTE_        │
-│ Core Function   │    │ Format Wrapper   │    │ FUNCTIONS       │
-│ (200+ lines)    │    │ (6-Block)        │    │ Registry        │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                       │
-         ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐
-│ Fake API        │    │ 6-Block Output   │
-│ Response        │    │ - CoreMetrics    │
-│ Wrapper         │    │ - Dynamics       │
-│ (MISLEADING!)   │    │ - Interactions   │
-│                 │    │ - KeyEvents      │
-│                 │    │ - Patterns       │
-│                 │    │ - Quality        │
-└─────────────────┘    └──────────────────┘
+┌─────────────────┐
+│   Video Input   │
+└────────┬────────┘
+         ▼
+┌─────────────────────────────────────┐
+│    Unified ML Services              │
+│  ┌───────────────────────────────┐  │
+│  │ Audio Energy Service Extended │  │
+│  │ - Energy Analysis (16kHz)     │  │
+│  │ - Pitch Extraction (22kHz)    │  │
+│  │ - Single Audio Load           │  │
+│  │ - SharedAudioExtractor        │  │
+│  └───────────────────────────────┘  │
+│  ┌───────────────────────────────┐  │
+│  │ Whisper Transcription         │  │
+│  │ - SharedAudioExtractor        │  │
+│  │ - Word-level timing           │  │
+│  └───────────────────────────────┘  │
+│  ┌───────────────────────────────┐  │
+│  │ Other ML Services             │  │
+│  │ - MediaPipe, YOLO, OCR        │  │
+│  │ - Emotion, Gender Detection   │  │
+│  └───────────────────────────────┘  │
+└────────────┬────────────────────────┘
+             ▼
+┌─────────────────────────────────────┐
+│    Timeline Builder                 │
+│    - Unified timeline structure     │
+│    - All ML outputs consolidated    │
+└────────────┬────────────────────────┘
+             ▼
+┌─────────────────────────────────────┐
+│    Temporal Compute Pipeline        │
+│  ┌───────────────────────────────┐  │
+│  │ compute_temporal_windows()    │  │
+│  │ - Hook (0-3s)                 │  │
+│  │ - Middle Segments (dynamic)   │  │
+│  │ - Closing (last 3s)           │  │
+│  └───────────────────────────────┘  │
+│  ┌───────────────────────────────┐  │
+│  │ process_segment()             │  │
+│  │ - Speech metrics              │  │
+│  │ - Energy metrics              │  │
+│  │ - Pitch metrics (NEW)         │  │
+│  └───────────────────────────────┘  │
+│  ┌───────────────────────────────┐  │
+│  │ calculate_pitch_metrics()     │  │
+│  │ - Gender-specific norm        │  │
+│  │ - Self-normalization fallback │  │
+│  └───────────────────────────────┘  │
+└────────────┬────────────────────────┘
+             ▼
+┌─────────────────────────────────────┐
+│    Unified JSON Output              │
+│    insights/{video_id}_temporal_    │
+│    windows_updated.json              │
+└─────────────────────────────────────┘
 ```
 
 ---
@@ -123,7 +158,57 @@ class SharedAudioExtractor:
 - **Before**: 4 extractions × 3-5 seconds = 12-20 seconds wasted
 - **After**: 1 extraction × 3-5 seconds = 75% reduction!
 
-#### **B. Whisper Transcription Service (REDUNDANT - 3 IMPLEMENTATIONS)**
+---
+
+## Pitch Analysis (NEW)
+
+### Audio Energy Service Extended
+**Location**: `/home/jorge/rumiaifinal/rumiai_v2/ml_services/audio_energy_service.py`
+
+**Key Features**:
+- **Optimized Loading**: Audio loaded once at 22050Hz, resampled to 16000Hz for energy (30% I/O savings)
+- **Pitch Extraction**: Using librosa HPSS + piptrack for robust pitch detection
+- **Memory Optimization**: Capped at 500 voiced samples + pre-computed statistics
+- **Performance**: ~2.5s overhead for 44s video
+
+**Configuration**:
+```python
+PITCH_CONFIG = {
+    'enabled': True,                    # Enable/disable pitch extraction
+    'sample_rate': 22050,               # Hz - optimal for pitch detection
+    'hop_length': 512,                  # Samples - time resolution
+    'fmin': 60,                         # Hz - minimum human voice frequency
+    'fmax': 350,                        # Hz - maximum human voice frequency
+    'voiced_threshold': 80,             # Hz - below this is unvoiced
+    'max_voiced_samples': 500,         # Memory cap for voiced samples
+    'min_frames_avg': 10,              # Minimum frames for average pitch
+    'min_frames_range': 30,            # Minimum frames for pitch range
+}
+```
+
+### Gender-Specific Normalization
+The system applies different normalization based on detected gender:
+
+**Male Normalization**: `(pitch - 110) / 40`
+- Baseline: 110 Hz (typical male fundamental frequency)
+- Range: 40 Hz (typical male pitch variation)
+
+**Female Normalization**: `(pitch - 200) / 45`
+- Baseline: 200 Hz (typical female fundamental frequency)
+- Range: 45 Hz (typical female pitch variation)
+
+**Unknown/Multi-person**: Self-normalization using percentiles
+- Uses P20-P80 range from the actual video
+- Ensures consistent metrics even without gender detection
+
+### Pitch Metrics in Temporal Windows
+Each temporal window (hook, middle segments, closing) includes:
+- **avg_pitch_normalized**: Normalized average pitch for the segment
+- **pitch_range_norm**: Normalized pitch range (variability indicator)
+
+---
+
+#### **B. Whisper Transcription Service**
 
 **Primary Implementation**: `/home/jorge/rumiaifinal/rumiai_v2/api/whisper_cpp_service.py`
 ```python
@@ -205,18 +290,20 @@ def _extract_timelines_from_analysis(analysis_dict: Dict[str, Any]) -> Dict[str,
 
 **Issue**: Re-processes already structured timeline data, creating format conversion overhead.
 
-### 3. Speech Analysis Core Implementation
+### 3. Temporal Compute Implementation
 
-#### **Main Analysis Function**
+#### **Main Compute Function**
 
-**Location**: `/home/jorge/rumiaifinal/rumiai_v2/processors/precompute_functions_full.py` (Lines 3076-3300+)
+**Location**: `/home/jorge/rumiaifinal/rumiai_v2/processors/temporal_compute.py`
 ```python
-def compute_speech_analysis_metrics(
-    speech_timeline, transcript, speech_segments, expression_timeline,
-    gesture_timeline, human_analysis_data, video_duration,
-    energy_level_windows, energy_variance, climax_timestamp, burst_pattern
-):
-    # 200+ lines of comprehensive speech analysis
+def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Complete implementation of temporal windows computation.
+    This is the ONLY compute function called from rumiai_runner.py
+    """
+    # Extracts ml_data, timeline, and metadata
+    # Processes hook, middle segments, and closing windows
+    # Includes pitch metrics via calculate_pitch_metrics()
 ```
 
 **Core Metrics Calculated**:
@@ -229,37 +316,56 @@ def compute_speech_analysis_metrics(
 
 ---
 
-## Data Input Requirements
+## Data Flow in Temporal Compute
 
-### Required Input Data Sources
+### Input Sources
+The temporal compute pipeline receives a unified analysis dictionary containing:
 
-**Primary Timeline Dependencies**:
-- **speechTimeline**: Whisper-generated segments with text and timing
-- **expressionTimeline**: Facial expression analysis for emotion correlation
-- **gestureTimeline**: Hand gesture data for speech-gesture synchronization  
-- **Audio energy data**: LibROSA-generated energy windows and patterns
+1. **ml_data**: All ML service outputs
+   - `audio_energy`: Contains energy frames + pitch frames (NEW)
+   - `deepface_gender`: Gender detection for pitch normalization
+   - `whisper`: Speech transcription with word-level timing
+   - `mediapipe`: Gesture and facial landmarks
+   - `emotion`: FEAT emotion detection results
 
-**Input Format Specification**:
+2. **timeline**: Unified timeline from timeline_builder
+   - Speech segments with timing and text
+   - Gesture, emotion, and scene change entries
+   - Text overlays and visual elements
+
+3. **metadata**: Video metadata and processing info
+
+### Processing Pipeline
 ```python
-speech_timeline = {
-    "0-5s": {
-        'text': 'Hello everyone, welcome to this video',
-        'confidence': 0.95,
-        'start_time': 0.0,
-        'end_time': 5.2
-    },
-    "5-10s": {
-        'text': 'Today we will be discussing...',
-        'confidence': 0.89,
-        'start_time': 5.2,
-        'end_time': 10.1
-    }
-}
+# 1. Main orchestrator
+compute_temporal_windows(analysis_dict)
+    ↓
+# 2. Window processor (for each temporal window)
+process_segment(seg_bounds, timelines, audio_data, ml_data, video_duration)
+    ↓
+# 3. Pitch metrics calculation (NEW)
+calculate_pitch_metrics(audio_data, ml_data, start, end)
+```
 
-energy_level_windows = {
-    "0-5": 0.75,     # High energy
-    "5-10": 0.45,    # Medium energy  
-    "10-15": 0.23    # Low energy
+### Output Structure
+```json
+{
+  "video_id": "7515687288257465630",
+  "duration": 44.0,
+  "temporal_windows": {
+    "hook": {
+      "start": 0,
+      "end": 3.0,
+      "energy_level": 0.056,
+      "avg_pitch_normalized": 0.686,  // NEW
+      "pitch_range_norm": 0.751,      // NEW
+      "speech_coverage": 1.0,
+      "word_count": 11,
+      // ... other metrics
+    },
+    "middle_segments": [...],
+    "closing": {...}
+  }
 }
 ```
 
@@ -606,17 +712,30 @@ self.enable_audio_energy = True       # Always enabled
 
 ---
 
-## Performance Analysis & Redundancy Issues
+## Performance Metrics
 
-### Current Performance Bottlenecks
+### Processing Times (44s video, production environment)
+- **Total Pipeline**: ~2 minutes
+  - Scraping & Download: 30s
+  - ML Processing: 80s
+  - Timeline Building: 5s
+  - Temporal Compute: 0.003s
 
-**1. Audio Extraction Redundancy (CRITICAL)**
-- **Current**: 4 separate audio extractions per video
-- **Duration**: ~3-5 seconds per extraction = **12-20 seconds waste**
-- **Files**: 4-6 temporary WAV files created and deleted
-- **Optimization**: Single shared audio extraction = **75% time reduction**
+### Audio Processing Performance
+- **Audio Extraction**: Once via SharedAudioExtractor (3-5s)
+- **Energy Analysis**: Integrated with pitch (2.5s total)
+- **Pitch Extraction**: 2.5s for 1893 voiced frames
+- **Whisper Transcription**: 20-30s
 
-**2. Whisper Model Loading (HIGH)**
+### Memory Usage
+- **Before ML**: 1.1GB
+- **After ML**: 3.7GB
+- **Pitch Data Storage**: <1MB (500 samples + statistics)
+
+### Optimization Achievements
+- **SharedAudioExtractor**: 75% reduction in audio extraction time
+- **Single Audio Load**: 30% I/O savings (load at 22kHz, resample to 16kHz)
+- **Memory-Optimized Pitch**: Capped storage with pre-computed statistics
 - **Current**: 3 separate WhisperCppTranscriber instances
 - **Overhead**: ~2-3 seconds model validation per instance = **4-6 seconds waste**
 - **Memory**: Multiple model instances loaded simultaneously
@@ -1188,13 +1307,65 @@ The system now operates at peak efficiency while maintaining all original functi
 
 ---
 
-## Future Enhancement Opportunities
+## Troubleshooting
 
-### Performance Optimizations
-- **Parallel audio processing**: Multi-threaded LibROSA analysis
-- **GPU acceleration**: CUDA-enabled Whisper processing
-- **Streaming analysis**: Real-time processing for live content
-- **Caching layer**: Intelligent result caching for repeated analyses
+### Common Issues and Solutions
+
+#### Pitch Metrics Show 0.0
+**Symptom**: All pitch metrics in temporal windows show 0.0 values
+
+**Causes & Solutions**:
+1. **Cached audio energy output**: Old cache from before pitch implementation
+   - Solution: `rm -rf audio_energy_outputs/{video_id}/`
+
+2. **Gender detection failure**: No gender detected for normalization
+   - Check: `gender_detection_outputs/{video_id}/{video_id}_gender.json`
+   - System falls back to self-normalization automatically
+
+3. **No voiced content**: Video has no speech/voice
+   - Check pitch_statistics in audio energy output
+   - Normal for videos without speech
+
+#### Audio Processing Errors
+**Symptom**: "Audio analysis failed" in logs
+
+**Solutions**:
+1. **Missing dependencies**: `pip install librosa soundfile`
+2. **Corrupted audio**: Check if video downloads correctly
+3. **Memory issues**: Reduce batch size or quality settings in PITCH_CONFIG
+
+#### Performance Issues
+**Symptom**: Processing takes longer than 3 minutes
+
+**Solutions**:
+1. Check cached outputs aren't being regenerated
+2. Verify GPU is available for ML models
+3. Clear temp directory: `rm -rf temp/*_audio.wav`
+
+---
+
+## Future Enhancements
+
+### Completed ✅
+- [x] Pitch extraction and analysis
+- [x] Gender-normalized pitch metrics
+- [x] Temporal compute architecture
+- [x] Memory-optimized pitch storage
+- [x] SharedAudioExtractor implementation
+- [x] Single audio load optimization
+
+### Planned Improvements
+- [ ] Real-time pitch tracking visualization
+- [ ] Speaker diarization using pitch signatures
+- [ ] Emotional tone detection from pitch patterns
+- [ ] Pitch-based engagement scoring
+- [ ] Prosody analysis (rhythm, stress, intonation)
+- [ ] Voice quality metrics (breathiness, creakiness)
+
+### Performance Targets
+- [ ] Sub-90 second processing for 60s videos
+- [ ] Streaming mode for live analysis
+- [ ] Distributed processing for batch videos
 
 ### Feature Enhancements
 - **Advanced NLP**: Sentiment analysis, topic modeling, entity recognition
