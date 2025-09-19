@@ -1,0 +1,26 @@
+[
+  {
+    "video": "18s_video",
+    "url": "https://www.tiktok.com/@meganlock_/video/7428596413707144481",
+    "expected_duration": 18,
+    "total_processing_time": 68.34907221794128,
+    "success": true,
+    "timestamp": "2025-09-18T17:39:02.160185"
+  },
+  {
+    "video": "73s_video",
+    "url": "https://www.tiktok.com/@janemukbangs/video/7500252920844193067",
+    "expected_duration": 73,
+    "total_processing_time": 132.5720636844635,
+    "success": true,
+    "timestamp": "2025-09-18T17:41:16.745866"
+  },
+  {
+    "video": "120s_video",
+    "url": "https://www.tiktok.com/@jakedoesmusicsometimes/video/6923023955813092613",
+    "expected_duration": 120,
+    "total_processing_time": 246.4203143119812,
+    "success": true,
+    "timestamp": "2025-09-18T17:45:25.180434"
+  }
+]

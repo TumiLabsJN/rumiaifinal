@@ -22,6 +22,13 @@ class MLAnalysisResult:
     error: Optional[str] = None
     processing_time: float = 0.0
     output_path: Optional[str] = None  # Path to saved results
+
+    # Instrumentation fields (Phase 1)
+    start_time: float = 0.0  # When service started
+    end_time: float = 0.0    # When service completed
+    threads_created: int = 0  # Peak thread count during execution
+    memory_delta_mb: float = 0.0  # Memory increase during execution
+    thread_flexibility: str = '❓ Unknown'  # Thread control capability
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -32,7 +39,13 @@ class MLAnalysisResult:
             'data': self.data,
             'error': self.error,
             'processing_time': self.processing_time,
-            'output_path': self.output_path
+            'output_path': self.output_path,
+            # Instrumentation fields
+            'start_time': self.start_time,
+            'end_time': self.end_time,
+            'threads_created': self.threads_created,
+            'memory_delta_mb': self.memory_delta_mb,
+            'thread_flexibility': self.thread_flexibility
         }
 
 

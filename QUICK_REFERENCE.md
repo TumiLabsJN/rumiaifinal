@@ -2,66 +2,72 @@
 
 ## 🎯 What is RumiAI?
 
-**Current System (Production - v2.1)**: 
-Zero-cost TikTok video analyzer that extracts professional insights using ML models and Python processing.
-rumiai_v2/processors/temporal_compute.py is the main flow we use. 
-We are deleting precompute_functions
+**Current System**: TikTok video analyzer that extracts ML features through temporal window analysis.
+- **Core**: `rumiai_v2/processors/temporal_compute.py` - Computes features across hook/middle/closing windows
+- **Output**: JSON with 50+ features per temporal window for ML training
 
+## 📚 Understanding the System
 
-## 📚 Documentation Reading Order
+### For Fresh CLI Instance (Start Here):
+1. **This file** - Quick operational overview
+2. **SystemArchitecture.md** - Complete technical flow and dependencies
+3. **Sample output**: `/insights/[video_id]_temporal_windows_updated.json` - See actual output
 
-### For Understanding Future Development (20 min)
-1. **postrefactorflow.md** - Explanation of the new architecture and flow 
-2. **MLMVP2.md** - Feature engineering architecture for ML training
-3. **MLProjectsGrassrootsv2.md** - Full ML training pipeline implementation plan
-4. **DONE - refactortemporal.md** - Recent refactor we did with now correct flow for our main script python3 scripts/rumiai_runner.py 
+### For Deep Technical Dives:
+- **Services**: See `/documentation_migration/services/*.md` (Phase 1 docs)
+- **Features**: See `/documentation_migration/features/*.md` (Phase 2 docs)
 
-## Future Plans
-1. **MLProjectsGrassrootsv2.md** - General Plan
-2. **MLMVP2.md** - Future ML training layer will identify viral patterns
-1. **ImprovementsMLMVP.md** - This is a list of modifications we are currently making
+### For Future ML Development:
+1. **MLMVP2.md** - Feature engineering architecture for ML training
+2. **MLProjectsGrassrootsv2.md** - Full ML training pipeline implementation plan
+3. **ImprovementsMLMVP.md** - Current feature improvements in progress
 
 ## 🚀 Key System Facts
 
 ### Current Capabilities
-- **Cost**: $0.00 per video (no API usage)
-- **Speed**: ~2 Minutes
-- **Output**: 1 JSON output per video
-- **Format**: 1 ML Ready format which we still need to transform to RF and KMeans
-- **ML Models**: YOLO, Whisper, MediaPipe, OCR, Scene Detection
-- **Success Rate**: 100% (fail-fast architecture)
+- **Processing Time**: ~60-80 seconds per video
+- **Output**: Temporal windows JSON with 50+ features
+- **Window Structure**: Hook (0-3s), Middle segments (~7.6s each), Closing (last 3s)
+- **ML Services**: YOLO, Whisper, MediaPipe, OCR, Scene Detection, FEAT, DeepFace, Audio Energy
+- **Architecture**: Self-contained services with fail-fast validation
 
 
 ## 🔧 Common Commands
 
 ```bash
-# Analyze a video (current system)
+# Analyze a video
 python3 scripts/rumiai_runner.py "VIDEO_URL"
 
-# Test Flow
-python test_temporal_compute_v2.py "VIDEO ID"
+# Test temporal compute directly
+python test_temporal_compute_v2.py
 
-# Check configuration (hardcoded for Python-only)
-cat rumiai_v2/config/settings.py | grep "use_python_only"
+# View output structure
+cat insights/[video_id]_temporal_windows_updated.json | jq '.temporal_windows | keys'
+
+# Check what features are in each window
+cat insights/[video_id]_temporal_windows_updated.json | jq '.temporal_windows.hook | keys'
 ```
 
 ## ⚠️ Important Notes
 
-1. **All settings are hardcoded** - No environment variables needed
-2. **Fail-fast architecture** - Either complete success or immediate failure
-3. **No Claude API** - 100% Python-only processing
-4. **Real ML models** - Not mocked, actual YOLO/Whisper/MediaPipe
+1. **Temporal Windows** - All features computed over hook/middle/closing segments
+2. **Fail-fast validation** - Services validate data integrity before processing
+3. **Self-contained services** - Each ML service can run independently
+4. **Unified timeline** - All ML outputs merged into single timeline before temporal compute
 
+## 📁 Key File Locations
 
-## 📖 Further Reading
-
-### Technical Deep Dives
-- Individual service docs: `ScenePacing.md`, `VisualOverlay.md`, etc.
-
-### Architecture Philosophy
-- Why Python-only: See RUMIAI_CORE_ARCHITECTURE_PRINCIPLES.md
-- Why these ML models: See MLMVP2.md Section 2
+```
+/rumiai_v2/
+├── scripts/rumiai_runner.py         # Main entry point
+├── processors/
+│   ├── temporal_compute.py          # Core temporal window processing
+│   ├── timeline_builder.py          # ML data unification
+│   └── video_analyzer.py            # Service orchestration
+├── api/ml_services_unified.py       # ML service implementations
+└── insights/                         # Output JSONs
+```
 
 ---
 
-*This guide provides entry point for understanding RumiAI's current capabilities and future direction. Start with the documentation reading order above for comprehensive understanding.*
+*For comprehensive understanding, read SystemArchitecture.md. For specific components, see the Phase 1-2 documentation.*

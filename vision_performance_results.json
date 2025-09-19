@@ -1,0 +1,146 @@
+[
+  {
+    "video": "16s_video",
+    "video_path": "/home/jorge/rumiaifinal/temp/7015376025727143174.mp4",
+    "services": {
+      "yolo": {
+        "frames_processed": 83,
+        "processing_time": 6.271748065948486,
+        "peak_memory_mb": 75.50982189178467,
+        "realtime_factor": 2.657419668553944,
+        "metadata": {
+          "model": "YOLOv8n",
+          "processed": true,
+          "frames_analyzed": 83,
+          "objects_detected": 92
+        }
+      },
+      "mediapipe": {
+        "frames_processed": 83,
+        "processing_time": 18.11084747314453,
+        "peak_memory_mb": 169.18059158325195,
+        "realtime_factor": 0.9202587947019403,
+        "metadata": {
+          "frames_analyzed": 83,
+          "processed": true,
+          "poses_detected": 83,
+          "faces_detected": 82,
+          "hands_detected": 82,
+          "gaze_detected": 82,
+          "gestures_detected": 124
+        }
+      },
+      "ocr": {
+        "frames_processed": 60,
+        "processing_time": 8.874948978424072,
+        "peak_memory_mb": 24.972657203674316,
+        "realtime_factor": 1.877945068437585,
+        "metadata": {
+          "frames_analyzed": 60,
+          "unique_texts": 15,
+          "stickers_detected": 7,
+          "processed": true
+        }
+      }
+    },
+    "duration": 16.666666666666668,
+    "total_frames": 83,
+    "extraction_time": 0.2449803352355957
+  },
+  {
+    "video": "44s_video",
+    "video_path": "/home/jorge/rumiaifinal/temp/7515687288257465630.mp4",
+    "services": {
+      "yolo": {
+        "frames_processed": 132,
+        "processing_time": 2.2072696685791016,
+        "peak_memory_mb": 2.2826614379882812,
+        "realtime_factor": 19.949231378547037,
+        "metadata": {
+          "model": "YOLOv8n",
+          "processed": true,
+          "frames_analyzed": 132,
+          "objects_detected": 363
+        }
+      },
+      "mediapipe": {
+        "frames_processed": 132,
+        "processing_time": 7.942991733551025,
+        "peak_memory_mb": 3.9788427352905273,
+        "realtime_factor": 5.543671051215814,
+        "metadata": {
+          "frames_analyzed": 132,
+          "processed": true,
+          "poses_detected": 132,
+          "faces_detected": 132,
+          "hands_detected": 107,
+          "gaze_detected": 130,
+          "gestures_detected": 116
+        }
+      },
+      "ocr": {
+        "frames_processed": 60,
+        "processing_time": 12.685843706130981,
+        "peak_memory_mb": 21.345627784729004,
+        "realtime_factor": 3.471060684127168,
+        "metadata": {
+          "frames_analyzed": 60,
+          "unique_texts": 46,
+          "stickers_detected": 8,
+          "processed": true
+        }
+      }
+    },
+    "duration": 44.03333333333333,
+    "total_frames": 132,
+    "extraction_time": 0.6285426616668701
+  },
+  {
+    "video": "59s_video",
+    "video_path": "/home/jorge/rumiaifinal/temp/7274651255392210219.mp4",
+    "services": {
+      "yolo": {
+        "frames_processed": 176,
+        "processing_time": 2.68666934967041,
+        "peak_memory_mb": 2.22664737701416,
+        "realtime_factor": 21.923055029911147,
+        "metadata": {
+          "model": "YOLOv8n",
+          "processed": true,
+          "frames_analyzed": 176,
+          "objects_detected": 443
+        }
+      },
+      "mediapipe": {
+        "frames_processed": 176,
+        "processing_time": 9.535601139068604,
+        "peak_memory_mb": 3.969302177429199,
+        "realtime_factor": 6.176852318065088,
+        "metadata": {
+          "frames_analyzed": 176,
+          "processed": true,
+          "poses_detected": 171,
+          "faces_detected": 156,
+          "hands_detected": 108,
+          "gaze_detected": 148,
+          "gestures_detected": 111
+        }
+      },
+      "ocr": {
+        "frames_processed": 60,
+        "processing_time": 8.063206911087036,
+        "peak_memory_mb": 21.333243370056152,
+        "realtime_factor": 7.304785881038421,
+        "metadata": {
+          "frames_analyzed": 60,
+          "unique_texts": 46,
+          "stickers_detected": 0,
+          "processed": true
+        }
+      }
+    },
+    "duration": 58.9,
+    "total_frames": 176,
+    "extraction_time": 0.7301616668701172
+  }
+]

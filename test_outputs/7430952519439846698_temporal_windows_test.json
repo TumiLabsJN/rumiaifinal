@@ -29,6 +29,8 @@
       "has_question": 0,
       "has_instruction": 0,
       "has_speech_cta": 0,
+      "gaze_variance": 0.012218142490159843,
+      "eye_contact_rate": 0.6054123852195006,
       "joy_ratio": 0.6666666666666666,
       "sadness_ratio": 0.0,
       "anger_ratio": 0.0,
@@ -40,10 +42,13 @@
       "medium_ratio": 0.8888888888888888,
       "wide_ratio": 0.1111111111111111,
       "none_ratio": 0.0,
+      "average_face_size": 0.102,
       "energy_level": 0.034306080956813145,
       "energy_variance": 0.00031430192040495853,
       "energy_max": 0.07388430088758469,
-      "burst_pattern": "middle_peak"
+      "burst_pattern": "middle_peak",
+      "avg_pitch_normalized": 0.0,
+      "pitch_range_norm": 0.0
     },
     "middle_segments": [
       {
@@ -73,6 +78,8 @@
         "has_question": 0,
         "has_instruction": 1,
         "has_speech_cta": 0,
+        "gaze_variance": 0.014120932550885876,
+        "eye_contact_rate": 0.5942879723470983,
         "joy_ratio": 0.8333333333333334,
         "sadness_ratio": 0.0,
         "anger_ratio": 0.0,
@@ -84,10 +91,13 @@
         "medium_ratio": 0.6111111111111112,
         "wide_ratio": 0.3888888888888889,
         "none_ratio": 0.0,
+        "average_face_size": 0.089,
         "energy_level": 0.0340137353402527,
         "energy_variance": 0.0005571522742798919,
         "energy_max": 0.11504771560430527,
         "burst_pattern": "middle_peak",
+        "avg_pitch_normalized": 0.0,
+        "pitch_range_norm": 0.0,
         "segment_name": "segment_1"
       },
       {
@@ -117,6 +127,8 @@
         "has_question": 0,
         "has_instruction": 1,
         "has_speech_cta": 0,
+        "gaze_variance": 0.009180515788950717,
+        "eye_contact_rate": 0.7044159831954205,
         "joy_ratio": 0.3333333333333333,
         "sadness_ratio": 0.0,
         "anger_ratio": 0.0,
@@ -128,10 +140,13 @@
         "medium_ratio": 0.23529411764705882,
         "wide_ratio": 0.7647058823529411,
         "none_ratio": 0.0,
+        "average_face_size": 0.065,
         "energy_level": 0.04343061002732888,
         "energy_variance": 0.0003892015129924254,
         "energy_max": 0.09990719705820084,
         "burst_pattern": "back_loaded",
+        "avg_pitch_normalized": 0.0,
+        "pitch_range_norm": 0.0,
         "segment_name": "segment_2"
       },
       {
@@ -161,6 +176,8 @@
         "has_question": 0,
         "has_instruction": 0,
         "has_speech_cta": 0,
+        "gaze_variance": 0.00582241238555194,
+        "eye_contact_rate": 0.715634478732296,
         "joy_ratio": 0.0,
         "sadness_ratio": 0.0,
         "anger_ratio": 0.0,
@@ -172,10 +189,13 @@
         "medium_ratio": 0.0,
         "wide_ratio": 1.0,
         "none_ratio": 0.0,
+        "average_face_size": 0.0508,
         "energy_level": 0.04073601449037084,
         "energy_variance": 0.0007101533772432238,
         "energy_max": 0.14000914990901947,
         "burst_pattern": "middle_peak",
+        "avg_pitch_normalized": 0.0,
+        "pitch_range_norm": 0.0,
         "segment_name": "segment_3"
       },
       {
@@ -205,6 +225,8 @@
         "has_question": 0,
         "has_instruction": 0,
         "has_speech_cta": 0,
+        "gaze_variance": 0.010654696790360012,
+        "eye_contact_rate": 0.6857973887179046,
         "joy_ratio": 0.6666666666666666,
         "sadness_ratio": 0.0,
         "anger_ratio": 0.0,
@@ -216,10 +238,13 @@
         "medium_ratio": 0.4117647058823529,
         "wide_ratio": 0.5882352941176471,
         "none_ratio": 0.0,
+        "average_face_size": 0.0731,
         "energy_level": 0.0380151433418685,
         "energy_variance": 0.0005944558891783445,
         "energy_max": 0.12109740078449249,
         "burst_pattern": "back_loaded",
+        "avg_pitch_normalized": 0.0,
+        "pitch_range_norm": 0.0,
         "segment_name": "segment_4"
       },
       {
@@ -249,6 +274,8 @@
         "has_question": 0,
         "has_instruction": 0,
         "has_speech_cta": 0,
+        "gaze_variance": 0.008177991993443563,
+        "eye_contact_rate": 0.650152414192811,
         "joy_ratio": 0.8,
         "sadness_ratio": 0.0,
         "anger_ratio": 0.0,
@@ -260,10 +287,13 @@
         "medium_ratio": 0.35294117647058826,
         "wide_ratio": 0.6470588235294118,
         "none_ratio": 0.0,
+        "average_face_size": 0.0669,
         "energy_level": 0.026086672527746265,
         "energy_variance": 0.00019604366854986395,
         "energy_max": 0.0701056718826294,
         "burst_pattern": "middle_peak",
+        "avg_pitch_normalized": 0.0,
+        "pitch_range_norm": 0.0,
         "segment_name": "segment_5"
       }
     ],
@@ -294,6 +324,8 @@
       "has_question": 0,
       "has_instruction": 0,
       "has_speech_cta": 0,
+      "gaze_variance": 0.003498800928927556,
+      "eye_contact_rate": 0.6642678182843835,
       "joy_ratio": 0.6666666666666666,
       "sadness_ratio": 0.0,
       "anger_ratio": 0.0,
@@ -305,10 +337,13 @@
       "medium_ratio": 0.4444444444444444,
       "wide_ratio": 0.5555555555555556,
       "none_ratio": 0.0,
+      "average_face_size": 0.0748,
       "energy_level": 0.028248194955609818,
       "energy_variance": 0.0002482080407681143,
       "energy_max": 0.06651636213064194,
-      "burst_pattern": "middle_peak"
+      "burst_pattern": "middle_peak",
+      "avg_pitch_normalized": 0.0,
+      "pitch_range_norm": 0.0
     }
   },
   "metadata": {
@@ -321,8 +356,14 @@
     "comment_count": 171,
     "create_time": "2024-10-28T22:11:03+00:00",
     "author": "valerieribon",
-    "description": "I take these DAILY (and cycle the ashwagandha 1 month on, 1 month off!) \nBTW, to lower cortisol and increase progesterone, you also want to check out my cortisol + metabolism playlists. Why? Because they are KEY to actually lowering cortisol longterm and feeling incredible, both mentally and physically! Heres why- your metabolism is how you create energy, and its CONTROLLED by your thyroid (specifically t4 to t3 conversion) , when thats LOW, cortisol is pumped out because cortisol is like your bodys VERY expensive backup energy generator. And we know, when our cortisol is high, it STEALS our pregnenolone and we dont have enough left to create our beauty hormone, progesterone!! #cortisol #progesterone #cortisollevels #cortisolimbalance #highcortisol #glowup #glowupchallenge #holistichealth #naturalremedy #naturalremedies #herbalmedicine #herbalremedies #herbalremedy #wellnessgirl #wellness #progesterone #glowuptips #pheromones #glowups #glowupforreal #beauty #metabolism #cortisolbelly #greenscreen "
+    "description": "I take these DAILY (and cycle the ashwagandha 1 month on, 1 month off!) \nBTW, to lower cortisol and increase progesterone, you also want to check out my cortisol + metabolism playlists. Why? Because they are KEY to actually lowering cortisol longterm and feeling incredible, both mentally and physically! Heres why- your metabolism is how you create energy, and its CONTROLLED by your thyroid (specifically t4 to t3 conversion) , when thats LOW, cortisol is pumped out because cortisol is like your bodys VERY expensive backup energy generator. And we know, when our cortisol is high, it STEALS our pregnenolone and we dont have enough left to create our beauty hormone, progesterone!! #cortisol #progesterone #cortisollevels #cortisolimbalance #highcortisol #glowup #glowupchallenge #holistichealth #naturalremedy #naturalremedies #herbalmedicine #herbalremedies #herbalremedy #wellnessgirl #wellness #progesterone #glowuptips #pheromones #glowups #glowupforreal #beauty #metabolism #cortisolbelly #greenscreen ",
+    "hashtag_analysis": {
+      "hashtag_count": 24,
+      "generic_hashtag_count": 0,
+      "specific_hashtag_count": 24,
+      "generic_ratio": 0.0
+    }
   },
-  "processing_timestamp": 1758134750.3878613,
+  "processing_timestamp": 1758216965.057646,
   "version": "2.0.0"
 }

@@ -299,18 +299,14 @@ def extract_timelines_for_temporal(analysis_dict: Dict[str, Any]) -> Dict[str, A
     timelines['gaze_timeline'] = gaze_timeline
     
     # Face data from timeline entries (MediaPipe face detections)
-    # Simplified: Only extract fields that are actually used (timestamp and bbox)
     face_timeline = []
     for entry in timeline_entries:
         if entry.get('entry_type') == 'face':
-            face_data = entry.get('data', {})
-            bbox = face_data.get('bbox')
-            if bbox:  # Only add if bbox exists
-                face_timeline.append({
-                    'timestamp': entry.get('start', 0),
-                    'bbox': bbox
-                    # Excluded unused fields: confidence, count, frame_number
-                })
+            face_timeline.append({
+                'timestamp': entry.get('start', 0),
+                'bbox': entry.get('data', {}).get('bbox', {}),
+                'confidence': entry.get('data', {}).get('confidence', 0)
+            })
     timelines['face_timeline'] = face_timeline
     
     # Text overlay data from timeline entries (OCR-detected text)
@@ -374,20 +370,11 @@ def extract_timelines_for_temporal(analysis_dict: Dict[str, Any]) -> Dict[str, A
     # YOLO object detections (raw bounding boxes and labels)
     timelines['object_timeline'] = extract_yolo_data(ml_data)
     
-    # Face data validation - ensure timeline_builder processed faces correctly
-    # We use timeline entries as single source of truth (MediaPipe → timeline_builder → timeline entries)
-    ml_mediapipe = ml_data.get('mediapipe', {})
-    ml_faces = ml_mediapipe.get('faces', [])
-
-    # Fail-fast validation to catch timeline_builder bugs
-    if ml_faces and not timelines.get('face_timeline', []):
-        raise ValueError(f"Data integrity error: Timeline builder missing {len(ml_faces)} faces from MediaPipe. "
-                        f"This indicates a bug in timeline_builder that must be fixed.")
-    elif not ml_faces and not timelines.get('face_timeline', []):
-        logger.debug("No faces detected in video - both sources agree")
-
-    # Note: face_timeline is already populated from timeline entries above (lines 302-310)
-    # Removed redundant MediaPipe extraction that was overwriting timeline data
+    # MediaPipe raw landmark data (unprocessed poses/faces)
+    # Note: Gestures and gaze are interpreted from these in timeline.entries
+    mediapipe_data = extract_mediapipe_data(ml_data)
+    timelines['pose_timeline'] = mediapipe_data.get('poses', [])
+    timelines['face_timeline'] = mediapipe_data.get('faces', [])
     
     # Audio energy RMS frames for burst pattern analysis (Decision 2)
     audio_data = extract_audio_energy_data(ml_data)
@@ -1372,9 +1359,6 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     # close (>25% frame), medium (8-25%), wide (<8%), none (no face)
     framing_counts = {'close': 0, 'medium': 0, 'wide': 0, 'none': 0}
 
-    # Collect face areas for average calculation (average_face_size feature)
-    face_areas = []
-
     # Get face entries for this segment
     segment_faces = [f for f in timelines.get('face_timeline', [])
                     if start <= f.get('timestamp', 0) < end]
@@ -1384,9 +1368,6 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         if bbox:
             # Calculate face area as percentage of frame
             face_area = bbox.get('width', 0) * bbox.get('height', 0) * 100
-
-            # Store for averaging (new feature)
-            face_areas.append(face_area)
 
             if face_area > 25:
                 framing_counts['close'] += 1
@@ -1408,10 +1389,6 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         f'{frame_type}_ratio': count / total_camera_frames if total_camera_frames > 0 else 0
         for frame_type, count in framing_counts.items()
     }
-
-    # Calculate average face size (new feature from personframingfix.md)
-    # Note: face_areas are already in percentage (0-100), convert to 0-1 range
-    average_face_size = (sum(face_areas) / len(face_areas) / 100.0) if face_areas else 0.0
     
     # Calculate audio energy for segment
     # Note: This is NOT duplication of calculate_audio_energy_for_windows().
@@ -1488,7 +1465,6 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         **emotion_dist,
         # Framing distribution (camera shot types)
         **framing_dist,
-        'average_face_size': round(average_face_size, 4),  # New ML feature: continuous face size metric
         # Audio energy
         'energy_level': energy_level,
         'energy_variance': energy_variance,

@@ -33,29 +33,31 @@ unified_analysis = self.timeline_builder.build_timeline(
 **Investigation Conducted:** Tested 5 videos to understand data sources:
 - Timeline entries: Contains complete face data (105 faces in test video)
 - ML data: Contains identical face data (105 faces)
-- **Line 378 is redundant** - overwrites with same data
+- **Lines 375-377 are redundant** - extract_mediapipe_data overwrites with same data
 
 ```python
-# Path 1: Timeline entries (lines 302-310)
+# Correct Path: MediaPipe → timeline_builder → timeline entries
 face_timeline = []
 for entry in timeline_entries:
     if entry.get('entry_type') == 'face':
         face_timeline.append({
             'timestamp': entry.get('start', 0),
             'bbox': entry.get('data', {}).get('bbox', {}),
-            'confidence': entry.get('data', {}).get('confidence', 0)
+            'confidence': entry.get('data', {}).get('confidence', 0)  # Currently extracted but unused
         })
-timelines['face_timeline'] = face_timeline  # Has 105 faces
+timelines['face_timeline'] = face_timeline  # Has 105 faces from timeline
 
-# Path 2: ML data (line 378) - OVERWRITES Path 1!
-mediapipe_data = extract_mediapipe_data(ml_data)
-timelines['face_timeline'] = mediapipe_data.get('faces', [])  # Replaces with same 105 faces!
+# Redundant Path (lines 375-377) - OVERWRITES with same data!
+mediapipe_data = extract_mediapipe_data(ml_data)  # Line 375
+timelines['pose_timeline'] = mediapipe_data.get('poses', [])  # Line 376 - UNUSED
+timelines['face_timeline'] = mediapipe_data.get('faces', [])  # Line 377 - Overwrites!
 ```
 
-**Data Loss from Overwrite:**
-- Timeline path produces: `{timestamp, bbox, confidence}`
-- ML path produces: `{timestamp, bbox, confidence, count, frame_number}`
-- We lose `count` and `frame_number` fields, but these are unused in the codebase
+**Data Structure Analysis:**
+- Timeline currently extracts: `{timestamp, bbox, confidence}`
+- ML path has: `{timestamp, bbox, confidence, count, frame_number}`
+- **Only `timestamp` and `bbox` are actually used** in temporal_compute.py
+- Decision: Simplify to extract only what we need
 
 #### 3. Data Structure Verification
 ```python
@@ -78,11 +80,11 @@ timelines['face_timeline'] = mediapipe_data.get('faces', [])  # Replaces with sa
     "count": 1
 }
 
-# After extraction to face_timeline, both become:
+# After simplified extraction (only what we use):
 {
     "timestamp": 0.0,
-    "bbox": {"x": 0.31, "y": 0.22, "width": 0.33, "height": 0.18},
-    "confidence": 0.96
+    "bbox": {"x": 0.31, "y": 0.22, "width": 0.33, "height": 0.18}
+    # Removed: confidence, count, frame_number (all unused)
 }
 ```
 
@@ -90,8 +92,8 @@ timelines['face_timeline'] = mediapipe_data.get('faces', [])  # Replaces with sa
 
 ### Why Two Phases?
 The current face data path conflict makes it unsafe to add `average_face_size` directly:
-- **Line 378 overwrites timeline data** → Face data source is unreliable
-- **bbox access pattern inconsistent** → Can't guarantee data structure
+- **Lines 375-377 create duplicate data paths** → Face data source is unreliable
+- **Unused fields being extracted** → Wasting resources on confidence, count, frame_number
 - **No single source of truth** → Results would be unpredictable
 - **Missing validation** → No detection of timeline_builder failures
 
@@ -105,58 +107,62 @@ Therefore, we must:
 
 **File**: `/home/jorge/rumiaifinal/rumiai_v2/processors/temporal_compute.py`
 
-**Step 1: Implement fail-fast validation** (around line 378)
+**Step 1: Remove MediaPipe extraction and add validation** (lines 375-377 as of Jan 2025)
 ```python
-# REPLACE the overwriting line with fail-fast validation:
-ml_faces = mediapipe_data.get('faces', [])
+# DELETE these lines entirely:
+# mediapipe_data = extract_mediapipe_data(ml_data)
+# timelines['pose_timeline'] = mediapipe_data.get('poses', [])  # Unused
+# timelines['face_timeline'] = mediapipe_data.get('faces', [])  # Overwrites timeline
+
+# ADD validation to ensure timeline_builder processed faces:
+# (Note: face_timeline was already extracted from timeline entries above)
+
+# Get ML face count for validation only
+ml_mediapipe = ml_data.get('mediapipe', {})
+ml_faces = ml_mediapipe.get('faces', [])
 
 # Validate that timeline_builder processed faces correctly
 if ml_faces and not face_timeline:
-    # CRITICAL: Timeline builder failed to process faces!
-    raise ValueError(f"Data integrity error: Timeline builder missing {len(ml_faces)} faces found in ML data. "
+    # CRITICAL: Timeline builder failed to process MediaPipe faces!
+    raise ValueError(f"Data integrity error: Timeline builder missing {len(ml_faces)} faces from MediaPipe. "
                     f"This indicates a bug in timeline_builder that must be fixed.")
 elif not ml_faces and not face_timeline:
     # Correct case - video genuinely has no faces
     logger.debug("No faces detected in video - both sources agree")
-    face_timeline = []
 
-# Remove the old overwriting line:
-# timelines['face_timeline'] = mediapipe_data.get('faces', [])
-
-# Use the validated timeline data
-timelines['face_timeline'] = face_timeline
+# face_timeline is already set from timeline entries extraction above
+# Single source of truth: MediaPipe → timeline_builder → timeline entries → face_timeline
 ```
 
-**Step 2: Fix bbox access pattern** (lines 302-310)
-Since timeline_builder creates proper face entries, update extraction:
+**Step 2: Simplify extraction to only used fields** (starting at line 302 as of Jan 2025)
 ```python
-# Current (partially wrong):
+# Current (extracting unused fields):
 face_timeline = []
 for entry in timeline_entries:
     if entry.get('entry_type') == 'face':
         face_timeline.append({
             'timestamp': entry.get('start', 0),
             'bbox': entry.get('data', {}).get('bbox', {}),
-            'confidence': entry.get('data', {}).get('confidence', 0)
+            'confidence': entry.get('data', {}).get('confidence', 0)  # UNUSED
         })
 
-# Fixed (consistent with timeline structure):
+# Simplified (only extract what we actually use):
 face_timeline = []
 for entry in timeline_entries:
     if entry.get('entry_type') == 'face':
         face_data = entry.get('data', {})
-        if face_data.get('bbox'):  # Only add if bbox exists
+        bbox = face_data.get('bbox')
+        if bbox:  # Only add if bbox exists
             face_timeline.append({
                 'timestamp': entry.get('start', 0),
-                'bbox': face_data.get('bbox', {}),
-                'confidence': face_data.get('confidence', 0),
-                'count': face_data.get('count', 1)  # For multi-face support
+                'bbox': bbox
+                # Excluded: confidence (unused), count (unused), frame_number (unused)
             })
 ```
 
 ### Phase 2: Add average_face_size Metric (Feature)
 
-**Location**: In `process_segment()` function (around lines 1320-1360)
+**Location**: In `process_segment()` function (around lines 1320-1360 as of Jan 2025)
 
 **Step 1: Collect face areas during existing loop**
 ```python
@@ -260,11 +266,14 @@ timelines['face_timeline'] = timeline_faces  # Single source of truth
 
 ## 🧪 Testing Plan
 
-### Test 1: Verify Data Sources and Fail-Fast Behavior
+### Test 1: Diagnose Current Overwrite Bug (BEFORE fix)
 ```python
 #!/usr/bin/env python3
+"""Test to demonstrate the current overwrite bug before fixing."""
 import json
 from pathlib import Path
+import sys
+sys.path.append('/home/jorge/rumiaifinal')
 from rumiai_v2.processors.temporal_compute import extract_timelines_for_temporal
 
 # Load test video
@@ -272,34 +281,136 @@ test_file = Path('unified_analysis/7430952519439846698.json')
 with open(test_file) as f:
     data = json.load(f)
 
-# Test BEFORE fix to understand current state
+# Temporarily modify extract_timelines_for_temporal to log both sources
+print("=== BEFORE FIX - Demonstrating the overwrite bug ===\n")
+
+# Count from both sources
 timeline_entries = data.get('timeline', {}).get('entries', [])
-ml_data = data.get('ml_data', {})
-
-# Count faces from both sources
 timeline_faces = [e for e in timeline_entries if e.get('entry_type') == 'face']
-ml_faces = ml_data.get('mediapipe', {}).get('faces', [])
+ml_faces = data.get('ml_data', {}).get('mediapipe', {}).get('faces', [])
 
-print(f"Timeline faces: {len(timeline_faces)}")
-print(f"ML faces: {len(ml_faces)}")
+print(f"Timeline path would extract: {len(timeline_faces)} faces")
+print(f"ML path would extract: {len(ml_faces)} faces")
 
-if ml_faces and not timeline_faces:
-    print("ERROR: This would trigger fail-fast after fix!")
-    print(f"Timeline builder missing {len(ml_faces)} faces")
-elif not ml_faces and not timeline_faces:
-    print("OK: Video has no faces (both sources agree)")
-else:
-    print("OK: Both sources have face data")
-
-# Verify data structure consistency
-if timeline_faces and ml_faces:
-    print(f"\nTimeline face structure: {list(timeline_faces[0].keys())}")
-    print(f"ML face structure: {list(ml_faces[0].keys())}")
+# Show what happens at line 310 vs line 377
+timelines = extract_timelines_for_temporal(data)
+face_timeline_after = timelines.get('face_timeline', [])
+print(f"\nFinal face_timeline has: {len(face_timeline_after)} faces")
+print(f"Which source won? Check if structure has 'frame_number' field:")
+if face_timeline_after:
+    has_frame_number = 'frame_number' in face_timeline_after[0]
+    print(f"  Has frame_number field: {has_frame_number}")
+    print(f"  → Data is from: {'ML path (BUG!)' if has_frame_number else 'Timeline path'}")
 ```
 
-### Test 2: Verify average_face_size Calculation
+### Test 2: Verify Fix Works (AFTER fix)
 ```python
 #!/usr/bin/env python3
+"""Test to verify the fix eliminates the overwrite."""
+import json
+from pathlib import Path
+import sys
+sys.path.append('/home/jorge/rumiaifinal')
+
+# Mock the fixed version
+def test_fixed_extraction(data):
+    """Simulates the fixed extraction logic."""
+    timeline_entries = data.get('timeline', {}).get('entries', [])
+    ml_data = data.get('ml_data', {})
+
+    # Extract faces from timeline only
+    face_timeline = []
+    for entry in timeline_entries:
+        if entry.get('entry_type') == 'face':
+            face_data = entry.get('data', {})
+            bbox = face_data.get('bbox')
+            if bbox:
+                face_timeline.append({
+                    'timestamp': entry.get('start', 0),
+                    'bbox': bbox  # Simplified - only what we use
+                })
+
+    # Validation (fail-fast)
+    ml_faces = ml_data.get('mediapipe', {}).get('faces', [])
+    if ml_faces and not face_timeline:
+        raise ValueError(f"Timeline builder bug: missing {len(ml_faces)} faces")
+
+    return face_timeline
+
+# Test with multiple videos
+test_videos = [
+    'unified_analysis/7430952519439846698.json',  # Has faces
+    # Add more test videos as needed
+]
+
+print("=== AFTER FIX - Verifying single source of truth ===\n")
+
+for video_path in test_videos:
+    print(f"Testing: {video_path}")
+    with open(video_path) as f:
+        data = json.load(f)
+
+    try:
+        face_timeline = test_fixed_extraction(data)
+        print(f"  ✓ Extracted {len(face_timeline)} faces from timeline")
+        if face_timeline:
+            print(f"  ✓ Structure: {list(face_timeline[0].keys())}")
+    except ValueError as e:
+        print(f"  ✗ FAIL-FAST: {e}")
+```
+
+### Test 3: Edge Cases and Validation
+```python
+#!/usr/bin/env python3
+"""Test edge cases to ensure robustness."""
+
+def test_edge_cases():
+    """Test various edge cases."""
+
+    # Case 1: No faces at all
+    print("Test 1: Video with no faces")
+    data_no_faces = {
+        'timeline': {'entries': []},
+        'ml_data': {'mediapipe': {'faces': []}}
+    }
+    result = test_fixed_extraction(data_no_faces)
+    assert len(result) == 0, "Should handle no faces gracefully"
+    print("  ✓ Passed\n")
+
+    # Case 2: Timeline builder failure (faces in ML but not timeline)
+    print("Test 2: Timeline builder failure")
+    data_timeline_bug = {
+        'timeline': {'entries': []},  # No face entries!
+        'ml_data': {'mediapipe': {'faces': [
+            {'timestamp': 0, 'bbox': {'x': 0.3, 'y': 0.3, 'width': 0.2, 'height': 0.3}}
+        ]}}
+    }
+    try:
+        result = test_fixed_extraction(data_timeline_bug)
+        print("  ✗ Should have raised an error!")
+    except ValueError as e:
+        print(f"  ✓ Correctly caught: {e}\n")
+
+    # Case 3: Faces without bbox (malformed data)
+    print("Test 3: Malformed face data (no bbox)")
+    data_malformed = {
+        'timeline': {'entries': [
+            {'entry_type': 'face', 'start': 0, 'data': {}}  # No bbox!
+        ]},
+        'ml_data': {'mediapipe': {'faces': []}}
+    }
+    result = test_fixed_extraction(data_malformed)
+    assert len(result) == 0, "Should skip faces without bbox"
+    print("  ✓ Passed - skipped malformed entries\n")
+
+if __name__ == "__main__":
+    test_edge_cases()
+```
+
+### Test 4: Verify average_face_size Feature (Phase 2)
+```python
+#!/usr/bin/env python3
+"""Test the average_face_size feature after Phase 2 implementation."""
 from rumiai_v2.processors.temporal_compute import compute_temporal_windows
 import json
 from pathlib import Path
@@ -311,17 +422,33 @@ with open(test_file) as f:
 
 result = compute_temporal_windows(data)
 
+print("=== PHASE 2 - Testing average_face_size feature ===\n")
+
 # Check all windows have average_face_size
 for window_type in ['hook', 'closing']:
     window = result['temporal_windows'].get(window_type)
     if window:
+        avg_size = window.get('average_face_size', 'MISSING')
+        close_ratio = window.get('close_ratio', 0)
         print(f"{window_type}:")
-        print(f"  average_face_size: {window.get('average_face_size', 'MISSING')}")
-        print(f"  close_ratio: {window.get('close_ratio')}")
+        print(f"  average_face_size: {avg_size}")
+        print(f"  close_ratio: {close_ratio}")
+
+        # Validate correlation
+        if avg_size != 'MISSING':
+            if avg_size > 0.25 and close_ratio < 0.5:
+                print("  ⚠️ Warning: Large face size but low close_ratio - check calculation")
+            elif avg_size < 0.08 and close_ratio > 0.5:
+                print("  ⚠️ Warning: Small face size but high close_ratio - check calculation")
+            else:
+                print("  ✓ Face size and framing ratios correlate")
 
 for segment in result['temporal_windows'].get('middle_segments', []):
-    print(f"Middle segment {segment.get('start')}-{segment.get('end')}:")
-    print(f"  average_face_size: {segment.get('average_face_size', 'MISSING')}")
+    avg_size = segment.get('average_face_size', 'MISSING')
+    print(f"\nMiddle segment {segment.get('start')}-{segment.get('end')}:")
+    print(f"  average_face_size: {avg_size}")
+    if avg_size == 'MISSING':
+        print("  ✗ Feature not implemented yet")
 ```
 
 ## 🎯 Success Criteria
@@ -357,33 +484,44 @@ Hook: average_face_size=0.30 → Middle: 0.08 → Close: 0.35
 
 ## ⚠️ Risks & Mitigations
 
-### Risk 1: Breaking Existing Pipeline
-- **Mitigation**: Fail-fast validation will catch issues immediately rather than silently failing
-- **Rollback**: If too many videos fail validation, temporarily switch to warning instead of error:
+### Risk Assessment Conducted (Jan 2025)
+**Investigation Results:**
+- ✅ `face_timeline` only used within temporal_compute.py
+- ✅ No consumers depend on `confidence`, `count`, or `frame_number` fields
+- ✅ `pose_timeline` is created but never used anywhere
+- ✅ Production test (`test_temporal_compute_v2.py`) has no dependencies on removed fields
+- ✅ Output consumers (rumiai_runner.py) just save JSON without structure requirements
+
+**Risk Level: VERY LOW** - No production dependencies on removed code
+
+### Risk 1: Timeline Builder Failures
+- **Detection**: Fail-fast validation will immediately catch if timeline_builder misses faces
+- **Mitigation**: Clear error messages identify the exact problem
+- **Rollback**: If needed, temporary degraded mode:
   ```python
-  # Temporary degraded mode if needed:
+  # Emergency fallback if too many videos fail:
   if ml_faces and not face_timeline:
       logger.warning(f"Timeline missing {len(ml_faces)} faces - using ML data")
-      face_timeline = ml_faces  # Temporary fallback
+      face_timeline = ml_faces  # Temporary fallback until timeline_builder fixed
   ```
 
-### Risk 2: Timeline Builder Bugs
-- **Detection**: Fail-fast will identify any videos where timeline_builder fails to process faces
-- **Mitigation**: Fix timeline_builder bugs as they're discovered
-- **Validation**: Error messages clearly indicate the problem source
+### Risk 2: Test Suite Impact
+- **Impact**: None - test_temporal_compute_v2.py doesn't use removed fields
+- **Mitigation**: Tests will actually help validate the fix works correctly
 
 ### Risk 3: Performance Impact
-- **Mitigation**: Validation adds negligible overhead (simple list length check)
-- **Benefit**: Early detection prevents cascading failures
+- **Impact**: Positive - removing redundant extraction and unused fields
+- **Validation**: Adds negligible overhead (simple list length check)
 
 ## 📅 Implementation Steps
 
 ### Phase 1: Infrastructure (Must Complete First)
 1. **Backup current temporal_compute.py** (2 min)
-2. **Implement fail-fast validation** - Replace line 378 with validation logic (5 min)
-3. **Update bbox extraction logic** - Ensure consistent access (5 min)
-4. **Test fail-fast behavior** - Verify errors trigger for missing timeline data (10 min)
-5. **Validate single source of truth** - Confirm only timeline data is used (5 min)
+2. **Remove MediaPipe extraction** - Delete lines 375-377 entirely (2 min)
+3. **Add fail-fast validation** - Validate timeline_builder processed faces (5 min)
+4. **Simplify face extraction** - Only extract timestamp and bbox fields (5 min)
+5. **Test fail-fast behavior** - Verify errors trigger for missing timeline data (10 min)
+6. **Validate single source** - Confirm only timeline path is used (3 min)
 
 ### Phase 2: Feature Implementation (Only After Phase 1)
 1. **Add face_areas collection** in existing loop (5 min)
@@ -392,8 +530,8 @@ Hook: average_face_size=0.30 → Middle: 0.08 → Close: 0.35
 4. **Run integration tests** (10 min)
 5. **Update ImprovementsMLMVP.md** (2 min)
 
-**Phase 1 time**: ~27 minutes (Infrastructure)
-**Phase 2 time**: ~22 minutes (Feature)
+**Phase 1 time**: ~27 minutes (Infrastructure with 6 steps)
+**Phase 2 time**: ~22 minutes (Feature implementation)
 **Total time**: ~49 minutes
 
 ## 🚀 Decision

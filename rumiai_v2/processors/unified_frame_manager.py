@@ -2,6 +2,22 @@
 Unified Frame Manager - Extract once, use everywhere
 Handles frame extraction, caching, and distribution to ML services
 With LRU cache, size limits, and error recovery
+
+IMPORTANT FRAME EXTRACTION LOGIC:
+1. Frame manager extracts frames at ADAPTIVE FPS based on video duration:
+   - <30s videos: 5 FPS extraction
+   - 30-60s videos: 3 FPS extraction
+   - 60-120s videos: 2 FPS extraction
+   - >120s videos: 1 FPS extraction
+
+2. These extracted frames span the ENTIRE video duration uniformly.
+   Example: 120s video @ 2fps = 240 frames sampled every 0.5s from 0-120s
+
+3. Services then get subsets of these pre-extracted frames:
+   - YOLO: Up to 300 frames (uniform sampling if needed)
+   - MediaPipe: ALL extracted frames (240 for 120s video)
+   - OCR: 60 frames (adaptive sampling from extracted set)
+   - Scene Detection: Bypasses this, uses video directly
 """
 
 import os
@@ -51,9 +67,11 @@ class FrameSamplingConfig:
             'rationale': 'Object detection needs consistent temporal coverage'
         },
         'mediapipe': {
-            'max_frames': 180,  # All frames per doc line 207
-            'strategy': 'all',
-            'rationale': 'Human motion requires high temporal resolution'
+            'max_frames': None,  # Uses ALL extracted frames (adaptive FPS)
+            'strategy': 'all',  # Gets all frames extracted by frame manager
+            'rationale': 'Human motion analysis across entire video duration'
+            # Actual frames: duration * adaptive_fps
+            # <30s: 5fps, 30-60s: 3fps, 60-120s: 2fps, >120s: 1fps
         },
         'ocr': {
             'max_frames': 60,  # ~1 FPS for 60s video (matches doc line 208)
