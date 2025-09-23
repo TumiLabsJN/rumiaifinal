@@ -1,0 +1,65 @@
+{
+  "video_id": "7428596413707144481",
+  "video_path": "test_video.mp4",
+  "timestamp": "2025-09-19T16:42:52.599683",
+  "execution_mode": "sequential",
+  "pipeline": {
+    "start_time": 1758310954.5996542,
+    "end_time": 1758310972.5996544,
+    "total_time": 18.00000023841858
+  },
+  "services": {
+    "yolo": {
+      "success": true,
+      "processing_time": 5.2,
+      "start_time": 1758310967.3996334,
+      "end_time": 1758310972.5996335,
+      "threads_created": 3,
+      "thread_flexibility": "\u2705 cv2.set()",
+      "memory_delta_mb": 250.5
+    },
+    "whisper": {
+      "success": true,
+      "processing_time": 12.8,
+      "start_time": 1758310959.79964,
+      "end_time": 1758310972.59964,
+      "threads_created": 25,
+      "thread_flexibility": "\u2705 Direct",
+      "memory_delta_mb": 1200.3
+    }
+  },
+  "analysis": {
+    "bottleneck_service": "whisper",
+    "bottleneck_time": 12.8,
+    "bottleneck_percentage": 71.11111111111111,
+    "total_memory_used": 1450.8,
+    "total_threads_created": 28,
+    "services_succeeded": 2,
+    "services_failed": 0
+  },
+  "optimization_suggestions": [
+    {
+      "service": "whisper",
+      "issue": "thread_explosion",
+      "threads_created": 25,
+      "suggestion": "Consider limiting threads using environment variables"
+    },
+    {
+      "service": "whisper",
+      "issue": "high_memory",
+      "memory_mb": 1200.3,
+      "suggestion": "Used 1200.3MB memory"
+    }
+  ],
+  "thread_analysis": {
+    "total_threads_created": 28,
+    "threads_per_service": {
+      "yolo": 3,
+      "whisper": 25
+    },
+    "flexibility_summary": {
+      "yolo": "\u2705 cv2.set()",
+      "whisper": "\u2705 Direct"
+    }
+  }
+}

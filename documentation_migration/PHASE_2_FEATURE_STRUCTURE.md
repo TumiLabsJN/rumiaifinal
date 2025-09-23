@@ -36,11 +36,12 @@ Every feature in temporal windows JSON must be documented in exactly ONE documen
    - Gaze: `gaze_variance`, `eye_contact_rate`
    - Emotion: `expression_count`, `joy_ratio`, `sadness_ratio`, `anger_ratio`, `fear_ratio`, `disgust_ratio`, `surprise_ratio`, `neutral_ratio`
 
-4. **EngagementMetadata.md** (~13 features)
+4. **EngagementAndMetadata.md** (~16 features)
    - Virality Metrics: `digg_count`, `play_count`, `collect_count`, `share_count`, `comment_count`
-   - Video Metadata: `create_time`, `author`, `description`
-   - Demographics: `gender_detection` (gender, confidence, method)
-   - Hashtags: `hashtag_count`, `generic_hashtag_count`, `specific_hashtag_count`, `generic_ratio`
+   - Video Metadata: `create_time`, `author`, `description`, `video_id`, `duration`
+   - Demographics: `gender_detection` (object with gender, confidence, method)
+   - Hashtags: `hashtag_analysis` (object with hashtag_count, generic_hashtag_count, specific_hashtag_count, generic_ratio)
+   - System Fields: `processing_timestamp`, `version` (documented but marked as non-ML)
 
 Note: Temporal structure fields (`start`, `end`, `duration`, `segment_name`) are automatically present in all windows and don't require separate documentation. These will be covered in Phase 3's SystemArchitecture.md.
 
@@ -50,12 +51,83 @@ Note: Temporal structure fields (`start`, `end`, `duration`, `segment_name`) are
 # [Feature Category] Features (e.g., Visual Features)
 
 ## 📊 Feature Overview Matrix
-| Feature Group | Source Services | Temporal Availability | ML Priority | Status |
-|---------------|----------------|----------------------|-------------|---------|
-| Person Framing | MediaPipe | All windows | HIGH | ✅ Active |
-| Creative Density | YOLO, MediaPipe, OCR | All windows | HIGH | ✅ Active |
-| Text Overlays | OCR | All windows | MEDIUM | ✅ Active |
-| Scene Pacing | Scene Detection | All windows | MEDIUM | ✅ Active |
+
+### ⚠️ CRITICAL: Feature Validation Required
+
+This feature matrix is NOT just documentation - it requires:
+1. **Statistical Analysis**: Calculate actual correlations between features
+2. **Semantic Review**: Identify which features are interpretations vs measurements
+3. **Dependency Tracking**: Verify which features are derivatives
+4. **Quality Testing**: Run features through videos with known issues (no faces, no speech, etc.)
+5. **Performance Profiling**: Measure actual processing time per feature
+
+DO NOT trust feature descriptions at face value. Each feature must be:
+- Traced to its source code
+- Validated with test videos
+- Checked for correlations
+- Verified for reliability
+
+### Feature Matrix Columns
+
+| Column | Purpose | How to Fill |
+|--------|---------|-------------|
+| **Feature Name** | Exact JSON field name | Use the exact field name from temporal windows JSON (e.g., `hook_text_count`, `avg_pitch_normalized`) |
+| **Category** | Feature grouping | VisualFeatures / AudioFeatures / BehavioralFeatures / EngagementAndMetadata |
+| **Source Services** | ML services that generate this | YOLO / MediaPipe / OCR / Scene Detection / FEAT / Whisper / Audio Energy / DeepFace / Apify / Hashtag Analysis / Engagement Calculator |
+| **Dependencies** | Other features required | List features needed to calculate this one (e.g., "views" needed for engagement_rate) |
+| **Temporal Type** | Where feature appears | Global (video-level) / Metadata / Temporal (in windows) |
+| **Data Type & Range** | Value constraints | Integer [0-∞] / Float [0.0-1.0] / Boolean / String (categorical) / Array[Float] |
+| **ML Importance** | Why it matters for models |
+| **Creator Benefit** | Brief explanation of predictive value and what creator behavior it captures |
+| **Reliability** | Confidence in accuracy | High (direct measurement) / Medium (some inference) / Low (highly interpretive) |
+| **Doubtful** | Feature quality concern | None / Colinear / Semantic / Derivative - flags problematic features |
+| **Comments** | Explanation of concerns | For Colinear: which features correlate and r-value / For Semantic: why interpretive / For Derivative: base features |
+| **RF Transform** | Random Forest preprocessing | None / One-hot encode / Extract position / Bin into categories |
+| **RF Complexity** | Transform difficulty | None / Low / Medium / High |
+| **KM Transform** | K-Means preprocessing | None / Scale [0-1] / Log transform + scale / Label encode / Cyclical encode |
+| **KM Complexity** | Transform difficulty | None / Low / Medium / High |
+| **Feature Time** | Processing cost | High (>100ms) / Medium (10-100ms) / Low (<10ms) per video |
+
+### How to Fill the "Doubtful" Column
+
+**None**: Feature is a direct measurement with unique signal
+- Example: `video_duration` - raw metadata, not derived
+
+**Colinear**: Feature highly correlates with another feature (r > 0.8)
+- Example: `hook_face_count` and `hook_person_count` might be r=0.95
+- Comments: "Highly correlated with hook_person_count (r=0.95)"
+- Action: Consider dropping in feature selection
+
+**Semantic**: Feature is an interpretation, not a measurement
+- Example: `emotional_journey_archetype = "surprise_delight"`
+- Comments: "FEAT's interpretation of emotion patterns - accuracy varies"
+- Action: Use with caution, validate against ground truth
+
+**Derivative**: Feature calculated from other available features
+- Example: `engagement_rate = (likes+comments+shares)/views`
+- Comments: "Calculated from likes/comments/shares/views - redundant"
+- Action: Drop if base features included in model
+
+### Example Feature Matrix
+
+| Feature Name | Category | Source Services | Dependencies | Temporal Type | Data Type & Range | ML Importance | Reliability | Doubtful | Comments | RF Transform | RF Complexity | KM Transform | KM Complexity | Feature Time |
+|--------------|----------|-----------------|--------------|---------------|-------------------|---------------|-------------|----------|----------|--------------|---------------|--------------|---------------|--------------|
+| close_ratio | Person Framing | MediaPipe | None | Temporal | Float [0-1] | Face prominence in hook critical for engagement | High | None | Direct face area measurement | None | None | Scale [0-1] | Low | Low |
+| engagement_rate | Metadata | Engagement Calculator | views, likes, comments, shares | Global | Float [0-1] | Composite virality signal | Medium | Derivative | Calculated from base metrics - use base features instead | None | None | Log + scale | Medium | Low |
+| emotional_journey | Behavioral | FEAT | All FEAT AUs | Temporal | String | Emotion pattern interpretation | Low | Semantic | FEAT's subjective pattern matching - not raw AUs | One-hot (8) | Medium | Label encode | Medium | High |
+| hook_person_count | Visual | YOLO | None | Temporal | Integer [0-∞] | People in frame affects viewer connection | High | Colinear | Correlates with hook_face_count (r=0.92) | None | None | Scale [0-1] | Low | Medium |
+
+### Validation Requirements
+
+Before adding a feature to the matrix:
+
+1. **Verify it exists**: Check `/insights/[video_id]_temporal_windows_updated.json`
+2. **Trace the source**: Find where it's calculated in `temporal_compute.py`
+3. **Test correlation**: Run correlation analysis against similar features
+4. **Check derivation**: Ensure it's not just a calculation of other features
+5. **Measure performance**: Profile the actual processing time
+
+This matrix becomes your feature audit trail and ML feature selection guide.
 
 ---
 
@@ -277,12 +349,13 @@ Behavioral Features:
 □ anger_ratio         □ fear_ratio          □ disgust_ratio
 □ surprise_ratio      □ neutral_ratio
 
-Engagement Features (in metadata section):
+Engagement & Metadata Features (in metadata section):
 □ digg_count          □ play_count          □ collect_count
 □ share_count         □ comment_count       □ create_time
-□ author              □ description         □ gender_detection
-□ hashtag_count       □ generic_hashtag_count □ specific_hashtag_count
-□ generic_ratio
+□ author              □ description         □ video_id
+□ duration            □ gender_detection (object)
+□ hashtag_analysis (object with 4 sub-fields)
+□ processing_timestamp □ version
 
 Temporal Structure:
 □ start               □ end                 □ duration

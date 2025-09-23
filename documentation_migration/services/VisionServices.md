@@ -19,15 +19,13 @@ python3 scripts/rumiai_runner.py 'VIDEO_URL'
 | 73s | 132.57s | 0.55x realtime | ✅ Tested |
 | 120s | 246.42s | 0.49x realtime | ✅ Tested |
 
-**⚠️ IMPORTANT: Parallel Execution Architecture**
-- All vision services (YOLO, MediaPipe, OCR, Scene Detection) run **concurrently** through `video_analyzer.py`
-- Services are launched in parallel, NOT sequentially
-- Individual service times cannot be isolated without adding instrumentation
-- The times above include:
-  - Video download from TikTok
-  - All ML services running in parallel (competing for CPU/memory)
-  - Timeline building and temporal computation
-  - Output file generation
+## 🔄 Flexible Execution Architecture
+**IMPORTANT**: Metadata extraction happens BEFORE ML services, not in parallel.
+- Apify scraping occurs first to get video metadata (rumiai_runner.py lines 243)
+- Video download happens after scraping (line 249)
+- The downloaded videos get processed either in Parallel or Sequentially. The architecture can support both and switch between them easily. 
+- Metadata is passed through the entire pipeline
+
 
 | Service | Purpose | Status | Currently Using | GPU Compatible | Output Type | Self-Contained |
 |---------|---------|--------|-----------------|----------------|-------------|----------------|
@@ -40,11 +38,12 @@ python3 scripts/rumiai_runner.py 'VIDEO_URL'
 
 # YOLO Service
 
-## 🔄 Execution Context
-**This service runs in parallel with other vision services through `video_analyzer.py`.**
-- Launched concurrently with MediaPipe, OCR, and Scene Detection
-- Competes for CPU/memory resources with other services
-- Cannot be timed individually in production without instrumentation
+## 🔄 Flexible Execution Architecture
+**IMPORTANT**: Metadata extraction happens BEFORE ML services, not in parallel.
+- Apify scraping occurs first to get video metadata (rumiai_runner.py lines 243)
+- Video download happens after scraping (line 249)
+- The downloaded videos get processed either in Parallel or Sequentially. The architecture can support both and switch between them easily. 
+- Metadata is passed through the entire pipeline
 
 ## 🎯 Service Purpose
 - **Single sentence**: Detects and tracks objects across video frames for creative density analysis
@@ -54,7 +53,6 @@ python3 scripts/rumiai_runner.py 'VIDEO_URL'
 ## ⚡ Performance Profile
 ```
 Note: Individual service timing cannot be isolated in production.
-Service runs in parallel with other ML services.
 
 Resource Usage (from isolated testing):
 - Memory: ~75 MB peak
@@ -67,7 +65,6 @@ Configuration:
 - Frame Batching: Yes (10 frames per batch within video)
 - Video Processing: Sequential (one video at a time)
 - Current Status: ✅ Optimized for single video
-- Runs in parallel with other services
 ```
 
 ## 📹 Frame Sampling Strategy
@@ -227,10 +224,6 @@ python3 -c "from rumiai_v2.api.ml_services_unified import UnifiedMLServices; pri
 cat /tmp/vision_test/test_video_yolo_detections.json | jq '.metadata'
 ```
 
-### Performance Testing (Full Pipeline)
-**Purpose**: Measure actual performance with all services running in parallel
-**Note**: This is the ONLY valid way to measure production performance
-
 ```bash
 # Clear caches and run full pipeline
 rm -rf /tmp/rumiai_frames_*
@@ -260,12 +253,12 @@ Internal Dependencies:
 
 # MediaPipe Service
 
-## 🔄 Execution Context
-**This service runs in parallel with other vision services through `video_analyzer.py`.**
-- Launched concurrently with YOLO, OCR, and Scene Detection
-- Uses 400% CPU (heaviest CPU user among vision services)
-- Processes frames at adaptive FPS: 5fps (<30s), 3fps (30-60s), 2fps (60-120s), 1fps (>120s)
-- Cannot be timed individually in production without instrumentation
+## 🔄 Flexible Execution Architecture
+**IMPORTANT**: Metadata extraction happens BEFORE ML services, not in parallel.
+- Apify scraping occurs first to get video metadata (rumiai_runner.py lines 243)
+- Video download happens after scraping (line 249)
+- The downloaded videos get processed either in Parallel or Sequentially. The architecture can support both and switch between them easily. 
+- Metadata is passed through the entire pipeline
 
 ## 🎯 Service Purpose
 - **Single sentence**: Detects human pose, face landmarks, hands, and gaze direction for behavioral analysis
@@ -275,7 +268,6 @@ Internal Dependencies:
 ## ⚡ Performance Profile
 ```
 Note: Individual service timing cannot be isolated in production.
-Service runs in parallel with other ML services.
 
 Resource Usage (from isolated testing):
 - Memory: ~170 MB peak
@@ -290,7 +282,6 @@ Configuration:
 - Video Processing: Sequential (one video at a time)
 - Frame Coverage: 3-17% of total frames, uniformly distributed
 - Current Status: ✅ Working as designed with adaptive FPS
-- Runs in parallel with other services
 ```
 
 ## 📹 Frame Sampling Strategy
@@ -493,11 +484,12 @@ Internal Dependencies:
 
 # OCR Service
 
-## 🔄 Execution Context
-**This service runs in parallel with other vision services through `video_analyzer.py`.**
-- Launched concurrently with YOLO, MediaPipe, and Scene Detection
-- Processes fewer frames (60 max) compared to other services
-- Cannot be timed individually in production without instrumentation
+## 🔄 Flexible Execution Architecture
+**IMPORTANT**: Metadata extraction happens BEFORE ML services, not in parallel.
+- Apify scraping occurs first to get video metadata (rumiai_runner.py lines 243)
+- Video download happens after scraping (line 249)
+- The downloaded videos get processed either in Parallel or Sequentially. The architecture can support both and switch between them easily. 
+- Metadata is passed through the entire pipeline
 
 ## 🎯 Service Purpose
 - **Single sentence**: Detects and recognizes text overlays in video frames for caption and CTA analysis
@@ -507,7 +499,6 @@ Internal Dependencies:
 ## ⚡ Performance Profile
 ```
 Note: Individual service timing cannot be isolated in production.
-Service runs in parallel with other ML services.
 
 Resource Usage (from isolated testing):
 - Memory: ~25 MB peak (very efficient)
@@ -520,7 +511,6 @@ Configuration:
 - Frame Batching: No (processes frames sequentially)
 - Video Processing: Sequential (one video at a time)
 - Current Status: ⚠️ Potential bottleneck
-- Runs in parallel with other services
 ```
 
 ## 📹 Frame Sampling Strategy
@@ -711,11 +701,12 @@ Internal Dependencies:
 
 # Scene Detection Service
 
-## 🔄 Execution Context
-**This service runs in parallel with other vision services through `video_analyzer.py`.**
-- Launched concurrently with YOLO, MediaPipe, and OCR
-- Processes all frames (no sampling) for accurate scene boundaries
-- Cannot be timed individually in production without instrumentation
+## 🔄 Flexible Execution Architecture
+**IMPORTANT**: Metadata extraction happens BEFORE ML services, not in parallel.
+- Apify scraping occurs first to get video metadata (rumiai_runner.py lines 243)
+- Video download happens after scraping (line 249)
+- The downloaded videos get processed either in Parallel or Sequentially. The architecture can support both and switch between them easily. 
+- Metadata is passed through the entire pipeline
 
 ## 🎯 Service Purpose
 - **Single sentence**: Detects scene boundaries and cuts in video for pacing and rhythm analysis
@@ -725,7 +716,6 @@ Internal Dependencies:
 ## ⚡ Performance Profile
 ```
 Note: Individual service timing cannot be isolated in production.
-Service runs in parallel with other ML services.
 
 Resource Usage (estimated from codebase):
 - Memory: ~50 MB peak
@@ -738,7 +728,6 @@ Configuration:
 - Frame Batching: No (analyzes frame differences sequentially)
 - Video Processing: Sequential (one video at a time)
 - Current Status: ✅ Active
-- Runs in parallel with other services
 ```
 
 ## 📹 Frame Sampling Strategy
@@ -940,7 +929,6 @@ Internal Dependencies:
 
 ### Key Insights
 - **Processing is slower than realtime** (0.26x - 0.55x speed)
-- **Services run in parallel**, making individual timing impossible to isolate
 - **Short videos have more overhead** due to initialization costs
 - **Frame limits prevent linear scaling** - longer videos don't always take proportionally longer
 - **Total time includes**: Video download, all ML services, timeline building, temporal computation

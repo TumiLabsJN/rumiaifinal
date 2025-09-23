@@ -1,0 +1,155 @@
+{
+  "video_id": "7500252920844193067",
+  "video_path": "temp/7500252920844193067.mp4",
+  "timestamp": "2025-09-19T16:58:50.948558",
+  "execution_mode": "sequential",
+  "pipeline": {
+    "start_time": 1758311846.994605,
+    "end_time": 1758311930.94854,
+    "total_time": 83.95393490791321
+  },
+  "services": {
+    "yolo": {
+      "success": true,
+      "processing_time": 3.504055976867676,
+      "start_time": 1758311847.0973263,
+      "end_time": 1758311850.6013823,
+      "threads_created": 2,
+      "thread_flexibility": "\u2705 cv2.set()",
+      "memory_delta_mb": 948.4
+    },
+    "whisper": {
+      "success": true,
+      "processing_time": 12.031014919281006,
+      "start_time": 1758311850.8083665,
+      "end_time": 1758311862.8393822,
+      "threads_created": 1,
+      "thread_flexibility": "\u2705 Direct",
+      "memory_delta_mb": 0.1
+    },
+    "mediapipe": {
+      "success": true,
+      "processing_time": 7.01025128364563,
+      "start_time": 1758311863.0471888,
+      "end_time": 1758311870.0574405,
+      "threads_created": 1,
+      "thread_flexibility": "\u274c Fixed",
+      "memory_delta_mb": 398.3
+    },
+    "ocr": {
+      "success": true,
+      "processing_time": 10.088415384292603,
+      "start_time": 1758311870.2648416,
+      "end_time": 1758311880.3532572,
+      "threads_created": 1,
+      "thread_flexibility": "\u2705 Direct",
+      "memory_delta_mb": 90.8
+    },
+    "scene_detection": {
+      "success": true,
+      "processing_time": 1.5025808811187744,
+      "start_time": 1758311880.559098,
+      "end_time": 1758311882.0616796,
+      "threads_created": 2,
+      "thread_flexibility": "\u2705 N/A",
+      "memory_delta_mb": 41.6
+    },
+    "audio_energy": {
+      "success": true,
+      "processing_time": 3.503220558166504,
+      "start_time": 1758311882.267509,
+      "end_time": 1758311885.7707303,
+      "threads_created": 1,
+      "thread_flexibility": "\u2705 N/A",
+      "memory_delta_mb": 101.5
+    },
+    "emotion_detection": {
+      "success": true,
+      "processing_time": 39.144490242004395,
+      "start_time": 1758311885.9768176,
+      "end_time": 1758311925.1213086,
+      "threads_created": 2,
+      "thread_flexibility": "\u26a0\ufe0f Env vars",
+      "memory_delta_mb": 1136.4
+    },
+    "deepface_gender": {
+      "success": true,
+      "processing_time": 5.506356477737427,
+      "start_time": 1758311925.338924,
+      "end_time": 1758311930.8452811,
+      "threads_created": 1,
+      "thread_flexibility": "\u26a0\ufe0f Env vars",
+      "memory_delta_mb": 0.0
+    }
+  },
+  "analysis": {
+    "bottleneck_service": "emotion_detection",
+    "bottleneck_time": 39.144490242004395,
+    "bottleneck_percentage": 47.56872859208065,
+    "total_memory_used": 2717.1,
+    "total_threads_created": 11,
+    "services_succeeded": 8,
+    "services_failed": 0
+  },
+  "optimization_suggestions": [
+    {
+      "service": "yolo",
+      "issue": "underutilized",
+      "current_threads": 2,
+      "suggestion": "Could benefit from more threads"
+    },
+    {
+      "service": "whisper",
+      "issue": "underutilized",
+      "current_threads": 1,
+      "suggestion": "Could benefit from more threads"
+    },
+    {
+      "service": "ocr",
+      "issue": "underutilized",
+      "current_threads": 1,
+      "suggestion": "Could benefit from more threads"
+    },
+    {
+      "service": "scene_detection",
+      "issue": "underutilized",
+      "current_threads": 2,
+      "suggestion": "Could benefit from more threads"
+    },
+    {
+      "service": "audio_energy",
+      "issue": "underutilized",
+      "current_threads": 1,
+      "suggestion": "Could benefit from more threads"
+    },
+    {
+      "service": "emotion_detection",
+      "issue": "high_memory",
+      "memory_mb": 1136.4,
+      "suggestion": "Used 1136.4MB memory"
+    }
+  ],
+  "thread_analysis": {
+    "total_threads_created": 11,
+    "threads_per_service": {
+      "yolo": 2,
+      "whisper": 1,
+      "mediapipe": 1,
+      "ocr": 1,
+      "scene_detection": 2,
+      "audio_energy": 1,
+      "emotion_detection": 2,
+      "deepface_gender": 1
+    },
+    "flexibility_summary": {
+      "yolo": "\u2705 cv2.set()",
+      "whisper": "\u2705 Direct",
+      "mediapipe": "\u274c Fixed",
+      "ocr": "\u2705 Direct",
+      "scene_detection": "\u2705 N/A",
+      "audio_energy": "\u2705 N/A",
+      "emotion_detection": "\u26a0\ufe0f Env vars",
+      "deepface_gender": "\u26a0\ufe0f Env vars"
+    }
+  }
+}

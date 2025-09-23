@@ -4,12 +4,12 @@
 This document references current implementation verified through code inspection (2025-01-19).
 All information has been validated through actual code review and testing where possible.
 
-## 🔄 Parallel Execution Architecture
-**IMPORTANT**: All audio services run concurrently with ALL other ML services, NOT sequentially.
-- Services are launched in parallel through `video_analyzer.py`
-- Individual service timing cannot be isolated in production
-- Services compete for system resources (CPU, memory, I/O) with vision services
-- Performance measurements show aggregate time for entire pipeline
+## 🔄 Flexible Execution Architecture
+**IMPORTANT**: Metadata extraction happens BEFORE ML services, not in parallel.
+- Apify scraping occurs first to get video metadata (rumiai_runner.py lines 243)
+- Video download happens after scraping (line 249)
+- The downloaded videos get processed either in Parallel or Sequentially. The architecture can support both and switch between them easily. 
+- Metadata is passed through the entire pipeline
 
 ## 📦 Batch Processing Clarification
 **CRITICAL DISTINCTION** - Two types of "batching":
@@ -38,7 +38,7 @@ All information has been validated through actual code review and testing where 
 | 73s | ~133s | 0.55x realtime | Based on Vision tests |
 | 120s | ~246s | 0.49x realtime | Based on Vision tests |
 
-**Note**: These times include ALL services (vision + audio + analysis) running in parallel
+
 
 | Service | Purpose | Status | Currently Using | GPU Compatible | Output Type | Self-Contained |
 |---------|---------|--------|-----------------|----------------|-------------|----------------|
@@ -49,12 +49,12 @@ All information has been validated through actual code review and testing where 
 
 # Whisper Service
 
-## 🔄 Execution Context
-**This service runs in parallel with ALL ML services through `video_analyzer.py`.**
-- Launched concurrently with YOLO, MediaPipe, OCR, Scene Detection, Audio Energy, FEAT, DeepFace
-- Shares CPU resources with all other services
-- Uses SharedAudioExtractor (avoids redundant extraction)
-- Cannot be timed individually in production without instrumentation
+## 🔄 Flexible Execution Architecture
+**IMPORTANT**: Metadata extraction happens BEFORE ML services, not in parallel.
+- Apify scraping occurs first to get video metadata (rumiai_runner.py lines 243)
+- Video download happens after scraping (line 249)
+- The downloaded videos get processed either in Parallel or Sequentially. The architecture can support both and switch between them easily. 
+- Metadata is passed through the entire pipeline
 
 ## 🎯 Service Purpose
 - **Single sentence**: Transcribes speech from video audio with precise timestamps using whisper.cpp
@@ -66,7 +66,7 @@ All information has been validated through actual code review and testing where 
 Execution Time (To Be Confirmed - Pending Instrumentation Tests):
 - 60-second video: TBC seconds
 - 120-second video: TBC seconds
-Note: Individual service timing requires instrumentation as services run in parallel
+
 
 Resource Usage (To Be Confirmed - Pending Instrumentation Tests):
 - Memory: TBC MB peak (estimated ~500-800 MB for base model)
@@ -245,7 +245,7 @@ Model Storage:
 ### Functional Testing (Isolation)
 **Purpose**: Verify service works correctly, NOT for performance measurement
 **Warning**: Isolation tests show theoretical performance without resource competition
-**Actual production performance**: 2-3x slower due to parallel service execution
+
 
 ```bash
 # Test Whisper functionality only (NOT for performance metrics)
@@ -307,12 +307,12 @@ Internal Dependencies:
 
 # Audio Energy Service
 
-## 🔄 Execution Context
-**This service runs in parallel with ALL ML services through `video_analyzer.py`.**
-- Launched concurrently with YOLO, MediaPipe, OCR, Scene Detection, Whisper, FEAT, DeepFace
-- Analyzes energy and pitch dynamics for emotional/intensity patterns
-- Uses SharedAudioExtractor (avoids redundant extraction)
-- Cannot be timed individually in production without instrumentation
+## 🔄 Flexible Execution Architecture
+**IMPORTANT**: Metadata extraction happens BEFORE ML services, not in parallel.
+- Apify scraping occurs first to get video metadata (rumiai_runner.py lines 243)
+- Video download happens after scraping (line 249)
+- The downloaded videos get processed either in Parallel or Sequentially. The architecture can support both and switch between them easily. 
+- Metadata is passed through the entire pipeline
 
 ## 🎯 Service Purpose
 - **Single sentence**: Analyzes audio energy (RMS) and pitch dynamics to detect speech intensity and emotional patterns
@@ -324,7 +324,7 @@ Internal Dependencies:
 Execution Time (To Be Confirmed - Pending Instrumentation Tests):
 - 60-second video: TBC seconds
 - 120-second video: TBC seconds
-Note: Individual service timing requires instrumentation as services run in parallel
+
 
 Resource Usage (To Be Confirmed - Pending Instrumentation Tests):
 - Memory: TBC MB peak (estimated ~200-400 MB for librosa)
@@ -509,14 +509,6 @@ Output Storage:
 - **Effort Estimate**: 1 day
 - **Files Affected**: audio_energy_service.py
 
-### Priority: LOW 🟢
-- **Issue**: Fixed 5-second window might not suit all content types
-- **Impact**: Pattern detection less accurate for rapid content
-- **Current Workaround**: Works well for most TikTok content
-- **Proposed Fix**: Adaptive windowing based on content dynamics
-- **Effort Estimate**: 2 days
-- **Files Affected**: audio_energy_service.py
-
 ## 🧪 Testing & Validation
 
 ### Functional Testing (Isolation)
@@ -571,12 +563,6 @@ Internal Dependencies:
 
 ## 📊 Audio Services Performance Summary
 
-### Resource Competition
-Both audio services run in parallel with:
-- 4 Vision services (YOLO, MediaPipe, OCR, Scene Detection)
-- 2 Analysis services (FEAT, DeepFace)
-- Total: 8 services competing for CPU/memory
-
 ### Processing Patterns
 - **Whisper**: CPU-intensive, processes full audio sequentially
 - **Audio Energy**: Moderate CPU, processes in windows/frames
@@ -608,11 +594,6 @@ rm -rf /home/jorge/rumiaifinal/speech_transcriptions/test_*
 time python3 scripts/rumiai_runner.py 'VIDEO_URL'
 ```
 
-#### Key Testing Principle
-**Isolation performance ≠ Production performance**
-- Isolation tests use all available resources
-- Production runs share resources among 8 parallel services
-- Expect 2-3x slower performance in production
 
 ---
 

@@ -37,6 +37,11 @@ class ThreadMonitor:
         self.process = psutil.Process()
         self.start_memory = self.process.memory_info().rss / 1024 / 1024  # MB
 
+        # Enhanced monitoring with sampling
+        self.thread_names = set()
+        self.samples = []
+        self.cpu_times_start = self.process.cpu_times()
+
         # Start thread sampling
         self.thread = threading.Thread(target=self._sample_threads)
         self.thread.daemon = True
@@ -58,11 +63,24 @@ class ThreadMonitor:
         return flexibility_map.get(self.service_name, '❓ Unknown')
 
     def _sample_threads(self):
-        """Sample thread count every 0.5 seconds to catch peak usage."""
+        """Sample thread count and resources every 0.5 seconds."""
         while self.running:
             try:
                 current_threads = threading.active_count()
                 self.peak_threads = max(self.peak_threads, current_threads)
+
+                # Track thread names for debugging
+                for thread in threading.enumerate():
+                    if thread.name not in self.thread_names:
+                        self.thread_names.add(thread.name)
+
+                # Collect resource samples
+                self.samples.append({
+                    'time': time.time(),
+                    'threads': current_threads,
+                    'cpu_percent': self.process.cpu_percent(),
+                    'memory_mb': self.process.memory_info().rss / 1024**2
+                })
             except Exception as e:
                 logger.warning(f"Thread sampling error for {self.service_name}: {e}")
             time.sleep(0.5)
@@ -96,15 +114,72 @@ class ThreadMonitor:
         threads_created = self.peak_threads - self.initial_threads
 
         # Check if we're in sequential mode
-        is_sequential = os.getenv('SEQUENTIAL_TEST', 'false').lower() == 'true'
+        is_sequential = os.getenv('PARALLEL_MODE', 'false').lower() != 'true'
+
+        # Calculate CPU time if available
+        cpu_time = 0
+        if hasattr(self, 'cpu_times_start'):
+            try:
+                cpu_times_end = self.process.cpu_times()
+                cpu_time = (cpu_times_end.user - self.cpu_times_start.user +
+                           cpu_times_end.system - self.cpu_times_start.system)
+            except Exception:
+                pass
+
+        # Calculate peak memory from samples if available
+        peak_memory_mb = end_memory if memory_delta else 0
+        if self.samples:
+            peak_memory_mb = max((s['memory_mb'] for s in self.samples if s.get('memory_mb') is not None), default=end_memory)
 
         self._cached_stats = {
             'threads_created': max(0, threads_created),
             'peak_threads': self.peak_threads,
             'memory_delta_mb': round(memory_delta, 1) if is_sequential else None,
-            'thread_flexibility': self.thread_flexibility
+            'thread_flexibility': self.thread_flexibility,
+            'cpu_time': round(cpu_time, 2) if cpu_time else None,
+            'peak_memory_mb': round(peak_memory_mb, 1) if self.samples else None,
+            'unique_threads': len(self.thread_names) if hasattr(self, 'thread_names') else 0,
+            'sample_count': len(self.samples) if hasattr(self, 'samples') else 0
         }
         return self._cached_stats
+
+
+class SystemSnapshot:
+    """Capture comprehensive system state between services."""
+
+    def __init__(self):
+        try:
+            import psutil
+            self.psutil = psutil
+            self.process = psutil.Process()
+            self.available = True
+        except ImportError:
+            logger.warning("psutil not installed - system snapshots disabled")
+            self.available = False
+
+    def capture(self) -> Dict[str, Any]:
+        """Capture current system state."""
+        if not self.available:
+            return {}
+
+        vm = self.psutil.virtual_memory()
+
+        return {
+            'timestamp': time.time(),
+            'cpu': {
+                'percent': self.psutil.cpu_percent(interval=0.1),
+                'load_avg': os.getloadavg(),
+            },
+            'memory': {
+                'available_mb': vm.available / 1024**2,
+                'used_mb': vm.used / 1024**2,
+                'percent': vm.percent,
+            },
+            'process': {
+                'threads': self.process.num_threads(),
+                'connections': len(self.process.connections(kind='all')) if hasattr(self.process, 'connections') else 0,
+            }
+        }
 
 
 class VideoAnalyzer:
@@ -133,9 +208,9 @@ class VideoAnalyzer:
         pipeline_start = time.time()
 
         # Check execution mode
-        sequential_mode = os.getenv('SEQUENTIAL_TEST', 'false').lower() == 'true'
+        sequential_mode = os.getenv('PARALLEL_MODE', 'false').lower() != 'true'  # Default to sequential
         if sequential_mode:
-            logger.info("🔬 SEQUENTIAL TEST MODE: Running services one-by-one for accurate measurement")
+            logger.info("Running services sequentially (default mode)")
 
         # Define all ML analyses to run
         analyses = {
@@ -153,11 +228,43 @@ class VideoAnalyzer:
 
         if sequential_mode:
             # SEQUENTIAL MODE: Run services one-by-one for accurate measurement
+            # Initialize system snapshot for optimization detection
+            system_snapshot = SystemSnapshot()
+            optimization_warnings = []
+
             for model_name, analysis_func in analyses.items():
                 logger.info(f"Starting {model_name} analysis (sequential)")
+
+                # Capture system state before (if available)
+                system_before = system_snapshot.capture() if system_snapshot.available else {}
+
                 try:
                     result = await analysis_func(video_id, video_path)
                     results[model_name] = result
+
+                    # Capture system state after
+                    system_after = system_snapshot.capture() if system_snapshot.available else {}
+
+                    # Real-time optimization detection
+                    if system_after and system_before:
+                        # Memory pressure warning
+                        if system_after.get('memory', {}).get('percent', 0) > 80:
+                            warning = f"⚠️ Memory pressure after {model_name}: {system_after['memory']['percent']:.1f}%"
+                            logger.warning(warning)
+                            optimization_warnings.append(warning)
+
+                        # CPU saturation warning
+                        if system_after.get('cpu', {}).get('percent', 0) > 90:
+                            warning = f"⚠️ CPU saturated after {model_name}: {system_after['cpu']['percent']:.1f}%"
+                            logger.warning(warning)
+                            optimization_warnings.append(warning)
+
+                    # Service-specific optimization detection
+                    if result.threads_created > 10:
+                        logger.warning(f"⚠️ {model_name} created {result.threads_created} threads")
+
+                    if result.memory_delta_mb is not None and result.memory_delta_mb > 500:
+                        logger.warning(f"⚠️ {model_name} used {result.memory_delta_mb:.0f}MB memory")
 
                     # Log detailed metrics in sequential mode
                     if hasattr(result, 'processing_time'):
@@ -166,6 +273,13 @@ class VideoAnalyzer:
                                   f"memory: {'+' + str(result.memory_delta_mb) + 'MB' if result.memory_delta_mb else 'N/A'}")
                     else:
                         logger.info(f"{model_name} analysis completed (success={result.success})")
+
+                    # Garbage collection after heavy services
+                    if model_name in ['emotion_detection', 'mediapipe'] and system_after:
+                        if system_after.get('memory', {}).get('percent', 0) > 70:
+                            import gc
+                            gc.collect()
+                            logger.info("🧹 Forced garbage collection after heavy service")
 
                 except Exception as e:
                     logger.error(f"{model_name} analysis failed: {e}")
@@ -182,7 +296,8 @@ class VideoAnalyzer:
                         thread_flexibility='❓ Unknown'
                     )
         else:
-            # PARALLEL MODE: Default production behavior
+            # PARALLEL MODE: Only when PARALLEL_MODE=true
+            logger.info("Running services in parallel (PARALLEL_MODE=true)")
             tasks = {}
             for model_name, analysis_func in analyses.items():
                 logger.info(f"Scheduling {model_name} analysis (parallel)")
@@ -680,33 +795,26 @@ class VideoAnalyzer:
         pipeline_start: float,
         pipeline_end: float
     ) -> None:
-        """Generate and save performance timing report."""
+        """Generate comprehensive timing report with mode-aware features."""
         import os
         from datetime import datetime
+
+        # Determine execution mode
+        sequential_mode = os.getenv('PARALLEL_MODE', 'false').lower() != 'true'
 
         # Calculate pipeline timing
         total_pipeline_time = pipeline_end - pipeline_start
 
-        # Find the bottleneck service
-        bottleneck_service = None
-        max_time = 0.0
-        for service_name, result in results.items():
-            if result.success and result.processing_time > max_time:
-                max_time = result.processing_time
-                bottleneck_service = service_name
-
-        # Build the report
+        # Build base report
         report = {
             "video_id": video_id,
             "video_path": str(video_path),
             "timestamp": datetime.now().isoformat(),
-            "execution_mode": "sequential" if os.getenv('SEQUENTIAL_TEST') == 'true' else "parallel",
+            "execution_mode": "sequential" if sequential_mode else "parallel",
             "pipeline": {
                 "start_time": pipeline_start,
                 "end_time": pipeline_end,
                 "total_time": total_pipeline_time,
-                "bottleneck_service": bottleneck_service,
-                "max_service_time": max_time
             },
             "services": {}
         }
@@ -723,7 +831,7 @@ class VideoAnalyzer:
             }
 
             # Only include memory_delta_mb in sequential mode (Decision 5)
-            if os.getenv('SEQUENTIAL_TEST') == 'true':
+            if os.getenv('PARALLEL_MODE', 'false').lower() != 'true':  # Sequential is default
                 service_metrics["memory_delta_mb"] = result.memory_delta_mb
 
             if not result.success:
@@ -731,21 +839,14 @@ class VideoAnalyzer:
 
             report["services"][service_name] = service_metrics
 
-        # Calculate additional metrics
-        if os.getenv('SEQUENTIAL_TEST') == 'true':
-            # In sequential mode, sum of all service times should equal pipeline time
-            total_service_time = sum(r.processing_time for r in results.values() if r.success)
-            report["pipeline"]["service_time_sum"] = total_service_time
-            report["pipeline"]["overhead"] = total_pipeline_time - total_service_time
-
-            # Total memory used
-            total_memory = sum(r.memory_delta_mb for r in results.values() if r.success)
-            report["pipeline"]["total_memory_mb"] = total_memory
+        # Add mode-specific analysis
+        if sequential_mode:
+            # Sequential mode - detailed analysis
+            report["analysis"] = self._generate_sequential_analysis(results)
+            report["optimization_suggestions"] = self._generate_optimization_suggestions(results)
         else:
-            # In parallel mode, calculate theoretical speedup
-            sequential_estimate = sum(r.processing_time for r in results.values() if r.success)
-            report["pipeline"]["sequential_estimate"] = sequential_estimate
-            report["pipeline"]["parallel_speedup"] = sequential_estimate / total_pipeline_time if total_pipeline_time > 0 else 1.0
+            # Parallel mode - different metrics
+            report["analysis"] = self._generate_parallel_analysis(results)
 
         # Thread analysis
         total_threads = sum(r.threads_created for r in results.values())
@@ -774,30 +875,8 @@ class VideoAnalyzer:
 
         logger.info(f"Metrics saved to {report_path}")
 
-        # Display report based on METRICS_DISPLAY env var
-        display_mode = os.getenv('METRICS_DISPLAY', 'summary')
-
-        if display_mode == 'none':
-            return
-        elif display_mode == 'summary':
-            # Display summary
-            logger.info("=" * 60)
-            logger.info(f"PERFORMANCE SUMMARY - {video_id}")
-            logger.info("=" * 60)
-            logger.info(f"Mode: {'Sequential' if os.getenv('SEQUENTIAL_TEST') == 'true' else 'Parallel'}")
-            logger.info(f"Total Pipeline Time: {total_pipeline_time:.2f}s")
-            logger.info(f"Bottleneck: {bottleneck_service} ({max_time:.2f}s)")
-            if os.getenv('SEQUENTIAL_TEST') == 'true':
-                logger.info(f"Total Memory: {report['pipeline'].get('total_memory_mb', 0):.1f} MB")
-            logger.info(f"Total Threads Created: {total_threads}")
-            logger.info("=" * 60)
-        elif display_mode == 'full':
-            # Display full report
-            logger.info("=" * 60)
-            logger.info(f"FULL PERFORMANCE REPORT - {video_id}")
-            logger.info("=" * 60)
-            logger.info(json.dumps(report, indent=2))
-            logger.info("=" * 60)
+        # Display summary
+        self._display_report_summary(report, sequential_mode)
 
     async def _run_deepface_gender(self, video_id: str, video_path: Path) -> MLAnalysisResult:
         """
@@ -868,3 +947,99 @@ class VideoAnalyzer:
                     memory_delta_mb=stats['memory_delta_mb'] if stats['memory_delta_mb'] is not None else 0.0,
                     thread_flexibility=stats['thread_flexibility']
                 )
+    def _generate_sequential_analysis(self, results: Dict[str, MLAnalysisResult]) -> Dict:
+        """Generate analysis specific to sequential mode."""
+        successful = [r for r in results.values() if r.success]
+
+        # Find bottlenecks
+        if successful:
+            bottleneck = max(successful, key=lambda r: r.processing_time)
+            total_time = sum(r.processing_time for r in successful if r.processing_time is not None)
+
+            return {
+                "bottleneck_service": bottleneck.model_name,
+                "bottleneck_time": bottleneck.processing_time,
+                "bottleneck_percentage": (bottleneck.processing_time / total_time * 100) if total_time > 0 else 0,
+                "total_memory_used": sum(r.memory_delta_mb for r in successful if r.memory_delta_mb is not None),
+                "total_threads_created": sum(r.threads_created for r in successful if r.threads_created is not None),
+                "services_succeeded": len(successful),
+                "services_failed": len(results) - len(successful)
+            }
+        return {}
+
+    def _generate_optimization_suggestions(self, results: Dict[str, MLAnalysisResult]) -> List[Dict]:
+        """Generate optimization suggestions based on metrics."""
+        suggestions = []
+
+        for service_name, result in results.items():
+            if not result.success:
+                continue
+
+            # High thread usage
+            if result.threads_created > 20:
+                suggestions.append({
+                    'service': service_name,
+                    'issue': 'thread_explosion',
+                    'threads_created': result.threads_created,
+                    'suggestion': 'Consider limiting threads using environment variables'
+                })
+
+            # High memory usage
+            if result.memory_delta_mb is not None and result.memory_delta_mb > 1000:
+                suggestions.append({
+                    'service': service_name,
+                    'issue': 'high_memory',
+                    'memory_mb': result.memory_delta_mb,
+                    'suggestion': f'Used {result.memory_delta_mb:.1f}MB memory',
+                })
+
+            # Parallelization opportunity
+            if result.thread_flexibility and '✅' in result.thread_flexibility and result.threads_created <= 2:
+                suggestions.append({
+                    'service': service_name,
+                    'issue': 'underutilized',
+                    'current_threads': result.threads_created,
+                    'suggestion': 'Could benefit from more threads'
+                })
+
+        return suggestions
+
+    def _generate_parallel_analysis(self, results: Dict[str, MLAnalysisResult]) -> Dict:
+        """Generate analysis specific to parallel mode."""
+        successful = [r for r in results.values() if r.success]
+
+        if successful:
+            slowest = max(successful, key=lambda r: r.end_time) if successful else None
+            fastest_finish = min(r.end_time for r in successful) if successful else 0
+
+            return {
+                "mode": "parallel",
+                "slowest_service": slowest.model_name if slowest else None,
+                "services_succeeded": len(successful),
+                "services_failed": len(results) - len(successful),
+                "thread_info": "Thread counts approximate due to parallel execution",
+                "memory_info": "Memory tracking disabled in parallel mode"
+            }
+        return {}
+
+    def _display_report_summary(self, report: Dict, sequential_mode: bool) -> None:
+        """Display a summary of the report to console."""
+        logger.info("\n" + "="*60)
+        logger.info("INSTRUMENTATION REPORT")
+        logger.info("="*60)
+        logger.info(f"Mode: {'Sequential' if sequential_mode else 'Parallel'}")
+        logger.info(f"Pipeline Time: {report['pipeline']['total_time']:.2f}s")
+
+        if sequential_mode and 'analysis' in report:
+            analysis = report['analysis']
+            if 'bottleneck_service' in analysis:
+                logger.info(f"Bottleneck: {analysis['bottleneck_service']} ({analysis['bottleneck_time']:.2f}s)")
+                logger.info(f"Memory Used: {analysis.get('total_memory_used', 0):.1f} MB")
+                logger.info(f"Threads Created: {analysis.get('total_threads_created', 0)}")
+
+        if 'optimization_suggestions' in report and report['optimization_suggestions']:
+            logger.info("\nOptimization Suggestions:")
+            for suggestion in report['optimization_suggestions'][:3]:  # Top 3
+                logger.info(f"  - {suggestion['service']}: {suggestion['suggestion']}")
+
+        logger.info("="*60)

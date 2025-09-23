@@ -1,0 +1,113 @@
+{
+  "video_id": "7428596413707144481",
+  "video_path": "temp/7428596413707144481.mp4",
+  "timestamp": "2025-09-19T14:49:17.656438",
+  "execution_mode": "sequential",
+  "pipeline": {
+    "start_time": 1758304112.511271,
+    "end_time": 1758304157.656422,
+    "total_time": 45.145150899887085,
+    "bottleneck_service": "ocr",
+    "max_service_time": 22.089172840118408,
+    "service_time_sum": 45.1344940662384,
+    "overhead": 0.01065683364868164,
+    "total_memory_mb": 2560.7
+  },
+  "services": {
+    "yolo": {
+      "success": true,
+      "processing_time": 2.000889778137207,
+      "start_time": 1758304112.5113437,
+      "end_time": 1758304114.5122337,
+      "threads_created": 1,
+      "thread_flexibility": "\u2705 cv2.set()",
+      "memory_delta_mb": 852.9
+    },
+    "whisper": {
+      "success": true,
+      "processing_time": 2.0038955211639404,
+      "start_time": 1758304114.5124974,
+      "end_time": 1758304116.5163937,
+      "threads_created": 1,
+      "thread_flexibility": "\u2705 Direct",
+      "memory_delta_mb": 0.0
+    },
+    "mediapipe": {
+      "success": true,
+      "processing_time": 3.0012049674987793,
+      "start_time": 1758304116.5165627,
+      "end_time": 1758304119.5177684,
+      "threads_created": 1,
+      "thread_flexibility": "\u274c Fixed",
+      "memory_delta_mb": 388.3
+    },
+    "ocr": {
+      "success": true,
+      "processing_time": 22.089172840118408,
+      "start_time": 1758304119.5180607,
+      "end_time": 1758304141.607234,
+      "threads_created": 1,
+      "thread_flexibility": "\u2705 Direct",
+      "memory_delta_mb": 90.6
+    },
+    "scene_detection": {
+      "success": true,
+      "processing_time": 0.5009231567382812,
+      "start_time": 1758304141.6075087,
+      "end_time": 1758304142.1084325,
+      "threads_created": 1,
+      "thread_flexibility": "\u2705 N/A",
+      "memory_delta_mb": 40.5
+    },
+    "audio_energy": {
+      "success": true,
+      "processing_time": 1.5059754848480225,
+      "start_time": 1758304142.1087399,
+      "end_time": 1758304143.6147158,
+      "threads_created": 1,
+      "thread_flexibility": "\u2705 N/A",
+      "memory_delta_mb": 99.3
+    },
+    "emotion_detection": {
+      "success": true,
+      "processing_time": 9.530961990356445,
+      "start_time": 1758304143.614983,
+      "end_time": 1758304153.1459458,
+      "threads_created": 2,
+      "thread_flexibility": "\u26a0\ufe0f Env vars",
+      "memory_delta_mb": 1086.7
+    },
+    "deepface_gender": {
+      "success": true,
+      "processing_time": 4.501470327377319,
+      "start_time": 1758304153.1548188,
+      "end_time": 1758304157.6562893,
+      "threads_created": 1,
+      "thread_flexibility": "\u26a0\ufe0f Env vars",
+      "memory_delta_mb": 2.4
+    }
+  },
+  "thread_analysis": {
+    "total_threads_created": 9,
+    "threads_per_service": {
+      "yolo": 1,
+      "whisper": 1,
+      "mediapipe": 1,
+      "ocr": 1,
+      "scene_detection": 1,
+      "audio_energy": 1,
+      "emotion_detection": 2,
+      "deepface_gender": 1
+    },
+    "flexibility_summary": {
+      "yolo": "\u2705 cv2.set()",
+      "whisper": "\u2705 Direct",
+      "mediapipe": "\u274c Fixed",
+      "ocr": "\u2705 Direct",
+      "scene_detection": "\u2705 N/A",
+      "audio_energy": "\u2705 N/A",
+      "emotion_detection": "\u26a0\ufe0f Env vars",
+      "deepface_gender": "\u26a0\ufe0f Env vars"
+    }
+  }
+}

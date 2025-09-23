@@ -1,0 +1,7 @@
+{
+  "ocr": {
+    "threads": 2,
+    "speedup": 1.2559696637793771,
+    "env_var": "OMP_NUM_THREADS"
+  }
+}

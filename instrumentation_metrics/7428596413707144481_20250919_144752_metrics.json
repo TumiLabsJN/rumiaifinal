@@ -1,0 +1,104 @@
+{
+  "video_id": "7428596413707144481",
+  "video_path": "temp/7428596413707144481.mp4",
+  "timestamp": "2025-09-19T14:47:52.543763",
+  "execution_mode": "parallel",
+  "pipeline": {
+    "start_time": 1758304035.3779743,
+    "end_time": 1758304072.5437431,
+    "total_time": 37.16576886177063,
+    "bottleneck_service": "ocr",
+    "max_service_time": 37.15725302696228,
+    "sequential_estimate": 109.28435516357422,
+    "parallel_speedup": 2.940457267816301
+  },
+  "services": {
+    "yolo": {
+      "success": true,
+      "processing_time": 14.070438385009766,
+      "start_time": 1758304035.3782175,
+      "end_time": 1758304049.448656,
+      "threads_created": 13,
+      "thread_flexibility": "\u2705 cv2.set()"
+    },
+    "whisper": {
+      "success": true,
+      "processing_time": 8.061156988143921,
+      "start_time": 1758304035.3787806,
+      "end_time": 1758304043.4399378,
+      "threads_created": 12,
+      "thread_flexibility": "\u2705 Direct"
+    },
+    "mediapipe": {
+      "success": true,
+      "processing_time": 12.060351133346558,
+      "start_time": 1758304035.385372,
+      "end_time": 1758304047.4457233,
+      "threads_created": 11,
+      "thread_flexibility": "\u274c Fixed"
+    },
+    "ocr": {
+      "success": true,
+      "processing_time": 37.15725302696228,
+      "start_time": 1758304035.3858273,
+      "end_time": 1758304072.5430813,
+      "threads_created": 9,
+      "thread_flexibility": "\u2705 Direct"
+    },
+    "scene_detection": {
+      "success": true,
+      "processing_time": 0.5006060600280762,
+      "start_time": 1758304035.3866067,
+      "end_time": 1758304035.8872132,
+      "threads_created": 1,
+      "thread_flexibility": "\u2705 N/A"
+    },
+    "audio_energy": {
+      "success": true,
+      "processing_time": 9.061777830123901,
+      "start_time": 1758304035.8872557,
+      "end_time": 1758304044.949034,
+      "threads_created": 7,
+      "thread_flexibility": "\u2705 N/A"
+    },
+    "emotion_detection": {
+      "success": true,
+      "processing_time": 19.973665714263916,
+      "start_time": 1758304035.9814246,
+      "end_time": 1758304055.955091,
+      "threads_created": 6,
+      "thread_flexibility": "\u26a0\ufe0f Env vars"
+    },
+    "deepface_gender": {
+      "success": true,
+      "processing_time": 8.3991060256958,
+      "start_time": 1758304039.5468616,
+      "end_time": 1758304047.9459684,
+      "threads_created": 5,
+      "thread_flexibility": "\u26a0\ufe0f Env vars"
+    }
+  },
+  "thread_analysis": {
+    "total_threads_created": 64,
+    "threads_per_service": {
+      "yolo": 13,
+      "whisper": 12,
+      "mediapipe": 11,
+      "ocr": 9,
+      "scene_detection": 1,
+      "audio_energy": 7,
+      "emotion_detection": 6,
+      "deepface_gender": 5
+    },
+    "flexibility_summary": {
+      "yolo": "\u2705 cv2.set()",
+      "whisper": "\u2705 Direct",
+      "mediapipe": "\u274c Fixed",
+      "ocr": "\u2705 Direct",
+      "scene_detection": "\u2705 N/A",
+      "audio_energy": "\u2705 N/A",
+      "emotion_detection": "\u26a0\ufe0f Env vars",
+      "deepface_gender": "\u26a0\ufe0f Env vars"
+    }
+  }
+}

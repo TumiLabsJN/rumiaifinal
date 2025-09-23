@@ -1,0 +1,326 @@
+{
+  "test_date": "2025-09-19T17:06:47.626926",
+  "results": {
+    "parallel": [
+      {
+        "video": "18s_video",
+        "url": "https://www.tiktok.com/@meganlock_/video/7428596413707144481",
+        "mode": "parallel",
+        "expected_duration": 18,
+        "total_processing_time": 83.43886280059814,
+        "success": true,
+        "timestamp": "2025-09-19T16:55:27.552082",
+        "instrumentation": {
+          "bottleneck_service": null,
+          "max_service_time": null,
+          "total_memory_mb": null,
+          "services": {
+            "yolo": {
+              "time": 2.0028223991394043,
+              "success": true
+            },
+            "whisper": {
+              "time": 2.006152391433716,
+              "success": true
+            },
+            "mediapipe": {
+              "time": 3.0032119750976562,
+              "success": true
+            },
+            "ocr": {
+              "time": 22.59835910797119,
+              "success": true
+            },
+            "scene_detection": {
+              "time": 0.5014786720275879,
+              "success": true
+            },
+            "audio_energy": {
+              "time": 2.0276453495025635,
+              "success": true
+            },
+            "emotion_detection": {
+              "time": 9.544352054595947,
+              "success": true
+            },
+            "deepface_gender": {
+              "time": 5.004634618759155,
+              "success": true
+            }
+          }
+        }
+      },
+      {
+        "video": "73s_video",
+        "url": "https://www.tiktok.com/@janemukbangs/video/7500252920844193067",
+        "mode": "parallel",
+        "expected_duration": 73,
+        "total_processing_time": 113.64818000793457,
+        "success": true,
+        "timestamp": "2025-09-19T16:58:52.779048",
+        "instrumentation": {
+          "bottleneck_service": null,
+          "max_service_time": null,
+          "total_memory_mb": null,
+          "services": {
+            "yolo": {
+              "time": 3.504055976867676,
+              "success": true
+            },
+            "whisper": {
+              "time": 12.031014919281006,
+              "success": true
+            },
+            "mediapipe": {
+              "time": 7.01025128364563,
+              "success": true
+            },
+            "ocr": {
+              "time": 10.088415384292603,
+              "success": true
+            },
+            "scene_detection": {
+              "time": 1.5025808811187744,
+              "success": true
+            },
+            "audio_energy": {
+              "time": 3.503220558166504,
+              "success": true
+            },
+            "emotion_detection": {
+              "time": 39.144490242004395,
+              "success": true
+            },
+            "deepface_gender": {
+              "time": 5.506356477737427,
+              "success": true
+            }
+          }
+        }
+      },
+      {
+        "video": "120s_video",
+        "url": "https://www.tiktok.com/@jakedoesmusicsometimes/video/6923023955813092613",
+        "mode": "parallel",
+        "expected_duration": 120,
+        "total_processing_time": 167.43905878067017,
+        "success": true,
+        "timestamp": "2025-09-19T17:03:48.082080",
+        "instrumentation": {
+          "bottleneck_service": null,
+          "max_service_time": null,
+          "total_memory_mb": null,
+          "services": {
+            "yolo": {
+              "time": 4.003498554229736,
+              "success": true
+            },
+            "whisper": {
+              "time": 20.036681413650513,
+              "success": true
+            },
+            "mediapipe": {
+              "time": 10.5777006149292,
+              "success": true
+            },
+            "ocr": {
+              "time": 14.012139320373535,
+              "success": true
+            },
+            "scene_detection": {
+              "time": 3.003204822540283,
+              "success": true
+            },
+            "audio_energy": {
+              "time": 5.510261058807373,
+              "success": true
+            },
+            "emotion_detection": {
+              "time": 68.85018515586853,
+              "success": true
+            },
+            "deepface_gender": {
+              "time": 6.537772178649902,
+              "success": true
+            }
+          }
+        }
+      }
+    ],
+    "sequential": [
+      {
+        "video": "18s_video",
+        "url": "https://www.tiktok.com/@meganlock_/video/7428596413707144481",
+        "mode": "sequential",
+        "expected_duration": 18,
+        "total_processing_time": 83.96223449707031,
+        "success": true,
+        "timestamp": "2025-09-19T16:56:57.115152",
+        "instrumentation": {
+          "bottleneck_service": null,
+          "max_service_time": null,
+          "total_memory_mb": null,
+          "services": {
+            "yolo": {
+              "time": 5.5868470668792725,
+              "success": true
+            },
+            "whisper": {
+              "time": 2.004288673400879,
+              "success": true
+            },
+            "mediapipe": {
+              "time": 3.0029730796813965,
+              "success": true
+            },
+            "ocr": {
+              "time": 19.52078628540039,
+              "success": true
+            },
+            "scene_detection": {
+              "time": 0.501274585723877,
+              "success": true
+            },
+            "audio_energy": {
+              "time": 1.5030629634857178,
+              "success": true
+            },
+            "emotion_detection": {
+              "time": 13.640870571136475,
+              "success": true
+            },
+            "deepface_gender": {
+              "time": 5.007339954376221,
+              "success": true
+            }
+          }
+        }
+      },
+      {
+        "video": "73s_video",
+        "url": "https://www.tiktok.com/@janemukbangs/video/7500252920844193067",
+        "mode": "sequential",
+        "expected_duration": 73,
+        "total_processing_time": 123.83132362365723,
+        "success": true,
+        "timestamp": "2025-09-19T17:00:58.626804",
+        "instrumentation": {
+          "bottleneck_service": null,
+          "max_service_time": null,
+          "total_memory_mb": null,
+          "services": {
+            "yolo": {
+              "time": 3.0032498836517334,
+              "success": true
+            },
+            "whisper": {
+              "time": 12.111704349517822,
+              "success": true
+            },
+            "mediapipe": {
+              "time": 7.024286985397339,
+              "success": true
+            },
+            "ocr": {
+              "time": 6.507641792297363,
+              "success": true
+            },
+            "scene_detection": {
+              "time": 1.5029137134552002,
+              "success": true
+            },
+            "audio_energy": {
+              "time": 3.5034701824188232,
+              "success": true
+            },
+            "emotion_detection": {
+              "time": 37.129677295684814,
+              "success": true
+            },
+            "deepface_gender": {
+              "time": 9.094713687896729,
+              "success": true
+            }
+          }
+        }
+      },
+      {
+        "video": "120s_video",
+        "url": "https://www.tiktok.com/@jakedoesmusicsometimes/video/6923023955813092613",
+        "mode": "sequential",
+        "expected_duration": 120,
+        "total_processing_time": 177.52468490600586,
+        "success": true,
+        "timestamp": "2025-09-19T17:06:47.626420",
+        "instrumentation": {
+          "bottleneck_service": null,
+          "max_service_time": null,
+          "total_memory_mb": null,
+          "services": {
+            "yolo": {
+              "time": 4.003798484802246,
+              "success": true
+            },
+            "whisper": {
+              "time": 26.136695623397827,
+              "success": true
+            },
+            "mediapipe": {
+              "time": 7.006189584732056,
+              "success": true
+            },
+            "ocr": {
+              "time": 17.09245991706848,
+              "success": true
+            },
+            "scene_detection": {
+              "time": 3.0054540634155273,
+              "success": true
+            },
+            "audio_energy": {
+              "time": 5.005167722702026,
+              "success": true
+            },
+            "emotion_detection": {
+              "time": 73.95981574058533,
+              "success": true
+            },
+            "deepface_gender": {
+              "time": 6.008378505706787,
+              "success": true
+            }
+          }
+        }
+      }
+    ]
+  },
+  "comparison": [
+    {
+      "video": "18s_video",
+      "duration": 18,
+      "parallel_time": 83.43886280059814,
+      "sequential_time": 83.96223449707031,
+      "difference": 0.523371696472168,
+      "speedup_percent": -0.6272517132968597,
+      "faster_mode": "parallel"
+    },
+    {
+      "video": "73s_video",
+      "duration": 73,
+      "parallel_time": 113.64818000793457,
+      "sequential_time": 123.83132362365723,
+      "difference": 10.183143615722656,
+      "speedup_percent": -8.960234660169393,
+      "faster_mode": "parallel"
+    },
+    {
+      "video": "120s_video",
+      "duration": 120,
+      "parallel_time": 167.43905878067017,
+      "sequential_time": 177.52468490600586,
+      "difference": 10.085626125335693,
+      "speedup_percent": -6.023460833321417,
+      "faster_mode": "parallel"
+    }
+  ]
+}
