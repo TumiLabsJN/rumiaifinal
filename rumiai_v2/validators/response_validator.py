@@ -24,14 +24,6 @@ class ResponseValidator:
     
     # Prompt-specific block name mappings
     BLOCK_NAME_MAPPINGS = {
-        'creative_density': {
-            'densityCoreMetrics': 'CoreMetrics',
-            'densityDynamics': 'Dynamics',
-            'densityInteractions': 'Interactions',
-            'densityKeyEvents': 'KeyEvents',
-            'densityPatterns': 'Patterns',
-            'densityQuality': 'Quality'
-        },
         'emotional_journey': {
             'emotionalCoreMetrics': 'CoreMetrics',
             'emotionalDynamics': 'Dynamics',

@@ -27,8 +27,7 @@ sys.path.insert(0, project_root)
 
 from rumiai_v2.api import ApifyClient, MLServices
 from rumiai_v2.processors import (
-    VideoAnalyzer, TimelineBuilder, TemporalMarkerProcessor,
-    get_compute_function, COMPUTE_FUNCTIONS
+    VideoAnalyzer, TimelineBuilder, TemporalMarkerProcessor
 )
 from rumiai_v2.processors.temporal_compute import compute_temporal_windows
 from rumiai_v2.core.models import VideoMetadata
@@ -92,7 +91,6 @@ class RumiAIRunner:
     def get_prefix_for_type(self, insight_type: str) -> str:
         """Get the prefix used in RESULT format for each insight type."""
         prefix_map = {
-            'creative_density': 'density',
             'emotional_journey': 'emotional',
             'person_framing': 'personFraming',
             'scene_pacing': 'scenePacing', 
@@ -296,19 +294,7 @@ class RumiAIRunner:
             except Exception as e:
                 logger.error(f"Temporal windows computation failed: {e}")
                 prompt_results['temporal_windows'] = {}
-            
-            # Optionally still run old compute functions if needed for backward compatibility
-            # Uncomment the following if you need to keep old functions temporarily:
-            # for func_name, func in COMPUTE_FUNCTIONS.items():
-            #     try:
-            #         result = func(unified_analysis.to_dict())
-            #         prompt_results[func_name] = result
-            #         if result:
-            #             self.save_analysis_result(video_id, func_name, result)
-            #     except Exception as e:
-            #         logger.error(f"Precompute {func_name} failed: {e}")
-            #         prompt_results[func_name] = {}
-            
+
             # Step 7: Generate final report
             print("📊 generating_report... (95%)")
             report = self._generate_report(unified_analysis, prompt_results)

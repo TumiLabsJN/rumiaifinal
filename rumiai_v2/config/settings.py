@@ -49,7 +49,6 @@ class Settings:
         
         # Precompute settings - control which analyses use precompute
         self.precompute_enabled_analyses = {
-            'creative_density': True,  # HARDCODED
             'emotional_journey': True,  # HARDCODED
             'person_framing': True,  # HARDCODED
             'scene_pacing': True,  # HARDCODED

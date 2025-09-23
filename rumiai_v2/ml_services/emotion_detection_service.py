@@ -34,14 +34,14 @@ class EmotionDetectionService:
     def __init__(self, gpu: bool = True):
         """
         Initialize FEAT emotion detector with adaptive sampling
-        
+
         Args:
             gpu: Use GPU if available (processes at 2-4 FPS on consumer GPUs)
         """
         # FEAT uses ResNet-50 for emotion detection + AU detection
         # Trained on AffectNet (420K images) + BP4D+ for AUs
         device = 'cuda' if gpu and torch.cuda.is_available() else 'cpu'
-        
+
         # Initialize with best models
         try:
             from feat import Detector
@@ -54,25 +54,25 @@ class EmotionDetectionService:
             )
         except Exception as e:
             raise RuntimeError(f"FEAT initialization failed: {e}")
-        
+
         self.device = device
         # Sample rate now determined dynamically based on video duration
-        
+
         # FEAT emotion categories (already matches RumiAI)
         # anger, disgust, fear, happiness, sadness, surprise, neutral
         self.emotion_mapping = {
             'anger': 'anger',
-            'disgust': 'disgust', 
+            'disgust': 'disgust',
             'fear': 'fear',
             'happiness': 'joy',
             'sadness': 'sadness',
             'surprise': 'surprise',
             'neutral': 'neutral'
         }
-        
-        
+
+
         logger.info(f"FEAT emotion detector initialized (Device: {device})")
-    
+
     def get_adaptive_sample_rate(self, video_duration: float) -> float:
         """
         Adaptive sampling based on video duration

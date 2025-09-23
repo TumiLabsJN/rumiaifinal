@@ -165,7 +165,6 @@ def validate_output_contract(result: Dict[str, Any], function_name: str) -> None
     
     # Check for expected structure based on function
     expected_keys = {
-        'compute_creative_density_analysis': 'density_analysis',
         'compute_emotional_metrics': 'emotional_analysis',
         'compute_speech_analysis_metrics': 'speech_analysis',
         'compute_visual_overlay_metrics': 'visual_analysis',

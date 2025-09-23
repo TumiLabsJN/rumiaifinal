@@ -83,3 +83,6 @@ htmlcov/
 .coverage
 .pytest_cache/
 .aider*
+
+# Metric Files
+instrumentation_metrics/*.json

@@ -141,7 +141,6 @@ Claude Response Format Error:
   Got: Invalid structure
   
   Fix:
-  1. Check prompt template: cat prompt_templates/creative_density_v2.txt
   2. Verify API key: echo $ANTHROPIC_API_KEY | head -c 10
   3. Test with minimal prompt: curl https://api.anthropic.com/v1/messages
   4. Check rate limits and quotas

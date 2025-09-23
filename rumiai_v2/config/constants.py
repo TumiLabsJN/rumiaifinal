@@ -48,7 +48,6 @@ ML_MODELS = {
 
 # Prompt types
 PROMPT_TYPES = [
-    'creative_density',
     'emotional_journey',
     'speech_analysis',
     'visual_overlay_analysis',

@@ -2,44 +2,44 @@
 
 ## 🎯 What is RumiAI?
 
-**Current System**: TikTok video analyzer that extracts ML features through temporal window analysis.
-- **Core**: `rumiai_v2/processors/temporal_compute.py` - Computes features across hook/middle/closing windows
-- **Output**: JSON with 50+ features per temporal window for ML training
+**Current System**: TikTok video analyzer that extracts 60+ ML features through temporal window analysis.
+- **Core**: Processes videos through 9 ML services sequentially
+- **Output**: JSON with ~60 features per temporal window for pattern detection
+- **Purpose**: Internal tool for Tumi Labs' RippleOS consultancy to identify viral creative patterns
 
-## 📚 Understanding the System
+## 📚 START HERE - Documentation Reading Order
 
-### For Fresh CLI Instance (Start Here):
-1. **This file** - Quick operational overview
-2. **SystemArchitecture.md** - Complete technical flow and dependencies
-3. **Sample output**: `/insights/[video_id]_temporal_windows_updated.json` - See actual output
+### For Fresh CLI Instance:
+1. **[BusinessContext.md](./BusinessContext.md)** (1-2 min) - Why RumiAI exists, business problem, stakeholders
+2. **[SystemArchitecturev2.md](./SystemArchitecturev2.md)** (10-15 min) - Technical architecture, data flow, services
+3. **[MLROADMAP.md](./MLROADMAP.md)** (5 min) - Future ML pipeline development plans
 
 ### For Deep Technical Dives:
-- **Services**: See `/documentation_migration/services/*.md` (Phase 1 docs)
-- **Features**: See `/documentation_migration/features/*.md` (Phase 2 docs)
-
-### For Future ML Development:
-1. **MLMVP2.md** - Feature engineering architecture for ML training
-2. **MLProjectsGrassrootsv2.md** - Full ML training pipeline implementation plan
-3. **ImprovementsMLMVP.md** - Current feature improvements in progress
+- **TotalFeatures.md**: `/documentation_migration/services/TotalFeatures.md` - All 60+ features explained
+- **Service docs**: See `/documentation_migration/services/*.md` for individual service details
 
 ## 🚀 Key System Facts
 
 ### Current Capabilities
-- **Processing Time**: ~60-80 seconds per video
-- **Output**: Temporal windows JSON with 50+ features
-- **Window Structure**: Hook (0-3s), Middle segments (~7.6s each), Closing (last 3s)
-- **ML Services**: YOLO, Whisper, MediaPipe, OCR, Scene Detection, FEAT, DeepFace, Audio Energy
-- **Architecture**: Self-contained services with fail-fast validation
+- **Processing Time**: ~60-80 seconds for a 60-second video
+- **Output**: `temporal_windows_updated.json` with 60+ features per temporal window
+- **Window Structure**: Hook (0-3s), Middle segments (variable), Closing (last 3s)
+- **ML Services**: 9 services - YOLO, Whisper, MediaPipe, OCR, Scene Detection, FEAT, DeepFace, Audio Energy, Hashtag Analysis
+- **Processing Modes**: Sequential (default) or Parallel
+- **Architecture**: Self-contained services with fail-fast validation and checkpoint/resume
 
 
 ## 🔧 Common Commands
 
 ```bash
-# Analyze a video
-python3 scripts/rumiai_runner.py "VIDEO_URL"
+# Process a single video
+python rumiai_runner.py "https://tiktok.com/@user/video/123"
 
-# Test temporal compute directly
-python test_temporal_compute_v2.py
+# Set parallel processing mode (faster for short videos)
+export PARALLEL_MODE=true
+
+# Set sequential mode (default, better for long videos)
+export PARALLEL_MODE=false
 
 # View output structure
 cat insights/[video_id]_temporal_windows_updated.json | jq '.temporal_windows | keys'
@@ -48,26 +48,30 @@ cat insights/[video_id]_temporal_windows_updated.json | jq '.temporal_windows | 
 cat insights/[video_id]_temporal_windows_updated.json | jq '.temporal_windows.hook | keys'
 ```
 
-## ⚠️ Important Notes
-
-1. **Temporal Windows** - All features computed over hook/middle/closing segments
-2. **Fail-fast validation** - Services validate data integrity before processing
-3. **Self-contained services** - Each ML service can run independently
-4. **Unified timeline** - All ML outputs merged into single timeline before temporal compute
+## 🔧 Environment Variables
+- `PARALLEL_MODE`: true/false (processing mode)
+- `WHISPER_THREADS`: 1-16 (optimal: 4)
+- `CV2_THREADS`: 1-8 (optimal: 2)
+- `OMP_NUM_THREADS`: 1-8 (optimal: 2)
 
 ## 📁 Key File Locations
 
 ```
-/rumiai_v2/
-├── scripts/rumiai_runner.py         # Main entry point
-├── processors/
-│   ├── temporal_compute.py          # Core temporal window processing
-│   ├── timeline_builder.py          # ML data unification
-│   └── video_analyzer.py            # Service orchestration
-├── api/ml_services_unified.py       # ML service implementations
-└── insights/                         # Output JSONs
+/home/jorge/rumiaifinal/
+├── rumiai_runner.py                    # Main entry point
+├── video_analyzer.py                   # Core orchestrator
+├── timeline_builder.py                 # Temporal aggregation
+├── BusinessContext.md                  # Business context
+├── SystemArchitecturev2.md            # Technical architecture
+├── MLROADMAP.md                        # Future ML pipeline
+├── documentation_migration/
+│   └── services/
+│       └── TotalFeatures.md           # All 60+ features explained
+└── services/                           # Individual ML service modules
 ```
 
----
-
-*For comprehensive understanding, read SystemArchitecture.md. For specific components, see the Phase 1-2 documentation.*
+## 📊 For ML Development
+See [MLROADMAP.md](./MLROADMAP.md) for upcoming ML training pipeline that will:
+- Process 300 videos per hashtag
+- Train Random Forest + K-means models per duration bucket
+- Generate creative strategy reports for content creators

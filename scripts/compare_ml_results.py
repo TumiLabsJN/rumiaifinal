@@ -12,12 +12,12 @@ from glob import glob
 # Get arguments
 if len(sys.argv) < 3:
     print("Usage: python3 compare_ml_results.py <video_id_1> <video_id_2> [analysis_type]")
-    print("Example: python3 compare_ml_results.py 7518107389090876727 TestVideoTester12.08pt2 creative_density")
+    print("Example: python3 compare_ml_results.py 7518107389090876727 TestVideoTester12.08pt2 emotional_journey")
     sys.exit(1)
 
 video1_id = sys.argv[1]
 video2_id = sys.argv[2]
-analysis_type = sys.argv[3] if len(sys.argv) > 3 else 'creative_density'
+analysis_type = sys.argv[3] if len(sys.argv) > 3 else 'emotional_journey'
 
 # Find the ML files
 video1_files = glob(f'/home/jorge/rumiaifinal/insights/{video1_id}/{analysis_type}/{analysis_type}_ml_*.json')
@@ -55,8 +55,8 @@ if 'CoreMetrics' in prod and 'CoreMetrics' in test:
                 pct = (diff / prod_val * 100) if prod_val != 0 else 0
                 print(f"  {key:25} {prod_val:10.2f} → {test_val:10.2f}  ({pct:+.1f}%)")
 
-# For creative_density, show density curve comparison
-if analysis_type == 'creative_density' and 'Dynamics' in prod and 'Dynamics' in test:
+# For emotional_journey, show dynamics comparison
+if analysis_type == 'emotional_journey' and 'Dynamics' in prod and 'Dynamics' in test:
     prod_curve = prod['Dynamics'].get('densityCurve', [])
     test_curve = test['Dynamics'].get('densityCurve', [])
     

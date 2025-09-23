@@ -62,7 +62,6 @@ def check_field_naming(prod_data: dict, test_data: dict, file_type: str, analysi
         
         # Check for prefixed names in ML files (they shouldn't exist)
         prefix_map = {
-            'creative_density': 'density',
             'emotional_journey': 'emotional',
             'person_framing': 'framing',
             'scene_pacing': 'pacing',
@@ -80,7 +79,6 @@ def check_field_naming(prod_data: dict, test_data: dict, file_type: str, analysi
     elif file_type == 'result':
         # Result files should have analysis-specific names
         prefix_map = {
-            'creative_density': 'density',
             'emotional_journey': 'emotional',
             'person_framing': 'framing',
             'scene_pacing': 'pacing',
@@ -108,7 +106,7 @@ def main():
     test_base = Path("/home/jorge/rumiaifinal/insights/TestVideoTester12.08pt2")
     
     analysis_types = [
-        'creative_density', 'emotional_journey', 'metadata_analysis',
+        'emotional_journey', 'metadata_analysis',
         'person_framing', 'scene_pacing', 'speech_analysis',
         'temporal_markers', 'visual_overlay_analysis'
     ]
