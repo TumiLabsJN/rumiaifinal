@@ -23,13 +23,9 @@ DO NOT trust feature descriptions at face value. Each feature must be:
 | gaze_variance | Gaze | MediaPipe | eye_contact scores | Temporal | Float [0-∞] | Gaze stability affects viewer connection | Consistent eye contact builds trust and engagement | Medium | None | Variance of eye contact scores within window | None | None | Log + scale | Low | Medium |
 | eye_contact_rate | Gaze | MediaPipe | None | Temporal | Float [0-1] | Eye contact percentage drives viewer engagement | Higher rates suggest confident, direct communication | High | None | Mean eye contact score from gaze entries | None | None | Scale [0-1] | Low | Medium |
 | expression_count | Emotion | FEAT | None | Temporal | Integer [0-∞] | Facial expression frequency indicates emotional activity | More expressions suggest animated, engaging delivery | High | None | Direct count from FEAT emotion detections | None | None | Scale [0-1] | Low | High |
-| joy_ratio | Emotion | FEAT | expression_count | Temporal | Float [0-1] | Positive emotion frequency affects viewer mood | Higher joy correlates with viewer engagement and sharing | High | Colinear | All emotion ratios sum to 1.0 (perfect correlation) | None | None | Scale [0-1] | Low | High |
-| sadness_ratio | Emotion | FEAT | expression_count | Temporal | Float [0-1] | Negative emotion frequency for emotional range | Sadness can drive empathy and deeper connection | High | Colinear | All emotion ratios sum to 1.0 (perfect correlation) | None | None | Scale [0-1] | Low | High |
-| anger_ratio | Emotion | FEAT | expression_count | Temporal | Float [0-1] | Strong emotion frequency for intensity analysis | Anger indicates passion but may affect viewer comfort | High | Colinear | All emotion ratios sum to 1.0 (perfect correlation) | None | None | Scale [0-1] | Low | High |
-| fear_ratio | Emotion | FEAT | expression_count | Temporal | Float [0-1] | Anxiety emotion frequency for authenticity | Fear can indicate vulnerability and relatability | High | Colinear | All emotion ratios sum to 1.0 (perfect correlation) | None | None | Scale [0-1] | Low | High |
-| disgust_ratio | Emotion | FEAT | expression_count | Temporal | Float [0-1] | Negative reaction frequency for content analysis | Disgust may indicate reaction content or strong opinions | High | Colinear | All emotion ratios sum to 1.0 (perfect correlation) | None | None | Scale [0-1] | Low | High |
-| surprise_ratio | Emotion | FEAT | expression_count | Temporal | Float [0-1] | Surprise emotion frequency for novelty analysis | Surprise suggests unexpected content or reactions | High | Colinear | All emotion ratios sum to 1.0 (perfect correlation) | None | None | Scale [0-1] | Low | High |
-| neutral_ratio | Emotion | FEAT | expression_count | Temporal | Float [0-1] | Neutral expression frequency for baseline analysis | High neutral may indicate calm, professional delivery | High | Colinear | All emotion ratios sum to 1.0 (perfect correlation) | None | None | Scale [0-1] | Low | High |
+| dominant_emotion_id | Emotion | FEAT | expression_timeline | Window-level | Categorical (1-7) | High | Shows emotional hook/CTA | High | No | 1=joy, 2=sadness, 3=anger, 4=fear, 5=disgust, 6=surprise, 7=neutral. Ties: first wins | One-hot encoding (7 binary) | Simple | One-hot encoding (7 binary) | Simple | O(n) |
+| emotional_valence | Emotion | FEAT | expression_timeline | Window-level | Continuous (-1.0 to 1.0) | High | Positive vs negative tone | High | No | (joy -(sadness+anger+fear+disgust))/total. Surprise excluded as ambiguous | Direct use | Simple | Direct use | Simple | O(n) | 
+| emotion_consistency | Emotion | FEAT | expression_timeline | Window-level | Continuous (0.0 to 1.0)  | Medium | Shows emotional focus vs chaos | High | No | max(emotion_counts)/total. 1.0=all same, 0.17=all different | Direct use | Simple | Direct use | Simple | O(n) |
 
 ---
 
@@ -228,7 +224,6 @@ What emotional range and intensity does the creator display throughout their con
 ### ML Significance
 - **Predictive Power**: HIGH for engagement prediction - emotional expressiveness drives viewer connection and sharing behavior
 - **Feature Type**: Count and ratio distribution across 7 emotion categories
-- **Correlation with Success**: Joy-dominant content (60-80% joy_ratio) outperforms neutral content, but mixed emotions show highest engagement
 
 ### Legacy ML Insights
 ```
@@ -245,13 +240,6 @@ What emotional range and intensity does the creator display throughout their con
 {
   "hook": {
     "expression_count": 0-∞,          // Total emotion detections
-    "joy_ratio": 0.0-1.0,             // Joy expressions / total
-    "sadness_ratio": 0.0-1.0,         // Sadness expressions / total
-    "anger_ratio": 0.0-1.0,           // Anger expressions / total
-    "fear_ratio": 0.0-1.0,            // Fear expressions / total
-    "disgust_ratio": 0.0-1.0,         // Disgust expressions / total
-    "surprise_ratio": 0.0-1.0,        // Surprise expressions / total
-    "neutral_ratio": 0.0-1.0          // Neutral expressions / total
   },
   "middle_segments": [...],           // Same metrics per segment
   "closing": {...}                    // Same metrics
@@ -326,7 +314,6 @@ assert 0 <= data['temporal_windows']['hook']['eye_contact_rate'] <= 1
 
 # Check Emotion features
 assert 'expression_count' in data['temporal_windows']['hook']
-emotions = ['joy', 'sadness', 'anger', 'fear', 'disgust', 'surprise', 'neutral']
 for emotion in emotions:
     ratio_key = f'{emotion}_ratio'
     assert ratio_key in data['temporal_windows']['hook']
@@ -376,21 +363,14 @@ assert has_emotion_entries or window_data['expression_count'] == 0
 
 ### For Engagement Prediction
 1. **eye_contact_rate in hook**: 0.61 correlation - direct viewer connection critical for retention
-2. **joy_ratio in hook**: 0.58 correlation - positive emotions drive immediate engagement
-3. **expression_count consistency**: 0.45 correlation - emotional activity indicates dynamic content
-4. **gesture_count in middle**: 0.38 correlation - hand movements suggest animated presentation
+2. **expression_count consistency**: 0.45 correlation - emotional activity indicates dynamic content
+3. **gesture_count in middle**: 0.38 correlation - hand movements suggest animated presentation
 
 ### For Creator Style Classification
 1. **emotion ratio distribution**: Best separator for content types (educational vs entertainment vs reaction)
 2. **gaze_variance patterns**: Distinguishes confident (low variance) vs nervous (high variance) presenters
 3. **gesture_count consistency**: Separates animated vs static presentation styles
 4. **expression_count vs speech_coverage**: Identifies talking-head vs voice-over content
-
-### For Content Type Detection
-1. **joy_ratio dominance**: Entertainment content typically >60% joy
-2. **surprise_ratio spikes**: Reaction content shows high surprise patterns
-3. **neutral_ratio + low gesture_count**: Educational/tutorial content indicators
-4. **eye_contact_rate consistency**: Professional vs casual content production
 
 ### Cross-Feature Correlations to Monitor
 1. **All emotion ratios**: Perfect colinearity (sum = 1.0) - consider using raw counts or dominant emotion only

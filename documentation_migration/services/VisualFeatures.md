@@ -19,15 +19,9 @@ DO NOT trust feature descriptions at face value. Each feature must be:
 
 | Feature Name | Category | Source Services | Dependencies | Temporal Type | Data Type & Range | ML Importance | Creator Benefit | Reliability | Doubtful | Comments | RF Transform | RF Complexity | KM Transform | KM Complexity | Feature Time |
 |--------------|----------|-----------------|--------------|---------------|-------------------|---------------|----------------|-------------|----------|----------|--------------|---------------|--------------|---------------|--------------|
-| close_ratio | Person Framing | MediaPipe | None | Temporal | Float [0-1] | Face prominence in hook critical for engagement | Shows intimate vs distant creator style | High | None | Direct face area measurement from bbox | None | None | Scale [0-1] | Low | Low |
-| medium_ratio | Person Framing | MediaPipe | None | Temporal | Float [0-1] | Standard framing frequency | Balances intimacy with context visibility | High | Colinear | Sum with other ratios = 1.0 (perfect correlation) | None | None | Scale [0-1] | Low | Low |
-| wide_ratio | Person Framing | MediaPipe | None | Temporal | Float [0-1] | Product/environment focus vs face focus | Shows product-focused content strategy | High | Colinear | Sum with other ratios = 1.0 (perfect correlation) | None | None | Scale [0-1] | Low | Low |
-| none_ratio | Person Framing | MediaPipe | None | Temporal | Float [0-1] | No face visibility frequency | Indicates B-roll or product-only content | High | Colinear | Sum with other ratios = 1.0 (perfect correlation) | None | None | Scale [0-1] | Low | Low |
 | average_face_size | Person Framing | MediaPipe | None | Temporal | Float [0-1] | Overall face prominence magnitude | Continuous intimacy metric vs discrete ratios | High | None | Mean of face bbox areas in percentage | None | None | Scale [0-1] | Low | Low |
-| element_count | Creative Density | YOLO, MediaPipe, OCR, Scene Detection | object_count, text counts, gesture_count, expression_count, scene_count | Temporal | Integer [0-∞] | Overall visual complexity | More elements may increase engagement through novelty | Medium | Derivative | Sum of 6 component counts - use components instead | None | None | Scale [0-1] | Medium | Medium |
 | max_density | Creative Density | YOLO, MediaPipe, OCR, Scene Detection | element_count per second intervals | Temporal | Float [0-∞] | Peak visual complexity moment | Shows maximum information density | Medium | Derivative | Maximum of per-second element counts | None | None | Log + scale | Medium | Medium |
 | min_density | Creative Density | YOLO, MediaPipe, OCR, Scene Detection | element_count per second intervals | Temporal | Float [0-∞] | Minimum visual complexity moment | Shows quietest visual moments | Medium | Derivative | Minimum of per-second element counts | None | None | Log + scale | Medium | Medium |
-| avg_density | Creative Density | YOLO, MediaPipe, OCR, Scene Detection | element_count, duration | Temporal | Float [0-∞] | Average visual complexity rate | Overall pacing assessment | Medium | Derivative | element_count / duration - redundant | None | None | Log + scale | Medium | Medium |
 | overlay_unique_count | Text Overlays | OCR | None | Temporal | Integer [0-∞] | Unique marketing text overlay count | More overlays may indicate professional production | High | None | Count of unique text overlays (not captions) | None | None | Scale [0-1] | Low | Medium |
 | overlay_coverage | Text Overlays | OCR | overlay timestamps, duration | Temporal | Float [0-1] | Percentage of time overlays visible | High coverage indicates text-heavy content | High | None | Time with overlays visible / total duration | None | None | Scale [0-1] | Low | Medium |
 | overlay_persistence | Text Overlays | OCR | overlay timestamps | Temporal | Float [0-1] | Average overlay display duration | Longer persistence suggests marketing vs quick captions | High | None | Mean duration each overlay stays visible | None | None | Scale [0-1] | Low | Medium |
@@ -68,10 +62,6 @@ How prominently is the creator's face featured throughout different video segmen
 ```json
 {
   "hook": {
-    "close_ratio": 0.0-1.0,      // >25% face area frames / total frames
-    "medium_ratio": 0.0-1.0,     // 8-25% face area frames / total frames
-    "wide_ratio": 0.0-1.0,       // <8% face area frames / total frames
-    "none_ratio": 0.0-1.0,       // No face visible / total frames
     "average_face_size": 0.0-1.0 // Mean face area as percentage [0-100] / 100
   },
   "middle_segments": [...],      // Same metrics per segment
@@ -83,12 +73,6 @@ How prominently is the creator's face featured throughout different video segmen
 ⚠️ **VERIFIED: All features exist in temporal windows JSON output**
 Reference: `/insights/7515687288257465630_temporal_windows_updated.json:45` for average_face_size
 
-| Metric | Formula (temporal_compute.py:1391-1414) | Range | Interpretation |
-|--------|---------|-------|----------------|
-| close_ratio | faces_area>25% / total_frames | 0-1 | Intimate framing percentage |
-| medium_ratio | 8%<faces_area<25% / total_frames | 0-1 | Standard framing percentage |
-| wide_ratio | faces_area<8% / total_frames | 0-1 | Distant framing percentage |
-| none_ratio | no_faces / total_frames | 0-1 | No face visible percentage |
 | average_face_size | mean(face_areas) / 100.0 | 0-1 | Overall prominence magnitude |
 
 ## 🔄 Data Pipeline
@@ -167,7 +151,6 @@ How visually complex and information-dense is the content at different moments?
 ### Legacy ML Insights
 ```
 ⚠️ VERIFIED: From temporal_compute.py:1246-1329 implementation
-- element_count is sum of 6 types: texts + objects + gestures + expressions + scenes
 - Density calculated as elements per second intervals for min/max detection
 - Stickers removed from calculation (see StickersProblem.md reference)
 ```
@@ -178,10 +161,8 @@ How visually complex and information-dense is the content at different moments?
 ```json
 {
   "hook": {
-    "element_count": 0-∞,        // Sum of all detected elements
     "max_density": 0.0-∞,        // Peak elements per second
     "min_density": 0.0-∞,        // Lowest elements per second
-    "avg_density": 0.0-∞         // Total elements / duration
   },
   "middle_segments": [...],      // Same metrics per segment
   "closing": {...}               // Same metrics
@@ -194,10 +175,8 @@ Reference: `/insights/7430952519439846698_temporal_windows_updated.json:15-18`
 
 | Metric | Formula (temporal_compute.py:1246-1329) | Range | Interpretation |
 |--------|---------|-------|----------------|
-| element_count | overlay_count + caption_count + object_count + gesture_count + expression_count + scene_count | 0-∞ | Total visual elements |
 | max_density | max(elements_per_second_buckets) | 0-∞ | Peak information density |
 | min_density | min(elements_per_second_buckets) | 0-∞ | Sparsest moment density |
-| avg_density | element_count / duration | 0-∞ | Average elements per second |
 
 ## 🔄 Data Pipeline
 
@@ -227,13 +206,11 @@ Temporal Windows Output
 ## 🎨 Feature Engineering Opportunities
 
 ### Current Limitations
-- element_count is derivative (sum of available components)
 - Density metrics may be noisy from 1-second bucketing
 - No weighting by element importance (text overlay ≠ scene change)
 - Missing temporal smoothing for density trends
 
 ### Proposed Enhancements
-- [ ] Use component counts directly instead of element_count sum
 - [ ] Add density_trend (increasing/decreasing/stable across segments)
 - [ ] Implement weighted_density (different weights for element types)
 - [ ] Add density_variance for pacing consistency measurement
@@ -510,14 +487,8 @@ with open('insights/[video_id]_temporal_windows_updated.json') as f:
     data = json.load(f)
 
 # Check Person Framing features
-assert 'close_ratio' in data['temporal_windows']['hook']
 assert 'average_face_size' in data['temporal_windows']['hook']
 assert sum([data['temporal_windows']['hook'][f'{t}_ratio']
-           for t in ['close', 'medium', 'wide', 'none']]) <= 1.01  # Allow rounding
-
-# Check Creative Density features
-assert 'element_count' in data['temporal_windows']['hook']
-assert data['temporal_windows']['hook']['avg_density'] >= 0
 
 # Check Text Overlay features
 assert 'overlay_unique_count' in data['temporal_windows']['hook']
@@ -561,7 +532,6 @@ for window in ['hook', 'closing']:
 ### For Creator Style Classification
 1. **wide_ratio in middle**: Best separator for product-focused vs talking-head content
 2. **scene_count variance**: Distinguishes dynamic vs static editing styles
-3. **element_count consistency**: Separates professional vs amateur production
 
 ### For Content Type Detection
 1. **person_count patterns**: Single vs multi-person content strategies

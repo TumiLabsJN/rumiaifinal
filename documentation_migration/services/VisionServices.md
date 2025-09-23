@@ -52,19 +52,21 @@ python3 scripts/rumiai_runner.py 'VIDEO_URL'
 
 ## ⚡ Performance Profile
 ```
-Note: Individual service timing cannot be isolated in production.
+Note: Individual service timing measured with tracking enabled (2025-09-23)
 
-Resource Usage (from isolated testing):
-- Memory: ~75 MB peak
+Resource Usage (with tracking enabled):
+- Memory: ~942 MB peak (was 275 MB without tracking)
+- Processing Time: ~4s for 132 frames (was 1s without tracking)
 - CPU: 100% single core average
 - GPU Compatible: ⚠️ Optional (CUDA supported, falls back to CPU)
 - GPU Usage (if available): ~30% average
 
 Configuration:
+- Tracking: ByteTrack algorithm (persist=True, iou=0.3, conf=0.3)
 - Parallelizable: Yes (within single video)
 - Frame Batching: Yes (10 frames per batch within video)
 - Video Processing: Sequential (one video at a time)
-- Current Status: ✅ Optimized for single video
+- Current Status: ✅ Real object tracking implemented
 ```
 
 ## 📹 Frame Sampling Strategy
@@ -119,20 +121,22 @@ Frame Data ─────────> YOLO Processing ────────
 
 2. Processing Stage
    ├── Step 1: Load YOLOv8n model (lazy loading)
-   ├── Step 2: Process frames in batches of 10
-   ├── Step 3: Track objects across frames with unique IDs
-   └── Step 4: Filter by confidence threshold
+   ├── Step 2: Sort frames by frame_number for temporal consistency
+   ├── Step 3: Process frames with model.track() using ByteTrack algorithm
+   ├── Step 4: Assign real instance IDs (1, 2, 3...) or fallback IDs (10000+)
+   └── Step 5: Filter by confidence threshold
 
 3. Output Stage
    └── {
        'objectAnnotations': [
          {
-           'trackId': 'obj_0_55',
+           'trackId': 'obj_0_1',  // Real instance ID 1
            'className': 'person',
            'confidence': 0.85,
            'timestamp': 1.5,
            'bbox': [100, 200, 50, 150],
-           'frame_number': 45
+           'frame_number': 45,
+           'tracked': true  // Indicates real tracking vs fallback
          }
        ],
        'metadata': {
@@ -174,12 +178,13 @@ Tests:
 
 ## 🐛 Current Issues & Future Fixes
 
-### Priority: MEDIUM 🟡
-- **Issue**: Object tracking IDs sometimes reset mid-video
-- **Impact**: May miss continuous object presence
-- **Current Workaround**: Using frame-based matching
-- **Proposed Fix**: Implement more robust tracking algorithm
-- **Files Affected**: ml_services_unified.py
+### ✅ COMPLETED: Real Object Tracking
+- **Previous Issue**: Object tracking used fake class-based IDs (0 for person, 39 for bottle)
+- **Solution Implemented**: ByteTrack algorithm with `model.track(persist=True, iou=0.3, conf=0.3)`
+- **Performance Impact**: Processing time 1s → 4s (4x slower), Memory +667MB
+- **Accuracy Improvement**: Unique objects now correctly tracked (2-7 objects vs 17+ before)
+- **Implementation Date**: 2025-09-23
+- **Files Modified**: ml_services_unified.py (_process_yolo_batch method)
 
 ### Priority: LOW 🟢
 - **Issue**: Batch size hardcoded to 10
@@ -195,7 +200,7 @@ Tests:
 | GPU fallback | CUDA unavailable | 3-5x slower processing | Automatic CPU fallback | 15-20% |
 | Frame processing error | Corrupted frame data | Skip problematic frames | Continue with next frame | 5-8% |
 | Memory exhaustion | Large batch sizes | Service timeout | Fixed batch size (10 frames) | 10-15% |
-| Tracking ID reset | Object disappears/reappears | Inconsistent tracking | Frame-based matching workaround | 30-40% |
+| Missing lap package | ByteTrack dependency missing | No tracking (fallback IDs) | Install lap with pip | <1% (first run) |
 | Processing timeout | Complex scenes, slow CPU | Incomplete detection | 300s timeout, return partial | 2-3% |
 
 ### Graceful Degradation Strategy
@@ -233,6 +238,7 @@ python3 scripts/rumiai_runner.py 'VIDEO_URL'
 
 ## 📈 Optimization Opportunities
 - [x] **Frame batching**: Already implemented (10 frames per batch within video)
+- [x] **Object tracking**: Implemented with ByteTrack algorithm (2025-09-23)
 - [ ] **GPU acceleration**: Available but not always utilized
 - [ ] **Model quantization**: YOLOv8n → YOLOv8n-int8 could reduce model size
 - [ ] **Adaptive sampling**: Skip similar frames to reduce processing
@@ -241,6 +247,7 @@ python3 scripts/rumiai_runner.py 'VIDEO_URL'
 ```
 External Libraries:
 ├── ultralytics version 8.0+ (YOLO implementation)
+├── lap version 0.5+ (ByteTrack algorithm for object tracking)
 ├── opencv-python version 4.5+ (frame processing)
 └── numpy version 1.19+ (array operations)
 
@@ -622,6 +629,10 @@ Timeline Integration:
 Temporal Processing:
 └── /rumiai_v2/processors/temporal_compute.py
     └── Used for overlay_coverage, overlay_persistence, has_captions
+
+Advanced Text Tracking:
+└── For detailed implementation of text persistence, deduplication,
+    and temporal tracking algorithms, see [VisionServices-OCR-Advanced.md](./VisionServices-OCR-Advanced.md)
 ```
 
 ## 🐛 Current Issues & Future Fixes

@@ -1093,46 +1093,74 @@ def calculate_speech_content_indicators(speech_segments, start, end, duration):
         'has_speech_cta': has_speech_cta
     }
 
-def calculate_max_unique_persons(segment_objects, confidence_threshold=0.5):
+def extract_instance_id(track_id: str) -> Optional[str]:
     """
-    Calculate the maximum number of unique persons visible at any point in the segment.
-
-    This counts unique persons by finding the maximum number of unique trackIds
-    at any single timestamp, after filtering by confidence.
+    Extract instance ID from YOLO trackId with strict validation.
 
     Args:
-        segment_objects: List of object detections from YOLO
-        confidence_threshold: Minimum confidence to consider a detection valid
+        track_id: YOLO tracking ID (e.g., "obj_10_39")
 
     Returns:
-        int: Maximum number of unique persons visible at any point
+        Instance ID string or None if invalid format
     """
-    # Filter for person detections with sufficient confidence
-    person_detections = [
-        obj for obj in segment_objects
-        if (obj.get('className') == 'person' or obj.get('label') == 'person')
-        and obj.get('confidence', 0) >= confidence_threshold
-    ]
+    if not track_id or '_' not in track_id:
+        return None
 
-    if not person_detections:
-        return 0
+    parts = track_id.split('_')
 
-    # Group by timestamp
-    from collections import defaultdict
-    detections_by_timestamp = defaultdict(list)
+    # Strict validation: must be exactly 3 parts
+    if len(parts) != 3 or parts[0] != 'obj':
+        return None
 
-    for detection in person_detections:
-        timestamp = detection.get('timestamp', 0)
-        track_id = detection.get('trackId', f"unknown_{id(detection)}")
-        detections_by_timestamp[timestamp].append(track_id)
+    # Validate numeric parts
+    try:
+        int(parts[1])  # Frame number must be valid
+        int(parts[2])  # Instance ID must be valid
+        return parts[2]
+    except ValueError:
+        return None
 
-    # Find maximum unique persons at any timestamp
-    max_persons = 0
-    for timestamp, track_ids in detections_by_timestamp.items():
-        unique_persons = len(set(track_ids))
-        max_persons = max(max_persons, unique_persons)
-
-    return max_persons
+# DEPRECATED: Replaced by instance-based counting in the main computation
+# def calculate_max_unique_persons(segment_objects, confidence_threshold=0.5):
+#     """
+#     Calculate the maximum number of unique persons visible at any point in the segment.
+#
+#     This counts unique persons by finding the maximum number of unique trackIds
+#     at any single timestamp, after filtering by confidence.
+#
+#     Args:
+#         segment_objects: List of object detections from YOLO
+#         confidence_threshold: Minimum confidence to consider a detection valid
+#
+#     Returns:
+#         int: Maximum number of unique persons visible at any point
+#     """
+#     # Filter for person detections with sufficient confidence
+#     person_detections = [
+#         obj for obj in segment_objects
+#         if (obj.get('className') == 'person' or obj.get('label') == 'person')
+#         and obj.get('confidence', 0) >= confidence_threshold
+#     ]
+#
+#     if not person_detections:
+#         return 0
+#
+#     # Group by timestamp
+#     from collections import defaultdict
+#     detections_by_timestamp = defaultdict(list)
+#
+#     for detection in person_detections:
+#         timestamp = detection.get('timestamp', 0)
+#         track_id = detection.get('trackId', f"unknown_{id(detection)}")
+#         detections_by_timestamp[timestamp].append(track_id)
+#
+#     # Find maximum unique persons at any timestamp
+#     max_persons = 0
+#     for timestamp, track_ids in detections_by_timestamp.items():
+#         unique_persons = len(set(track_ids))
+#         max_persons = max(max_persons, unique_persons)
+#
+#     return max_persons
 
 def calculate_eye_contact_rate(timeline_entries: List[Dict], start: float, end: float) -> float:
     """
@@ -1236,18 +1264,30 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     
     # Calculate all P0 required counts
     # sticker_count removed - see StickersProblem.md for why
-    object_count = len(segment_objects)
-    # MVP: Count unique persons (maximum at any timestamp)
-    person_count = calculate_max_unique_persons(segment_objects)
+
+    # NEW: Count unique object instances using YOLO's trackId with strict validation
+    unique_instances = set()
+    person_instances = set()
+
+    for obj in segment_objects:
+        # Extract instance ID using the validation function
+        instance_id = extract_instance_id(obj.get('trackId', ''))
+        if instance_id is not None:
+            unique_instances.add(instance_id)
+
+            # Also track person instances
+            if obj.get('className') == 'person':
+                person_instances.add(instance_id)
+
+    object_count = len(unique_instances)
+    person_count = len(person_instances)  # Replaces calculate_max_unique_persons()
+
     gesture_count = len(segment_gestures)
     expression_count = len(segment_expressions)
     scene_count = len(segment_scenes)
     
-    # P0 spec: element_count is sum of ALL 6 types
-    # Use overlay + caption count instead of removed unique_text_count
-    total_unique_texts = text_metrics.get('overlay_unique_count', 0) + text_metrics.get('caption_unique_count', 0)
-    total_elements = (total_unique_texts + 
-                     object_count + gesture_count + expression_count + scene_count)
+    # element_count removed per MLFeaturesGIGO.md - pure derivative
+    # ML can compute sum if needed from raw components
     
     # Calculate scene durations for this segment (P0 requirement)
     scene_durations = []
@@ -1273,9 +1313,9 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
                 if scene_duration > 0:
                     scene_durations.append(scene_duration)
     
-    # Calculate density metrics
-    avg_density = total_elements / duration if duration > 0 else 0
-    changes_per_second = scene_count / duration if duration > 0 else 0
+    # Density metrics removed per MLFeaturesGIGO.md
+    # avg_density is element_count/duration (double derivative)
+    # changes_per_second is scene_count/duration (simple division)
     
     # Calculate density extremes (P0 requirement)
     # Single-pass bucketing for O(n) performance instead of O(n*m)
@@ -1332,10 +1372,8 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         speech_segments, start, end, duration
     )
 
-    # Calculate speech content indicators (NEW)
-    speech_content_indicators = calculate_speech_content_indicators(
-        speech_segments, start, end, duration
-    )
+    # Speech content indicators removed per MLFeaturesGIGO.md
+    # Arbitrary keyword matching creates false signals
 
     # Calculate gaze variance (NEW)
     gaze_variance = calculate_gaze_variance(
@@ -1362,10 +1400,44 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
             emotion_counts[emotion] += 1
     
     total_emotions = len(segment_expressions)
-    emotion_dist = {
-        f'{emotion}_ratio': count / total_emotions if total_emotions > 0 else 0
-        for emotion, count in emotion_counts.items()
+    # Emotion ratios removed per MLFeaturesGIGO.md - perfect multicollinearity
+    # Replaced with new non-collinear features below
+
+    # Calculate new emotion features (MLFeaturesGIGO.md)
+    emotion_encoding = {
+        'joy': 1, 'sadness': 2, 'anger': 3, 'fear': 4,
+        'disgust': 5, 'surprise': 6, 'neutral': 7
     }
+
+    if total_emotions > 0:
+        # Feature 1: Dominant emotion (with deterministic tie handling)
+        max_count = max(emotion_counts.values())
+        dominant_emotion = None
+        # First emotion in this order wins ties
+        for emotion in ['joy', 'sadness', 'anger', 'fear', 'disgust', 'surprise', 'neutral']:
+            if emotion_counts.get(emotion, 0) == max_count:
+                dominant_emotion = emotion
+                break
+        dominant_emotion_id = emotion_encoding[dominant_emotion]
+
+        # Feature 2: Emotional valence (-1 to +1)
+        # Note: Surprise excluded as it's ambiguous (can be positive or negative)
+        positive_count = emotion_counts.get('joy', 0)
+        negative_count = (emotion_counts.get('sadness', 0) +
+                         emotion_counts.get('anger', 0) +
+                         emotion_counts.get('fear', 0) +
+                         emotion_counts.get('disgust', 0))
+        # Neutral and surprise don't affect valence
+        emotional_valence = (positive_count - negative_count) / total_emotions
+
+        # Feature 3: Emotion consistency (how unified)
+        max_emotion_count = max(emotion_counts.values())
+        emotion_consistency = max_emotion_count / total_emotions
+    else:
+        # No emotions detected - use defaults
+        dominant_emotion_id = 7  # neutral
+        emotional_valence = 0.0
+        emotion_consistency = 0.0
     
     # Calculate framing distribution from face bbox sizes
     # Since camera_distance entries don't exist, calculate from face entries
@@ -1403,11 +1475,8 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     if not segment_faces:
         framing_counts['none'] = 1
 
-    total_camera_frames = sum(framing_counts.values()) if sum(framing_counts.values()) > 0 else 1
-    framing_dist = {
-        f'{frame_type}_ratio': count / total_camera_frames if total_camera_frames > 0 else 0
-        for frame_type, count in framing_counts.items()
-    }
+    # Framing ratios removed per MLFeaturesGIGO.md - multicollinearity issue
+    # Only keeping average_face_size as continuous metric
 
     # Calculate average face size (new feature from personframingfix.md)
     # Note: face_areas are already in percentage (0-100), convert to 0-1 range
@@ -1430,16 +1499,13 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
                 energy_level = float(np.mean(segment_rms))
                 energy_variance = float(np.var(segment_rms))
                 energy_max = float(np.max(segment_rms))
-                burst_pattern = calculate_burst_pattern_for_window(segment_rms)
+                # burst_pattern removed per MLFeaturesGIGO.md
             else:
                 energy_level = energy_variance = energy_max = 0.0
-                burst_pattern = 'steady'
         else:
             energy_level = energy_variance = energy_max = 0.0
-            burst_pattern = 'steady'
     else:
         energy_level = energy_variance = energy_max = 0.0
-        burst_pattern = 'steady'
 
     # Calculate pitch metrics if available
     pitch_metrics = calculate_pitch_metrics(audio_data, ml_data, start, end)
@@ -1467,33 +1533,34 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         'gesture_count': gesture_count,
         'expression_count': expression_count,
         'scene_count': scene_count,
-        'element_count': total_elements,  # Sum of all 6 types
+        # element_count removed per MLFeaturesGIGO.md - pure derivative
         # P0 density extremes
         'max_density': max_density,
         'min_density': min_density,
-        'avg_density': avg_density,
+        # avg_density removed - element_count/duration
         # P1 scene duration metrics
         'shortest_scene': shortest_scene,
         'longest_scene': longest_scene,
         # P2 scene variance
         'scene_duration_variance': scene_duration_variance,
         # Other metrics
-        'changes_per_second': changes_per_second,
+        # changes_per_second removed - scene_count/duration
         'speech_coverage': speech_coverage,
         'word_count': word_count,
-        **speech_content_indicators,  # Unpack speech content indicators (NEW)
+        # semantic speech features removed per MLFeaturesGIGO.md - arbitrary keywords
         'gaze_variance': gaze_variance,  # Gaze variance (NEW)
         'eye_contact_rate': eye_contact_rate,  # Eye contact rate (NEW - Temporal Eye Contact Metrics)
-        # Emotion distribution
-        **emotion_dist,
-        # Framing distribution (camera shot types)
-        **framing_dist,
+        # New emotion features (replace removed ratios)
+        'dominant_emotion_id': dominant_emotion_id,
+        'emotional_valence': round(emotional_valence, 4),
+        'emotion_consistency': round(emotion_consistency, 4),
+        # Framing ratios removed - multicollinearity
         'average_face_size': round(average_face_size, 4),  # New ML feature: continuous face size metric
         # Audio energy
         'energy_level': energy_level,
         'energy_variance': energy_variance,
         'energy_max': energy_max,
-        'burst_pattern': burst_pattern,
+        # burst_pattern removed - arbitrary categorization
         # Pitch metrics
         **pitch_metrics  # Unpack all pitch metrics
     }
@@ -1725,7 +1792,7 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
         hook_data['energy_level'] = audio_energy_metrics.get('hook_energy_level', 0)
         hook_data['energy_variance'] = audio_energy_metrics.get('hook_energy_variance', 0)
         hook_data['energy_max'] = audio_energy_metrics.get('hook_energy_max', 0)
-        hook_data['burst_pattern'] = audio_energy_metrics.get('hook_burst_pattern', 'steady')
+        # burst_pattern removed per MLFeaturesGIGO.md
     
     # ============================================
     # STEP 6: Process Middle Segments
@@ -1755,7 +1822,7 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
         closing_data['energy_level'] = audio_energy_metrics.get('closing_energy_level', 0)
         closing_data['energy_variance'] = audio_energy_metrics.get('closing_energy_variance', 0)
         closing_data['energy_max'] = audio_energy_metrics.get('closing_energy_max', 0)
-        closing_data['burst_pattern'] = audio_energy_metrics.get('closing_burst_pattern', 'steady')
+        # burst_pattern removed per MLFeaturesGIGO.md
     
     # ============================================
     # STEP 8: Calculate Metadata

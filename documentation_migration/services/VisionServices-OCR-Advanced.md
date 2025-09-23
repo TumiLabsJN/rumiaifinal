@@ -1,7 +1,11 @@
-# Text Overlay v2: Overlay vs Caption Classification
+# VisionServices OCR Advanced: Text Overlay Tracking & Classification
+
+> **Part of**: [VisionServices.md](./VisionServices.md) → OCR Service → Advanced Features
+
 **Created**: 2025-01-16
 **Status**: Implemented & Simplified
 **Location**: `/home/jorge/rumiaifinal/rumiai_v2/processors/temporal_compute.py`
+**Document Type**: Technical Deep Dive
 
 ---
 

@@ -29,6 +29,7 @@ class UnifiedMLServices:
         self.frame_manager = get_frame_manager()
         self._models = {}  # Models loaded on demand
         self._gesture_service = None  # Add gesture service instance
+        self.next_fallback_id = 10000  # For YOLO tracking fallback IDs
         self._model_locks = {
             'yolo': asyncio.Lock(),
             'mediapipe': asyncio.Lock(),
@@ -271,21 +272,49 @@ class UnifiedMLServices:
         return result
     
     def _process_yolo_batch(self, model, frames: List[FrameData]) -> List[Dict]:
-        """Process a batch of frames with YOLO (sync)"""
+        """Process frames with YOLO tracking enabled"""
         results = []
-        for frame_data in frames:
-            detections = model(frame_data.image, verbose=False)
-            
+
+        # Initialize fallback ID counter (high numbers to avoid conflicts with real tracking IDs)
+        if not hasattr(self, 'next_fallback_id'):
+            self.next_fallback_id = 10000
+
+        # Sort frames to ensure temporal order for tracking
+        sorted_frames = sorted(frames, key=lambda f: f.frame_number)
+
+        for frame_data in sorted_frames:
+            # Use track() with hardcoded parameters optimized for 3 FPS
+            # No error handling - fail fast if tracking has issues
+            detections = model.track(
+                frame_data.image,
+                persist=True,      # Maintain IDs across frames
+                iou=0.3,           # Hardcoded for 0.33s frame gaps
+                conf=0.3,          # Hardcoded for TikTok videos
+                verbose=False
+            )
+
             for detection in detections:
                 if detection.boxes is not None:
                     for box in detection.boxes:
+                        # Try to get real tracking ID, fall back if needed
+                        if hasattr(box, 'id') and box.id is not None:
+                            instance_id = int(box.id)
+                            is_tracked = True
+                        else:
+                            # Generate fallback ID for untracked detection
+                            instance_id = self.next_fallback_id
+                            self.next_fallback_id += 1
+                            is_tracked = False
+                            logger.debug(f"Generated fallback ID {instance_id} for untracked {model.names[int(box.cls)]}")
+
                         results.append({
-                            'trackId': f"obj_{frame_data.frame_number}_{int(box.cls)}",
+                            'trackId': f"obj_{frame_data.frame_number}_{instance_id}",
                             'className': model.names[int(box.cls)],
                             'confidence': float(box.conf),
                             'timestamp': frame_data.timestamp,
                             'bbox': box.xyxy[0].tolist() if len(box.xyxy) > 0 else [0,0,0,0],
-                            'frame_number': frame_data.frame_number
+                            'frame_number': frame_data.frame_number,
+                            'tracked': is_tracked  # Indicates if this has real tracking or fallback
                         })
         return results
         

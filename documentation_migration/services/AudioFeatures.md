@@ -21,14 +21,9 @@ DO NOT trust feature descriptions at face value. Each feature must be:
 |--------------|----------|-----------------|--------------|---------------|-------------------|---------------|----------------|-------------|----------|----------|--------------|---------------|--------------|---------------|--------------|
 | speech_coverage | Speech | Whisper | None | Temporal | Float [0-1] | Speech density critical for audience retention | Shows talking vs silent content ratio | High | None | Proportional calculation from segment overlaps | None | None | Scale [0-1] | Low | Medium |
 | word_count | Speech | Whisper | speech_coverage | Temporal | Integer [0-∞] | Information density indicator | More words may indicate educational content | High | Colinear | Highly correlated with speech_coverage (r>0.9) | None | None | Scale [0-1] | Low | Medium |
-| has_greeting | Speech | Whisper | speech segments | Temporal | Boolean | Creator warmth and viewer connection | Greetings in hook improve viewer retention | High | Semantic | Pattern matching on predefined greeting words | One-hot (2) | Low | Label encode | Low | Medium |
-| has_question | Speech | Whisper | speech segments | Temporal | Boolean | Interactive engagement strategy | Questions drive audience participation | High | Semantic | Pattern matching + question mark detection | One-hot (2) | Low | Label encode | Low | Medium |
-| has_instruction | Speech | Whisper | speech segments | Temporal | Boolean | Educational content indicator | Instructions suggest tutorial/how-to content | High | Semantic | Pattern matching on instructional keywords | One-hot (2) | Low | Label encode | Low | Medium |
-| has_speech_cta | Speech | Whisper | speech segments | Temporal | Boolean | Monetization and growth focus | Call-to-actions drive follower growth | High | Semantic | Pattern matching on CTA keywords | One-hot (2) | Low | Label encode | Low | Medium |
 | energy_level | Energy | Audio Energy | None | Temporal | Float [0-1] | Audio intensity affects viewer attention | Higher energy typically increases engagement | High | None | Mean RMS amplitude from audio frames | None | None | Scale [0-1] | Low | Low |
 | energy_variance | Energy | Audio Energy | energy_level frames | Temporal | Float [0-∞] | Dynamic range indicates editing style | High variance shows dynamic vs flat audio | High | None | Variance of RMS frames within window | None | None | Log + scale | Low | Low |
 | energy_max | Energy | Audio Energy | energy_level frames | Temporal | Float [0-1] | Peak audio intensity moment | Shows loudest moment in segment | High | None | Maximum RMS value in window | None | None | Scale [0-1] | Low | Low |
-| burst_pattern | Energy | Audio Energy | energy_level frames | Temporal | String | Audio pacing classification | Different patterns suit different content types | Medium | Semantic | Algorithmic classification of energy distribution | One-hot (4) | Low | Label encode | Low | Low |
 | avg_pitch_normalized | Pitch | Audio Energy, DeepFace | gender_detection for normalization | Temporal | Float [-1-3] | Voice characteristics affect perceived authority | Pitch relative to gender norms affects perception | Medium | None | Gender-normalized pitch from voiced frames | None | None | Scale [0-1] | Medium | High |
 | pitch_range_norm | Pitch | Audio Energy, DeepFace | avg_pitch_normalized, voiced frames | Temporal | Float [0-1] | Voice expressiveness indicator | Dynamic pitch shows engagement and emotion | Medium | None | Pitch range normalized by average pitch | None | None | Scale [0-1] | Medium | High |
 
@@ -62,10 +57,6 @@ What type of spoken content is the creator delivering and how much are they talk
   "hook": {
     "speech_coverage": 0.0-1.0,    // Percentage of window with speech
     "word_count": 0-∞,             // Estimated words spoken
-    "has_greeting": 0/1,           // Contains greeting patterns
-    "has_question": 0/1,           // Contains question patterns
-    "has_instruction": 0/1,        // Contains instructional language
-    "has_speech_cta": 0/1          // Contains call-to-action patterns
   },
   "middle_segments": [...],        // Same metrics per segment
   "closing": {...}                 // Same metrics
@@ -80,10 +71,6 @@ Reference: `/insights/7500252920844193067_temporal_windows_updated.json:26-31`
 |--------|---------|-------|----------------|
 | speech_coverage | total_speech_duration / window_duration | 0-1 | Speech density percentage |
 | word_count | sum(segment_words * proportion_in_window) | 0-∞ | Estimated word count |
-| has_greeting | pattern_match(['hey', 'hello', 'hi', 'welcome'][:50]) | 0/1 | Greeting presence (first 50 chars) |
-| has_question | pattern_match(['how', 'what', 'why'] + '?') | 0/1 | Question presence |
-| has_instruction | pattern_match(['first', 'then', 'step', 'make sure']) | 0/1 | Instructional language |
-| has_speech_cta | pattern_match(['subscribe', 'follow', 'like', 'comment']) | 0/1 | Call-to-action presence |
 
 ## 🔄 Data Pipeline
 
@@ -173,7 +160,6 @@ How dynamic and intense is the audio throughout different video segments?
     "energy_level": 0.0-1.0,           // Mean RMS amplitude
     "energy_variance": 0.0-∞,          // Variance in RMS values
     "energy_max": 0.0-1.0,             // Peak RMS amplitude
-    "burst_pattern": "front_loaded"    // Energy distribution pattern
   },
   "middle_segments": [...],            // Same metrics per segment
   "closing": {...}                     // Same metrics
@@ -189,7 +175,6 @@ Reference: `/insights/7500252920844193067_temporal_windows_updated.json:46-49`
 | energy_level | mean(window_rms_frames) | 0-1 | Average audio intensity |
 | energy_variance | variance(window_rms_frames) | 0-∞ | Dynamic range measurement |
 | energy_max | max(window_rms_frames) | 0-1 | Peak intensity moment |
-| burst_pattern | thirds_classification(window_rms) | categorical | Energy distribution type |
 
 ## 🔄 Data Pipeline
 
@@ -208,12 +193,10 @@ Temporal Windows Output
 
 ### Implementation Location
 ```python
-# Audio energy analysis with burst pattern detection
+# Audio energy analysis
 /rumiai_v2/processors/temporal_compute.py:403-479
-├── calculate_burst_pattern_for_window() (lines 403-427)
 ├── calculate_audio_energy_for_windows() (lines 428-479)
 ├── Frame-based extraction from Audio Energy service
-└── Thirds-based pattern classification algorithm
 ```
 
 ## 🎨 Feature Engineering Opportunities
@@ -330,7 +313,6 @@ assert 0 <= data['temporal_windows']['hook']['speech_coverage'] <= 1
 
 # Check Energy features
 assert 'energy_level' in data['temporal_windows']['hook']
-assert 'burst_pattern' in data['temporal_windows']['hook']
 assert data['temporal_windows']['hook']['energy_level'] >= 0
 
 # Check Pitch features
@@ -338,10 +320,6 @@ assert 'avg_pitch_normalized' in data['temporal_windows']['hook']
 assert 'pitch_range_norm' in data['temporal_windows']['hook']
 assert 0 <= data['temporal_windows']['hook']['pitch_range_norm'] <= 1
 
-# Check Speech content indicators
-for indicator in ['has_greeting', 'has_question', 'has_instruction', 'has_speech_cta']:
-    assert indicator in data['temporal_windows']['hook']
-    assert data['temporal_windows']['hook'][indicator] in [0, 1]
 ```
 
 ### Value Range Validation
@@ -360,10 +338,6 @@ for window in ['hook', 'closing']:
 
     # Pitch range should be 0-1
     assert 0 <= window_data['pitch_range_norm'] <= 1
-
-    # Burst pattern should be valid category
-    valid_patterns = ['front_loaded', 'back_loaded', 'middle_peak', 'steady']
-    assert window_data['burst_pattern'] in valid_patterns
 ```
 
 ### Dependency Validation
@@ -384,14 +358,7 @@ assert gender_data['gender'] in ['male', 'female', 'multiple_people']
 ### For Engagement Prediction
 1. **speech_coverage in hook**: 0.68 correlation - critical for immediate audience connection
 2. **energy_level in hook**: 0.52 correlation - dynamic audio captures attention
-3. **has_greeting in hook**: 0.48 correlation - creator warmth drives retention
-4. **burst_pattern consistency**: 0.41 correlation - editing style affects viewing experience
 
-### For Content Type Classification
-1. **has_instruction patterns**: Best separator for tutorial vs entertainment content
-2. **speech_coverage variance**: Distinguishes educational (high) vs viral (moderate) content
-3. **energy_pattern distribution**: Professional content has different energy curves than casual
-4. **has_speech_cta frequency**: Business content indicator vs organic content
 
 ### For Creator Style Analysis
 1. **avg_pitch_normalized consistency**: Voice characteristics for creator identification
@@ -402,5 +369,4 @@ assert gender_data['gender'] in ['male', 'female', 'multiple_people']
 ### Cross-Feature Correlations to Monitor
 1. **speech_coverage vs word_count**: Expected high correlation (r>0.9) - consider dropping word_count
 2. **energy_level vs speech_coverage**: Moderate correlation expected - speech drives energy
-3. **has_greeting vs has_speech_cta**: Low correlation expected - different content strategies
-4. **pitch metrics vs gender_detection**: Strong dependency - monitor DeepFace reliability
+3. **pitch metrics vs gender_detection**: Strong dependency - monitor DeepFace reliability
