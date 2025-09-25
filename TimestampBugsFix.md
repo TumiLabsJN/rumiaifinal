@@ -286,285 +286,37 @@ def test_frame_precision():
 
 ---
 
-## 🔵 ALIGNMENT: Production vs BucketsPlan.md Discrepancies
-
-### Overview
-The production code does NOT match BucketsPlan.md specifications. This section outlines the changes needed to align them.
-
-### Current Discrepancies
-
-| Duration | BucketsPlan.md Spec | Current Production | Issue |
-|----------|-------------------|-------------------|--------|
-| 0-3s | Hook only | Hook only | ✅ Correct |
-| 3-9s | Hook + Closing only | 3-6s: No middle<br>6-9s: HAS middle | ❌ Wrong boundary |
-| 9-18s | Hook + 3 Middle + Closing | Based on middle duration, not video duration | ❌ Wrong logic |
-| 18-33s | Hook + 4 Middle + Closing | Boundaries don't align | ❌ Wrong boundaries |
-
-### Root Cause
-Production uses **middle segment duration** for decisions, while BucketsPlan uses **total video duration**.
-
-### Changes Required for Alignment
-
-#### Change 1: Fix 3-9 Second Boundary
-```python
-# CURRENT (temporal_compute.py line 496)
-elif video_duration <= (HOOK_WINDOW_DURATION + CLOSING_WINDOW_DURATION):  # 6 seconds
-    return {
-        'hook': (0, HOOK_WINDOW_DURATION),
-        'middle': None,
-        'closing': (HOOK_WINDOW_DURATION, video_duration)
-    }
-
-# CHANGE TO:
-elif video_duration <= 9:  # Match BucketsPlan.md
-    return {
-        'hook': (0, min(3, video_duration)),
-        'middle': None,
-        'closing': (min(3, video_duration), video_duration)
-    }
-```
-
-#### Change 2: Update Middle Segment Calculation
-```python
-# CURRENT (temporal_compute.py line 516)
-def calculate_middle_segments(video_duration: float):
-    if video_duration <= 6:
-        return {}
-
-# CHANGE TO:
-def calculate_middle_segments(video_duration: float):
-    if video_duration <= 9:  # No middle for 3-9s videos per BucketsPlan
-        return None
-```
-
-#### Change 3: Redefine Segment Count Thresholds
-```python
-# CURRENT (lines 31-36)
-SEGMENT_THRESHOLDS = {
-    'min_duration_for_segments': 3,     # Based on middle duration
-    'three_segments_max': 12,           # Based on middle duration
-    'four_segments_max': 27,            # Based on middle duration
-}
-
-# CHANGE TO (based on total video duration per BucketsPlan):
-BUCKET_THRESHOLDS = {
-    'no_middle_max': 9,           # 0-9s: No middle segments
-    'three_segments_max': 18,     # 9-18s: 3 middle segments
-    'four_segments_max': 33,      # 18-33s: 4 middle segments
-    'five_segments_max': 75,      # 33-75s: 5 middle segments
-    # >75s: 5 segments (capped)
-}
-```
-
-#### Change 4: Rewrite Segment Count Logic
-```python
-# CURRENT (lines 532-537) - uses middle_duration
-if middle_duration <= SEGMENT_THRESHOLDS['three_segments_max']:
-    num_segments = 3
-elif middle_duration <= SEGMENT_THRESHOLDS['four_segments_max']:
-    num_segments = 4
-else:
-    num_segments = 5
-
-# CHANGE TO (use video_duration directly):
-def calculate_middle_segments(video_duration: float):
-    # No middle for short videos
-    if video_duration <= BUCKET_THRESHOLDS['no_middle_max']:
-        return None
-
-    # Determine segment count based on TOTAL video duration
-    if video_duration <= BUCKET_THRESHOLDS['three_segments_max']:
-        num_segments = 3  # 9-18s videos
-    elif video_duration <= BUCKET_THRESHOLDS['four_segments_max']:
-        num_segments = 4  # 18-33s videos
-    elif video_duration <= BUCKET_THRESHOLDS['five_segments_max']:
-        num_segments = 5  # 33-75s videos
-    else:
-        num_segments = 5  # Cap at 5 for very long videos
-
-    # Calculate segment boundaries
-    middle_start = HOOK_WINDOW_DURATION
-    middle_end = video_duration - CLOSING_WINDOW_DURATION
-    middle_duration = middle_end - middle_start
-
-    # Safety check
-    if middle_duration <= 0:
-        return None
-
-    segment_duration = middle_duration / num_segments
-    segments = {}
-
-    for i in range(num_segments):
-        segment_start = middle_start + (i * segment_duration)
-        segment_end = segment_start + segment_duration
-        segments[f'segment_{i+1}'] = {
-            'start': segment_start,
-            'end': segment_end
-        }
-
-    return segments
-```
-
-### Impact Analysis
-
-#### Videos Affected by Changes
-| Duration | Current Output | New Output | Impact |
-|----------|---------------|------------|--------|
-| 6-9s | 3 segments | No segments | **Major** - loses middle analysis |
-| 12-18s | 3 segments | 3 segments | None - same count |
-| 27-33s | 4 segments | 4 segments | None - same count |
-
-#### Backward Compatibility Issues
-1. **Existing processed videos**: 6-9s videos will have different structure
-2. **ML models**: Trained on current buckets, will need retraining
-3. **Downstream consumers**: Code expecting middle segments for 6-9s videos will break
-
-### Migration Strategy: OPTION 1 - HARD CUT-OVER (SELECTED)
-
-We have decided to implement **Option 1: Hard Cut-Over** for a clean, consistent system.
-
-#### Implementation Steps
-
-##### Step 1: Pre-Deployment Testing
-1. **Create comprehensive test suite** with videos at all boundary conditions
-2. **Run tests on development environment** with new logic
-3. **Validate output structure** matches BucketsPlan.md exactly
-4. **Document all changes** in release notes
-
-##### Step 2: Production Deployment
-1. **Schedule maintenance window** (recommend low-traffic period)
-2. **Backup current code** and configuration
-3. **Deploy all changes atomically**:
-   - Update temporal window calculation (9s boundary)
-   - Update segment calculation (video duration based)
-   - Update threshold constants
-4. **Run smoke tests** immediately after deployment
-
-##### Step 3: Data Reprocessing
-1. **Identify affected videos** (all 6-9s videos minimum)
-2. **Create reprocessing script**:
-```python
-# reprocess_for_bucketplan.py
-import glob
-import json
-
-def needs_reprocessing(video_path):
-    """Check if video needs reprocessing based on duration"""
-    with open(video_path, 'r') as f:
-        data = json.load(f)
-    duration = data.get('duration', 0)
-    # All 6-9s videos definitely need reprocessing
-    # Consider reprocessing all for consistency
-    return 6 <= duration <= 9 or REPROCESS_ALL
-
-def reprocess_video(video_id):
-    """Re-run temporal compute for video"""
-    # Load unified_analysis
-    # Run new compute_temporal_windows
-    # Save updated output
-    pass
-```
-3. **Execute reprocessing** in batches to avoid overload
-4. **Validate reprocessed outputs**
-
-##### Step 4: ML Model Updates
-1. **Retrain models** with new bucket structure
-2. **Update model configs** to expect new bucket boundaries
-3. **Validate model performance** before production use
-
-#### Risk Mitigation
-
-Despite choosing the hard cut-over, we'll implement these safety measures:
-
-1. **Rollback Plan**:
-   - Keep previous version tagged and ready
-   - Document rollback procedure
-   - Test rollback in staging
-
-2. **Monitoring**:
-   - Alert on processing failures
-   - Track bucket distribution changes
-   - Monitor performance metrics
-
-3. **Validation Checklist**:
-   - [ ] All tests pass with new logic
-   - [ ] 6-9s videos have no middle segments
-   - [ ] 9-18s videos have exactly 3 middle segments
-   - [ ] No crashes at boundary conditions
-   - [ ] Performance acceptable (< 10% degradation)
-
-### Testing Requirements for Hard Cut-Over
-
-#### Priority Test Videos
-Create these videos BEFORE deployment:
-- **6.0s exactly**: Currently has middle, should have none after fix
-- **9.0s exactly**: Critical boundary - should have no middle
-- **9.1s**: Should have 3 middle segments
-- **18.0s exactly**: Should have 3 middle segments
-- **18.1s**: Should have 4 middle segments
-
-#### Comprehensive Test Suite
-Full boundary testing:
-- 2.9s, 3.0s, 3.1s (bucket 1-2 boundary)
-- 5.9s, 6.0s, 6.1s (current problem area)
-- 8.9s, 9.0s, 9.1s (bucket 2-3 boundary)
-- 17.9s, 18.0s, 18.1s (bucket 3-4 boundary)
-- 32.9s, 33.0s, 33.1s (bucket 4-5 boundary)
-
-#### Validation Script
-```python
-def validate_bucketplan_alignment(video_id, duration):
-    """Verify video follows BucketsPlan.md exactly"""
-    output = load_temporal_output(video_id)
-
-    if duration <= 3:
-        assert output['temporal_windows']['middle_segments'] is None
-        assert output['temporal_windows']['closing'] is None
-    elif duration <= 9:
-        assert output['temporal_windows']['middle_segments'] is None
-        assert output['temporal_windows']['closing'] is not None
-    elif duration <= 18:
-        assert len(output['temporal_windows']['middle_segments']) == 3
-    elif duration <= 33:
-        assert len(output['temporal_windows']['middle_segments']) == 4
-    else:
-        assert len(output['temporal_windows']['middle_segments']) == 5
-```
-
----
-
 ## Summary
 
-### Phase 1: Bug Fixes (Original 8)
+### Bug Fixes to Implement
 - **2 CRITICAL** bugs causing crashes and data corruption
 - **4 MEDIUM** bugs causing precision loss and inconsistencies
 - **2 LOW** priority improvements for edge cases
-- **Timeline**: 2-3 hours
+- **Timeline**: 2-3 hours total
 - **Risk**: Low - mostly one-line changes
-
-### Phase 2: BucketsPlan Alignment (Hard Cut-Over)
-- **Major structural changes** to match BucketsPlan.md exactly
-- **Affects ALL videos**, especially 6-9 second range
-- **Requires complete reprocessing** of existing data
-- **Timeline**:
-  - Development & Testing: 4-6 hours
-  - Deployment & Reprocessing: 2-4 hours
-  - Total: 6-10 hours
-- **Risk**: High - but mitigated with thorough testing
 
 ### Deployment Order
 
-1. **Fix critical bugs first** (Bug 1 & 2) - Immediate
-2. **Test alignment changes** - Next day
-3. **Deploy alignment changes** - After validation
-4. **Reprocess all videos** - Post-deployment
-5. **Fix remaining bugs** - When convenient
+1. **Fix critical bugs** (Bug 1 & 2) - Immediate
+   - Eye contact double-counting (line 1183, 1215)
+   - 6-second video state issue (line 516)
+2. **Fix medium bugs** (Bug 3-6) - Next sprint
+   - Frame truncation
+   - OCR duration
+   - Segment boundary consistency
+   - Float precision
+3. **Fix low priority items** (Bug 7-8) - When convenient
+   - FPS validation
+   - Documentation for <3s videos
 
 ### Success Criteria
 
-After Option 1 implementation:
+After bug fixes:
 - ✅ No 6-second video crashes
 - ✅ No double-counting at boundaries
-- ✅ Perfect alignment with BucketsPlan.md
-- ✅ All existing videos reprocessed
-- ✅ Clean, consistent codebase
+- ✅ Improved precision in frame calculations
+- ✅ Consistent boundary logic throughout
+- ✅ Better error handling for edge cases
+
+### Note on BucketsPlan Alignment
+BucketsPlan alignment has been moved to a separate document (BucketUpdate.md) due to its complexity and higher risk profile. These bug fixes can and should be implemented independently of bucket alignment decisions.

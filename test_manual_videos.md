@@ -9,9 +9,9 @@ Test the core ML processing pipeline (ML Services → Timeline Builder → Tempo
 ## Scope
 
 ### What This Test Covers ✅
-- **ML SERVICES LAYER**: All 8 ML services (YOLO, Whisper, MediaPipe, OCR, Scene Detection, FEAT, Audio Energy, DeepFace)
+- **ML SERVICES LAYER**: All 8 ML services (YOLO, Whisper, MediaPipe, OCR, Scene Detection, Audio Energy, FEAT Emotion, DeepFace Gender)
 - **TIMELINE BUILDER**: Merging ML outputs into unified timeline
-- **TEMPORAL COMPUTE**: Extracting 27+ features per temporal window
+- **TEMPORAL COMPUTE**: Extracting 60+ features per temporal window
 - **OUTPUT LAYER**: Generating final JSON in `/insights/` directory
 
 ### What This Test Skips ❌
@@ -27,25 +27,40 @@ Test the core ML processing pipeline (ML Services → Timeline Builder → Tempo
 - Maintain identical data flow and processing logic
 - Preserve all production behaviors (logging, error handling, checkpointing)
 
-### 2. No Production Code Changes
+### 2. Minimal Mock Data Strategy
+- Use **zero or minimal values** for all engagement metrics
+- Provide **only required fields** to prevent crashes
+- Keep **test simple and fast** without complex data generation
+- Accept that **some features will produce zero values**
+
+### 3. No Production Code Changes
 ```python
 # Import production runner AS-IS
 from scripts.rumiai_runner import RumiAIRunner
+from rumiai_v2.core.models.video import VideoMetadata
+from pathlib import Path
+from datetime import datetime
 
 # Create test subclass that overrides only Apify methods
 class TestManualVideosRunner(RumiAIRunner):
     async def _scrape_video(self, video_url: str) -> VideoMetadata:
         """Override to return mock metadata instead of Apify scraping."""
-        return self.create_mock_metadata(video_url)
+        video_path = self.video_mapping.get(video_url)
+        if not video_path:
+            raise ValueError(f"No local video for URL: {video_url}")
+        return self.create_mock_metadata(video_url, video_path)
 
     async def _download_video(self, video_metadata: VideoMetadata) -> Path:
         """Override to return local file path instead of downloading."""
-        return self.get_local_video_path(video_metadata.video_id)
+        video_path = self.video_mapping.get(video_metadata.url)
+        if not video_path or not video_path.exists():
+            raise FileNotFoundError(f"Video file not found: {video_path}")
+        return video_path
 ```
 
 **Rationale**: Analysis showed rumiai_runner.py has excellent Apify separation with only 2 clean interface points to override.
 
-### 3. Comparison with Existing Tests
+### 4. Comparison with Existing Tests
 
 | Aspect | rumiai_runner.py | test_temporal_compute_v2.py | test_manual_videos.py |
 |--------|------------------|------------------------------|----------------------|
@@ -81,41 +96,44 @@ class TestManualVideosRunner(RumiAIRunner):
 
     def create_mock_metadata(self, video_url: str, video_path: Path) -> VideoMetadata:
         """
-        Create VideoMetadata that exactly matches production structure.
-        All fields that production expects must be present.
-        """
-        # Extract actual video properties using production utilities
-        duration = self._extract_video_duration(video_path)
+        Create minimal VideoMetadata with only required fields to avoid crashes.
+        Uses zero/minimal values to keep the test simple and focused on ML pipeline.
 
-        # Generate consistent video_id like production
+        Decision: Use minimal mock data (Option A) for simplicity and speed.
+        Some features dependent on engagement may produce zero values.
+        """
+        # Extract actual video properties
+        import cv2
+        cap = cv2.VideoCapture(str(video_path))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        duration = int(frame_count / fps) if fps > 0 else 0
+        cap.release()
+
+        # Generate simple video_id from filename
         video_id = video_path.stem.replace('_', '')
         if not video_id.isdigit():
-            video_id = str(hash(video_id) % 10**15)  # Fake TikTok-like ID
+            video_id = str(abs(hash(video_id)) % 10**15)  # Fake TikTok-like ID
 
-        # Return VideoMetadata matching production schema
+        # Return VideoMetadata with all required fields (production expects these)
         return VideoMetadata(
             video_id=video_id,
             url=video_url,
+            username="testuser",  # Required: changed from 'author'
+            description="Test video",
             duration=duration,
-            description=f"Test video {video_path.stem}",
-            author="testuser",
-            author_id="123456789",
-            create_time=int(datetime.now().timestamp()),
-
-            # Engagement metrics (use realistic test values)
-            digg_count=1000,
-            play_count=5000,
-            share_count=100,
-            comment_count=50,
-            collect_count=200,
-
-            # Required fields for hashtag analysis
-            hashtags=["#test", "#rumiai"],
-
-            # Video properties
-            width=1080,
-            height=1920,
-            ratio="9:16"
+            views=0,  # Required: changed from 'play_count'
+            likes=0,  # Required: changed from 'digg_count'
+            comments=0,  # Required: changed from 'comment_count'
+            shares=0,  # Required: changed from 'share_count'
+            saves=0,  # Required: changed from 'collect_count'
+            create_time=datetime.now(),  # Required: datetime object, not timestamp
+            download_url=video_url,  # Required field
+            cover_url="",  # Required field
+            hashtags=[],  # Empty list is valid
+            music={},  # Required: empty dict is valid
+            author={},  # Required: empty dict is valid
+            engagement_rate=0.0  # Required field
         )
 ```
 
@@ -158,20 +176,15 @@ class TestManualVideosRunner(RumiAIRunner):
         return temp_path
 
     def create_mock_metadata(self, video_url: str, video_path: Path) -> VideoMetadata:
-        """Create VideoMetadata that matches production structure."""
-        # Get actual video duration
-        duration = self.get_video_duration(video_path)
-
-        return VideoMetadata(
-            video_id=f"manual_{video_path.stem}",
-            url=video_url,
-            duration=duration,
-            # ... rest of required fields with test values
-        )
+        """Create minimal VideoMetadata matching production structure.
+        See full implementation above with zero/minimal values."""
+        # Implementation shown in Phase 1 above
+        # Cannot call super() as parent class doesn't have this method
+        # Would implement the full method here (see Phase 1)
 
 # Usage: Run exact production pipeline with local videos
 runner = TestManualVideosRunner()
-await runner.run("https://tiktok.com/@test/my_video")  # Uses local my_video.mp4
+await runner.process_video_url("https://tiktok.com/@test/my_video")  # Uses local my_video.mp4
 ```
 
 ### Phase 3: Output Validation
@@ -229,7 +242,7 @@ async def main():
         try:
             # Run EXACT production pipeline
             # This will call all production code except the 2 overridden methods
-            await runner.run(url)
+            await runner.process_video_url(url)
 
             # Extract video_id from URL for validation
             video_id = url.split('/')[-1]
@@ -270,8 +283,8 @@ if __name__ == "__main__":
 
 ### 1. Metadata Handling
 - **Production**: Gets rich metadata from TikTok (hashtags, engagement, creator info)
-- **Test**: Uses mock metadata with defaults
-- **Impact**: Features dependent on hashtags/engagement will have zero values
+- **Test**: Uses minimal mock metadata with zero/default values
+- **Impact**: Features dependent on hashtags/engagement will produce zero or minimal values
 
 ### 2. Video Source
 - **Production**: Downloads from TikTok CDN after Apify provides URL
@@ -303,8 +316,9 @@ test_outputs/
 1. **Functional Success**
    - All 8 ML services run successfully
    - Timeline builds without errors
-   - Temporal compute produces all 27 features
+   - Temporal compute produces all 60+ features per window
    - Output JSONs have correct structure
+   - Pipeline completes without crashes (some features may be zero due to minimal mock data)
 
 2. **Performance Baseline**
    - 60-second video processes in < 3 minutes
@@ -319,7 +333,7 @@ test_outputs/
 ## Usage
 
 ```bash
-# Basic usage
+# Basic usage with minimal mock data
 python test_manual_videos.py
 
 # With specific directory
@@ -342,10 +356,10 @@ python test_manual_videos.py --validate-only
 
 ## Limitations
 
-1. **No Real Metadata**: Can't test hashtag-dependent features properly
+1. **Minimal Metadata**: Can't properly test hashtag-dependent or engagement-based features
 2. **No Apify Testing**: Doesn't validate scraping layer
 3. **Static Test Set**: Limited to pre-downloaded videos
-4. **Mock Engagement**: Can't test virality-related features
+4. **Zero Engagement**: Virality and engagement ratio features will be meaningless
 
 ## Future Enhancements
 
