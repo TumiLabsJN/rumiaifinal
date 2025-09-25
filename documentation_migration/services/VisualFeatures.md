@@ -30,7 +30,6 @@ DO NOT trust feature descriptions at face value. Each feature must be:
 | shortest_scene | Scene Pacing | Scene Detection | scene timestamps | Temporal | Float [0-∞] | Duration of shortest scene in seconds | Shows editing pace extremes | High | None | Minimum scene duration calculated from timestamps | None | None | Log + scale | Low | Medium |
 | longest_scene | Scene Pacing | Scene Detection | scene timestamps | Temporal | Float [0-∞] | Duration of longest scene in seconds | Shows editing pace extremes | High | None | Maximum scene duration calculated from timestamps | None | None | Log + scale | Low | Medium |
 | scene_duration_variance | Scene Pacing | Scene Detection | scene durations | Temporal | Float [0-∞] | Variance in scene durations | High variance indicates dynamic vs consistent pacing | High | Derivative | Variance of scene durations - use durations directly | None | None | Log + scale | Medium | Medium |
-| changes_per_second | Scene Pacing | Scene Detection | scene_count, duration | Temporal | Float [0-∞] | Scene change rate | Editing pace measurement | High | Derivative | scene_count / duration - redundant | None | None | Log + scale | Medium | Medium |
 | object_count | Object Detection | YOLO | None | Temporal | Integer [0-∞] | Total YOLO object detections | More objects indicate visually rich content | High | None | Direct count from YOLO detections | None | None | Scale [0-1] | Low | Medium |
 | person_count | Object Detection | YOLO | object detections with className='person' | Temporal | Integer [0-∞] | Maximum unique persons visible simultaneously | Multi-person content affects viewer engagement | High | Colinear | Highly correlated with close_ratio when >1 person | None | None | Scale [0-1] | Low | Medium |
 
@@ -335,7 +334,6 @@ How dynamic is the video editing and visual pacing throughout different segments
     "shortest_scene": 0.0-∞,            // Minimum scene duration (seconds)
     "longest_scene": 0.0-∞,             // Maximum scene duration (seconds)
     "scene_duration_variance": 0.0-∞,   // Variance in scene lengths
-    "changes_per_second": 0.0-∞         // Scene change rate
   },
   "middle_segments": [...],             // Same metrics per segment
   "closing": {...}                      // Same metrics
@@ -352,7 +350,6 @@ Reference: `/insights/7430952519439846698_temporal_windows_updated.json:37-39`
 | shortest_scene | min(scene_durations) | 0-∞ | Fastest cut duration |
 | longest_scene | max(scene_durations) | 0-∞ | Longest static shot |
 | scene_duration_variance | variance(scene_durations) | 0-∞ | Pacing consistency |
-| changes_per_second | scene_count / duration | 0-∞ | Editing pace rate |
 
 ## 🔄 Data Pipeline
 
@@ -382,7 +379,6 @@ Temporal Windows Output
 ## 🎨 Feature Engineering Opportunities
 
 ### Current Limitations
-- scene_duration_variance and changes_per_second are derivative metrics
 - No analysis of scene transition types (cut vs fade vs wipe)
 - Missing scene content analysis (indoor/outdoor, close/wide)
 - No correlation with audio cuts or beat synchronization
@@ -496,7 +492,7 @@ assert 0 <= data['temporal_windows']['hook']['overlay_coverage'] <= 1
 
 # Check Scene Pacing features
 assert 'scene_count' in data['temporal_windows']['hook']
-assert data['temporal_windows']['hook']['changes_per_second'] >= 0
+assert data['temporal_windows']['hook'] >= 0
 
 # Check Object Detection features
 assert 'object_count' in data['temporal_windows']['hook']
