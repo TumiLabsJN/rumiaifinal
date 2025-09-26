@@ -4,5 +4,5 @@
   "method": "deepface",
   "frames_analyzed": 3,
   "detector_backend": "opencv",
-  "processing_ms": 1915
+  "processing_ms": 1979
 }
