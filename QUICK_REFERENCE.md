@@ -23,7 +23,17 @@
 ### Current Capabilities
 - **Processing Time**: ~60-80 seconds for a 60-second video
 - **Output**: `temporal_windows_updated.json` with 60+ features per temporal window
-- **Window Structure**: Hook (0-3s), Middle segments (variable), Closing (last 3s)
+- **Window Structure**:
+  - Hook (0-3s): Always present
+  - Middle segments: Based on video duration
+    - 0-9s videos: None (returns null)
+    - 9-18s videos: 3 segments
+    - 18-33s videos: 4 segments
+    - 33-75s videos: 5 segments
+    - >75s videos: 5 segments (capped)
+  - Closing (last 3s): Always present
+  - **Critical**: Videos ≤9s return middle_segments as null (not empty array)
+  - **ML Note**: ML training will split 9-18s into two buckets (9-13s, 13-18s) for variance handling
 - **ML Services**: 9 services - YOLO, Whisper, MediaPipe, OCR, Scene Detection, FEAT, DeepFace, Audio Energy, Hashtag Analysis
 - **Processing Modes**: Sequential (default) or Parallel
 - **Architecture**: Self-contained services with fail-fast validation and checkpoint/resume

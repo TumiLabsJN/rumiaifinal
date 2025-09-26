@@ -1,0 +1,8 @@
+{
+  "gender": "female",
+  "confidence": 0.9982424676418304,
+  "method": "deepface",
+  "frames_analyzed": 5,
+  "detector_backend": "opencv",
+  "processing_ms": 2560
+}

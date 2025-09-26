@@ -35,9 +35,11 @@ Success for this ML training pipeline is measured through technical and operatio
 
 #### Key Metrics
 - **Input Scale**: Up to 240 videos per analysis batch (60 per duration bucket: 40 top + 20 bottom)
-- **ML Models**: Random Forest and K-means with 8 models total (2 algorithms × 4 duration buckets) 
+- **ML Models**: Random Forest and K-means with 16 models total (2 algorithms × 8 duration buckets)
 - **Output**: Duration-specific creative recommendations (5 patterns per bucket)
 - **Processing**: Sequential (one-by-one) with resumption capability
+
+**Note**: These ML training buckets (for grouping videos by duration) are separate from temporal window segments (for analyzing within videos). Temporal windows output: 0-9s (no middle), 9-18s (3 middle segments), 18-33s (4 middle segments), 33-75s (5 middle segments), >75s (5 middle segments capped). The ML training uses 8 buckets: 0-3s, 3-9s, 9-13s, 13-18s, 18-33s, 33-60s, 60-90s, 90-120s.
 
 ##### 📊 Quality Built Into Selection Process
 > **Key Point**: This system should automatically select high-quality videos through:
@@ -112,6 +114,19 @@ Success for this ML training pipeline is measured through technical and operatio
 
 ### B. Video Selection Criteria & Apify Integration
 Defines a TikTok video selection pipeline: scrape 400 to 800 per hashtag via Apify, apply client side date filter, bucket by duration, rank by engagement, and process sequentially with checkpoints. Also covers costs, data fields, scaling and validation, storage, and confidence reporting.
+
+#### Duration Bucket Strategy for ML Training
+**Key Insight**: While production temporal_compute.py outputs identical structure for certain duration ranges (e.g., all 9-18s videos have 3 middle segments), the ML training pipeline buckets them separately:
+
+**Production Output** (temporal_compute.py):
+- 9-18s videos → All output 3 middle segments (same JSON structure)
+- 18-33s videos → All output 4 middle segments (same JSON structure)
+
+**ML Training Buckets** (separate models):
+- Bucket 3: 9-13s videos (3 segments of 1-2.33s each)
+- Bucket 4: 13-18s videos (3 segments of 2.33-4s each)
+
+**Why This Works**: Since the output structure is identical (both have 3 middle segments), the ML pipeline can simply filter videos by duration metadata to train separate models. The models learn that identical feature values (e.g., word_count=20) mean different things based on the duration context. This avoids breaking changes to production while properly handling the 4x variance issue.
 
 Brainstorm in:
 \\wsl$\Ubuntu\home\jorge\rumiaifinal\documentation_migration\FutureDevelopments\VideoSelection.md

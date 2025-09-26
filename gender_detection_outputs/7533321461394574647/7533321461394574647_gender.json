@@ -1,8 +1,8 @@
 {
-  "gender": "female",
-  "confidence": 0.9998875856399536,
+  "gender": "male",
+  "confidence": 0.7140255059514727,
   "method": "deepface",
   "frames_analyzed": 7,
   "detector_backend": "opencv",
-  "processing_ms": 3586
+  "processing_ms": 3519
 }

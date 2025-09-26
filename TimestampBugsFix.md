@@ -3,76 +3,61 @@
 ## Overview
 This document outlines all timestamp-related bugs found in the RumiAI pipeline and provides specific fixes for each issue.
 
----
-
-## 🔴 CRITICAL BUG 1: 6-Second Video State Inconsistency
-
-### The Problem
-Videos exactly 6 seconds long create an inconsistent state where closing window exists but middle segments are empty.
-
-### Current Code
-```python
-# temporal_compute.py Line 496-500
-elif video_duration <= (HOOK_WINDOW_DURATION + CLOSING_WINDOW_DURATION):  # <= 6
-    return {
-        'hook': (0, HOOK_WINDOW_DURATION),
-        'middle': None,
-        'closing': (HOOK_WINDOW_DURATION, video_duration)
-    }
-
-# Line 516-517
-def calculate_middle_segments(video_duration: float):
-    if video_duration <= 6:
-        return {}  # Returns empty dict, not None!
-```
-
-### The Fix
-```python
-# Option 1: Make 6-second videos have NO middle (consistent with window calculation)
-def calculate_middle_segments(video_duration: float):
-    if video_duration <= 6:
-        return None  # Return None instead of {}
-
-# Option 2: Change boundary to exclude exactly 6 seconds
-elif video_duration < (HOOK_WINDOW_DURATION + CLOSING_WINDOW_DURATION):  # < 6 instead of <= 6
-    return {
-        'hook': (0, HOOK_WINDOW_DURATION),
-        'middle': None,
-        'closing': (HOOK_WINDOW_DURATION, video_duration)
-    }
-```
-
-### Recommendation
-Use **Option 1** - simpler and maintains consistency. Videos ≤6s should have no middle segments.
+**Note**: The previous 6-second boundary issue has been resolved by the bucket alignment changes (boundary moved from 6s to 9s). This document focuses on remaining active bugs.
 
 ---
 
-## 🔴 CRITICAL BUG 2: Eye Contact Double-Counting at Boundaries
+## 🔴 CRITICAL BUG 1: Eye Contact Double-Counting at Boundaries
 
 ### The Problem
-Eye contact events at exact boundaries (3.0s, video end) are counted in both adjacent windows.
+Eye contact events at exact boundaries (3.0s, video end) are counted in both adjacent windows. This is the ONLY timeline entry using inclusive upper bounds.
+
+### Comprehensive Analysis of Boundary Logic
+We searched the entire codebase for boundary comparisons and found:
+
+| Location | Pattern | Type | Status |
+|----------|---------|------|--------|
+| Line 638 | `if start <= timestamp < end:` | Text timeline | ✅ Correct |
+| Line 1191 | `if start <= entry_start <= end:` | Eye contact | ❌ BUG |
+| Line 1223 | `if start <= entry_start <= end:` | Eye contact | ❌ BUG |
+| Line 1262 | `if start <= o.get('timestamp', 0) < end]` | Objects | ✅ Correct |
+| Line 1264 | `if start <= g.get('timestamp', 0) < end]` | Gestures | ✅ Correct |
+| Line 1266 | `if start <= e.get('timestamp', 0) < end]` | Expressions | ✅ Correct |
+| Line 1268 | `if start <= s.get('timestamp', 0) < end]` | Scenes | ✅ Correct |
+| Line 1270 | `if start <= c.get('timestamp', 0) < end]` | Camera | ✅ Correct |
+| Line 1338 | `if start <= timestamp < end:` | Text (2nd) | ✅ Correct |
+| Line 1460 | `if start <= f.get('timestamp', 0) < end]` | Faces | ✅ Correct |
+| Line 604 | `if seg_start <= timestamp <= seg_end:` | Speech segments | ⚠️ Different* |
+
+*Speech segments use inclusive bounds intentionally - they represent continuous ranges, not point events.
 
 ### Current Code
 ```python
-# temporal_compute.py Lines 1183, 1215
+# temporal_compute.py Lines 1191, 1223 (same bug in two places)
 if start <= entry_start <= end:  # WRONG: inclusive upper bound
     eye_contact = entry.get('data', {}).get('eye_contact', 0)
 ```
 
 ### The Fix
 ```python
-# Change to exclusive upper bound to match all other filtering
+# Change to exclusive upper bound to match all other timeline filtering
 if start <= entry_start < end:  # Fixed: exclusive upper bound
     eye_contact = entry.get('data', {}).get('eye_contact', 0)
 ```
 
+### Why This Is The Only Fix Needed
+- **10 out of 12** boundary checks already use exclusive upper bound correctly
+- **Only eye contact** (2 instances) uses inclusive, causing double-counting
+- **Speech segments** (line 604) use inclusive intentionally for continuous ranges
+
 ### Impact
 - Events at 3.0s will only count in middle segment (not hook)
 - Events at video end will only count in closing (not double-counted)
+- Aligns with Python convention: `[start, end)` (inclusive start, exclusive end)
 
 ---
 
-## 🟡 MEDIUM BUG 3: Frame Number Truncation Loses Precision
+## 🟡 MEDIUM BUG 2: Frame Number Truncation Loses Precision
 
 ### The Problem
 Converting timestamps to frame numbers using `int()` truncates decimal frames, losing temporal precision.
@@ -101,7 +86,7 @@ Use `round()` for both - simpler and preserves temporal accuracy better than tru
 
 ---
 
-## 🟡 MEDIUM BUG 4: OCR Text Duration Hardcoded to Minimum 1 Second
+## 🟡 MEDIUM BUG 3: OCR Text Duration Hardcoded to Minimum 1 Second
 
 ### The Problem
 Short text like "Hi" gets artificial 1-second duration, potentially spanning window boundaries incorrectly.
@@ -129,7 +114,7 @@ Use **Option 2** - provides reasonable range without artificial boundaries spann
 
 ---
 
-## 🟡 MEDIUM BUG 5: Segment Timeline Uses Different Boundary Logic
+## 🟡 MEDIUM BUG 4: Segment Timeline Uses Different Boundary Logic
 
 ### The Problem
 Segment timeline uses inclusive upper bound while all other timelines use exclusive.
@@ -151,7 +136,7 @@ Verify this doesn't break existing segment logic before applying.
 
 ---
 
-## 🟡 MEDIUM BUG 6: Float Precision in Window Boundaries
+## 🟡 MEDIUM BUG 5: Float Precision in Window Boundaries
 
 ### The Problem
 Floating point arithmetic can create boundaries like 41.0000001 that don't match events at 41.0.
@@ -187,7 +172,7 @@ Use boundary rounding - cleaner and more predictable.
 
 ---
 
-## 🟢 LOW BUG 7: No FPS Validation
+## 🟢 LOW BUG 6: No FPS Validation
 
 ### The Problem
 Code assumes fps is valid, could divide by zero or negative.
@@ -212,7 +197,7 @@ timestamps.append(frame_count / fps)
 
 ---
 
-## 🟢 LOW BUG 8: Edge Case for Videos < 3 Seconds
+## 🟢 LOW BUG 7: Edge Case for Videos < 3 Seconds
 
 ### The Problem
 Not really a bug, but unusual behavior where entire video becomes hook window.
@@ -240,28 +225,34 @@ if video_duration <= HOOK_WINDOW_DURATION:
 ## Implementation Priority
 
 ### Immediate (Fix Now)
-1. **Bug 2**: Eye contact double-counting - Data corruption
-2. **Bug 1**: 6-second video crash - Pipeline failures
+1. **Bug 1**: Eye contact double-counting - Data corruption
 
 ### Soon (Next Sprint)
-3. **Bug 3**: Frame truncation - Precision loss
-4. **Bug 5**: Segment boundary inconsistency - Consistency
+2. **Bug 2**: Frame truncation - Precision loss
+3. **Bug 4**: Segment boundary inconsistency - Consistency
 
 ### When Convenient
-5. **Bug 4**: OCR duration - Minor impact
-6. **Bug 6**: Float precision - Rare edge case
-7. **Bug 7**: FPS validation - Defensive programming
-8. **Bug 8**: Documentation only - No code change
+4. **Bug 3**: OCR duration - Minor impact
+5. **Bug 5**: Float precision - Rare edge case
+6. **Bug 6**: FPS validation - Defensive programming
+7. **Bug 7**: Documentation only - No code change
 
 ---
 
 ## Testing After Fixes
 
 ### Create Test Videos
-1. **6-second video**: Test Bug 1 fix
-2. **Video with events at 3.0s, 41.0s**: Test Bug 2 boundary fix
-3. **Video with OCR text**: Test Bug 4 duration fix
-4. **Corrupted metadata video**: Test Bug 7 validation
+1. **Video with events at 3.0s, 41.0s**: Test Bug 1 boundary fix
+2. **Video with OCR text**: Test Bug 3 duration fix
+3. **Corrupted metadata video**: Test Bug 6 validation
+
+### Note on Speech Segment Boundaries
+```python
+# Line 604 uses inclusive boundaries intentionally:
+if seg_start <= timestamp <= seg_end:  # Checking if timestamp is IN speech segment
+    # This is correct for continuous ranges (speech segments)
+    # Different from point events (detections, gestures, etc.)
+```
 
 ### Automated Tests
 ```python
@@ -270,10 +261,13 @@ def test_boundary_filtering():
     assert event_at_3_seconds in middle_segment
     assert event_at_3_seconds not in hook
 
-def test_six_second_video():
-    # Test that 6-second video processes without crash
-    windows = calculate_temporal_windows(6.0)
-    assert windows['middle'] is None or windows['middle'] == []
+    # Test that all timeline entries use consistent boundaries
+    for timeline_type in ['object', 'gesture', 'expression', 'face', 'gaze']:
+        events = filter_by_window(timeline_type, start=3.0, end=6.0)
+        # Event at 3.0 should be included (inclusive start)
+        assert any(e.timestamp == 3.0 for e in events)
+        # Event at 6.0 should NOT be included (exclusive end)
+        assert not any(e.timestamp == 6.0 for e in events)
 
 def test_frame_precision():
     # Test that frame conversion maintains precision
@@ -289,34 +283,34 @@ def test_frame_precision():
 ## Summary
 
 ### Bug Fixes to Implement
-- **2 CRITICAL** bugs causing crashes and data corruption
+- **1 CRITICAL** bug causing data corruption (eye contact double-counting)
+  - Only 2 lines need changing (1191, 1223)
+  - 10 other boundary checks already correct
 - **4 MEDIUM** bugs causing precision loss and inconsistencies
 - **2 LOW** priority improvements for edge cases
 - **Timeline**: 2-3 hours total
-- **Risk**: Low - mostly one-line changes
+- **Risk**: Very Low - only 2 lines to change for critical bug
 
 ### Deployment Order
 
-1. **Fix critical bugs** (Bug 1 & 2) - Immediate
-   - Eye contact double-counting (line 1183, 1215)
-   - 6-second video state issue (line 516)
-2. **Fix medium bugs** (Bug 3-6) - Next sprint
+1. **Fix critical bug** (Bug 1) - Immediate
+   - Eye contact double-counting (line 1191, 1223)
+2. **Fix medium bugs** (Bug 2-5) - Next sprint
    - Frame truncation
    - OCR duration
    - Segment boundary consistency
    - Float precision
-3. **Fix low priority items** (Bug 7-8) - When convenient
+3. **Fix low priority items** (Bug 6-7) - When convenient
    - FPS validation
    - Documentation for <3s videos
 
 ### Success Criteria
 
 After bug fixes:
-- ✅ No 6-second video crashes
 - ✅ No double-counting at boundaries
 - ✅ Improved precision in frame calculations
 - ✅ Consistent boundary logic throughout
 - ✅ Better error handling for edge cases
 
 ### Note on BucketsPlan Alignment
-BucketsPlan alignment has been moved to a separate document (BucketUpdate.md) due to its complexity and higher risk profile. These bug fixes can and should be implemented independently of bucket alignment decisions.
+BucketsPlan alignment has been implemented, moving the boundary from 6s to 9s. This resolved the previous 6-second video state inconsistency issue. The remaining bugs in this document can be implemented independently.

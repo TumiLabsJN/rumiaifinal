@@ -54,7 +54,7 @@
   │  Window Extraction (temporal_compute.py)                        │
   │  ┌────────────┬──────────────────┬──────────────┐              │
   │  │ Hook       │ Middle Segments  │ Closing      │              │
-  │  │ (0-3s)     │ (3-7 segments)   │ (last 3s)    │              │
+  │  │ (0-3s)     │ (3-5 segments)   │ (last 3s)    │              │
   │  │ 50+ feats  │ 50+ per segment  │ 50+ feats    │              │
   │  └────────────┴──────────────────┴──────────────┘              │
   └────────────────────────┬────────────────────────────────────────┘
@@ -185,8 +185,28 @@
   # processors/temporal_compute.py
   def compute_temporal_windows(unified_analysis):
       hook = process_segment(0, 3)          # First 3 seconds
-      middle = process_middle_segments()     # 3-7 segments
+      middle = process_middle_segments()     # 3-5 segments based on duration
       closing = process_segment(-3, end)     # Last 3 seconds
+
+  ### Temporal Window Bucket Thresholds
+  | Video Duration | Middle Segments | Structure | Middle Duration | Segment Duration | Variance | ML Bucket |
+  |----------------|-----------------|-----------|-----------------|------------------|----------|-----------|
+  | 0-3s | None (null) | Hook only | N/A | N/A | N/A | 1 |
+  | 3-9s | None (null) | Hook + Closing | N/A | N/A | N/A | 2 |
+  | 9-13s | 3 segments | Hook + 3 Middle + Closing | 3-7s | 1.0-2.33s each | 2.33x | 3 |
+  | 13-18s | 3 segments | Hook + 3 Middle + Closing | 7-12s | 2.33-4.0s each | 1.72x | 4 |
+  | 18-33s | 4 segments | Hook + 4 Middle + Closing | 12-27s | 3.0-6.75s each | 2.25x | 5 |
+  | 33-60s | 5 segments | Hook + 5 Middle + Closing | 27-54s | 5.4-10.8s each | 2.0x | 6 |
+  | 60-90s | 5 segments | Hook + 5 Middle + Closing | 54-84s | 10.8-16.8s each | 1.56x | 7 |
+  | 90-120s | 5 segments | Hook + 5 Middle + Closing | 84-114s | 16.8-22.8s each | 1.36x | 8 |
+  | >120s | 5 segments (capped) | Hook + 5 Middle + Closing | >114s | >22.8s each | Variable | Beyond |
+
+  **Critical Changes**:
+  - The boundary changed from 6s to 9s for "no middle segments"
+  - Videos ≤9s return `middle_segments: null` (not empty array `[]`)
+  - Maximum segments capped at 5 for videos >75s
+
+  **ML Training Note**: While 9-18s videos all output 3 middle segments (same structure), the ML training pipeline will bucket them separately as 9-13s and 13-18s to handle variance. The production output remains identical, but ML models train on duration-specific subsets.
 
   Feature Extraction Details:
 
@@ -394,7 +414,8 @@
       },
 
       "middle_segments": [
-        // 3-7 segments depending on video length
+        // 3-5 segments based on duration (see bucket thresholds table)
+        // null for videos ≤9s
         {
           "start": 3.0,
           "end": 10.6,

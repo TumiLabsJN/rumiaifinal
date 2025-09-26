@@ -28,22 +28,31 @@ CLOSING_WINDOW_DURATION = 3.0  # Last 3 seconds - critical for engagement/sharin
 # Based on Decision 10 from decisions2.md
 # These thresholds determine how many middle segments to create
 
+# Updated to match BucketsPlan.md - thresholds now based on TOTAL video duration
+BUCKET_THRESHOLDS = {
+    'no_middle_max': 9,           # 0-9s: No middle segments
+    'three_segments_max': 18,     # 9-18s: 3 middle segments
+    'four_segments_max': 33,      # 18-33s: 4 middle segments
+    'five_segments_max': 75,      # 33-75s: 5 middle segments
+    # >75s: 5 segments (capped)
+}
+
+# Keep old thresholds for backward compatibility reference
 SEGMENT_THRESHOLDS = {
-    'min_duration_for_segments': 3,     # Videos < 3s have no middle segments
-    'three_segments_max': 12,            # Videos 3-12s get 3 segments
-    'four_segments_max': 27,             # Videos 13-27s get 4 segments
-    # Videos > 27s get 5 segments
+    'min_duration_for_segments': 3,     # DEPRECATED: Use BUCKET_THRESHOLDS
+    'three_segments_max': 12,            # DEPRECATED: Use BUCKET_THRESHOLDS
+    'four_segments_max': 27,             # DEPRECATED: Use BUCKET_THRESHOLDS
 }
 
 """
-SEGMENT CALCULATION RULES:
-- Videos < 3 seconds: No middle segments (too short)
-- Videos 3-12 seconds: 3 middle segments
-- Videos 13-27 seconds: 4 middle segments  
-- Videos > 27 seconds: 5 middle segments
+BUCKET CALCULATION RULES (Per BucketsPlan.md):
+- Videos 0-9 seconds: No middle segments
+- Videos 9-18 seconds: 3 middle segments
+- Videos 18-33 seconds: 4 middle segments
+- Videos 33-75 seconds: 5 middle segments
+- Videos >75 seconds: 5 middle segments (capped)
 
-These thresholds were chosen to balance granularity with meaningful
-temporal divisions based on typical short-form video patterns.
+These thresholds align with natural content boundaries for TikTok videos.
 """
 
 # ============================================
@@ -493,7 +502,7 @@ def calculate_temporal_windows(video_duration: float) -> Dict[str, Optional[Tupl
             'middle': None,
             'closing': None
         }
-    elif video_duration <= (HOOK_WINDOW_DURATION + CLOSING_WINDOW_DURATION):
+    elif video_duration <= 9:  # Changed from 6s to 9s per BucketsPlan.md
         return {
             'hook': (0, HOOK_WINDOW_DURATION),
             'middle': None,
@@ -510,31 +519,30 @@ def calculate_middle_segments(video_duration: float) -> Dict[str, Dict[str, floa
     """
     Calculate 3-5 middle segments based on video duration.
     Implements Decision 10 from decisions2.md and P0TemporalWindows.md spec.
-    
+    Updated to match BucketsPlan.md: no middle segments for videos ≤9s.
+
     Uses SEGMENT_THRESHOLDS constants defined at module level.
     """
-    if video_duration <= 6:
-        return {}
+    if video_duration <= 9:  # Changed from 6s to 9s per BucketsPlan.md
+        return None  # Return None instead of {} for consistency
     
     middle_start = HOOK_WINDOW_DURATION
     middle_end = video_duration - CLOSING_WINDOW_DURATION
     middle_duration = middle_end - middle_start
-    
+
     # Handle edge cases
     if middle_duration <= 0:
-        return {}
-    
-    # No segments if middle < 3s (per P0 spec and SEGMENT_THRESHOLDS)
-    if middle_duration < SEGMENT_THRESHOLDS['min_duration_for_segments']:
-        return {}  # Middle exists but no segments
-    
-    # Determine number of segments using module-level constants
-    if middle_duration <= SEGMENT_THRESHOLDS['three_segments_max']:
-        num_segments = 3  # 3-12s middle duration
-    elif middle_duration <= SEGMENT_THRESHOLDS['four_segments_max']:
-        num_segments = 4  # 13-27s middle duration  
+        return None
+
+    # Determine number of segments based on TOTAL video duration (BucketsPlan.md)
+    if video_duration <= BUCKET_THRESHOLDS['three_segments_max']:
+        num_segments = 3  # 9-18s videos
+    elif video_duration <= BUCKET_THRESHOLDS['four_segments_max']:
+        num_segments = 4  # 18-33s videos
+    elif video_duration <= BUCKET_THRESHOLDS['five_segments_max']:
+        num_segments = 5  # 33-75s videos
     else:
-        num_segments = 5  # >27s middle duration
+        num_segments = 5  # >75s videos (capped at 5)
     
     segment_duration = middle_duration / num_segments
     segments = {}
@@ -1797,14 +1805,22 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     # ============================================
     # STEP 6: Process Middle Segments
     # ============================================
-    
-    middle_segments = []
-    if windows['middle']:
+
+    if windows['middle'] is None:
+        # No middle window for videos ≤9s (per BucketsPlan.md)
+        middle_segments = None
+    elif windows['middle']:
         segments = calculate_middle_segments(video_duration)
-        for seg_name, seg_bounds in segments.items():
-            seg_data = process_segment(seg_bounds, timelines, audio_data, ml_data, video_duration)
-            seg_data['segment_name'] = seg_name
-            middle_segments.append(seg_data)
+        if segments is None:
+            middle_segments = None
+        else:
+            middle_segments = []
+            for seg_name, seg_bounds in segments.items():
+                seg_data = process_segment(seg_bounds, timelines, audio_data, ml_data, video_duration)
+                seg_data['segment_name'] = seg_name
+                middle_segments.append(seg_data)
+    else:
+        middle_segments = []
     
     # ============================================
     # STEP 7: Process Closing Window (last 3s)

@@ -27,19 +27,32 @@ Test the core ML processing pipeline (ML Services → Timeline Builder → Tempo
 - Maintain identical data flow and processing logic
 - Preserve all production behaviors (logging, error handling, checkpointing)
 
-### 2. Minimal Mock Data Strategy
-- Use **zero or minimal values** for all engagement metrics
-- Provide **only required fields** to prevent crashes
-- Keep **test simple and fast** without complex data generation
-- Accept that **some features will produce zero values**
+### 2. Minimal Mock Data Strategy with Complete Fields
+- Use **zero or minimal values** for all engagement metrics (Decision Point 2)
+- Provide **ALL required VideoMetadata fields** to prevent AttributeErrors (Decision Point 5)
+- Keep **values simple** (zeros/empty) but **structure complete**
+- Accept that **some features will produce zero values** due to minimal data
 
-### 3. No Production Code Changes
+### 3. Direct Video Path Return
+- Videos already in `/home/jorge/rumiaifinal/temp/` directory
+- No copying needed - return paths directly (Decision Point 6)
+- Avoids unnecessary I/O and duplication
+- Production expects videos in temp dir, which is where they already are
+
+### 4. No Production Code Changes
 ```python
 # Import production runner AS-IS
-from scripts.rumiai_runner import RumiAIRunner
-from rumiai_v2.core.models.video import VideoMetadata
+import asyncio
+import json
+import logging
+from typing import Dict, List, Any
 from pathlib import Path
 from datetime import datetime
+
+from scripts.rumiai_runner import RumiAIRunner
+from rumiai_v2.core.models.video import VideoMetadata
+
+logger = logging.getLogger(__name__)
 
 # Create test subclass that overrides only Apify methods
 class TestManualVideosRunner(RumiAIRunner):
@@ -60,7 +73,7 @@ class TestManualVideosRunner(RumiAIRunner):
 
 **Rationale**: Analysis showed rumiai_runner.py has excellent Apify separation with only 2 clean interface points to override.
 
-### 4. Comparison with Existing Tests
+### 5. Comparison with Existing Tests
 
 | Aspect | rumiai_runner.py | test_temporal_compute_v2.py | test_manual_videos.py |
 |--------|------------------|------------------------------|----------------------|
@@ -96,11 +109,13 @@ class TestManualVideosRunner(RumiAIRunner):
 
     def create_mock_metadata(self, video_url: str, video_path: Path) -> VideoMetadata:
         """
-        Create minimal VideoMetadata with only required fields to avoid crashes.
-        Uses zero/minimal values to keep the test simple and focused on ML pipeline.
+        Create VideoMetadata with ALL required fields to ensure production compatibility.
 
-        Decision: Use minimal mock data (Option A) for simplicity and speed.
-        Some features dependent on engagement may produce zero values.
+        Decision Point 2: Use minimal mock data values for simplicity.
+        Decision Point 5: Provide ALL VideoMetadata fields (even with zero values)
+        because production code may access any field and we want to avoid AttributeErrors.
+
+        This combines minimal values with complete field coverage.
         """
         # Extract actual video properties
         import cv2
@@ -115,24 +130,25 @@ class TestManualVideosRunner(RumiAIRunner):
         if not video_id.isdigit():
             video_id = str(abs(hash(video_id)) % 10**15)  # Fake TikTok-like ID
 
-        # Return VideoMetadata with all required fields (production expects these)
+        # Return VideoMetadata with ALL required fields to avoid AttributeErrors
+        # Decision Point 5: Must provide every field that VideoMetadata class expects
         return VideoMetadata(
             video_id=video_id,
             url=video_url,
-            username="testuser",  # Required: changed from 'author'
-            description="Test video",
-            duration=duration,
-            views=0,  # Required: changed from 'play_count'
-            likes=0,  # Required: changed from 'digg_count'
-            comments=0,  # Required: changed from 'comment_count'
-            shares=0,  # Required: changed from 'share_count'
-            saves=0,  # Required: changed from 'collect_count'
-            create_time=datetime.now(),  # Required: datetime object, not timestamp
-            download_url=video_url,  # Required field
-            cover_url="",  # Required field
-            hashtags=[],  # Empty list is valid
-            music={},  # Required: empty dict is valid
-            author={},  # Required: empty dict is valid
+            username="testuser",  # Required field (not 'author' string)
+            description="Test video",  # Minimal but valid
+            duration=duration,  # Actual duration from video
+            views=0,  # Minimal value
+            likes=0,  # Minimal value
+            comments=0,  # Minimal value
+            shares=0,  # Minimal value
+            saves=0,  # Minimal value
+            create_time=datetime.now(),  # Must be datetime object
+            download_url=video_url,  # Required even if not downloading
+            cover_url="",  # Required but can be empty
+            hashtags=[],  # Required but can be empty list
+            music={},  # Required but can be empty dict
+            author={},  # Required but can be empty dict
             engagement_rate=0.0  # Required field
         )
 ```
@@ -165,22 +181,55 @@ class TestManualVideosRunner(RumiAIRunner):
         return self.create_mock_metadata(video_url, video_path)
 
     async def _download_video(self, video_metadata: VideoMetadata) -> Path:
-        """Override Apify download by returning local file."""
+        """Override Apify download by returning local file.
+
+        Decision Point 6: Direct return (no copy) since videos are already in temp dir.
+        Videos are in /home/jorge/rumiaifinal/temp/ which is where production expects them.
+        """
         video_path = self.video_mapping.get(video_metadata.url)
         if not video_path or not video_path.exists():
             raise FileNotFoundError(f"Video file not found: {video_path}")
 
-        # Copy to temp dir to mimic production behavior
-        temp_path = self.settings.temp_dir / f"{video_metadata.video_id}.mp4"
-        shutil.copy2(video_path, temp_path)
-        return temp_path
+        # Videos are already in temp directory, just return the path
+        return video_path
 
     def create_mock_metadata(self, video_url: str, video_path: Path) -> VideoMetadata:
         """Create minimal VideoMetadata matching production structure.
         See full implementation above with zero/minimal values."""
-        # Implementation shown in Phase 1 above
-        # Cannot call super() as parent class doesn't have this method
-        # Would implement the full method here (see Phase 1)
+        # Implementation must match Phase 1 exactly
+        # Extract video duration
+        import cv2
+        cap = cv2.VideoCapture(str(video_path))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        duration = int(frame_count / fps) if fps > 0 else 0
+        cap.release()
+
+        # Generate video_id
+        video_id = video_path.stem.replace('_', '')
+        if not video_id.isdigit():
+            video_id = str(abs(hash(video_id)) % 10**15)
+
+        # Return complete VideoMetadata
+        return VideoMetadata(
+            video_id=video_id,
+            url=video_url,
+            username="testuser",
+            description="Test video",
+            duration=duration,
+            views=0,
+            likes=0,
+            comments=0,
+            shares=0,
+            saves=0,
+            create_time=datetime.now(),
+            download_url=video_url,
+            cover_url="",
+            hashtags=[],
+            music={},
+            author={},
+            engagement_rate=0.0
+        )
 
 # Usage: Run exact production pipeline with local videos
 runner = TestManualVideosRunner()
@@ -190,6 +239,9 @@ await runner.process_video_url("https://tiktok.com/@test/my_video")  # Uses loca
 ### Phase 3: Output Validation
 
 ```python
+import json
+from pathlib import Path
+
 def validate_output(video_id: str) -> bool:
     """
     Verify the pipeline produced expected outputs.
@@ -216,67 +268,67 @@ def validate_output(video_id: str) -> bool:
     return True
 ```
 
-### Phase 4: Batch Processing
+### Phase 4: Single Video Testing
 
 ```python
-async def main():
+import asyncio
+from pathlib import Path
+
+async def test_single_video(video_filename: str):
     """
-    Process all videos in temp directory using production pipeline.
+    Test a single video through the production pipeline.
+    Tests are run one at a time for better debugging and isolation.
     """
     runner = TestManualVideosRunner(
         video_dir=Path("/home/jorge/rumiaifinal/temp")
     )
 
-    # Get all mapped URLs
-    test_urls = list(runner.video_mapping.keys())
-    print(f"Found {len(test_urls)} videos to process")
+    # Create fake URL for this specific video
+    fake_url = f"https://tiktok.com/@test/{Path(video_filename).stem}"
 
-    results = []
-    for url in test_urls:
-        video_name = runner.video_mapping[url].name
-        print(f"\n{'='*60}")
-        print(f"Processing: {video_name}")
-        print(f"URL: {url}")
-        print('='*60)
+    if fake_url not in runner.video_mapping:
+        print(f"❌ Video not found: {video_filename}")
+        print(f"Available videos: {list(runner.video_mapping.keys())}")
+        return False
 
-        try:
-            # Run EXACT production pipeline
-            # This will call all production code except the 2 overridden methods
-            await runner.process_video_url(url)
+    print(f"\n{'='*60}")
+    print(f"Testing: {video_filename}")
+    print(f"URL: {fake_url}")
+    print('='*60)
 
-            # Extract video_id from URL for validation
-            video_id = url.split('/')[-1]
+    try:
+        # Run EXACT production pipeline
+        await runner.process_video_url(fake_url)
 
-            # Validate outputs using production paths
-            success = validate_output(f"manual_{video_id}")
+        # Extract video_id and validate outputs
+        video_id = Path(video_filename).stem
+        success = validate_output(f"manual_{video_id}")
 
-            results.append({
-                'video': video_name,
-                'video_id': f"manual_{video_id}",
-                'success': success,
-                'url': url
-            })
+        if success:
+            print(f"✅ Test passed: {video_filename}")
+        else:
+            print(f"⚠️ Test completed but validation failed: {video_filename}")
 
-            print(f"✅ Completed: {video_name}")
+        return success
 
-        except Exception as e:
-            print(f"❌ Failed: {video_name}")
-            print(f"   Error: {str(e)}")
-            logger.exception(f"Failed processing {url}")
+    except Exception as e:
+        print(f"❌ Test failed: {video_filename}")
+        print(f"   Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return False
 
-            results.append({
-                'video': video_name,
-                'success': False,
-                'error': str(e),
-                'url': url
-            })
-
-    # Print summary report
-    print_summary(results)
-
-# Entry point
+# Entry point for single video testing
 if __name__ == "__main__":
-    asyncio.run(main())
+    import sys
+    if len(sys.argv) < 2:
+        print("Usage: python test_manual_videos.py <video_filename>")
+        print("Example: python test_manual_videos.py example_video.mp4")
+        sys.exit(1)
+
+    video_file = sys.argv[1]
+    success = asyncio.run(test_single_video(video_file))
+    sys.exit(0 if success else 1)
 ```
 
 ## Key Differences from Production
@@ -287,9 +339,9 @@ if __name__ == "__main__":
 - **Impact**: Features dependent on hashtags/engagement will produce zero or minimal values
 
 ### 2. Video Source
-- **Production**: Downloads from TikTok CDN after Apify provides URL
-- **Test**: Reads from local `/temp` directory
-- **Impact**: No network dependencies, faster testing
+- **Production**: Downloads from TikTok CDN to temp directory
+- **Test**: Uses pre-existing files in `/home/jorge/rumiaifinal/temp/`
+- **Impact**: No network dependencies, no file copying, faster testing
 
 ### 3. Error Handling
 - **Production**: Handles Apify failures, network issues
@@ -333,17 +385,13 @@ test_outputs/
 ## Usage
 
 ```bash
-# Basic usage with minimal mock data
-python test_manual_videos.py
+# Test a single video
+python test_manual_videos.py example_video.mp4
 
-# With specific directory
-python test_manual_videos.py --video-dir /custom/path
+# Test another video
+python test_manual_videos.py my_test_video.mp4
 
-# With parallel processing
-python test_manual_videos.py --parallel
-
-# Validate only (don't process)
-python test_manual_videos.py --validate-only
+# Videos must be in /home/jorge/rumiaifinal/temp/
 ```
 
 ## Advantages Over Current Tests
@@ -351,8 +399,8 @@ python test_manual_videos.py --validate-only
 1. **End-to-End Testing**: Tests complete pipeline, not just one component
 2. **Custom Videos**: Can test edge cases with specific video content
 3. **Offline Testing**: No dependency on network or APIs
-4. **Debugging**: Easier to debug with local files
-5. **Regression Testing**: Can maintain suite of test videos
+4. **Debugging**: One-at-a-time testing makes debugging easier
+5. **Isolation**: Each test runs independently, no interference
 
 ## Limitations
 
