@@ -194,7 +194,7 @@ class TimelineBuilder:
             
             # Estimate duration based on text length
             text = text_annotation.get('text', '')
-            duration = max(1.0, len(text) * 0.1)  # At least 1 second, 0.1s per character
+            duration = max(0.5, len(text) * 0.1)  # At least 0.5 second, 0.1s per character
             
             entry = TimelineEntry(
                 start=timestamp,

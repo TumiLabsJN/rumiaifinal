@@ -1188,7 +1188,7 @@ def calculate_eye_contact_rate(timeline_entries: List[Dict], start: float, end: 
     for entry in timeline_entries:
         if entry.get('entry_type') == 'gaze':
             entry_start = entry.get('start', 0)
-            if start <= entry_start <= end:
+            if start <= entry_start < end:
                 eye_contact = entry.get('data', {}).get('eye_contact', 0)
                 if eye_contact is not None:  # Valid measurement
                     eye_contact_scores.append(eye_contact)
@@ -1220,7 +1220,7 @@ def calculate_gaze_variance(timeline_entries: List[Dict], start: float, end: flo
     for entry in timeline_entries:
         if entry.get('entry_type') == 'gaze':
             entry_start = entry.get('start', 0)
-            if start <= entry_start <= end:
+            if start <= entry_start < end:
                 eye_contact = entry.get('data', {}).get('eye_contact', 0)
                 if eye_contact is not None:  # Valid measurement
                     eye_contact_scores.append(eye_contact)
@@ -1274,24 +1274,25 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     # sticker_count removed - see StickersProblem.md for why
 
     # NEW: Count unique object instances using YOLO's trackId with strict validation
-    unique_instances = set()
+    # Fixed: Separate tracking of non-person objects to avoid double-counting
+    non_person_instances = set()
     person_instances = set()
 
     for obj in segment_objects:
         # Extract instance ID using the validation function
         instance_id = extract_instance_id(obj.get('trackId', ''))
         if instance_id is not None:
-            unique_instances.add(instance_id)
-
-            # Also track person instances
+            # Track persons and non-person objects separately
             if obj.get('className') == 'person':
                 person_instances.add(instance_id)
+            else:
+                non_person_instances.add(instance_id)
 
-    object_count = len(unique_instances)
-    person_count = len(person_instances)  # Replaces calculate_max_unique_persons()
+    object_count = len(non_person_instances)  # Only non-person objects
+    person_count = len(person_instances)      # Only persons
 
     gesture_count = len(segment_gestures)
-    expression_count = len(segment_expressions)
+    # expression_count removed - was always constant based on FEAT sampling rate
     scene_count = len(segment_scenes)
     
     # element_count removed per MLFeaturesGIGO.md - pure derivative
@@ -1539,7 +1540,6 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         'object_count': object_count,
         'person_count': person_count,  # MVP: Person-specific count
         'gesture_count': gesture_count,
-        'expression_count': expression_count,
         'scene_count': scene_count,
         # element_count removed per MLFeaturesGIGO.md - pure derivative
         # P0 density extremes

@@ -30,7 +30,7 @@ DO NOT trust feature descriptions at face value. Each feature must be:
 | shortest_scene | Scene Pacing | Scene Detection | scene timestamps | Temporal | Float [0-∞] | Duration of shortest scene in seconds | Shows editing pace extremes | High | None | Minimum scene duration calculated from timestamps | None | None | Log + scale | Low | Medium |
 | longest_scene | Scene Pacing | Scene Detection | scene timestamps | Temporal | Float [0-∞] | Duration of longest scene in seconds | Shows editing pace extremes | High | None | Maximum scene duration calculated from timestamps | None | None | Log + scale | Low | Medium |
 | scene_duration_variance | Scene Pacing | Scene Detection | scene durations | Temporal | Float [0-∞] | Variance in scene durations | High variance indicates dynamic vs consistent pacing | High | Derivative | Variance of scene durations - use durations directly | None | None | Log + scale | Medium | Medium |
-| object_count | Object Detection | YOLO | None | Temporal | Integer [0-∞] | Total YOLO object detections | More objects indicate visually rich content | High | None | Direct count from YOLO detections | None | None | Scale [0-1] | Low | Medium |
+| object_count | Object Detection | YOLO | None | Temporal | Integer [0-∞] | Non-person objects detected | Props, products, and scene elements (excludes persons) | High | None | Direct count from YOLO detections (excluding persons) | None | None | Scale [0-1] | Low | Medium |
 | person_count | Object Detection | YOLO | object detections with className='person' | Temporal | Integer [0-∞] | Maximum unique persons visible simultaneously | Multi-person content affects viewer engagement | High | Colinear | Highly correlated with close_ratio when >1 person | None | None | Scale [0-1] | Low | Medium |
 
 ---
@@ -417,7 +417,7 @@ How many objects and people are visible, indicating content richness and social 
 ```json
 {
   "hook": {
-    "object_count": 0-∞,    // Total YOLO object detections
+    "object_count": 0-∞,    // Non-person objects only (excludes persons)
     "person_count": 0-∞     // Maximum unique persons simultaneously
   },
   "middle_segments": [...], // Same metrics per segment
@@ -431,7 +431,7 @@ Reference: `/insights/7363753427328961834_temporal_windows_updated.json:12,14`
 
 | Metric | Formula (temporal_compute.py:1096-1241) | Range | Interpretation |
 |--------|---------|-------|----------------|
-| object_count | len(segment_objects) | 0-∞ | Total visual objects detected |
+| object_count | len(non_person_objects) | 0-∞ | Non-person objects only |
 | person_count | max_unique_persons_at_any_timestamp | 0-∞ | Peak simultaneous people |
 
 ## 🔄 Data Pipeline
