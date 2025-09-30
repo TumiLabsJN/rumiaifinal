@@ -485,3 +485,101 @@ Document for creators that emoji overlays won't be tracked in analytics.
 **Removed avg_pitch_normalized feature** - Eliminated dependency on gender detection for pitch analysis. System now uses gender-independent pitch_scatter_ratio instead.
 
 ---
+
+## 6. Person Count (ByteTrack + Temporal Windows)
+
+### Current Implementation
+- **Service**: YOLO v8 for detection + ByteTrack for tracking
+- **Processing**: Object detection at 5 FPS with track IDs
+- **Counting Strategy**: Maximum simultaneous persons visible within 0.2s temporal windows
+
+### Known Limitations
+
+#### 6.1 Sequential vs Simultaneous People
+- **The Problem**: Cannot distinguish between multiple people appearing sequentially vs same person with track fragmentation
+- **Example Case**: Video10TwoPeople.mp4 segment 3 (8.33-11.0s)
+  - Person A visible 8.33-9.0s (ID 2)
+  - Person B visible 9.0-11.0s (ID 4)
+  - Result: person_count = 1 (maximum simultaneous)
+  - Reality: 2 different people appeared sequentially
+- **Design Decision**: Counting maximum simultaneous was chosen to prevent track fragmentation over-counting
+
+#### 6.2 Track Fragmentation Trade-off
+- **What We Fixed**: Same person getting multiple IDs no longer causes over-counting
+- **What We Lost**: Total unique people who appear in segment (useful for cast complexity)
+- **The Dilemma**:
+  - Count unique IDs → Over-counts due to fragmentation
+  - Count max simultaneous → Under-counts sequential appearances
+  - No perfect solution without person re-identification
+
+#### 6.3 Rapid Re-ID Within Window
+- **Edge Case**: Person loses and regains tracking within same 0.2s window
+- **Probability**: ~0.1% of cases (requires track loss and re-acquisition within 200ms)
+- **Impact**: Would count same person twice within that window
+- **Decision**: Accepted as extremely rare edge case
+
+### What person_count Actually Represents
+
+**Current Metric**: Maximum number of people visible simultaneously in any 0.2s window within the segment
+
+**NOT Captured**:
+- Total unique people who appeared in segment
+- Cast complexity for sequential appearances
+- Quick cuts between different people (testimonial patterns)
+
+### Better Alternatives
+
+#### Hybrid Metrics (Recommended)
+```python
+# Provide multiple counts for ML models to choose
+person_count_max = 1      # Current: Max simultaneous
+person_count_total = 2    # Future: Total unique (with smart dedup)
+person_turnover = 1       # Future: How many person changes
+person_consistency = 0.5  # Future: Same people throughout?
+```
+
+#### Person Re-Identification
+| Method | Pros | Cons | Implementation |
+|--------|------|------|----------------|
+| **Face Recognition** | • Accurate person matching<br>• Handles re-ID perfectly | • Privacy concerns<br>• Computationally expensive | 1 week |
+| **Appearance Similarity** | • No face needed<br>• Uses clothing/body | • Changes in angle affect<br>• Less accurate | 3 days |
+| **Spatial-Temporal Heuristics** | • Fast<br>• No ML needed | • Many edge cases<br>• Parameter tuning | 2 days |
+
+### Impact on ML Analysis
+
+#### For Viral Pattern Detection
+- **Lost Patterns**: Quick testimonials, reaction compilations, before/after sequences
+- **Preserved Patterns**: Group dynamics, solo vs multi-person content
+- **Workaround**: Combine with scene_count to infer sequential patterns
+
+#### For Engagement Prediction
+- **Still Useful**: Distinguishes solo from group content
+- **Less Granular**: Can't detect "3 testimonials" pattern
+- **Compensated By**: Other features like scene changes, emotion variety
+
+### Recommended Improvements
+
+#### Short-term (Already Implemented)
+1. ✅ Temporal window approach to handle track fragmentation
+2. ✅ Filter fallback IDs (>=10000 or tracked=False)
+3. ✅ Separate person and object counting logic
+
+#### Medium-term (1 week)
+1. Add `person_count_total` as additional feature (with caveat documentation)
+2. Track person "turnover" - how many ID changes occur
+3. Add confidence score for counting accuracy
+
+#### Long-term (2-4 weeks)
+1. Implement basic person re-identification using appearance features
+2. Create "cast complexity" metric combining multiple signals
+3. Add temporal patterns (e.g., "alternating speakers" detection)
+
+### Current Workaround
+**Use maximum simultaneous count** - Provides conservative, consistent metric that won't explode due to fragmentation. Better to under-count sequential appearances than over-count due to tracking errors.
+
+### Why Not Fixed Completely
+1. **No Perfect Solution**: Without person re-identification, cannot distinguish sequential people from fragmented tracking
+2. **Business Priority**: Current approach prevents gross over-counting which is more harmful to ML models
+3. **Acceptable Trade-off**: Losing sequential cast information is better than 3x over-counting from fragmentation
+4. **Future Enhancement**: Proper fix requires person re-identification system (significant effort)
+

@@ -1326,32 +1326,63 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     # Calculate all P0 required counts
     # sticker_count removed - see StickersProblem.md for why
 
-    # NEW: Count unique object instances using YOLO's trackId with strict validation
-    # Fixed: Separate tracking of non-person objects to avoid double-counting
-    non_person_instances = set()
-    person_instances = set()
+    # NEW: Calculate person count using overlapping temporal windows
+    # Uses 0.2s windows with 0.1s stride to handle ByteTrack's
+    # timestamp granularity while preventing boundary split issues
 
+    WINDOW_SIZE = 0.2  # Matches 5 FPS sampling rate
+    STRIDE = 0.1       # 50% overlap between windows
+
+    # Initialize counters
+    max_persons = 0
+    all_object_instances = set()  # Simple set for objects (no windowing needed)
+
+    # Process objects first (simple counting across entire segment)
     for obj in segment_objects:
-        # Extract instance ID using the validation function
-        instance_id = extract_instance_id(obj.get('trackId', ''))
-        if instance_id is not None:
-            # Filter out fallback IDs (10000+) which indicate lost tracking
-            try:
-                instance_num = int(instance_id)
-                is_fallback = instance_num >= 10000
-            except ValueError:
-                is_fallback = False
+        if obj.get('className') != 'person':
+            timestamp = obj.get('timestamp', 0)
+            if start <= timestamp < end:
+                instance_id = extract_instance_id(obj.get('trackId', ''))
+                # Objects use simple tracked check (no logging needed typically)
+                if instance_id is not None and obj.get('tracked', True):
+                    all_object_instances.add(instance_id)
 
-            # Only count real tracked instances, not fallbacks
-            if not is_fallback:
-                # Track persons and non-person objects separately
-                if obj.get('className') == 'person':
-                    person_instances.add(instance_id)
-                else:
-                    non_person_instances.add(instance_id)
+    # Process persons with overlapping windows (handles fragmentation)
+    # Note: Final windows may be smaller than WINDOW_SIZE to ensure
+    # complete segment coverage. This is preferable to missing detections.
+    window_start = start
 
-    object_count = len(non_person_instances)  # Only non-person objects
-    person_count = len(person_instances)      # Only persons
+    while window_start < end:
+        window_end = min(window_start + WINDOW_SIZE, end)
+        unique_persons_in_window = set()
+
+        for obj in segment_objects:
+            if obj.get('className') == 'person':
+                timestamp = obj.get('timestamp', 0)
+
+                # Check if detection falls within this window
+                if window_start <= timestamp < window_end:
+                    instance_id = extract_instance_id(obj.get('trackId', ''))
+
+                    # Check tracked flag with logging for missing values
+                    tracked = obj.get('tracked')
+                    if tracked is None:
+                        logger.warning(f"Missing 'tracked' flag at {timestamp}s, defaulting to True")
+                        tracked = True
+
+                    # Only count tracked detections (fallbacks have tracked=False)
+                    if instance_id is not None and tracked:
+                        unique_persons_in_window.add(instance_id)
+
+        # Track maximum persons across all windows
+        max_persons = max(max_persons, len(unique_persons_in_window))
+
+        # Slide window by STRIDE
+        window_start += STRIDE
+        # Loop naturally terminates when window_start >= end
+
+    person_count = max_persons
+    object_count = len(all_object_instances)  # Simple count for objects
 
     # Deduplicate gestures - group consecutive same gestures within 0.8s
     unique_gestures = []

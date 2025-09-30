@@ -105,12 +105,12 @@ Configuration:
 
 Processing Method: Full audio transcription (no sampling)
 Audio Format: 16kHz mono WAV (via SharedAudioExtractor)
-Segmentation: Automatic by whisper.cpp VAD (Voice Activity Detection)
+Segmentation: None (NO VAD - processes entire audio file)
 
 Implementation Flow:
 1. SharedAudioExtractor.extract_once() - Gets/creates 16kHz WAV
 2. WhisperCppTranscriber.transcribe_with_preprocessing()
-3. Whisper.cpp processes full audio with VAD
+3. Whisper.cpp processes full audio (no VAD, no filtering)
 4. Returns segments with precise timestamps
 
 Implementation Location:
@@ -121,9 +121,16 @@ Implementation Location:
 └── /whisper.cpp/
     └── Native C++ implementation
 
+### Voice Activity Detection (VAD)
+
+**Not Implemented** - Whisper processes entire audio without VAD or filtering.
+- May miss initial 0.5s of speech when mixed with music
+- May output `[Music]` markers as part of transcription
+- Investigation: See MusicSpeech.md
+
 Rationale: Full transcription ensures no speech is missed
 Trade-offs: Longer videos take more time, but accuracy is paramount
-⚠️ Known Issues: None identified
+⚠️ Known Issues: Initial speech loss when audio starts with music
 ```
 
 ## 🔍 Self-Containment Check
@@ -156,7 +163,7 @@ Video Path ─────────> SharedAudioExtractor ──────�
 
 3. Transcription Stage
    ├── Load whisper.cpp base model
-   ├── Process full audio with VAD
+   ├── Process full audio
    ├── Generate segments with timestamps
    └── Include confidence scores
 
@@ -286,7 +293,7 @@ time python3 scripts/rumiai_runner.py 'VIDEO_URL'
 
 ## 📈 Optimization Opportunities
 - [ ] **Model Size**: Could use 'tiny' model for faster processing (trade quality for speed)
-- [ ] **VAD Tuning**: Adjust voice activity detection parameters for content type
+- [ ] **Implement VAD**: Add voice activity detection (currently not implemented)
 - [ ] **Language Hints**: Provide language hints to speed up detection
 - [ ] **GPU Acceleration**: Migrate to faster-whisper when processing speed becomes bottleneck (see Implementation Alternatives section)
 
