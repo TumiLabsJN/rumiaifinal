@@ -40,15 +40,15 @@ def analyze_video(video_path: str) -> dict:
     fps = cap.get(cv2.CAP_PROP_FPS)
     duration = total_frames / fps if fps > 0 else 0
 
-    # Determine frame count based on duration
+    # Determine frame count based on duration - IMPROVED: More samples
     if duration < 5:
-        num_frames = 2
+        num_frames = 3  # was 2 - more samples for short videos
     elif duration < 15:
-        num_frames = 3
+        num_frames = 5  # was 3 - better coverage for medium videos
     elif duration < 30:
-        num_frames = 5
+        num_frames = 7  # was 5
     else:
-        num_frames = 7
+        num_frames = 10  # was 7 - more samples for long videos
 
     # Sample frames evenly
     frame_indices = np.linspace(0, total_frames - 1, num_frames, dtype=int)
@@ -79,7 +79,7 @@ def analyze_video(video_path: str) -> dict:
                 frame,
                 actions=['gender'],
                 enforce_detection=False,
-                detector_backend='opencv',
+                detector_backend='mtcnn',  # IMPROVED: Balance of speed and accuracy
                 silent=True
             )
 
@@ -103,12 +103,17 @@ def analyze_video(video_path: str) -> dict:
                     dominant = face['dominant_gender']
                     confidence = face['gender'][dominant] / 100.0
 
-                    # Map to our format
-                    gender = 'male' if dominant.lower() == 'man' else 'female'
-                    gender_votes.append({
-                        'gender': gender,
-                        'confidence': confidence
-                    })
+                    # IMPROVED: Only accept high-confidence predictions
+                    MIN_CONFIDENCE = 0.75  # Lower threshold since we have more frames
+
+                    if confidence >= MIN_CONFIDENCE:
+                        # Map to our format
+                        gender = 'male' if dominant.lower() == 'man' else 'female'
+                        gender_votes.append({
+                            'gender': gender,
+                            'confidence': confidence
+                        })
+                    # If low confidence, skip this frame (don't vote)
         except Exception as e:
             # Skip frame on error
             continue
@@ -163,7 +168,7 @@ def analyze_video(video_path: str) -> dict:
         'confidence': float(final_confidence),
         'method': 'deepface',
         'frames_analyzed': len(frames),
-        'detector_backend': 'opencv',
+        'detector_backend': 'mtcnn',  # Updated to match actual detector
         'processing_ms': int((time.time() - start_time) * 1000)
     }
 

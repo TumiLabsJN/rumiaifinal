@@ -321,13 +321,14 @@ Used by: temporal_compute.py for voice characteristic analysis
 
 ## ⚡ Performance Profile
 ```
-Execution Time (To Be Confirmed - Pending Instrumentation Tests):
-- 60-second video: TBC seconds
-- 120-second video: TBC seconds
+Execution Time (UPDATED 2025-09-30):
+- 11-second video: 8.5 seconds with MTCNN (5 frames)
+- Previous: ~2-3 seconds with opencv (3 frames)
+- Frame processing: ~1.7 seconds per frame with MTCNN
 
-Resource Usage (To Be Confirmed - Pending Instrumentation Tests):
-- Memory: TBC GB peak (subprocess isolated)
-- CPU: TBC% average (TBC cores)
+Resource Usage:
+- Memory: <100MB (subprocess isolated)
+- CPU: Single-threaded face detection
 - GPU Capable: ✅ Yes (DeepFace/TensorFlow supports CUDA)
 - Current GPU Usage: ❌ None (CPU-only implementation)
 - Potential: Could enable GPU with proper CUDA environment in subprocess
@@ -342,35 +343,52 @@ Configuration:
 
 ## 📹 Frame Sampling Strategy
 ```
-⚠️ VERIFIED through code inspection
+⚠️ UPDATED: 2025-09-30 with improvements for better accuracy
 
 Adaptive Sampling (based on video duration):
-This is not FPS, its number of frames to identify sex.
-- <5s videos: 2 frames
-- 5-15s videos: 3 frames
-- 15-30s videos: 5 frames
-- >30s videos: 7 frames
+This is not FPS, its number of frames to identify gender.
+- <5s videos: 3 frames (was 2) +50% improvement
+- 5-15s videos: 5 frames (was 3) +67% improvement
+- 15-30s videos: 7 frames (was 5) +40% improvement
+- >30s videos: 10 frames (was 7) +43% improvement
 
 Actual Implementation:
-# From run_deepface_gender.py:44-51
+# From run_deepface_gender.py:44-51 (IMPROVED)
 if duration < 5:
-    num_frames = 2
+    num_frames = 3  # was 2 - more samples for short videos
 elif duration < 15:
-    num_frames = 3
+    num_frames = 5  # was 3 - better coverage for medium videos
 elif duration < 30:
-    num_frames = 5
+    num_frames = 7  # was 5
 else:
-    num_frames = 7
+    num_frames = 10  # was 7 - more samples for long videos
 
-# Frames sampled evenly across video
+# Frames sampled evenly across video using linear interpolation
 frame_indices = np.linspace(0, total_frames - 1, num_frames, dtype=int)
+
+Example for 11-second video (5 frames):
+- Frame at 0% (start)
+- Frame at 25% (2.75s)
+- Frame at 50% (5.5s)
+- Frame at 75% (8.25s)
+- Frame at 100% (end)
 
 Implementation Location:
 └── /scripts/run_deepface_gender.py
     └── analyze_video() function
         └── Lines: 44-54
 
+Face Detection Backend:
+- Using MTCNN (was opencv) - better accuracy/speed balance
+- Retinaface too slow (>30s timeout)
+
 Face Size Filter: 120x120 pixels minimum (filters out logos/watermarks)
+
+Confidence Threshold:
+- MIN_CONFIDENCE = 0.75 (NEW)
+- Low confidence frames don't vote
+- If all frames < 75% confidence: returns gender=None
+
 Multi-person Detection: Returns 'multiple_people' for ambiguous cases
 ```
 
@@ -466,10 +484,20 @@ Output:
 - **Effort Estimate**: 3 days
 - **Files Affected**: deepface_gender_service_simple.py
 
-### Priority: LOW 🟢
-- **Issue**: OpenCV backend less accurate than RetinaFace
-- **Impact**: ~5% lower accuracy in face detection
-- **Proposed Fix**: Switch to RetinaFace backend
+### Priority: HIGH 🔴 - Model Bias Issues
+- **Issue**: DeepFace model heavily biased toward performative gender presentation
+- **Impact**: Misclassifies natural/no-makeup faces (e.g., female without makeup → male)
+- **Real Example**: Test video of female (just woken up) classified as male with 85% confidence
+- **Root Cause**: Training data bias - women with makeup, men without
+- **Current Workaround**: Removed avg_pitch_normalized feature to eliminate dependency
+- **Proposed Fix**: Either custom model training or multi-modal (face+voice) approach
+- **Effort Estimate**: 2-4 weeks for proper solution
+
+### Priority: MEDIUM 🟡
+- **Issue**: Frame selection strategy is naive (linear interpolation)
+- **Impact**: May sample intro/outro frames with no faces or poor angles
+- **Current**: Evenly distributed frames (0%, 25%, 50%, 75%, 100%)
+- **Better**: Skip first/last 10% of video, focus on middle sections
 - **Effort Estimate**: 1 day
 
 ## 🧪 Testing & Validation

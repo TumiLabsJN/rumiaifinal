@@ -1,0 +1,9 @@
+{
+  "gender": "multiple_people",
+  "confidence": 0.0,
+  "method": "deepface",
+  "frames_analyzed": 5,
+  "multi_person_frames": 3,
+  "processing_ms": 5140,
+  "note": "Multiple people detected - use self-normalization for pitch"
+}

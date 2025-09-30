@@ -746,6 +746,14 @@ async def generate_creative_reports(hashtag_id):
 
 ### 🎥C.7 Engagement Data Source
 
+#### Engagement Score Calculation
+
+For **top mode** video selection, engagement is calculated using a composite score that weights shares heavily (viral indicator).
+
+**Formula**: `engagement_score = views × (1 + share_rate × 10)`
+
+**Complete implementation details**: See [MLAnalysisMode.md - Engagement Score Calculation](./MLAnalysisMode.md#engagement-score-calculation)
+
 #### Engagement Metrics from Apify
 
 All engagement data comes directly from Apify's TikTok scraper output:
@@ -754,14 +762,10 @@ All engagement data comes directly from Apify's TikTok scraper output:
 # Apify provides these metrics for each video:
 {
     "playCount": 3200000,      # → views
-    "diggCount": 346500,       # → likes  
+    "diggCount": 346500,       # → likes
     "commentCount": 872,        # → comments
     "shareCount": 15500         # → shares
 }
-
-# We calculate engagement rate as our ML target variable:
-engagement_rate = (likes + comments + shares) / views
-# Example: (346500 + 872 + 15500) / 3200000 = 11.34%
 ```
 
 #### Data Flow for Engagement Metrics

@@ -67,24 +67,64 @@ class MLDataValidator:
                 if not isinstance(annotation, dict):
                     logger.warning(f"Skipping non-dict annotation at index {i}")
                     continue
-                
+
                 # Ensure required fields
                 if 'class' not in annotation:
-                    annotation['class'] = 'unknown'
+                    # Check for alternative field name
+                    if 'className' in annotation:
+                        annotation['class'] = annotation['className']
+                    else:
+                        annotation['class'] = 'unknown'
                 
                 if 'frames' not in annotation:
-                    # Try alternative keys
-                    if 'detections' in annotation:
-                        annotation['frames'] = annotation['detections']
-                    elif 'instances' in annotation:
-                        annotation['frames'] = annotation['instances']
+                    # Check if this is a single detection (flat format from YOLO)
+                    if 'timestamp' in annotation and 'bbox' in annotation:
+                        # This is a single detection, wrap it as a frame
+                        annotation['frames'] = [annotation.copy()]
                     else:
-                        annotation['frames'] = []
+                        # Try alternative keys
+                        if 'detections' in annotation:
+                            annotation['frames'] = annotation['detections']
+                        elif 'instances' in annotation:
+                            annotation['frames'] = annotation['instances']
+                        else:
+                            annotation['frames'] = []
                 
                 # Ensure frames is a list
                 if not isinstance(annotation['frames'], list):
                     annotation['frames'] = [annotation['frames']]
-            
+
+            # Group annotations by class to fix flat YOLO format issue
+            original_count = len(data['objectAnnotations'])
+            grouped_by_class = {}
+
+            for annotation in data['objectAnnotations']:
+                class_name = annotation.get('class', 'unknown')
+
+                # Initialize group if not exists
+                if class_name not in grouped_by_class:
+                    grouped_by_class[class_name] = {
+                        'class': class_name,
+                        'frames': []
+                    }
+
+                # Add frames from this annotation to the grouped annotation
+                if 'frames' in annotation and annotation['frames']:
+                    for frame in annotation['frames']:
+                        # Remove redundant class fields from frame
+                        frame_copy = frame.copy() if isinstance(frame, dict) else frame
+                        if isinstance(frame_copy, dict):
+                            frame_copy.pop('class', None)
+                            frame_copy.pop('className', None)
+                        grouped_by_class[class_name]['frames'].append(frame_copy)
+
+            # Replace annotations with grouped version
+            data['objectAnnotations'] = list(grouped_by_class.values())
+
+            # Log grouping result
+            if original_count != len(data['objectAnnotations']):
+                logger.info(f"[YOLO] Grouped {original_count} flat annotations into {len(data['objectAnnotations'])} class-based groups for video {video_id}")
+
             # Add metadata if missing
             if 'metadata' not in data:
                 data['metadata'] = {'validated': True, 'version': 'unknown'}

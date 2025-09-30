@@ -389,8 +389,18 @@ def extract_timelines_for_temporal(analysis_dict: Dict[str, Any]) -> Dict[str, A
     if timelines['speech_segments']:
         logger.warning(f"[DEBUG] First segment: {timelines['speech_segments'][0]}")
     
-    # YOLO object detections (raw bounding boxes and labels)
-    timelines['object_timeline'] = extract_yolo_data(ml_data)
+    # YOLO object detections from timeline entries (processed by timeline_builder)
+    object_timeline = []
+    for entry in timeline_entries:
+        if entry.get('entry_type') == 'object':
+            object_timeline.append({
+                'timestamp': entry.get('start', 0),
+                'className': entry.get('data', {}).get('class', 'unknown'),  # Use className for compatibility
+                'confidence': entry.get('data', {}).get('confidence', 0),
+                'bbox': entry.get('data', {}).get('bbox', []),
+                'trackId': entry.get('data', {}).get('track_id', None)  # Use trackId for compatibility
+            })
+    timelines['object_timeline'] = object_timeline
     
     # Face data validation - ensure timeline_builder processed faces correctly
     # We use timeline entries as single source of truth (MediaPipe → timeline_builder → timeline entries)
@@ -1325,11 +1335,20 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         # Extract instance ID using the validation function
         instance_id = extract_instance_id(obj.get('trackId', ''))
         if instance_id is not None:
-            # Track persons and non-person objects separately
-            if obj.get('className') == 'person':
-                person_instances.add(instance_id)
-            else:
-                non_person_instances.add(instance_id)
+            # Filter out fallback IDs (10000+) which indicate lost tracking
+            try:
+                instance_num = int(instance_id)
+                is_fallback = instance_num >= 10000
+            except ValueError:
+                is_fallback = False
+
+            # Only count real tracked instances, not fallbacks
+            if not is_fallback:
+                # Track persons and non-person objects separately
+                if obj.get('className') == 'person':
+                    person_instances.add(instance_id)
+                else:
+                    non_person_instances.add(instance_id)
 
     object_count = len(non_person_instances)  # Only non-person objects
     person_count = len(person_instances)      # Only persons

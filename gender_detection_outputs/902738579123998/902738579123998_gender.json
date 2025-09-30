@@ -1,0 +1,6 @@
+{
+  "gender": null,
+  "confidence": 0.0,
+  "method": "deepface",
+  "error": "timeout_30s"
+}

@@ -418,4 +418,70 @@ Accept this limitation for now. Emoji detection would require:
 
 Document for creators that emoji overlays won't be tracked in analytics.
 
+## 5. Gender Detection (DeepFace)
+
+### Current Implementation
+- **Service**: DeepFace analyze() with gender action
+- **Backend**: MTCNN face detector (improved from opencv)
+- **Sampling**: 3-10 frames depending on video duration
+- **Confidence Threshold**: 75% minimum to vote
+
+### Known Limitations
+
+#### 5.1 Presentation Bias
+- **Makeup Dependency**: Model heavily biased toward performative gender presentation
+  - Female with makeup → Correctly classified
+  - Female without makeup → Often misclassified as male
+- **Real Example**: Test video of female (just woken up) → 85% confidence "male"
+- **Root Cause**: Training data bias (women typically with makeup, men without)
+
+#### 5.2 Technical Constraints
+- **Frame Selection**: Naive linear interpolation (0%, 25%, 50%, 75%, 100%)
+  - May sample intro/outro frames with poor angles
+  - No scene awareness or face quality checks
+- **Processing Time**: ~1.7 seconds per frame with MTCNN
+- **Single Modal**: Visual-only, no voice analysis integration
+
+#### 5.3 Classification Issues
+- **Binary Assumption**: Forces male/female classification
+- **Low Confidence Handling**: Returns null if all frames <75% confidence
+- **Cultural Bias**: Western-centric facial feature interpretation
+- **Age Sensitivity**: Less accurate on children/elderly
+
+### Better Alternatives
+
+#### Multi-Modal Approaches
+| Method | Pros | Cons | Implementation |
+|--------|------|------|----------------|
+| **Face + Voice** | • More robust classification<br>• Catches visual errors | • Requires voice presence<br>• Complex fusion logic | 1 week |
+| **Creator History** | • Learn from past videos<br>• Account-level consistency | • Requires data persistence<br>• Cold start problem | 3 days |
+| **Self-Identification** | • 100% accurate<br>• Respects identity | • Requires UI/input<br>• Not automated | 1 day |
+
+#### Alternative Models
+| Model | Accuracy | Speed | Notes |
+|-------|----------|-------|--------|
+| **FairFace** | Better on diverse faces | Similar | Addresses some bias issues |
+| **InsightFace** | High accuracy | Slower | Better with angles |
+| **Custom Model** | Can target TikTok data | Varies | Requires training data |
+
+### Recommended Improvements
+
+#### Short-term (1-2 days)
+1. **Smart Frame Selection**: Skip first/last 10% of video
+2. **Face Quality Filtering**: Check face size, angle, blur before using frame
+3. **Confidence Weighting**: Weight high-confidence frames more in voting
+
+#### Medium-term (1 week)
+1. **Multi-Modal Fusion**: Combine face + voice pitch for better accuracy
+2. **Scene-Aware Sampling**: Sample from stable scenes, not transitions
+3. **Fallback Strategy**: Use creator's historical gender if current detection fails
+
+#### Long-term (2-4 weeks)
+1. **Custom Model Training**: Train on TikTok-specific dataset with diverse presentations
+2. **Non-Binary Support**: Move beyond male/female classification
+3. **Presentation-Invariant Features**: Focus on bone structure, not cosmetic features
+
+### Current Workaround
+**Removed avg_pitch_normalized feature** - Eliminated dependency on gender detection for pitch analysis. System now uses gender-independent pitch_scatter_ratio instead.
+
 ---
