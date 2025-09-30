@@ -19,11 +19,11 @@ NO phantom features that don't exist in the output.
 ### Document-to-Feature Mapping (4 Documents Total)
 Every feature in temporal windows JSON must be documented in exactly ONE document:
 
-1. **VisualFeatures.md** (~19 features)
+1. **VisualFeatures.md** (~17 features - density metrics removed)
    - Person Framing: `close_ratio`, `medium_ratio`, `wide_ratio`, `none_ratio`, `average_face_size`
-   - Creative Density: `element_count`, `max_density`, `min_density`, `avg_density`
+   - Creative Density: ~~`element_count`, `max_density`, `min_density`, `avg_density`~~ **ALL REMOVED** - see RemoveDensity.md and MLFeaturesGIGO.md
    - Text Overlays: `overlay_unique_count`, `overlay_coverage`, `overlay_persistence`, `has_captions`
-   - Scene Pacing: `scene_count`, `shortest_scene`, `longest_scene`, `scene_duration_variance`, `changes_per_second`
+   - Scene Pacing: `scene_count`, `shortest_scene`, `longest_scene`, `scene_duration_variance`, ~~`changes_per_second`~~
    - Object Detection: `object_count`, `person_count`
 
 2. **AudioFeatures.md** (~12 features)
@@ -330,11 +330,11 @@ During Phase 2, consult user when:
 
 Visual Features:
 □ close_ratio          □ medium_ratio        □ wide_ratio
-□ none_ratio          □ average_face_size   □ element_count
-□ max_density         □ min_density         □ avg_density
+□ none_ratio          □ average_face_size   ~~□ element_count~~ REMOVED
+~~□ max_density         □ min_density         □ avg_density~~ REMOVED
 □ overlay_unique_count □ overlay_coverage    □ overlay_persistence
 □ has_captions        □ scene_count         □ shortest_scene
-□ longest_scene       □ scene_duration_variance □ changes_per_second
+□ longest_scene       □ scene_duration_variance ~~□ changes_per_second~~ REMOVED
 □ object_count        □ person_count
 
 Audio Features:

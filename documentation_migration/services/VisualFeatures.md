@@ -20,8 +20,8 @@ DO NOT trust feature descriptions at face value. Each feature must be:
 | Feature Name | Category | Source Services | Dependencies | Temporal Type | Data Type & Range | ML Importance | Creator Benefit | Reliability | Doubtful | Comments | RF Transform | RF Complexity | KM Transform | KM Complexity | Feature Time |
 |--------------|----------|-----------------|--------------|---------------|-------------------|---------------|----------------|-------------|----------|----------|--------------|---------------|--------------|---------------|--------------|
 | average_face_size | Person Framing | MediaPipe | None | Temporal | Float [0-1] | Overall face prominence magnitude | Continuous intimacy metric vs discrete ratios | High | None | Mean of face bbox areas in percentage | None | None | Scale [0-1] | Low | Low |
-| max_density | Creative Density | YOLO, MediaPipe, OCR, Scene Detection | element_count per second intervals | Temporal | Float [0-∞] | Peak visual complexity moment | Shows maximum information density | Medium | Derivative | Maximum of per-second element counts | None | None | Log + scale | Medium | Medium |
-| min_density | Creative Density | YOLO, MediaPipe, OCR, Scene Detection | element_count per second intervals | Temporal | Float [0-∞] | Minimum visual complexity moment | Shows quietest visual moments | Medium | Derivative | Minimum of per-second element counts | None | None | Log + scale | Medium | Medium |
+| ~~max_density~~ | ~~Creative Density~~ | ~~YOLO, MediaPipe, OCR, Scene Detection~~ | ~~element_count per second intervals~~ | ~~Temporal~~ | ~~Float [0-∞]~~ | **REMOVED** | Measured sampling frequency (processing artifact), not scene complexity - see RemoveDensity.md | ~~Medium~~ | **REMOVED** | ~~Maximum of per-second element counts~~ | N/A | N/A | N/A | N/A | N/A |
+| ~~min_density~~ | ~~Creative Density~~ | ~~YOLO, MediaPipe, OCR, Scene Detection~~ | ~~element_count per second intervals~~ | ~~Temporal~~ | ~~Float [0-∞]~~ | **REMOVED** | Measured sampling frequency (processing artifact), not scene complexity - see RemoveDensity.md | ~~Medium~~ | **REMOVED** | ~~Minimum of per-second element counts~~ | N/A | N/A | N/A | N/A | N/A |
 | overlay_unique_count | Text Overlays | OCR | None | Temporal | Integer [0-∞] | Unique marketing text overlay count | More overlays may indicate professional production | High | None | Count of unique text overlays (not captions) | None | None | Scale [0-1] | Low | Medium |
 | overlay_coverage | Text Overlays | OCR | overlay timestamps, duration | Temporal | Float [0-1] | Percentage of time overlays visible | High coverage indicates text-heavy content | High | None | Time with overlays visible / total duration | None | None | Scale [0-1] | Low | Medium |
 | overlay_persistence | Text Overlays | OCR | overlay timestamps | Temporal | Float [0-1] | Average overlay display duration | Longer persistence suggests marketing vs quick captions | High | None | Mean duration each overlay stays visible | None | None | Scale [0-1] | Low | Medium |
@@ -160,8 +160,8 @@ How visually complex and information-dense is the content at different moments?
 ```json
 {
   "hook": {
-    "max_density": 0.0-∞,        // Peak elements per second
-    "min_density": 0.0-∞,        // Lowest elements per second
+    // max_density REMOVED - see RemoveDensity.md
+    // min_density REMOVED - see RemoveDensity.md
   },
   "middle_segments": [...],      // Same metrics per segment
   "closing": {...}               // Same metrics
@@ -169,13 +169,18 @@ How visually complex and information-dense is the content at different moments?
 ```
 
 ### Metric Definitions
-⚠️ **VERIFIED: All features exist in temporal windows JSON output**
-Reference: `/insights/7430952519439846698_temporal_windows_updated.json:15-18`
+~~⚠️ **VERIFIED: All features exist in temporal windows JSON output**~~
+~~Reference: `/insights/7430952519439846698_temporal_windows_updated.json:15-18`~~
+
+**REMOVED: max_density and min_density**
+- These metrics measured sampling frequency (our processing artifact), not scene complexity
+- Entity counts (person_count, object_count, gesture_count, scene_count) already provide meaningful scene complexity without the noise
+- See RemoveDensity.md for full explanation
 
 | Metric | Formula (temporal_compute.py:1246-1329) | Range | Interpretation |
 |--------|---------|-------|----------------|
-| max_density | max(elements_per_second_buckets) | 0-∞ | Peak information density |
-| min_density | min(elements_per_second_buckets) | 0-∞ | Sparsest moment density |
+| ~~max_density~~ | ~~max(elements_per_second_buckets)~~ | ~~0-∞~~ | **REMOVED** - sampling artifact |
+| ~~min_density~~ | ~~min(elements_per_second_buckets)~~ | ~~0-∞~~ | **REMOVED** - sampling artifact |
 
 ## 🔄 Data Pipeline
 

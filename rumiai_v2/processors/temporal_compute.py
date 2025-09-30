@@ -1370,26 +1370,26 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     # Calculate all P0 required counts
     # sticker_count removed - see StickersProblem.md for why
 
-    # NEW: Calculate person count using overlapping temporal windows
-    # Uses 0.2s windows with 0.1s stride to handle ByteTrack's
-    # timestamp granularity while preventing boundary split issues
+    # Calculate person count using overlapping temporal windows (PersonFix2.md)
+    # Calculate object count by unique class names across segment
+    # Uses 0.2s windows with 0.1s stride to handle person track fragmentation
 
     WINDOW_SIZE = 0.2  # Matches 5 FPS sampling rate
     STRIDE = 0.1       # 50% overlap between windows
 
     # Initialize counters
     max_persons = 0
-    all_object_instances = set()  # Simple set for objects (no windowing needed)
+    unique_object_classes = set()
 
-    # Process objects first (simple counting across entire segment)
+    # Process objects first: count unique class names (not instances)
+    # E.g., 5 apples = 1 class, 1 apple + 1 book + 1 cup = 3 classes
     for obj in segment_objects:
         if obj.get('className') != 'person':
             timestamp = obj.get('timestamp', 0)
             if start <= timestamp < end:
-                instance_id = extract_instance_id(obj.get('trackId', ''))
-                # Objects use simple tracked check (no logging needed typically)
-                if instance_id is not None and obj.get('tracked', True):
-                    all_object_instances.add(instance_id)
+                tracked = obj.get('tracked', True)
+                if tracked:
+                    unique_object_classes.add(obj.get('className'))
 
     # Process persons with overlapping windows (handles fragmentation)
     # Note: Final windows may be smaller than WINDOW_SIZE to ensure
@@ -1426,7 +1426,7 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         # Loop naturally terminates when window_start >= end
 
     person_count = max_persons
-    object_count = len(all_object_instances)  # Simple count for objects
+    object_count = len(unique_object_classes)
 
     # Deduplicate gestures - group consecutive same gestures within 0.8s
     unique_gestures = []
@@ -1483,55 +1483,10 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     # avg_density is element_count/duration (double derivative)
     # changes_per_second is scene_count/duration (simple division)
     
-    # Calculate density extremes (P0 requirement)
-    # Single-pass bucketing for O(n) performance instead of O(n*m)
-    interval_count = max(1, int(end - start))
-    densities = [0] * interval_count
-    
-    # Single pass through each element type, bucketing by second
-    # For text, we need to track unique texts per second
-    text_timeline = timelines.get('text_overlay_timeline', [])
-    for t in text_timeline:
-        timestamp = t.get('timestamp', 0)
-        if start <= timestamp < end:
-            second = int(timestamp - start)
-            if 0 <= second < interval_count:
-                densities[second] += 1
-    
-    # Stickers removed from density calculation - see StickersProblem.md
-    # for s in segment_stickers:
-    #     second = int(s.get('timestamp', 0) - start)
-    #     if 0 <= second < interval_count:
-    #         densities[second] += 1
-    
-    for o in segment_objects:
-        second = int(o.get('timestamp', 0) - start)
-        if 0 <= second < interval_count:
-            densities[second] += 1
-    
-    for g in segment_gestures:
-        second = int(g.get('timestamp', 0) - start)
-        if 0 <= second < interval_count:
-            densities[second] += 1
-    
-    for e in segment_expressions:
-        second = int(e.get('timestamp', 0) - start)
-        if 0 <= second < interval_count:
-            densities[second] += 1
-    
-    for sc in segment_scenes:
-        second = int(sc.get('timestamp', 0) - start)
-        if 0 <= second < interval_count:
-            densities[second] += 1
-    
-    # Calculate min/max density from buckets
-    if densities:
-        max_density = float(max(densities))
-        min_density = float(min(densities))
-    else:
-        # Fallback for edge cases
-        max_density = avg_density
-        min_density = avg_density
+    # Density metrics removed - see RemoveDensity.md
+    # max_density/min_density measured sampling frequency (our processing artifact),
+    # not scene complexity. Entity counts (person_count, object_count, etc.)
+    # already provide meaningful scene complexity metrics without the noise.
     
     # Calculate speech metrics using word-level timestamps
     speech_coverage, word_count = calculate_speech_metrics_for_window(
@@ -1699,10 +1654,7 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         'gesture_count': gesture_count,
         'scene_count': scene_count,
         # element_count removed per MLFeaturesGIGO.md - pure derivative
-        # P0 density extremes
-        'max_density': max_density,
-        'min_density': min_density,
-        # avg_density removed - element_count/duration
+        # max_density/min_density removed per RemoveDensity.md - sampling frequency artifact
         # P1 scene duration metrics
         'shortest_scene': shortest_scene,
         'longest_scene': longest_scene,

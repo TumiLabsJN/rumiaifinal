@@ -88,4 +88,4 @@ htmlcov/
 instrumentation_metrics/*.json
 
 # Gender 
-gender_detection_outputs/*.json
+gender_detection_outputs/

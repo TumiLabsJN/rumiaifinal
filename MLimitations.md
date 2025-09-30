@@ -583,3 +583,295 @@ person_consistency = 0.5  # Future: Same people throughout?
 3. **Acceptable Trade-off**: Losing sequential cast information is better than 3x over-counting from fragmentation
 4. **Future Enhancement**: Proper fix requires person re-identification system (significant effort)
 
+---
+
+## 7. Object Count (YOLO + Class-Based Counting)
+
+### Current Implementation
+- **Service**: YOLO v8 for object detection
+- **Processing**: Object detection at 5 FPS (3 FPS for full videos)
+- **Counting Strategy**: Unique object class names within temporal window
+- **Example**: 5 apples = 1 object class, 1 apple + 1 book + 2 cups = 3 object classes
+
+### Known Limitations
+
+#### 7.1 Multiple Instances of Same Class
+- **The Problem**: Cannot distinguish between multiple physical objects of the same class
+- **Example Case**: Video05ObjectsGestures.mp4 segment_1
+  - Physical Reality: 2 different cups (cup#1 at 6s, cup#2 at 7s)
+  - YOLO Detection: Both detected as "cup" class
+  - Result: `object_count = 3` (book, cup, suitcase)
+  - Missing: That there are actually **4 physical objects** (book, cup, cup, suitcase)
+- **Design Decision**: Counting unique class names was chosen to avoid track fragmentation issues
+
+#### 7.2 Why Class-Based Counting Was Chosen
+
+##### Original Approach (ObjectCountFix.md): Instance ID + Windowing
+```python
+# Attempted to count unique instance IDs using overlapping windows
+# Problem: Undercounted non-overlapping objects
+Window 1 (4.8s-5.0s): cup#1 (ID 6) → count = 1
+Window 2 (7.0s-7.2s): cup#2 (ID 8) → count = 1
+Max across windows = 1 cup (WRONG! There are 2 cups)
+```
+
+**Why It Failed**: Windowing with max() only counts objects that appear **simultaneously** within 0.2s windows. Sequential objects of the same class get undercounted.
+
+##### Class-Based Approach (Current)
+```python
+# Count unique class names across entire segment
+segment_objects = ['cup', 'cup', 'book', 'suitcase']
+unique_classes = set(segment_objects)
+object_count = len(unique_classes)  # = 3
+```
+
+**Trade-off**: Simple, no fragmentation issues, but loses information about multiple instances of same class.
+
+#### 7.3 The Fundamental Problem
+
+**No Ground Truth Without Advanced Analysis**: We only have:
+- YOLO detections (can misclassify objects)
+- ByteTrack IDs (fragments and reassigns IDs)
+- Timestamps (when detections occurred)
+
+**Cannot Distinguish**:
+- **Case A**: Same cup with IDs [6 → 8] due to track fragmentation (count as 1)
+- **Case B**: Cup#1 with ID 6, Cup#2 with ID 8 (different cups, count as 2)
+
+Both cases have 2 unique instance IDs of class "cup". Without bounding box analysis or visual similarity matching, we can't tell them apart.
+
+#### 7.4 Sequential vs Simultaneous Objects
+- **What Current Metric Captures**: Object type diversity (how many different kinds of objects)
+- **What It Misses**: Quantity of same object type (2 cups vs 1 cup)
+- **Example Impact**:
+  - Video with 1 apple, 1 book, 1 cup → `object_count = 3` ✓
+  - Video with 10 apples → `object_count = 1` (loses quantity information)
+
+### What object_count Actually Represents
+
+**Current Metric**: Number of unique object types/classes detected in the temporal window
+
+**Semantic Meaning**: "Object diversity" or "object type count", NOT "total physical objects"
+
+**NOT Captured**:
+- Quantity of objects of same type (2 cups, 3 books)
+- Duplicate/matching items (twin props, paired objects)
+- Object accumulation over time (props being added to scene)
+
+### Better Alternatives (Not Implemented)
+
+#### Option A: Instance ID Counting (Abandoned)
+```python
+# Count unique instance IDs
+object_count = len(set(instance_ids))  # Simple but brings back fragmentation
+```
+**Why Not Used**: This was the original bug in ObjectCountFix.md - counts fragmented IDs as separate objects (e.g., 8 objects when only 4 exist).
+
+#### Option B: Windowed Max Per Class (Considered, Rejected)
+```python
+# For each class, find max simultaneous instances
+# Then sum across classes
+class_max_counts = {
+    'cup': 2,    # Max 2 cups visible in any 0.2s window
+    'book': 1,   # Max 1 book visible
+}
+object_count = sum(class_max_counts.values())  # = 3
+```
+
+**Problems**:
+- Still undercounts non-overlapping objects (Cup#1 at 4s, Cup#2 at 7s → max=1)
+- Requires simultaneous visibility within 0.2s window (arbitrary)
+- Doesn't match requirement: "If 2 different cups exist, count as 2"
+- Complex implementation for marginal improvement
+
+#### Option C: Bounding Box Spatial Analysis (Too Complex)
+- Compare bounding boxes across frames to identify same vs different objects
+- Requires trajectory tracking, IoU calculations, appearance features
+- **Complexity**: 100+ lines, needs extensive testing
+- **Risk**: High false positive/negative rates
+- **Benefit**: Limited for current ML objectives (object diversity vs quantity)
+
+### Impact on ML Analysis
+
+#### What Works Well
+- **Object Type Diversity**: Accurately captures how many different kinds of objects appear
+- **Visual Complexity Proxy**: More object types → more visually complex scene
+- **Prop Variety**: Distinguishes videos with varied props vs single-item focus
+
+#### What's Lost
+- **Quantity Information**: Can't tell "showing 10 products" from "showing 1 product"
+- **Accumulation Patterns**: Can't detect "adding more items over time"
+- **Matching Sets**: Can't identify "before/after comparison with 2 phones"
+
+#### Compensating Features
+- ~~`max_density`~~: **REMOVED** (was capturing sampling artifacts, not useful - see RemoveDensity.md)
+- `scene_count`: Helps infer object changes (new scene often = new props)
+- `gesture_count`: Holding/manipulating objects shows in gestures
+- `person_count + object_count + scene_count`: Combined provides scene complexity signal
+
+### Recommended Improvements
+
+#### Short-term (Already Implemented)
+1. ✅ Class-based counting prevents fragmentation over-counting
+2. ✅ Simple, predictable metric that won't explode
+3. ✅ Properly interprets "object diversity" for ML
+
+#### Medium-term (If Needed - 2-3 days)
+1. Add `object_instance_count_estimate` - Use smart heuristics to estimate physical object count
+   - Apply windowing per class (max simultaneous)
+   - Add confidence score indicating estimate reliability
+   - Document as "best effort" metric with caveats
+
+2. Add `object_class_count` - Rename current metric for clarity
+   - Makes distinction explicit: types vs instances
+   - Prevents confusion in ML interpretation
+
+#### Long-term (2-4 weeks)
+1. Implement bounding box similarity matching for same-class objects
+2. Create "object complexity" composite metric (types × avg instances × scene changes)
+3. Add temporal patterns (e.g., "object accumulation" detection)
+
+### Current Workaround
+
+**Accept class-based counting as intended behavior** - The metric represents "object type diversity" which is useful for ML models. The limitation that 5 apples = 1 object is a known trade-off that prevents track fragmentation issues.
+
+### Why Not Fixed
+
+1. **No Perfect Solution**: Without visual similarity analysis, cannot reliably distinguish multiple instances from fragmentation
+2. **Good Enough**: Object type diversity is valuable for engagement prediction
+3. **Risk vs Reward**: Complex solutions (Option B, C) have high implementation cost with marginal benefit
+4. **Acceptable Trade-off**: Losing quantity information is better than systematic over-counting from fragmentation
+5. **Clear Semantics**: Current metric has clear meaning ("object type count") even if not perfect
+
+### User Expectation Mismatch
+
+**What Users Might Expect**: "Count all physical objects in the scene"
+- 2 cups + 1 book + 1 apple = 4 objects
+
+**What We Actually Provide**: "Count unique object types"
+- 2 cups + 1 book + 1 apple = 3 object types (cup, book, apple)
+
+**Documentation Requirement**: Clearly label metric as `object_type_count` or document that duplicates are counted once.
+
+---
+
+## 8. Multi-Line Text Detection (EasyOCR + Spatial Clustering)
+
+### Current Implementation
+- **Service**: EasyOCR for text detection
+- **Processing**: Line-by-line OCR detection at 5 FPS
+- **Problem**: Detects multi-line text as separate overlays, not unified visual elements
+- **Counting Strategy**: Each detected text line counted as unique overlay
+
+### Known Limitations
+
+#### 8.1 Multi-Line Text Splitting (Critical Issue)
+- **The Problem**: Visually unified text gets split into multiple overlay counts
+- **Example Case**: Video 7099027230512139526 hook
+  ```
+  Visual Reality: One title overlay
+  "3 THINGS YOU NEED FOR BETTER GUT HEALTH"
+
+  OCR Detection: Two separate text blocks
+  1. "3 THINGS YOU NEED FOR"
+  2. "BETTER GUT HEALTH"
+
+  Result: overlay_unique_count = 2 (should be 1)
+  ```
+- **Root Cause**: EasyOCR processes each text line independently without spatial context
+
+#### 8.2 No Spatial Relationship Awareness
+- **Missing Context**: OCR doesn't understand bounding box relationships
+- **Impact**: Cannot distinguish between:
+  - Multi-line titles (should be grouped)
+  - Separate overlays that happen to be vertically aligned (should stay separate)
+- **Example**: Title text above subtitle text gets counted as 2 overlays
+
+#### 8.3 Style Information Ignored
+- **Lost Data**: Font size, color, alignment information not used for grouping
+- **Problem**: Same-style text lines that are clearly one unit get separated
+- **OCR Output**: Only provides text + bounding box, no styling metadata
+
+### Better Alternatives
+
+#### Spatial Clustering (Recommended Long-term)
+| Method | Pros | Cons | Implementation |
+|--------|------|------|----------------|
+| **Vertical Proximity Clustering** | • Groups adjacent text lines<br>• Uses bounding box overlap<br>• Maintains visual relationships | • Complex spatial logic<br>• Many edge cases<br>• 2-3 weeks development | 2-3 weeks |
+| **Style-Based Grouping** | • Uses font size similarity<br>• Considers text case patterns<br>• More accurate grouping | • Requires style extraction<br>• OCR doesn't provide this data<br>• Need different OCR system | 3-4 weeks |
+| **Layout-Aware OCR** | • PaddleOCR/TrOCR with layout<br>• Returns text blocks, not lines<br>• Native multi-line support | • Major pipeline change<br>• Different API integration<br>• Performance unknown | 1-2 weeks |
+
+#### OCR Replacement Options
+| OCR System | Multi-line Support | Accuracy | Speed | Integration Effort |
+|------------|-------------------|----------|--------|-------------------|
+| **PaddleOCR** | Paragraph detection | Higher | Similar | Medium (1 week) |
+| **TrOCR (Transformers)** | Layout analysis | Highest | Slower | High (2 weeks) |
+| **Cloud Vision API** | Block detection | High | Fast | Low (3 days) |
+| **Azure Read API** | Line grouping | High | Fast | Low (3 days) |
+
+### Recommended Improvements
+
+#### Short-term (Interim Solution - OCRFix2.md)
+1. ✅ Implement fuzzy text matching to reduce OCR variation overcounting
+2. ✅ Accept multi-line limitation as documented trade-off
+3. ✅ Focus on fixing 80% of problem (OCR errors) vs 20% (multi-line)
+
+#### Medium-term (1-2 weeks)
+1. **Spatial Clustering Implementation**:
+   ```python
+   def group_multiline_overlays(detections):
+       clusters = []
+       for detection in detections:
+           # Find cluster based on:
+           # - Vertical proximity (< 2x text height gap)
+           # - Horizontal overlap (> 50% overlap)
+           # - Temporal similarity (same timestamp ± 0.5s)
+           # - Style similarity (same height ± 30%)
+       return clusters
+   ```
+2. **Bounding Box Analysis**: Use OCR confidence + bbox relationships
+3. **Text Block Reconstruction**: Combine clustered lines into single overlay
+
+#### Long-term (1 month)
+1. **Replace EasyOCR with PaddleOCR**: Native paragraph detection
+2. **Hybrid Approach**: EasyOCR + spatial post-processing for best of both
+3. **ML-Based Clustering**: Train model to identify text relationships
+
+### Current Workaround
+
+**Accept line-based counting with fuzzy deduplication** - The OCRFix2.md approach reduces overcounting from OCR variations by ~33% while accepting multi-line splitting limitation.
+
+**Spatial clustering** would be the complete solution but requires significant architectural changes.
+
+### Impact on ML Analysis
+
+#### What Works Well
+- **Single-line overlays**: Accurately counted (usernames, simple captions)
+- **OCR variation handling**: Fuzzy matching reduces duplicate counting
+- **Distinct overlays**: Different visual elements properly separated
+
+#### What's Lost
+- **Visual Unity**: Multi-line titles counted as multiple overlays
+- **Layout Context**: Cannot distinguish intentional vs accidental text grouping
+- **Design Intent**: Loses creator's intended text hierarchy
+
+#### Compensating Features
+- `overlay_coverage`: Still captures total text presence time
+- `overlay_persistence`: Indicates if text elements stay visible
+- `has_captions`: Distinguishes subtitle-heavy content
+
+### Why Not Fixed Completely
+
+1. **Architectural Complexity**: Spatial clustering requires major OCR pipeline changes
+2. **Edge Case Handling**: Many ambiguous cases (columns, intentionally separate text)
+3. **Performance Impact**: Bounding box analysis adds computational overhead
+4. **Alternative Priorities**: OCR variation fix (OCRFix2.md) provides 80% improvement with 20% effort
+
+### Current Status
+
+**Documented Limitation**: Multi-line text elements are over-counted by design
+- 1 visual title = 2-3 counted overlays (depending on line breaks)
+- Fuzzy matching reduces OCR errors but doesn't fix fundamental multi-line issue
+- Spatial clustering is planned future enhancement
+
+**Business Decision**: Accept interim limitation in favor of faster deployment of OCR variation fixes

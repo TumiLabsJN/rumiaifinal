@@ -108,11 +108,11 @@ These patterns indicate outdated information:
 
 Total features to document: ~55
 
-### Visual Features (19)
+### Visual Features (15 - density metrics removed)
 □ close_ratio, medium_ratio, wide_ratio, none_ratio, average_face_size
-□ element_count, max_density, min_density, avg_density
+~~□ element_count, max_density, min_density, avg_density~~ **REMOVED** - see RemoveDensity.md and MLFeaturesGIGO.md
 □ overlay_unique_count, overlay_coverage, overlay_persistence, has_captions
-□ scene_count, shortest_scene, longest_scene, scene_duration_variance, changes_per_second
+□ scene_count, shortest_scene, longest_scene, scene_duration_variance, ~~changes_per_second~~ **REMOVED**
 □ object_count, person_count
 
 ### Audio Features (12)

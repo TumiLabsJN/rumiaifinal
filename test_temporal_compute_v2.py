@@ -62,9 +62,9 @@ def validate_temporal_windows(result: Dict[str, Any]) -> None:
         'P0 Core': ['unique_text_count', 'max_simultaneous_texts', 'text_appearance_count',
                     'text_coverage', 'avg_text_lifespan', 'text_change_count',
                     'sticker_count', 'object_count', 
-                    'gesture_count', 'expression_count', 'scene_count', 
+                    'gesture_count', 'expression_count', 'scene_count',
                     'element_count'],
-        'P0 Density': ['max_density', 'min_density', 'avg_density'],
+        # 'P0 Density': ['max_density', 'min_density', 'avg_density'],  # REMOVED - see RemoveDensity.md
         'P0 Speech': ['speech_coverage', 'word_count'],
         'P0 Emotions': ['joy_ratio', 'sadness_ratio', 'anger_ratio', 
                        'fear_ratio', 'disgust_ratio', 'surprise_ratio', 
