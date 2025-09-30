@@ -600,11 +600,17 @@ class UnifiedMLServices:
         # Process OCR and stickers on same frames
         text_annotations = []
         sticker_detections = []
-        seen_texts = set()
+        seen_texts_by_window = {}  # {time_window: set_of_texts}
+        TIME_WINDOW = 1.0  # 1-second windows (local constant)
         seen_stickers = set()  # Deduplicate stickers
         
         for frame_data in ocr_frames:
             try:
+                # Calculate time window
+                time_window = int(frame_data.timestamp / TIME_WINDOW)
+                if time_window not in seen_texts_by_window:
+                    seen_texts_by_window[time_window] = set()
+
                 # Run OCR in thread
                 results = await asyncio.to_thread(
                     reader.readtext, frame_data.image
@@ -614,9 +620,9 @@ class UnifiedMLServices:
                     if confidence > 0.5 and len(text.strip()) > 2:
                         text_clean = text.strip()
                         
-                        # Deduplicate similar texts
-                        if text_clean not in seen_texts:
-                            seen_texts.add(text_clean)
+                        # Deduplicate similar texts within time window
+                        if text_clean not in seen_texts_by_window[time_window]:
+                            seen_texts_by_window[time_window].add(text_clean)
                             
                             # Convert polygon bbox to flat format [x, y, width, height]
                             if bbox and len(bbox) >= 4:
@@ -647,13 +653,17 @@ class UnifiedMLServices:
                             
             except Exception as e:
                 logger.warning(f"Frame processing failed on frame {frame_data.frame_number}: {e}")
-        
+
+        # Optional debug logging
+        logger.debug(f"OCR time-window deduplication: {len(seen_texts_by_window)} windows, "
+                    f"{sum(len(t) for t in seen_texts_by_window.values())} unique texts total")
+
         result = {
             'textAnnotations': text_annotations,
             'stickers': sticker_detections,  # NOW POPULATED!
             'metadata': {
                 'frames_analyzed': len(ocr_frames),
-                'unique_texts': len(seen_texts),
+                'unique_texts': sum(len(texts) for texts in seen_texts_by_window.values()),
                 'stickers_detected': len(sticker_detections),  # ADD THIS
                 'processed': True
             }
@@ -831,12 +841,12 @@ class UnifiedMLServices:
 
             # Try progressively lower thresholds for better scene detection
             scenes = None
-            for threshold in [20.0, 15.0, 10.0]:
+            for threshold in [35.0, 30.0, 25.0, 20.0]:
                 scenes = detect(str(video_path), ContentDetector(threshold=threshold, min_scene_len=10))
                 if scenes:
                     avg_scene_length = duration / len(scenes) if scenes else duration
                     # Good detection: scenes between 1-5 seconds average
-                    if 1.0 <= avg_scene_length <= 5.0:
+                    if len(scenes) > 1:  # At least one scene change found
                         logger.info(f"Using threshold {threshold} with {len(scenes)} scenes detected")
                         break
 

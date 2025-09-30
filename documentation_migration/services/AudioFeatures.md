@@ -24,8 +24,7 @@ DO NOT trust feature descriptions at face value. Each feature must be:
 | energy_level | Energy | Audio Energy | None | Temporal | Float [0-1] | Audio intensity affects viewer attention | Higher energy typically increases engagement | High | None | Mean RMS amplitude from audio frames | None | None | Scale [0-1] | Low | Low |
 | energy_variance | Energy | Audio Energy | energy_level frames | Temporal | Float [0-∞] | Dynamic range indicates editing style | High variance shows dynamic vs flat audio | High | None | Variance of RMS frames within window | None | None | Log + scale | Low | Low |
 | energy_max | Energy | Audio Energy | energy_level frames | Temporal | Float [0-1] | Peak audio intensity moment | Shows loudest moment in segment | High | None | Maximum RMS value in window | None | None | Scale [0-1] | Low | Low |
-| avg_pitch_normalized | Pitch | Audio Energy, DeepFace | gender_detection for normalization | Temporal | Float [-1-3] | Voice characteristics affect perceived authority | Pitch relative to gender norms affects perception | Medium | None | Gender-normalized pitch from voiced frames | None | None | Scale [0-1] | Medium | High |
-| pitch_range_norm | Pitch | Audio Energy, DeepFace | avg_pitch_normalized, voiced frames | Temporal | Float [0-1] | Voice expressiveness indicator | Dynamic pitch shows engagement and emotion | Medium | None | Pitch range normalized by average pitch | None | None | Scale [0-1] | Medium | High |
+| pitch_scatter_ratio | Pitch | Audio Energy | voiced frames | Temporal | Float [0-1] | Pitch instability/scatter measure | High values indicate unstable pitch (whisper), low values indicate controlled pitch | Medium | None | Pitch scatter relative to window average | None | None | Scale [0-1] | Medium | High |
 
 ---
 
@@ -241,8 +240,7 @@ How does the creator's voice pitch compare to gender norms and how expressive is
 ```json
 {
   "hook": {
-    "avg_pitch_normalized": -1.0-3.0,  // Gender-normalized average pitch
-    "pitch_range_norm": 0.0-1.0        // Normalized pitch expressiveness
+    "pitch_scatter_ratio": 0.0-1.0     // Pitch instability (high=scattered, low=controlled)
   },
   "middle_segments": [...],            // Same metrics per segment
   "closing": {...}                     // Same metrics
@@ -255,8 +253,7 @@ Reference: `/insights/7500252920844193067_temporal_windows_updated.json:50-51`
 
 | Metric | Formula (temporal_compute.py:919-1024) | Range | Interpretation |
 |--------|---------|-------|----------------|
-| avg_pitch_normalized | (avg_pitch_hz - gender_baseline) / gender_range | -1 to 3 | Pitch relative to gender norms |
-| pitch_range_norm | (max_pitch - min_pitch) / avg_pitch | 0-1 | Voice expressiveness level |
+| pitch_scatter_ratio | (max_pitch - min_pitch) / avg_pitch | 0-1 | Pitch instability/scatter coefficient |
 
 ## 🔄 Data Pipeline
 
@@ -316,9 +313,9 @@ assert 'energy_level' in data['temporal_windows']['hook']
 assert data['temporal_windows']['hook']['energy_level'] >= 0
 
 # Check Pitch features
-assert 'avg_pitch_normalized' in data['temporal_windows']['hook']
-assert 'pitch_range_norm' in data['temporal_windows']['hook']
-assert 0 <= data['temporal_windows']['hook']['pitch_range_norm'] <= 1
+assert 'pitch_scatter_ratio' in data['temporal_windows']['hook']
+assert 'pitch_scatter_ratio' in data['temporal_windows']['hook']
+assert 0 <= data['temporal_windows']['hook']['pitch_scatter_ratio'] <= 1
 
 ```
 
@@ -337,7 +334,7 @@ for window in ['hook', 'closing']:
     assert window_data['energy_max'] >= 0
 
     # Pitch range should be 0-1
-    assert 0 <= window_data['pitch_range_norm'] <= 1
+    assert 0 <= window_data['pitch_scatter_ratio'] <= 1
 ```
 
 ### Dependency Validation
@@ -361,8 +358,8 @@ assert gender_data['gender'] in ['male', 'female', 'multiple_people']
 
 
 ### For Creator Style Analysis
-1. **avg_pitch_normalized consistency**: Voice characteristics for creator identification
-2. **pitch_range_norm patterns**: Expressive vs monotone delivery styles
+1. **pitch_scatter_ratio patterns**: Voice instability for content style identification
+2. **pitch_scatter_ratio patterns**: Unstable (whisper) vs controlled (projection) delivery
 3. **speech_coverage + energy correlation**: Talking-head vs voice-over content styles
 4. **greeting + cta combination**: Professional vs casual creator approach
 

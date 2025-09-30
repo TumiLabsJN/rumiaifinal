@@ -1013,23 +1013,38 @@ def calculate_speech_metrics_for_window(speech_segments, start, end, duration):
 def calculate_pitch_metrics(audio_data: Dict[str, Any],
                            ml_data: Dict[str, Any],
                            start: float,
-                           end: float) -> float:
+                           end: float) -> Dict[str, float]:
     """
-    Calculate pitch scatter ratio for a temporal window.
+    Calculate pitch metrics for a temporal window.
 
-    Note: avg_pitch_normalized removed due to harmonic detection error - see SpeechPitchFix.md
-    avg_pitch_hz also removed - only used internally, never stored
+    Decision Point 3: Gender-specific normalization (required).
+    Decision Point 11: Fail fast if gender missing.
+    Decision Point 2: Only avg_pitch_normalized and pitch_scatter_ratio.
 
     Returns:
-        pitch_scatter_ratio as float, or None if insufficient data
+        Dictionary with exactly 2 metrics (zeros if no speech)
     """
     import numpy as np
 
-    # Check audio data exists
-    if not audio_data or 'pitch_frames' not in audio_data:
-        return None
+    # Step 1: Gender validation (Decision Point 11: fail fast)
+    gender_data = ml_data.get('deepface_gender')
+    if not gender_data:
+        # If DeepFace didn't run, return zeros (don't fail pipeline)
+        logger.warning("DeepFace data missing - returning zero pitch metrics")
+        return {'avg_pitch_normalized': 0.0, 'pitch_scatter_ratio': 0.0}
 
-    # Extract window frames
+    gender = gender_data.get('gender')
+    if gender is None:
+        logger.warning(f"DeepFace returned no gender: {gender_data}")
+        return {'avg_pitch_normalized': 0.0, 'pitch_scatter_ratio': 0.0}
+
+    gender_confidence = gender_data.get('confidence', 0.0)
+
+    # Step 2: Check audio data exists
+    if not audio_data or 'pitch_frames' not in audio_data:
+        return {'avg_pitch_normalized': 0.0, 'pitch_scatter_ratio': 0.0}
+
+    # Step 3: Extract window frames (Decision Point 4: time-based)
     pitch_fps = audio_data.get('pitch_fps', 43.07)
     pitch_frames = audio_data['pitch_frames']
 
@@ -1044,29 +1059,63 @@ def calculate_pitch_metrics(audio_data: Dict[str, Any],
     window_pitches = pitch_frames[start_frame:end_frame]
     voiced_pitches = [p for p in window_pitches if p > 80]
 
-    # Minimum frames for calculation
+    # Step 4: Calculate metrics (Decision Point 16: minimum frames)
     MIN_FRAMES_AVG = 10
     MIN_FRAMES_RANGE = 30
 
-    # Early return if insufficient voiced content
     if len(voiced_pitches) < MIN_FRAMES_AVG:
-        return None  # No pitch metrics available
+        # Not enough speech - return zeros
+        return {'avg_pitch_normalized': 0.0, 'pitch_scatter_ratio': 0.0}
 
-    # Calculate average pitch (internal use only)
+    # Step 5: Calculate average pitch
     avg_pitch_hz = float(np.mean(voiced_pitches))
 
-    # Safety check (shouldn't happen with voiced pitches)
-    if avg_pitch_hz == 0:
-        return None
+    # Step 6: Normalization (Decision Point 3)
+    if gender == 'multiple_people':
+        # Self-normalization for multi-person videos
+        # Use pre-computed statistics for efficiency
+        pitch_stats = audio_data.get('pitch_statistics', {})
+        if pitch_stats and 'p20' in pitch_stats and 'p80' in pitch_stats:
+            p20 = pitch_stats['p20']
+            p80 = pitch_stats['p80']
+            if p80 > p20:
+                avg_pitch_normalized = (avg_pitch_hz - p20) / (p80 - p20)
+            else:
+                avg_pitch_normalized = 0.0
+        else:
+            # Fallback to sample if stats not available
+            voiced_sample = audio_data.get('voiced_pitch_sample', [])
+            if len(voiced_sample) >= 20:
+                p20 = np.percentile(voiced_sample, 20)
+                p80 = np.percentile(voiced_sample, 80)
+                if p80 > p20:
+                    avg_pitch_normalized = (avg_pitch_hz - p20) / (p80 - p20)
+                else:
+                    avg_pitch_normalized = 0.0
+            else:
+                logger.warning("Insufficient pitch data for self-normalization")
+                avg_pitch_normalized = 0.0
+    else:
+        # Gender-specific normalization
+        if gender.lower() == 'male':
+            avg_pitch_normalized = (avg_pitch_hz - 110) / 40
+        else:  # female
+            avg_pitch_normalized = (avg_pitch_hz - 200) / 45
 
-    # Calculate pitch scatter ratio (needs more frames for accuracy)
+    # Clip to reasonable range
+    avg_pitch_normalized = np.clip(avg_pitch_normalized, -1.0, 3.0)
+
+    # Step 7: Calculate range (needs more frames)
     if len(voiced_pitches) >= MIN_FRAMES_RANGE:
         pitch_scatter_ratio = (max(voiced_pitches) - min(voiced_pitches)) / avg_pitch_hz
         pitch_scatter_ratio = min(pitch_scatter_ratio, 1.0)  # Cap at 1.0
-        return round(float(pitch_scatter_ratio), 4)
     else:
-        # Not enough frames for reliable scatter measurement
-        return None
+        pitch_scatter_ratio = 0.0
+
+    return {
+        'avg_pitch_normalized': round(float(avg_pitch_normalized), 3),
+        'pitch_scatter_ratio': round(float(pitch_scatter_ratio), 4)
+    }
 
 def calculate_speech_content_indicators(speech_segments, start, end, duration):
     """
@@ -1580,7 +1629,7 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         energy_level = energy_variance = energy_max = 0.0
 
     # Calculate pitch metrics if available
-    pitch_scatter_ratio = calculate_pitch_metrics(audio_data, ml_data, start, end)
+    pitch_metrics = calculate_pitch_metrics(audio_data, ml_data, start, end)
 
     # Calculate scene duration metrics (P0 requirement)
     if scene_durations:
@@ -1633,7 +1682,7 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         'energy_max': energy_max,
         # burst_pattern removed - arbitrary categorization
         # Pitch metrics
-        'pitch_scatter_ratio': pitch_scatter_ratio if pitch_scatter_ratio is not None else 0.0  # 0.0 means "no voiced content detected"
+        **pitch_metrics  # Unpack all pitch metrics
     }
 
 # ============================================

@@ -86,3 +86,6 @@ htmlcov/
 
 # Metric Files
 instrumentation_metrics/*.json
+
+# Gender 
+gender_detection_outputs/*.json

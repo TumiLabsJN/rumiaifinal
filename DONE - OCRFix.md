@@ -66,12 +66,17 @@ Result: THREE entries, Segment 3 correctly gets overlay_unique_count=1
 **File**: `/home/jorge/rumiaifinal/rumiai_v2/api/ml_services_unified.py`
 
 ```python
+# Inside the _run_ocr_on_frames method, after line 603:
+
 # Line 603, REPLACE:
 seen_texts = set()
 
 # WITH:
 seen_texts_by_window = {}  # {time_window: set_of_texts}
-TIME_WINDOW = 1.0  # 1-second windows
+TIME_WINDOW = 1.0  # 1-second windows (local constant)
+
+# Line 604: LEAVE UNCHANGED
+seen_stickers = set()  # Keep this line as-is (dead code but don't delete)
 
 # Line 606, at the beginning of the for loop, ADD:
 for frame_data in ocr_frames:
@@ -81,9 +86,11 @@ for frame_data in ocr_frames:
         if time_window not in seen_texts_by_window:
             seen_texts_by_window[time_window] = set()
 
-        # Rest of existing code continues...
+        # Rest of existing code continues unchanged
         # Run OCR in thread
-        results = await asyncio.to_thread(...
+        results = await asyncio.to_thread(
+            reader.readtext, frame_data.image
+        )
 
 # Line 618-619, REPLACE:
 if text_clean not in seen_texts:
@@ -98,9 +105,16 @@ if text_clean not in seen_texts_by_window[time_window]:
 
 # WITH:
 'unique_texts': sum(len(texts) for texts in seen_texts_by_window.values()),
+
+# OPTIONAL: Add debug logging after line 650 (before result = {):
+logger.debug(f"OCR time-window deduplication: {len(seen_texts_by_window)} windows, "
+            f"{sum(len(t) for t in seen_texts_by_window.values())} unique texts total")
 ```
 
-**Note**: We're NOT updating sticker deduplication (lines 604, 637-646) since stickers are disabled and this is dead code that never executes (see StickersProblem.md).
+**Note**:
+- Line 604 (`seen_stickers = set()`) is LEFT UNCHANGED - don't delete it
+- Empty time windows (no text detected) are handled correctly - they contribute 0 to the count
+- Sticker deduplication (lines 637-646) remains unchanged (dead code per StickersProblem.md)
 
 ---
 

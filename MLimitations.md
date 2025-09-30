@@ -104,4 +104,318 @@ This document catalogues the known limitations, edge cases, and potential improv
 - Cannot track overlay introduction patterns (e.g., staggered reveals)
 - Cannot identify if closing has "new call-to-action" vs repeated message
 
+## 3. Gesture Detection (MediaPipe)
+
+### Current Implementation
+- **Service**: MediaPipe GestureRecognizer
+- **Processing**: Frame-by-frame detection at 5 FPS
+- **Problem**: Detects gestures as point events, not time ranges
+- **Counting Strategy**: Counts ALL hand interactions, including unrecognized gestures
+
+### Critical Design Flaw: Gestures as Point Events
+
+#### The Problem
+Gestures are **continuous actions over time**, not instantaneous events. Current implementation:
+```python
+# WRONG: Treats each frame detection as separate gesture
+frame_0.2s: pointing detected → count = 1
+frame_0.4s: pointing detected → count = 2  # Same gesture!
+frame_0.6s: pointing detected → count = 3  # Still same gesture!
+```
+
+A single 3-second pointing gesture gets counted as 15-26 separate gestures.
+
+#### Band-Aid Fix (Currently Implemented)
+Deduplication at aggregation time in `temporal_compute.py`:
+- Groups detections within 0.8s as same gesture
+- Reduces count by ~95%
+- Preserves raw data but fixes counting
+
+### Architecturally Correct Solution: Gestures as Time Ranges
+
+#### Design Principle
+**Gestures ARE time ranges with lifecycle events:**
+- START: Gesture begins
+- CONTINUE: Gesture sustained
+- END: Gesture completes
+- TRANSITION: Gesture morphs into another
+
+#### Correct Implementation
+```python
+class GestureTimeline:
+    """Represents gestures as time ranges, not points"""
+
+    def build_timeline(self, frame_detections):
+        """Convert frame detections to gesture ranges"""
+        gestures = []
+        current = None
+
+        for detection in frame_detections:
+            if not current:
+                # Start new gesture range
+                current = GestureRange(
+                    type=detection.type,
+                    hand=detection.hand,
+                    start_time=detection.timestamp,
+                    end_time=detection.timestamp,
+                    confidence_samples=[detection.confidence]
+                )
+            elif (current.matches(detection) and
+                  detection.timestamp - current.end_time <= CONTINUATION_THRESHOLD):
+                # Extend current gesture
+                current.end_time = detection.timestamp
+                current.confidence_samples.append(detection.confidence)
+            else:
+                # Finalize current gesture, start new one
+                current.duration = current.end_time - current.start_time
+                current.stability = np.std(current.confidence_samples)
+                gestures.append(current)
+                current = GestureRange(...)
+
+        return gestures
+
+class GestureRange:
+    """A gesture as it should be: a time range with properties"""
+    def __init__(self, type, hand, start_time, end_time):
+        self.type = type              # pointing, thumbs_up, etc.
+        self.hand = hand              # left, right
+        self.start_time = start_time  # When gesture began
+        self.end_time = end_time      # When gesture ended
+        self.duration = None          # How long held
+        self.stability = None         # How steady (confidence variance)
+        self.transition_to = None     # Next gesture if morphed
+```
+
+#### Benefits of Correct Architecture
+
+1. **Natural Data Model**
+   - One record per gesture, not per frame
+   - Matches human understanding of gestures
+   - Enables duration-based features
+
+2. **Rich Features**
+   ```python
+   # Current (broken): Just count
+   gesture_count = 26  # Wrong!
+
+   # Correct: Multiple meaningful features
+   gesture_count = 2
+   avg_gesture_duration = 1.5
+   gesture_stability = 0.92
+   gesture_transitions = 1
+   longest_gesture = 2.3
+   gesture_types = ['pointing', 'thumbs_up']
+   ```
+
+3. **Transition Tracking**
+   ```python
+   # Can detect gesture flows
+   pointing → open_palm → thumbs_up
+   # Useful for engagement analysis
+   ```
+
+4. **Storage Efficiency**
+   - Current: 100 detections for 20-second video
+   - Correct: 3-5 gesture ranges for same video
+   - 95% reduction in data points
+
+5. **Semantic Accuracy**
+   - Distinguishes sustained vs repeated gestures
+   - Captures gesture emphasis through duration
+   - Preserves intentionality
+
+#### Implementation Path
+
+**Phase 1: Data Model Change**
+- Modify `timeline_builder.py` to create gesture ranges
+- Update Timeline class to support range entries
+- Keep raw detections for debugging
+
+**Phase 2: Feature Engineering**
+- Add gesture_duration, gesture_stability metrics
+- Track gesture transitions
+- Calculate gesture velocity (how quickly changing)
+
+**Phase 3: Deprecate Band-Aid**
+- Remove deduplication logic from temporal_compute
+- Update all downstream consumers
+- Migrate historical data
+
+#### Why Not Implemented Now
+
+1. **Breaking Change**: Requires pipeline refactor
+2. **Time Constraint**: Band-aid fix takes 3 minutes, this takes 2 days
+3. **Good Enough**: Band-aid gives 95% accuracy improvement
+4. **Risk**: More complex = more potential bugs
+
+### Alternative Architectures Considered
+
+#### Event-Driven Detection
+Only detect when hand motion exceeds threshold:
+- Pros: Efficient, natural gesture boundaries
+- Cons: Might miss subtle gestures
+
+#### State Machine
+Track gesture state per hand:
+- Pros: Handles complex transitions
+- Cons: Complex to implement and debug
+
+#### ML-Based Deduplication
+Train model to identify same vs different:
+- Pros: Learns from data
+- Cons: Requires labeled training data
+
+### Recommendation
+Implement **Gestures as Time Ranges** in next major version. Until then, the band-aid deduplication fix provides adequate accuracy improvement with minimal risk.
+
+### Critical Limitation: Gesture Recognition Vocabulary
+
+#### The Problem
+MediaPipe's GestureRecognizer has extremely limited gesture vocabulary and poor recognition accuracy.
+
+**Claimed Support vs Reality:**
+- **Documented gestures**: Pointing_Up, Thumb_Up, Victory, etc.
+- **Actually recognizes**: Only 5-6 gestures reliably
+- **Missing common gestures**: Pointing (horizontal), waving, counting, explaining gestures
+
+**Real Example from Video05:**
+```python
+# User performed pointing gesture for 2 seconds
+# MediaPipe detection results:
+Hook (0-3s): 26 detections ALL type='none'
+Entire video: 0 pointing gestures recognized
+
+# Actual recognized gestures:
+none: 72 detections (unrecognized hand positions)
+open_palm: 3 detections
+thumbs_up: 4 detections
+victory: 2 detections
+```
+
+#### Current Workaround
+**We count ALL hand interactions including 'none' type**:
+- Rationale: Any hand gesture shows engagement, even if unrecognized
+- Better reflects real human communication
+- Prevents undercounting natural gesturing
+
+**What 'gesture_count' actually measures:**
+- NOT specific gesture types
+- BUT hand interaction frequency
+- Includes pointing, waving, explaining, and other natural gestures
+- More accurate for engagement analysis than strict gesture recognition
+
+#### Impact
+1. **Feature Interpretation**:
+   - `gesture_count` = hand activity count, not specific gesture count
+   - Higher counts may indicate unrecognized but active gesturing
+
+2. **ML Models**:
+   - Learn hand activity patterns, not specific gesture patterns
+   - Still useful for engagement prediction
+
+3. **Future Enhancement Options**:
+   - Add `recognized_gesture_count` for only identified gestures
+   - Add `gesture_recognition_rate` = recognized/total
+   - Consider alternative gesture recognition models
+
+#### Why Not Fixed
+- Current approach (counting all hand activity) is actually MORE useful for engagement analysis
+- Filtering to only recognized gestures would undercount real human communication
+- MediaPipe's vocabulary is too limited for TikTok's diverse gesture landscape
+
+---
+
+## 4. Emoji Detection (EasyOCR)
+
+### Current Implementation
+- **Service**: EasyOCR for text detection
+- **Capability**: Detects alphanumeric text only
+- **Status**: CANNOT detect emojis or pictographic symbols
+
+### The Problem
+
+#### Test Case: Video03TextsCaptions.mp4
+- **Input**: Fire emoji (🔥) displayed at 12-14s in video
+- **Expected**: Detect and count emoji as overlay
+- **Actual**: EasyOCR cannot see emoji at all
+
+#### Investigation Results
+```
+OCR detections in closing window (11-14s):
+  11-12s: "New Text", "TEST"
+  12-13s: "New Text"
+  13-14s: "THANK YOU"
+
+Missing: 🔥 emoji (not detected)
+```
+
+### What We Tried
+
+#### Attempt 1: Emoji Normalization
+**Implementation**: Modified `normalize_text()` in temporal_compute.py to handle emojis:
+```python
+emoji_mappings = {
+    '🔥': '[fire]',
+    '❤️': '[heart]',
+    '💯': '[100]',
+    # ... 20+ common emojis
+}
+
+# For unknown emojis, create unique identifier
+if not text and original:
+    text = f"[emoji_{hashlib.md5(original.encode()).hexdigest()[:6]}]"
+```
+
+**Result**: Code works IF emoji is detected, but EasyOCR never detects emojis in the first place.
+
+#### Root Cause
+EasyOCR is fundamentally a **text-only OCR system**:
+- Trained on alphanumeric characters and punctuation
+- Cannot recognize pictographic symbols, emojis, or icons
+- No amount of post-processing can fix undetected content
+
+### Impact on Analysis
+
+#### What's Lost
+1. **Emoji Overlays**: Popular TikTok emojis (🔥, ❤️, 💯, etc.) are invisible to our system
+2. **Engagement Signals**: Emojis often indicate emotional peaks or CTAs
+3. **Trend Detection**: Cannot track emoji usage patterns
+4. **Cultural Context**: Emojis carry meaning that affects viewer engagement
+
+#### Metrics Affected
+- `overlay_unique_count`: Undercounts when emojis present
+- `overlay_coverage`: Lower than reality when emojis displayed
+- Missing potential features like `emoji_count`, `emoji_diversity`
+
+### Alternative Solutions (Not Implemented)
+
+#### Option 1: Symbol-Aware OCR
+- **PaddleOCR**: Claims some emoji support (limited)
+- **TrOCR (Transformers)**: Better with symbols but slower
+- **Cons**: Major pipeline change, still incomplete emoji coverage
+
+#### Option 2: Object Detection for Emojis
+- Train YOLO on emoji dataset
+- Detect emojis as objects, not text
+- **Pros**: Could work for common emojis
+- **Cons**: Need labeled emoji dataset, increases processing time
+
+#### Option 3: Hybrid Approach
+- Use EasyOCR for text
+- Add emoji-specific detector
+- Merge results in timeline
+- **Pros**: Best coverage
+- **Cons**: Complex, doubles OCR processing time
+
+### Current Workaround
+**None**. Emojis are completely invisible to our analysis pipeline.
+
+### Recommendation
+Accept this limitation for now. Emoji detection would require:
+1. Replacing or supplementing EasyOCR (major change)
+2. Significant processing overhead
+3. Limited benefit for current ML objectives
+
+Document for creators that emoji overlays won't be tracked in analytics.
+
 ---

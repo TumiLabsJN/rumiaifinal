@@ -425,8 +425,7 @@ Video Path ─────────> SharedAudioExtractor ──────�
          "max": 0.95
        },
        "pitch_features": {
-         "avg_pitch_normalized": 0.45,
-         "pitch_range_normalized": 0.62
+         "pitch_scatter_ratio": 0.62
        },
        "burst_pattern": "middle_peak"
      }
