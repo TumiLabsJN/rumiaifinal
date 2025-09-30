@@ -207,7 +207,7 @@ class WhisperCppTranscriber:
             "-t", "10",  # Use all 10 WSL2 cores
             "-bo", "1",  # Greedy decoding for maximum speed
             "-bs", "1",  # Greedy decoding (no beam search)
-            "-oj",  # Output JSON to file
+            "-ojf",  # Output JSON full format (includes word-level timestamps)
         ]
         
         # Add language if specified
@@ -298,12 +298,38 @@ class WhisperCppTranscriber:
         segments = []
         for i, seg in enumerate(transcription):
             offsets = seg.get("offsets", {})
+
+            # Parse word-level timestamps from tokens array (with defensive parsing)
+            words = []
+            try:
+                tokens = seg.get("tokens", [])  # -ojf provides tokens array
+                for token in tokens:
+                    word_text = token.get("text", "").strip()
+                    word_offsets = token.get("offsets", {})
+
+                    # Filter out special tokens and pure punctuation
+                    # Keep single-letter words like "I", "a", "A"
+                    if word_text and not word_text.startswith("[_"):
+                        # If single character, must be alphanumeric (skip standalone punctuation)
+                        if len(word_text) == 1 and not word_text.isalnum():
+                            continue
+
+                        words.append({
+                            "word": word_text,
+                            "start": word_offsets.get("from", 0) / 1000.0,  # ms to seconds
+                            "end": word_offsets.get("to", 0) / 1000.0,      # ms to seconds
+                            "confidence": token.get("p", 0.0)               # probability
+                        })
+            except (KeyError, TypeError, AttributeError) as e:
+                logger.warning(f"Failed to parse word timestamps for segment {i}: {e}")
+                words = []  # Fallback to empty, will use proportional estimation
+
             segments.append({
                 "id": i,
                 "start": offsets.get("from", 0) / 1000.0,  # Convert ms to seconds
                 "end": offsets.get("to", 0) / 1000.0,      # Convert ms to seconds
                 "text": seg.get("text", "").strip(),
-                "words": []  # Whisper.cpp doesn't provide word-level by default
+                "words": words  # Now populated with word-level timestamps (or empty on error)
             })
         
         # Extract language from result

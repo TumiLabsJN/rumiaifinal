@@ -1,0 +1,8 @@
+{
+  "gender": "male",
+  "confidence": 0.9713622629642487,
+  "method": "deepface",
+  "frames_analyzed": 10,
+  "detector_backend": "mtcnn",
+  "processing_ms": 8233
+}

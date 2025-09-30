@@ -4,8 +4,12 @@ import logging
 import numpy as np
 from typing import Dict, Any, List, Optional, Tuple
 import time
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
+
+# Word count metrics tracking (for validation of word-level timestamp fix)
+_word_count_metrics = defaultdict(lambda: {'word_based': 0, 'fallback': 0})
 
 # ============================================
 # MODULE CONSTANTS - NO MAGIC NUMBERS
@@ -926,10 +930,10 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
 # SEGMENT PROCESSING (Decision 4)
 # ============================================
 
-def calculate_speech_metrics_for_window(speech_segments, start, end, duration):
+def calculate_speech_metrics_for_window(speech_segments, start, end, duration, video_id=None):
     """
     Calculate speech coverage and word count for a temporal window.
-    Uses proportional calculation for segments that partially overlap.
+    Uses word-level timestamps when available, falls back to proportional calculation.
 
     This is a module-level function for testability and potential reuse.
 
@@ -938,6 +942,7 @@ def calculate_speech_metrics_for_window(speech_segments, start, end, duration):
         start: Window start time in seconds
         end: Window end time in seconds
         duration: Window duration (end - start)
+        video_id: Optional video ID for metrics tracking
 
     Returns:
         tuple: (speech_coverage, word_count)
@@ -959,15 +964,16 @@ def calculate_speech_metrics_for_window(speech_segments, start, end, duration):
     logger.warning(f"[DEBUG] calculate_speech_metrics: {len(speech_segments)} segments for window {start}-{end}s")
 
     total_speech_duration = 0.0
-    total_word_count = 0.0
+    total_word_count = 0
 
     for segment in speech_segments:
         seg_start = segment.get('start', 0)
         seg_end = segment.get('end', 0)
         seg_text = segment.get('text', '')
+        words = segment.get('words', [])
 
         # DEBUG: Log segment details
-        logger.warning(f"[DEBUG] Speech segment: start={seg_start}, end={seg_end}, text='{seg_text[:50]}...'")
+        logger.warning(f"[DEBUG] Speech segment: start={seg_start}, end={seg_end}, words={len(words)}, text='{seg_text[:50]}...'")
 
 
         # Validate segment data - fail fast on corruption
@@ -989,18 +995,38 @@ def calculate_speech_metrics_for_window(speech_segments, start, end, duration):
             overlap_end = min(seg_end, end)
             overlap_duration = overlap_end - overlap_start
 
-            # Calculate what proportion of the segment is in our window
-            segment_duration = seg_end - seg_start
-            # segment_duration is guaranteed > 0 due to validation above
-            proportion_in_window = overlap_duration / segment_duration
-
             # Add the overlap duration to total
             total_speech_duration += overlap_duration
 
-            # Count proportional words
-            segment_words = len(seg_text.split())
-            words_in_window = segment_words * proportion_in_window
-            total_word_count += words_in_window
+            # Count actual words that fall in this window (using word-level timestamps)
+            if words:  # Use word-level timestamps if available
+                if video_id:
+                    _word_count_metrics[video_id]['word_based'] += 1
+
+                for word in words:
+                    word_start = word.get('start', 0)
+                    word_end = word.get('end', word_start)
+                    # Count word if its MIDPOINT falls within this window
+                    word_midpoint = (word_start + word_end) / 2.0
+                    if start <= word_midpoint < end:
+                        total_word_count += 1
+            else:
+                # Fallback to proportional estimation if words array is empty
+                if video_id:
+                    _word_count_metrics[video_id]['fallback'] += 1
+                    logger.warning(
+                        f"Video {video_id}: No word timestamps for segment {seg_start:.1f}s-{seg_end:.1f}s, "
+                        f"using proportional estimation"
+                    )
+
+                segment_duration = seg_end - seg_start
+                # segment_duration is guaranteed > 0 due to validation above
+                proportion_in_window = overlap_duration / segment_duration
+
+                # Count proportional words
+                segment_words = len(seg_text.split())
+                words_in_window = segment_words * proportion_in_window
+                total_word_count += int(round(words_in_window))
 
     # Calculate coverage as percentage of window
     raw_coverage = total_speech_duration / duration if duration > 0 else 0
@@ -1015,10 +1041,28 @@ def calculate_speech_metrics_for_window(speech_segments, start, end, duration):
 
     speech_coverage = min(1.0, raw_coverage)
 
-    # Round word count to nearest integer
-    word_count = int(round(total_word_count))
+    # total_word_count is already integer (from word-based counting or int(round()) from fallback)
+    return speech_coverage, total_word_count
 
-    return speech_coverage, word_count
+def log_word_count_metrics(video_id: str):
+    """
+    Log word count metrics for validation. Call at end of temporal processing.
+
+    Args:
+        video_id: Video ID to log metrics for
+    """
+    if video_id in _word_count_metrics:
+        metrics = _word_count_metrics[video_id]
+        total = metrics['word_based'] + metrics['fallback']
+        success_rate = (metrics['word_based'] / total * 100) if total > 0 else 0
+
+        logger.info(
+            f"Video {video_id}: Word-based: {metrics['word_based']}/{total} segments, "
+            f"Fallback: {metrics['fallback']}/{total}, Success rate: {success_rate:.1f}%"
+        )
+
+        # Clean up to prevent memory leak
+        del _word_count_metrics[video_id]
 
 def calculate_pitch_metrics(audio_data: Dict[str, Any],
                            ml_data: Dict[str, Any],
@@ -1281,7 +1325,7 @@ def calculate_gaze_variance(timeline_entries: List[Dict], start: float, end: flo
 
 def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
                    audio_data: Dict[str, Any], ml_data: Dict[str, Any],
-                   video_duration: float) -> Dict[str, Any]:
+                   video_duration: float, video_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Process segment with FULL metrics matching hook/closing windows.
     Implements Decision 4 from decisions3.md - ML consistency across all windows.
@@ -1489,9 +1533,9 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         max_density = avg_density
         min_density = avg_density
     
-    # Calculate speech metrics using proportional approach
+    # Calculate speech metrics using word-level timestamps
     speech_coverage, word_count = calculate_speech_metrics_for_window(
-        speech_segments, start, end, duration
+        speech_segments, start, end, duration, video_id=video_id
     )
 
     # Speech content indicators removed per MLFeaturesGIGO.md
@@ -1907,7 +1951,7 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
             'start': windows['hook'][0],
             'end': windows['hook'][1]
         }
-        hook_data = process_segment(hook_bounds, timelines, audio_data, ml_data, video_duration)
+        hook_data = process_segment(hook_bounds, timelines, audio_data, ml_data, video_duration, video_id=video_id)
         
         # Add window-specific audio metrics
         hook_data['energy_level'] = audio_energy_metrics.get('hook_energy_level', 0)
@@ -1929,7 +1973,7 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
         else:
             middle_segments = []
             for seg_name, seg_bounds in segments.items():
-                seg_data = process_segment(seg_bounds, timelines, audio_data, ml_data, video_duration)
+                seg_data = process_segment(seg_bounds, timelines, audio_data, ml_data, video_duration, video_id=video_id)
                 seg_data['segment_name'] = seg_name
                 middle_segments.append(seg_data)
     else:
@@ -1945,7 +1989,7 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
             'start': windows['closing'][0],
             'end': windows['closing'][1]
         }
-        closing_data = process_segment(closing_bounds, timelines, audio_data, ml_data, video_duration)
+        closing_data = process_segment(closing_bounds, timelines, audio_data, ml_data, video_duration, video_id=video_id)
         
         # Add window-specific audio metrics
         closing_data['energy_level'] = audio_energy_metrics.get('closing_energy_level', 0)
@@ -2010,5 +2054,8 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     # Add performance warning for slow processing
     if total_time > 1.0:  # More than 1 second is concerning
         logger.warning(f"[Video {video_id}] Slow temporal compute: {total_time:.3f}s for {video_duration:.1f}s video")
-    
+
+    # Log word count metrics (SpeechCountFix.md validation)
+    log_word_count_metrics(video_id)
+
     return result

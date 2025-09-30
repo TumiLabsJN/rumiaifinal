@@ -158,37 +158,48 @@ def _format_result(self, whisper_cpp_result: Dict) -> Dict[str, Any]:
     for i, seg in enumerate(transcription):
         offsets = seg.get("offsets", {})
 
-        # Parse word-level timestamps from tokens array
+        # Parse word-level timestamps from tokens array (with defensive parsing)
         words = []
-        tokens = seg.get("tokens", [])  # -ojf provides tokens array
-        for token in tokens:
-            word_text = token.get("text", "").strip()
-            word_offsets = token.get("offsets", {})
+        try:
+            tokens = seg.get("tokens", [])  # -ojf provides tokens array
+            for token in tokens:
+                word_text = token.get("text", "").strip()
+                word_offsets = token.get("offsets", {})
 
-            # Filter out special tokens and punctuation-only tokens
-            if word_text and not word_text.startswith("[_") and len(word_text) > 1:
-                words.append({
-                    "word": word_text,
-                    "start": word_offsets.get("from", 0) / 1000.0,  # ms to seconds
-                    "end": word_offsets.get("to", 0) / 1000.0,      # ms to seconds
-                    "confidence": token.get("p", 0.0)               # probability
-                })
+                # Filter out special tokens and pure punctuation
+                # Keep single-letter words like "I", "a", "A"
+                if word_text and not word_text.startswith("[_"):
+                    # If single character, must be alphanumeric (skip standalone punctuation)
+                    if len(word_text) == 1 and not word_text.isalnum():
+                        continue
+
+                    words.append({
+                        "word": word_text,
+                        "start": word_offsets.get("from", 0) / 1000.0,  # ms to seconds
+                        "end": word_offsets.get("to", 0) / 1000.0,      # ms to seconds
+                        "confidence": token.get("p", 0.0)               # probability
+                    })
+        except (KeyError, TypeError, AttributeError) as e:
+            logger.warning(f"Failed to parse word timestamps for segment {i}: {e}")
+            words = []  # Fallback to empty, will use proportional estimation
 
         segments.append({
             "id": i,
             "start": offsets.get("from", 0) / 1000.0,
             "end": offsets.get("to", 0) / 1000.0,
             "text": seg.get("text", "").strip(),
-            "words": words  # ✅ NOW POPULATED with filtered tokens
+            "words": words  # ✅ NOW POPULATED with filtered tokens (or empty on error)
         })
 ```
 
 **Key Changes:**
-1. Parse `tokens` array (not `words` - that's what whisper.cpp uses)
-2. Convert milliseconds to seconds (`/ 1000.0`)
-3. Filter out special tokens like `[_BEG_]`, `[_TT_450]` using `startswith("[_")`
-4. Filter out single-character punctuation (`len(word_text) > 1`)
-5. Include confidence scores for potential quality filtering
+1. **Defensive parsing:** Wrap token parsing in try-catch for graceful degradation
+2. Parse `tokens` array (not `words` - that's what whisper.cpp uses)
+3. Convert milliseconds to seconds (`/ 1000.0`)
+4. Filter out special tokens like `[_BEG_]`, `[_TT_450]` using `startswith("[_")`
+5. **Improved punctuation filter:** Keep single-letter words ("I", "a"), skip pure punctuation
+6. Include confidence scores for potential quality filtering
+7. **Fallback on error:** Return empty `words` array, will use proportional estimation
 
 ### Phase 3: Update Timeline Builder to Preserve Words
 
@@ -259,8 +270,11 @@ def calculate_speech_metrics_for_window(
 
 **Updated `calculate_speech_metrics_for_window()`:**
 ```python
-# Module-level metrics (add at top of temporal_compute.py)
+# Module-level imports and metrics (add at top of temporal_compute.py after existing imports)
+import logging
 from collections import defaultdict
+
+logger = logging.getLogger(__name__)
 _word_count_metrics = defaultdict(lambda: {'word_based': 0, 'fallback': 0})
 
 def calculate_speech_metrics_for_window(
@@ -358,9 +372,25 @@ def log_word_count_metrics(video_id: str):
 
 **Usage in Caller:**
 ```python
-# At end of compute_temporal_windows() function
-from .temporal_compute import log_word_count_metrics
+# At end of compute_temporal_windows() function in temporal_compute.py (~line 1750)
+# No import needed - log_word_count_metrics() is in same file
+# Add just before the final return statement:
+
 log_word_count_metrics(video_id)
+return result
+```
+
+**Also update the function call at line ~1493:**
+```python
+# OLD:
+speech_coverage, word_count = calculate_speech_metrics_for_window(
+    speech_segments, start, end, duration
+)
+
+# NEW:
+speech_coverage, word_count = calculate_speech_metrics_for_window(
+    speech_segments, start, end, duration, video_id=analysis_dict.get('video_id')
+)
 ```
 
 ---
@@ -590,14 +620,14 @@ except (KeyError, TypeError, AttributeError) as e:
 **Scenario:** Word timestamp parsing breaks all videos
 
 **Recovery Plan:**
-1. **Immediate:** Comment out Phase 1 changes (remove `-ml 1` flag)
+1. **Immediate:** Revert Phase 1 changes (change `-ojf` back to `-oj`)
    - Videos process normally with empty `words` arrays
    - Fallback to proportional estimation (old behavior)
    - **Downtime: <5 minutes**
 
 2. **Debug:** Examine failed video's whisper.cpp JSON output
-   - Check if `-ml` flag is supported
-   - Verify token structure matches expectations
+   - Check if `-ojf` flag produced expected structure
+   - Verify `tokens` array exists and has correct format
 
 3. **Fix:** Update parsing logic based on actual output format
    - Deploy fixed parser
