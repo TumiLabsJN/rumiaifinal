@@ -62,6 +62,38 @@ Total: 20 reports
 - Nobody prints PDFs (mobile-first design)
 - Total per hashtag: 20 reports × 2 pages = 40 pages of content (manageable)
 
+### Decision 4: File Naming Convention
+**Decision**: `Pattern_[Number][Letter]_[hashtag].pdf`
+**Date**: 2025-10-01
+**Rationale**:
+- Letter encodes duration bucket (internal organization only)
+- Creators never see file structure (we send them specific reports)
+- Clean system for managing 20 reports per hashtag
+- Easy to identify duration at a glance
+
+**Letter Code System**:
+```
+A = 0-3s     (1 report max)
+B = 3-9s     (2 reports max)
+C = 9-13s    (2 reports max)
+D = 13-18s   (3 reports max)
+E = 18-33s   (5 reports max)  ← Most common duration
+F = 33-60s   (4 reports max)
+G = 60-90s   (2 reports max)
+H = 90-120s  (1 report max)
+```
+
+**Examples**:
+- `Pattern_1E_nutrition.pdf` = Pattern 1 for 18-33s bucket, #nutrition hashtag
+- `Pattern_5E_nutrition.pdf` = Pattern 5 for 18-33s bucket, #nutrition hashtag
+- `Pattern_1A_nutrition.pdf` = Pattern 1 for 0-3s bucket, #nutrition hashtag
+
+**Distribution Workflow**:
+1. Generate all 20 reports per hashtag analysis
+2. Analyze creator's natural content length (e.g., they make 25s videos)
+3. Send relevant reports (e.g., Pattern_1E, Pattern_2E, Pattern_3E)
+4. Creator receives 2-3 targeted reports (never sees full library or letter codes)
+
 ---
 
 ## Hashtag Analysis

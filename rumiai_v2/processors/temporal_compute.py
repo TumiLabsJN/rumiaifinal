@@ -132,6 +132,163 @@ def deduplicate_with_fuzzy_matching(texts: List[str]) -> List[str]:
 
     return unique_texts
 
+def normalize_text_global(text: str) -> str:
+    """Normalize text for grouping similar OCR detections."""
+    import re
+    original = text.strip()
+    # Convert to lowercase
+    text = text.lower()
+
+    # Common emoji to text mappings
+    emoji_mappings = {
+        '🔥': '[fire]',
+        '❤️': '[heart]', '❤': '[heart]',
+        '😊': '[smile]', '😀': '[smile]', '😃': '[smile]',
+        '👍': '[thumbsup]', '👍🏻': '[thumbsup]',
+        '💯': '[100]',
+        '✨': '[sparkles]',
+        '🎉': '[party]',
+        '💪': '[strong]',
+        '🙏': '[pray]',
+        '😂': '[laugh]',
+        '😍': '[love]',
+        '🤔': '[think]',
+        '👀': '[eyes]',
+        '🎯': '[target]',
+        '🚀': '[rocket]',
+        '💰': '[money]',
+        '🏆': '[trophy]',
+        '⭐': '[star]',
+        '✅': '[check]',
+        '❌': '[x]',
+        '⚡': '[lightning]',
+        '🌟': '[star]',
+    }
+
+    # Replace known emojis with text markers
+    for emoji, marker in emoji_mappings.items():
+        text = text.replace(emoji, marker)
+
+    # Remove remaining emojis and special characters, keep alphanumeric, spaces, and brackets
+    text = re.sub(r'[^a-z0-9\s\[\]]', '', text)
+    # Remove extra whitespace
+    text = ' '.join(text.split())
+
+    # If normalization resulted in empty string but original had content,
+    # it was an unmapped emoji/symbol - create unique identifier
+    if not text and original:
+        import hashlib
+        text = f"[emoji_{hashlib.md5(original.encode()).hexdigest()[:6]}]"
+
+    return text
+
+def temporal_cluster_overlays(overlay_entries: List[Dict]) -> List[str]:
+    """
+    Temporal clustering + fuzzy matching for multi-line overlay grouping.
+    Three-step approach: temporal grouping → within-bucket dedup → cross-bucket clustering.
+    """
+    if not overlay_entries:
+        return []
+
+    # Step 1: Group by temporal proximity (0.5s buckets - optimal for OCR detection patterns)
+    TEMPORAL_BUCKET_SIZE = 0.5  # Balanced: captures multi-line text without over-merging
+    time_buckets = {}
+
+    for entry in overlay_entries:
+        time_bucket = round(entry['timestamp'] / TEMPORAL_BUCKET_SIZE) * TEMPORAL_BUCKET_SIZE
+        if time_bucket not in time_buckets:
+            time_buckets[time_bucket] = []
+        time_buckets[time_bucket].append(entry['text'])
+
+    # Step 2: Apply fuzzy matching within each temporal bucket
+    bucket_results = []
+    for bucket_texts in time_buckets.values():
+        if bucket_texts:
+            normalized_texts = [normalize_text_global(text) for text in bucket_texts]
+            unique_texts = aggressive_fuzzy_matching(normalized_texts)
+            bucket_results.extend(unique_texts)
+
+    # Step 3: Cross-bucket clustering for multi-line text spanning multiple buckets
+    if bucket_results:
+        return aggressive_fuzzy_matching(bucket_results)
+
+    return []
+
+def aggressive_fuzzy_matching(texts: List[str]) -> List[str]:
+    """
+    More aggressive fuzzy matching for temporal clustering context.
+    Uses lower thresholds to group OCR fragments that belong to same overlay.
+    """
+    if not texts:
+        return []
+
+    unique_texts = []
+
+    for text in texts:
+        if not text or not text.strip():
+            continue
+
+        found_match = False
+
+        # More aggressive thresholds for temporal clustering
+        for i, unique_text in enumerate(unique_texts):
+            if should_merge_texts_aggressive(text, unique_text):
+                found_match = True
+                # Keep the longer version (assumed more complete)
+                if len(text) > len(unique_text):
+                    unique_texts[i] = text
+                break
+
+        if not found_match:
+            unique_texts.append(text)
+
+    return unique_texts
+
+def should_merge_texts_aggressive(text1: str, text2: str) -> bool:
+    """
+    Aggressive text similarity for temporal clustering.
+    Uses lower thresholds to group fragments of same overlay.
+    """
+    import difflib
+
+    if not text1 or not text2:
+        return False
+
+    # Convert to lowercase for comparison
+    t1, t2 = text1.lower().strip(), text2.lower().strip()
+
+    if t1 == t2:
+        return True
+
+    # More aggressive thresholds
+    AGGRESSIVE_CHAR_THRESHOLD = 0.7   # Was 0.85
+    AGGRESSIVE_TOKEN_THRESHOLD = 0.6  # Was 0.75
+
+    # Character-level similarity (handles OCR errors)
+    char_sim = difflib.SequenceMatcher(None, t1, t2).ratio()
+
+    # Token-level similarity (handles partial matches)
+    tokens1 = set(t1.split())
+    tokens2 = set(t2.split())
+    if tokens1 and tokens2:
+        token_sim = len(tokens1 & tokens2) / len(tokens1 | tokens2)
+    else:
+        token_sim = 0.0
+
+    # Additional checks for fragments
+    # If one text is contained in another (handles "day" vs "what eat in a day")
+    if len(t1) >= 3 and len(t2) >= 3:
+        if t1 in t2 or t2 in t1:
+            return True
+
+    # Check if they share significant common words
+    if tokens1 and tokens2:
+        common_words = tokens1 & tokens2
+        if common_words and len(common_words) >= min(len(tokens1), len(tokens2)) * 0.5:
+            return True
+
+    return (char_sim >= AGGRESSIVE_CHAR_THRESHOLD) or (token_sim >= AGGRESSIVE_TOKEN_THRESHOLD)
+
 # ============================================
 # DEFENSIVE EXTRACTION HELPERS (Decision 1)
 # ============================================
@@ -857,26 +1014,29 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
     caption_texts = high_confidence_captions
     
     # Step 4: Calculate metrics for overlays and captions separately
-    # Step 1: Collect and normalize texts (UNCHANGED from before)
-    overlay_normalized_texts = []
-    caption_normalized_texts = []
-
+    # OVERLAY PROCESSING: Enhanced with temporal clustering (OCRFix3.md)
+    overlay_entries = []
     for entry in overlay_texts:
         text_content = entry.get('data', {}).get('text', '')
-        normalized = normalize_text(text_content)
-        if normalized:  # Skip empty normalized texts (e.g., emojis)
-            overlay_normalized_texts.append(normalized)
-        elif start == 11.0:
-            logger.debug(f"[OVERLAY DEBUG] Skipped empty normalized overlay: '{text_content}'")
+        if text_content.strip():  # Skip empty texts
+            timestamp = entry.get('timestamp', entry.get('start', 0))
+            overlay_entries.append({'text': text_content, 'timestamp': timestamp})
 
+    # Apply temporal clustering + fuzzy matching for overlays
+    if overlay_entries:
+        overlay_unique_texts = temporal_cluster_overlays(overlay_entries)
+    else:
+        overlay_unique_texts = []
+
+    # CAPTION PROCESSING: Traditional approach (unchanged)
+    caption_normalized_texts = []
     for entry in caption_texts:
         text_content = entry.get('data', {}).get('text', '')
         normalized = normalize_text(text_content)
         if normalized:  # Skip empty normalized texts (e.g., emojis)
             caption_normalized_texts.append(normalized)
 
-    # Step 2: NEW - Apply fuzzy deduplication (replaces set() approach)
-    overlay_unique_texts = deduplicate_with_fuzzy_matching(overlay_normalized_texts)
+    # Apply fuzzy deduplication for captions
     caption_unique_texts = deduplicate_with_fuzzy_matching(caption_normalized_texts)
 
     # Step 3: Calculate counts using deduplicated texts
