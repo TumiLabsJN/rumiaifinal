@@ -1039,7 +1039,17 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
             text = f"[emoji_{hashlib.md5(original.encode()).hexdigest()[:6]}]"
 
         return text
-    
+
+    def fix_ocr_errors(text: str) -> str:
+        """Fix common OCR errors that break fuzzy matching."""
+        if not text:
+            return text
+        # Split merged words (e.g., "formeI" → "forme I")
+        text = re.sub(r'(\w)([A-Z])', r'\1 \2', text)
+        # Fix pipe symbols (e.g., "modeland|" → "modeland ")
+        text = re.sub(r'(\w)\|', r'\1 ', text)
+        return text
+
     def calculate_speech_overlap(text: str, timestamp: float, speech_segments: List[Dict]) -> float:
         """Calculate % overlap between text and speech at given timestamp."""
         if not speech_segments:
@@ -1050,14 +1060,24 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
             seg_start = segment.get('start', 0)
             seg_end = segment.get('end', seg_start + 1)
             if seg_start <= timestamp <= seg_end:
+
+                # TIMING STRICTNESS: Prevent false positives from thematic overlays
+                time_alignment = min(abs(timestamp - seg_start), abs(timestamp - seg_end))
+                if time_alignment > 2.0:  # Text >2s from speech boundaries
+                    return 0.0  # Too far from speech timing - likely thematic overlay
+
                 # Get segment text
                 segment_text = segment.get('text', '').lower()
                 if not segment_text:
                     continue
-                
+
+                # Apply OCR error correction before normalization
+                text_fixed = fix_ocr_errors(text)
+                segment_text_fixed = fix_ocr_errors(segment_text)
+
                 # Normalize both texts
-                text_normalized = normalize_text(text)
-                segment_normalized = normalize_text(segment_text)
+                text_normalized = normalize_text(text_fixed)
+                segment_normalized = normalize_text(segment_text_fixed)
                 
                 # Calculate overlap using fuzzy matching to handle OCR errors
                 if not text_normalized:
@@ -1687,6 +1707,57 @@ def extract_instance_id(track_id: str) -> Optional[str]:
 #
 #     return max_persons
 
+def bbox_overlap_ratio(bbox1, bbox2):
+    """Calculate IoU (Intersection over Union) between two bounding boxes."""
+    if not bbox1 or not bbox2 or len(bbox1) < 4 or len(bbox2) < 4:
+        return 0.0
+
+    x1_1, y1_1, x2_1, y2_1 = bbox1[:4]
+    x1_2, y1_2, x2_2, y2_2 = bbox2[:4]
+
+    # Calculate intersection
+    x1_int = max(x1_1, x1_2)
+    y1_int = max(y1_1, y1_2)
+    x2_int = min(x2_1, x2_2)
+    y2_int = min(y2_1, y2_2)
+
+    if x2_int <= x1_int or y2_int <= y1_int:
+        return 0.0  # No overlap
+
+    intersection = (x2_int - x1_int) * (y2_int - y1_int)
+    area1 = (x2_1 - x1_1) * (y2_1 - y1_1)
+    area2 = (x2_2 - x1_2) * (y2_2 - y1_2)
+    union = area1 + area2 - intersection
+
+    return intersection / union if union > 0 else 0.0
+
+def spatial_dedup_people(detections):
+    """Remove overlapping detections that represent the same person."""
+    if not detections:
+        return []
+
+    # Sort by confidence (keep highest confidence detections)
+    detections.sort(key=lambda x: x.get('confidence', 0), reverse=True)
+
+    unique_people = []
+    for detection in detections:
+        bbox = detection.get('bbox', [])
+        if not bbox:
+            continue
+
+        # Check if this detection overlaps significantly with existing people
+        is_duplicate = False
+        for existing in unique_people:
+            existing_bbox = existing.get('bbox', [])
+            if bbox_overlap_ratio(bbox, existing_bbox) > 0.5:  # 50% overlap threshold
+                is_duplicate = True
+                break
+
+        if not is_duplicate:
+            unique_people.append(detection)
+
+    return unique_people
+
 def calculate_eye_contact_rate(timeline_entries: List[Dict], start: float, end: float) -> float:
     """
     Calculate the rate of eye contact within a temporal window.
@@ -1823,16 +1894,15 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
 
     while window_start < end:
         window_end = min(window_start + WINDOW_SIZE, end)
-        unique_persons_in_window = set()
 
+        # Collect all person detections in this window
+        window_person_detections = []
         for obj in segment_objects:
             if obj.get('className') == 'person':
                 timestamp = obj.get('timestamp', 0)
 
                 # Check if detection falls within this window
                 if window_start <= timestamp < window_end:
-                    instance_id = extract_instance_id(obj.get('trackId', ''))
-
                     # Check tracked flag with logging for missing values
                     tracked = obj.get('tracked')
                     if tracked is None:
@@ -1840,11 +1910,14 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
                         tracked = True
 
                     # Only count tracked detections (fallbacks have tracked=False)
-                    if instance_id is not None and tracked:
-                        unique_persons_in_window.add(instance_id)
+                    if tracked:
+                        window_person_detections.append(obj)
+
+        # Apply spatial deduplication to remove double detections
+        unique_people_in_window = spatial_dedup_people(window_person_detections)
 
         # Track maximum persons across all windows
-        max_persons = max(max_persons, len(unique_persons_in_window))
+        max_persons = max(max_persons, len(unique_people_in_window))
 
         # Slide window by STRIDE
         window_start += STRIDE
