@@ -184,8 +184,8 @@ def normalize_text_global(text: str) -> str:
 
 def temporal_cluster_overlays(overlay_entries: List[Dict]) -> List[str]:
     """
-    Temporal clustering + fuzzy matching for multi-line overlay grouping.
-    Three-step approach: temporal grouping → within-bucket dedup → cross-bucket clustering.
+    Enhanced temporal clustering with spatial proximity clustering (FixOCR6).
+    Four-step approach: temporal grouping → spatial grouping → within-bucket dedup → cross-bucket clustering.
     """
     if not overlay_entries:
         return []
@@ -198,21 +198,177 @@ def temporal_cluster_overlays(overlay_entries: List[Dict]) -> List[str]:
         time_bucket = round(entry['timestamp'] / TEMPORAL_BUCKET_SIZE) * TEMPORAL_BUCKET_SIZE
         if time_bucket not in time_buckets:
             time_buckets[time_bucket] = []
-        time_buckets[time_bucket].append(entry['text'])
+        time_buckets[time_bucket].append(entry)
 
-    # Step 2: Apply fuzzy matching within each temporal bucket
+    # Step 2: Apply spatial clustering within each temporal bucket
     bucket_results = []
-    for bucket_texts in time_buckets.values():
-        if bucket_texts:
-            normalized_texts = [normalize_text_global(text) for text in bucket_texts]
-            unique_texts = aggressive_fuzzy_matching(normalized_texts)
-            bucket_results.extend(unique_texts)
+    for bucket_entries in time_buckets.values():
+        if bucket_entries:
+            spatially_clustered = spatial_cluster_within_bucket(bucket_entries)
+            bucket_results.extend(spatially_clustered)
 
     # Step 3: Cross-bucket clustering for multi-line text spanning multiple buckets
     if bucket_results:
         return aggressive_fuzzy_matching(bucket_results)
 
     return []
+
+def spatial_cluster_within_bucket(bucket_entries: List[Dict]) -> List[str]:
+    """
+    Group texts by spatial metadata and attempt phrase formation (FixOCR6).
+    """
+    # Group by spatial signature
+    spatial_groups = {}
+    for entry in bucket_entries:
+        spatial_key = (
+            entry.get('position', 'unknown'),  # "right", "left", "center"
+            entry.get('size', 'medium'),       # "small", "medium", "large"
+            entry.get('style', 'normal')       # "normal", "bold", etc.
+        )
+        if spatial_key not in spatial_groups:
+            spatial_groups[spatial_key] = []
+        spatial_groups[spatial_key].append(entry['text'])
+
+    # Process each spatial group
+    merged_texts = []
+    for group_texts in spatial_groups.values():
+        merged_group = merge_spatial_group(group_texts)
+        merged_texts.extend(merged_group)
+
+    return merged_texts
+
+def merge_spatial_group(texts: List[str]) -> List[str]:
+    """
+    Attempt to merge texts in same spatial location into coherent phrases.
+    """
+    if len(texts) <= 1:
+        return texts
+
+    # Try all combinations to form valid phrases
+    merged = []
+    used_indices = set()
+
+    for i, text1 in enumerate(texts):
+        if i in used_indices:
+            continue
+
+        best_combination = [text1]
+        best_indices = {i}
+
+        # Look for complementary texts
+        for j, text2 in enumerate(texts):
+            if j in used_indices or j == i:
+                continue
+
+            if can_form_phrase(best_combination + [text2]):
+                best_combination.append(text2)
+                best_indices.add(j)
+
+        if len(best_combination) > 1:
+            # Merge into single phrase
+            merged_phrase = combine_into_phrase(best_combination)
+            merged.append(merged_phrase)
+        else:
+            merged.append(text1)
+
+        used_indices.update(best_indices)
+
+    return merged
+
+def can_form_phrase(texts: List[str]) -> bool:
+    """
+    Determine if texts can logically form a coherent phrase.
+    """
+    if len(texts) < 2:
+        return False
+
+    # Normalize texts
+    normalized = [normalize_text_global(text) for text in texts]
+
+    # Check common phrase patterns
+    combined_variations = generate_phrase_combinations(normalized)
+
+    for combination in combined_variations:
+        if is_valid_phrase(combination):
+            return True
+
+    return False
+
+def is_valid_phrase(phrase: str) -> bool:
+    """
+    Check if combined text forms a valid phrase.
+    More conservative approach - only exact matches and strict patterns.
+    """
+    # Known complete phrases (exact matches only)
+    fitness_phrases = {
+        "daily movement", "daily exercise", "daily workout",
+        "more variety of plant foods", "more variety plant foods",
+        "vitamin d", "gut health", "better health", "wellness hacks",
+        "what i eat in a day", "eat in a day"
+    }
+
+    phrase_lower = phrase.lower().strip()
+
+    # Normalize common OCR variations for exact matching
+    normalized_phrase = phrase_lower.replace("@f", "of").replace("varfety", "variety")
+
+    # Direct exact match only
+    if normalized_phrase in fitness_phrases:
+        return True
+
+    # Conservative adjective-noun pattern (only 2 words)
+    words = normalized_phrase.split()
+    if len(words) == 2:
+        if has_adjective_noun_pattern(words):
+            return True
+
+    return False
+
+def has_adjective_noun_pattern(words: List[str]) -> bool:
+    """
+    Check if two words form common adjective-noun pattern.
+    """
+    common_adjectives = {"daily", "more", "better", "healthy", "fresh", "natural"}
+    common_nouns = {"movement", "exercise", "variety", "foods", "health", "workout"}
+
+    if len(words) == 2:
+        word1, word2 = words
+        return (word1 in common_adjectives and word2 in common_nouns) or \
+               (word2 in common_adjectives and word1 in common_nouns)
+    return False
+
+def generate_phrase_combinations(texts: List[str]) -> List[str]:
+    """
+    Generate different orderings of texts to test for valid phrases.
+    """
+    if len(texts) <= 1:
+        return texts
+
+    # Sort by length (shorter words often come first)
+    sorted_texts = sorted(texts, key=len)
+
+    combinations = [
+        " ".join(sorted_texts),
+        " ".join(reversed(sorted_texts)),
+        " ".join(sorted(sorted_texts, key=lambda x: x.lower()))
+    ]
+
+    return combinations
+
+def combine_into_phrase(texts: List[str]) -> str:
+    """
+    Intelligently combine texts into single phrase.
+    """
+    # Try different orderings
+    combinations = generate_phrase_combinations(texts)
+
+    # Return the most phrase-like combination
+    for combo in combinations:
+        if is_valid_phrase(combo):
+            return combo.strip()
+
+    # Fallback: alphabetical order
+    return " ".join(sorted(texts)).strip()
 
 def aggressive_fuzzy_matching(texts: List[str]) -> List[str]:
     """
@@ -1014,13 +1170,24 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
     caption_texts = high_confidence_captions
     
     # Step 4: Calculate metrics for overlays and captions separately
-    # OVERLAY PROCESSING: Enhanced with temporal clustering (OCRFix3.md)
+    # OVERLAY PROCESSING: Enhanced with temporal clustering (OCRFix3.md) + spatial clustering (FixOCR6.md)
     overlay_entries = []
     for entry in overlay_texts:
         text_content = entry.get('data', {}).get('text', '')
         if text_content.strip():  # Skip empty texts
             timestamp = entry.get('timestamp', entry.get('start', 0))
-            overlay_entries.append({'text': text_content, 'timestamp': timestamp})
+            # Extract spatial metadata for FixOCR6 spatial clustering
+            data = entry.get('data', {})
+            position = data.get('position', 'unknown')
+            size = data.get('size', 'medium')
+            style = data.get('style', 'normal')
+            overlay_entries.append({
+                'text': text_content,
+                'timestamp': timestamp,
+                'position': position,
+                'size': size,
+                'style': style
+            })
 
     # Apply temporal clustering + fuzzy matching for overlays
     if overlay_entries:
