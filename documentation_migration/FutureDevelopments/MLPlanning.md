@@ -23,7 +23,7 @@ We are in the last phase of RumiAI
    - Recognize that 15-second patterns differ completely from 60-second patterns
 
 4. **Creative Report Generation**
-   - **Hashtags**: 5 strategy reports per bucket (40 total per hashtag) - "What works for #nutrition"
+   - **Hashtags**: Number of reports vary per bucket - "What works for #nutrition"
    - **Competitors**: 5 strategy reports per bucket (40 total per competitor) - "What @rival is doing"
    - **Creators**: Style profile + compatibility scoring - "Does this creator fit our brand?"
    - Multiple perspectives and strategies per duration bucket
@@ -424,21 +424,6 @@ Same as Recent Mode but analyzes top 40 videos by engagement. Use case: Understa
 - Outputs compatibility score + hiring recommendation (not creative strategy reports)
 - Default mode is `recent` (natural style) vs `top` (best performance)
 
----
-
-### Future Enhancements (Post-MVP)
-
-#### Interactive Mode
-For beginners, offer guided prompts instead of memorizing flags:
-```bash
-$ python rumiai_ml_batch.py --interactive
-```
-
-#### Configuration File Support
-For complex multi-analysis batches:
-```bash
-python rumiai_ml_batch.py --config config/acme_nutrition_analysis.yaml
-```
 
 ---
 
@@ -747,6 +732,50 @@ Before implementing ML batch processing:
 4. **Profile vs Hashtag**: TWO scrapers required (profile scraper + hashtag scraper) ✅
 5. **Cost**: ~$0.005 per video, $6.10 per typical client analysis ✅
 6. **Date filtering**: Client-side only for hashtags (server-side unavailable) ⚠️
+
+---
+
+## 4. LLM Data Strategy
+
+**Purpose**: Define optimal data formatting and aggregation strategy for sending ML analysis results (Random Forest + K-Means) to Claude API for insight generation and report creation.
+
+**Key Capabilities**:
+- Support for two ML analysis types per bucket (Random Forest feature importance + K-Means clustering)
+- Full raw data format: Send complete video-level features (60 videos × 35 features per JSON)
+- Aggregated statistics format: Send compressed statistical summaries (mean, median, quartiles, distribution)
+- Token limit management: Stay within Claude API's 200K token (~800KB) limit
+- Scalable comparison mode: Support 5-10+ hashtag comparisons via aggregation
+
+**Architecture Decisions**:
+
+**Single Hashtag Analysis**:
+- Data volume: ~480KB (2 JSONs per bucket × 8 buckets)
+- Recommendation: **Full raw data**
+- Rationale: Well within token limits, provides richer insights for LLM
+- LLM calls: 16 total (RF + K-Means per bucket)
+
+**Multi-Hashtag Comparison**:
+- Data volume: ~1.44MB raw (exceeds limits)
+- Recommendation: **Aggregated statistics** (reduces to ~200KB)
+- Rationale: Token limit compliance, prevents hallucination risk
+- LLM calls: 8 total (combined RF + K-Means per bucket)
+
+**Business Value**:
+- Prevent hallucination and poor report quality from oversized context windows
+- Enable scalable multi-hashtag comparisons (5-10+ hashtags)
+- Balance data richness (full raw) vs efficiency (aggregated) based on analysis type
+- Optimize LLM API costs by right-sizing payloads
+
+**Implementation Details**:
+- High-Level Design: [ML_LLMData.md](./documentation_migration/FutureDevelopments/ML_LLMData.md)
+- Technical Implementation: [ML_LLMDataTI.md](./documentation_migration/FutureDevelopments/ML_LLMDataTI.md)
+
+**Priority**: MEDIUM - Required before report generation, but can start with single hashtag MVP (full raw data approach)
+
+**Dependencies**:
+- Requires ML analysis outputs (Random Forest + K-Means JSONs per bucket)
+- Feeds into Creative Report Generation system
+- Integration with Claude API for insight synthesis
 
 ---
 

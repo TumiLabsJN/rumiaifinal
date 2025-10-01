@@ -370,6 +370,6 @@ Each report answers:
 Not applicable
 
 ### Tumi Lab Clients
-Insights into which hashtags were the most successful
-
-1
+- single (default): Video review for 1 competitor brand
+- comparison: LLM-based comparison between multiple brands 
+  - (no video processing - it must be processed before)

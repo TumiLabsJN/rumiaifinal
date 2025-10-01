@@ -2,7 +2,9 @@
 
 ## Overview
 
-This document outlines the data formatting strategies for sending analyzed video data to Claude API for generating insights and comparison reports. The approach differs based on analysis type (single vs comparison) and data volume.
+This document outlines the high-level data formatting strategies for sending analyzed video data to Claude API for generating insights and comparison reports. The approach differs based on analysis type (single vs comparison) and data volume.
+
+For technical implementation details, JSON schemas, and code examples, see [ML_LLMDataTI.md](ML_LLMDataTI.md).
 
 ---
 
@@ -12,6 +14,12 @@ This document outlines the data formatting strategies for sending analyzed video
 - Each duration bucket (e.g., 18-33s) contains 50-70 videos
 - Each video JSON: ~10KB with ~35 features
 - Features include temporal window metrics (hook, middle, closing) from 9 ML services
+
+**ML Analysis per Bucket:**
+- **2 separate analyses** run on each bucket:
+  1. **Random Forest:** Feature importance, predictive patterns for engagement
+  2. **K-Means Clustering:** Creative archetypes, cluster performance insights
+- Each analysis produces its own JSON output that must be sent to LLM
 
 **LLM Constraints:**
 - Claude API token limit: ~200K tokens (≈800KB text)
@@ -25,87 +33,44 @@ This document outlines the data formatting strategies for sending analyzed video
 ### Single Hashtag Analysis
 
 **Data Volume:**
-- 1 bucket = 60 videos × 35 features = ~30KB
-- 8 buckets × 30KB = ~240KB total
+- 1 bucket = 60 videos × 35 features = ~30KB per JSON
+- **2 JSONs per bucket** (Random Forest + K-Means) = ~60KB per bucket
+- 8 buckets × 60KB = **~480KB total**
 
 **Options:**
 
 #### Option 1: Full Raw Data
-```json
-{
-  "bucket": "18-33s",
-  "hashtag": "#fitnesstips",
-  "video_count": 60,
-  "videos": {
-    "video_1": {
-      "engagement_score": 245000,
-      "hook_face_count": 1.8,
-      "hook_emotion_joy": 0.65,
-      "middle_scene_changes": 2.3,
-      "closing_text_density": 0.42
-      // ... 35 features total
-    },
-    "video_2": { ... },
-    // ... 60 videos
-  }
-}
-```
 
-**Size:** ~30KB per bucket
+**Approach:**
+- Send complete video-level data with all 35 features
+- Random Forest JSON includes feature importance rankings
+- K-Means JSON includes cluster assignments and centroids
+- Separate JSON per analysis type (2 JSONs per bucket)
+
+**Size:** ~30KB per JSON × 2 = **~60KB per bucket**
 
 **Pros:**
-- LLM sees all patterns and outliers
-- Can identify specific high-performing videos
-- Nuanced insights about distribution shapes
+- LLM sees all patterns and outliers from both RF and K-Means
+- Can identify specific high-performing videos and which cluster they belong to
+- Feature importance + cluster membership = nuanced strategic insights
 
 **Cons:**
-- Larger payload
+- Larger payload (~480KB total)
 - More tokens consumed
 
 #### Option 2: Aggregated Statistics
-```json
-{
-  "bucket": "18-33s",
-  "hashtag": "#fitnesstips",
-  "video_count": 60,
-  "features": {
-    "hook_face_count": {
-      "mean": 1.8,
-      "std": 0.4,
-      "min": 0.2,
-      "max": 5.0,
-      "median": 1.5,
-      "quartiles": [1.0, 1.5, 2.3],
-      "distribution": "bimodal: 0-1 (30%), 2-3 (50%), 4-5 (20%)"
-    },
-    "hook_emotion_joy": {
-      "mean": 0.65,
-      "min": 0.1,
-      "max": 0.95,
-      "median": 0.68,
-      "quartiles": [0.45, 0.68, 0.82]
-    }
-    // ... 35 features with stats
-  },
-  "cluster_insights": {
-    "cluster_0": {
-      "count": 18,
-      "avg_engagement": 350000,
-      "defining_features": ["high face count", "low text density"]
-    },
-    "cluster_1": {
-      "count": 25,
-      "avg_engagement": 180000,
-      "defining_features": ["single face", "high emotion joy"]
-    }
-  }
-}
-```
 
-**Size:** ~3-4KB per bucket
+**Approach:**
+- Combine RF feature importance + K-Means cluster insights
+- Replace video-level data with statistical summaries per feature
+- Include: mean, std, min, max, median, quartiles, distribution shape
+- Single combined JSON per bucket
+
+**Size:** ~6-8KB per bucket × 8 buckets = **~60KB total**
 
 **Pros:**
-- Compact, efficient
+- Compact, efficient (~60KB vs 480KB)
+- Combines RF feature importance + K-Means clusters in one view
 - Captures range and distribution shape
 - Still preserves outlier information (min/max)
 
@@ -113,103 +78,63 @@ This document outlines the data formatting strategies for sending analyzed video
 - Loses individual video patterns
 - Cannot identify specific examples
 
-**Verdict:** Both options totally feasible for single hashtag analysis (~240KB well within limits).
+**Verdict:** Both options feasible. Full raw data (~480KB) still well within 800KB limit and provides richer insights.
 
 ---
 
 ### Multiple Hashtag Comparison
 
 **Data Volume:**
-- 3 hashtags × 60 videos × 35 features = ~90KB per bucket
-- 8 buckets × 90KB = ~720KB total
+- 3 hashtags × 60 videos × 35 features = ~90KB per JSON
+- **2 JSONs per bucket** (RF + K-Means) = ~180KB per bucket
+- 8 buckets × 180KB = **~1.44MB total**
+- **Exceeds 800KB token limit** - aggregation required
 
 **Options:**
 
 #### Option 1: Full Raw Data
-```json
-{
-  "bucket": "18-33s",
-  "comparison": [
-    {
-      "hashtag": "#fitnesstips",
-      "video_count": 62,
-      "videos": { /* 62 videos with 35 features each */ }
-    },
-    {
-      "hashtag": "#workoutmotivation",
-      "video_count": 58,
-      "videos": { /* 58 videos with 35 features each */ }
-    },
-    {
-      "hashtag": "#gymlife",
-      "video_count": 65,
-      "videos": { /* 65 videos with 35 features each */ }
-    }
-  ]
-}
-```
 
-**Size:** ~90KB per bucket, ~720KB for all 8 buckets
+**Approach:**
+- Send complete video-level data for all hashtags
+- Separate RF and K-Means JSONs per bucket
+- Each hashtag includes all videos with 35 features
+
+**Size:** ~90KB per JSON × 2 = **~180KB per bucket**, ~1.44MB for all 8 buckets
 
 **Pros:**
 - Complete pattern visibility across hashtags
-- LLM can identify cross-hashtag trends
+- LLM can identify cross-hashtag trends in both RF and clustering
 
 **Cons:**
-- Approaching 200K token limit (~800KB)
-- **Hallucination risk increases** with very large contexts
-- Processing may be slower and less reliable
+- **Exceeds 800KB token limit** (~1.44MB)
+- **High hallucination risk** with very large contexts
+- Processing will be slow and unreliable
+- Would require sequential bucket processing (16 separate LLM calls)
 
-**Limit:** Feasible for **2-3 hashtags**, but risky beyond that.
+**Limit:** **Not feasible** for 3+ hashtags with full raw data.
 
 #### Option 2: Aggregated Statistics
-```json
-{
-  "bucket": "18-33s",
-  "comparison": [
-    {
-      "hashtag": "#fitnesstips",
-      "video_count": 62,
-      "features": {
-        "hook_face_count": {
-          "mean": 1.8,
-          "min": 0.2,
-          "max": 5.0,
-          "median": 1.5,
-          "quartiles": [1.0, 1.5, 2.3]
-        }
-        // ... 35 features with stats
-      },
-      "cluster_insights": { ... }
-    },
-    {
-      "hashtag": "#workoutmotivation",
-      "video_count": 58,
-      "features": { ... },
-      "cluster_insights": { ... }
-    },
-    {
-      "hashtag": "#gymlife",
-      "video_count": 65,
-      "features": { ... },
-      "cluster_insights": { ... }
-    }
-  ]
-}
-```
 
-**Size:** ~12-15KB per bucket, ~120KB for all 8 buckets
+**Approach:**
+- Combine RF + K-Means insights into single JSON per bucket
+- Replace video-level data with statistical summaries
+- Per-hashtag feature distributions and cluster insights
+- Cross-hashtag comparison in compact format
+
+**Size:** ~20-25KB per bucket, **~200KB for all 8 buckets**
 
 **Pros:**
 - Safe for **5-10+ hashtag comparisons**
-- Reliable LLM processing
-- Focuses on strategic patterns, not individual videos
+- Reliable LLM processing (well under 800KB limit)
+- Combines RF + K-Means insights in single JSON per bucket
+- Focuses on strategic patterns and cluster comparisons
+- Preserves distribution insights (min/max/quartiles)
 
 **Cons:**
 - Loses granular video-level insights
 - Cannot identify specific examples across hashtags
 
-**Verdict:** Both options feasible, but **aggregated stats recommended** for 4+ hashtags to avoid hallucination risk.
+**Verdict:** **Aggregated statistics required** for 3+ hashtags. Full raw data exceeds token limits and risks hallucination.
 
 ---
 
@@ -217,17 +142,50 @@ This document outlines the data formatting strategies for sending analyzed video
 
 ### Single Hashtag Analysis
 - **Use Full Raw Data** (Option 1)
-- Rationale: Data volume is manageable (~240KB), and raw data provides richer insights for strategic recommendations
+- **Rationale:**
+  - Data volume manageable (~480KB for 2 JSONs × 8 buckets)
+  - Well under 800KB token limit
+  - Raw data provides richer insights for strategic recommendations
+  - LLM can identify specific high-performing videos and patterns
+- **LLM Calls:** 16 total (2 per bucket: RF + K-Means)
 
 ### Multiple Hashtag Comparison
-- **2-3 hashtags:** Full Raw Data acceptable (~720KB, near limit)
-- **4+ hashtags:** Use Aggregated Statistics to stay well below token limits and maintain reliability
+- **MUST use Aggregated Statistics** (Option 2)
+- **Rationale:**
+  - Full raw data would be ~1.44MB (exceeds 800KB limit)
+  - Aggregated stats reduce to ~200KB (safe margin)
+  - Preserves strategic insights without granular video data
+  - Combines RF feature importance + K-Means clustering in one JSON per bucket
+- **LLM Calls:** 8 total (1 combined JSON per bucket)
+- **Scalability:** Can handle 5-10+ hashtags with aggregated approach
 
 ### Implementation Strategy
-- Start with Full Raw Data approach for MVP
-- Monitor Claude API performance and hallucination rates
-- Switch to Aggregated Statistics if reliability issues emerge
-- Consider hybrid approach: send aggregated stats + top 5-10 example videos per hashtag
+- **Single hashtag:** Send 2 separate JSONs per bucket (RF + K-Means)
+- **Multi-hashtag:** Combine RF + K-Means insights into 1 aggregated JSON per bucket
+- Start with full raw data for single hashtag MVP
+- Monitor Claude API performance and adjust if needed
+- Consider hybrid for future: aggregated stats + top 5 example videos per hashtag
+
+---
+
+## Data Components
+
+### Random Forest Insights
+- **Feature Importance:** Ranked list of features with importance scores (sum = 1.0)
+- **Top Performer Patterns:** Text description of what distinguishes high-engagement videos
+- **Video-Level Data:** Complete feature vectors for all videos (Option 1 only)
+
+### K-Means Clustering Insights
+- **Cluster Distribution:** Count and average engagement per cluster
+- **Cluster Definitions:** Defining features that characterize each creative archetype
+- **Centroids:** Feature values at cluster centers (Option 1 only)
+- **Video Assignments:** Cluster ID per video (Option 1 only)
+
+### Statistical Measures (Aggregated Option)
+- **Central Tendency:** Mean, median
+- **Spread:** Standard deviation, quartiles
+- **Range:** Min, max values
+- **Distribution Shape:** Normal, bimodal, skewed, uniform
 
 ---
 
@@ -237,3 +195,4 @@ This document outlines the data formatting strategies for sending analyzed video
 - **Chunking strategy:** If needed, process buckets sequentially rather than all at once
 - **Model upgrades:** Future Claude models may handle larger contexts more reliably
 - **Dynamic selection:** Algorithm to choose raw vs aggregated based on hashtag count and video volume
+- **Hybrid approach:** Combine aggregated stats with selective example videos for best of both worlds

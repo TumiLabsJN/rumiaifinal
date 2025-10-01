@@ -1059,15 +1059,27 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
                 text_normalized = normalize_text(text)
                 segment_normalized = normalize_text(segment_text)
                 
-                # Calculate word overlap
+                # Calculate overlap using fuzzy matching to handle OCR errors
+                if not text_normalized:
+                    return 0.0
+
+                # Use fuzzy similarity to handle OCR variations
+                from difflib import SequenceMatcher
+                char_similarity = SequenceMatcher(None, text_normalized, segment_normalized).ratio()
+
+                # Also calculate word overlap for additional confidence
                 text_words = set(text_normalized.split())
                 segment_words = set(segment_normalized.split())
-                
-                if not text_words:
-                    return 0.0
-                
-                overlap_words = text_words.intersection(segment_words)
-                overlap_ratio = len(overlap_words) / len(text_words)
+
+                if text_words and segment_words:
+                    overlap_words = text_words.intersection(segment_words)
+                    word_overlap_ratio = len(overlap_words) / len(text_words)
+                else:
+                    word_overlap_ratio = 0.0
+
+                # Use the higher of character similarity or word overlap
+                # This handles both OCR errors and partial text captures
+                overlap_ratio = max(char_similarity, word_overlap_ratio)
                 return overlap_ratio
         
         return 0.0
@@ -1775,8 +1787,7 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
                        if start <= g.get('timestamp', 0) < end]
     segment_expressions = [e for e in timelines.get('expression_timeline', [])
                           if start <= e.get('timestamp', 0) < end]
-    segment_scenes = [s for s in timelines.get('scene_change_timeline', [])
-                     if start <= s.get('timestamp', 0) < end]
+    # segment_scenes removed - was counting scene changes, not scenes (fixed below)
     segment_camera = [c for c in timelines.get('camera_distance_timeline', [])
                      if start <= c.get('timestamp', 0) < end]
     # Speech segments handled by calculate_speech_metrics_for_window function
@@ -1864,7 +1875,25 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
 
     gesture_count = len(unique_gestures)
     # expression_count removed - was always constant based on FEAT sampling rate
-    scene_count = len(segment_scenes)
+
+    # Fix scene counting: Count scenes that overlap with segment, not scene changes within segment
+    scene_count = 0
+    all_scenes = timelines.get('scene_change_timeline', [])
+    if all_scenes:
+        sorted_all_scenes = sorted(all_scenes, key=lambda x: x.get('timestamp', 0))
+        for i, scene in enumerate(sorted_all_scenes):
+            scene_start = scene.get('timestamp', 0)
+            # Find next scene or use video end
+            if i < len(sorted_all_scenes) - 1:
+                scene_end = sorted_all_scenes[i + 1].get('timestamp', 0)
+            else:
+                scene_end = video_duration  # Use video duration as end of last scene
+
+            # Check if this scene overlaps with our segment
+            if scene_end > start and scene_start < end:
+                scene_count += 1
+    else:
+        scene_count = 1  # Default: entire video is one scene if no scene changes detected
     
     # element_count removed per MLFeaturesGIGO.md - pure derivative
     # ML can compute sum if needed from raw components
@@ -1941,7 +1970,7 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     # Calculate new emotion features (MLFeaturesGIGO.md)
     emotion_encoding = {
         'joy': 1, 'sadness': 2, 'anger': 3, 'fear': 4,
-        'disgust': 5, 'surprise': 6, 'neutral': 7
+        'disgust': 5, 'surprise': 6, 'neutral': 7, 'no_person': 8
     }
 
     if total_emotions > 0:
@@ -1969,8 +1998,11 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         max_emotion_count = max(emotion_counts.values())
         emotion_consistency = max_emotion_count / total_emotions
     else:
-        # No emotions detected - use defaults
-        dominant_emotion_id = 7  # neutral
+        # No emotions detected - distinguish neutral vs no_person
+        if segment_faces:
+            dominant_emotion_id = 7  # neutral (face detected but no emotions classified)
+        else:
+            dominant_emotion_id = 8  # no_person (no face detected)
         emotional_valence = 0.0
         emotion_consistency = 0.0
     

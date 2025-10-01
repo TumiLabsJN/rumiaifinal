@@ -22,6 +22,10 @@ MLPlanning.md (Master Planning)
 ├── Creator Match Analysis
 │   └── MLCreatorMatch.md (HLD)
 │
+├── LLM Data Strategy
+│   ├── ML_LLMData.md (HLD)
+│   └── ML_LLMDataTI.md (Technical Implementation)
+│
 └── Creative Reports Generation
     └── MLCreativeReports.md (Brainstorm/Planning)
 ```
@@ -173,9 +177,69 @@ MLPlanning.md (Master Planning)
 
 ---
 
+### 4. LLM Data Strategy
+
+#### 4A. ML_LLMData.md (HLD)
+**Location**: `/home/jorge/rumiaifinal/documentation_migration/FutureDevelopments/ML_LLMData.md`
+
+**Type**: High-Level Design
+
+**Purpose**:
+- Data formatting strategy for sending ML analysis to Claude API
+- Trade-offs between full raw data vs aggregated statistics
+- Token limit management and hallucination risk mitigation
+
+**Contents**:
+- Data volume analysis per bucket (RF + K-Means = 2 JSONs)
+- Single hashtag options (full raw data ~480KB vs aggregated ~60KB)
+- Multi-hashtag comparison options (aggregated required due to ~1.44MB raw)
+- Recommendations per analysis type
+- Data components (RF insights, K-Means clusters, statistical measures)
+
+**Audience**: Product managers, architects, ML engineers
+
+**No Code**: All JSON schemas and implementation code in TI document
+
+**Cross-References**:
+- Technical Implementation → ML_LLMDataTI.md
+- Used By → MLPlanning.md (Hashtag Flow, Competitor Flow)
+
+---
+
+#### 4B. ML_LLMDataTI.md (Technical Implementation)
+**Location**: `/home/jorge/rumiaifinal/documentation_migration/FutureDevelopments/ML_LLMDataTI.md`
+
+**Type**: Technical Implementation
+
+**Purpose**:
+- JSON schema specifications for all LLM input formats
+- Claude API integration code examples
+- Prompt templates and data pipeline flow
+
+**Contents**:
+- Complete JSON schemas for:
+  - Single hashtag: full raw data (RF + K-Means separate)
+  - Single hashtag: aggregated statistics (combined)
+  - Multi-hashtag: full raw data (not recommended)
+  - Multi-hashtag: aggregated statistics (recommended)
+- Python code for Claude API integration
+- Prompt templates (single vs comparison analysis)
+- Data type specifications and validation rules
+- Testing & validation guidelines
+
+**Audience**: Developers, ML engineers
+
+**Code-Heavy**: All JSON schemas and implementation code
+
+**Cross-References**:
+- High-Level Design → ML_LLMData.md
+- Related To → MLCreativeReports.md (LLM generates report content)
+
+---
+
 ## Feature Documentation (HLD Only - No TI Yet)
 
-### 4. MLCreatorMatch.md
+### 5. MLCreatorMatch.md
 **Location**: `/home/jorge/rumiaifinal/documentation_migration/FutureDevelopments/MLCreatorMatch.md`
 
 **Type**: High-Level Design
@@ -206,7 +270,7 @@ MLPlanning.md (Master Planning)
 
 ## Brainstorm / Planning Documents
 
-### 5. MLCreativeReports.md
+### 6. MLCreativeReports.md
 **Location**: `/home/jorge/rumiaifinal/documentation_migration/FutureDevelopments/MLCreativeReports.md`
 
 **Type**: Brainstorm / Planning
@@ -318,6 +382,7 @@ MLPlanning.md (Master Planning)
 - ├─ **MLAnalysisMode.md** (Child - HLD)
 - ├─ **MLCheckpointResume.md** (Child - HLD)
 - ├─ **MLCreatorMatch.md** (Child - HLD)
+- ├─ **ML_LLMData.md** (Child - HLD)
 - └─ **MLCreativeReports.md** (Child - Brainstorm)
 
 **MLAnalysisMode.md** (Parent - HLD)
@@ -325,6 +390,9 @@ MLPlanning.md (Master Planning)
 
 **MLCheckpointResume.md** (Parent - HLD)
 - └─ **MLCheckpointResumeTI.md** (Child - TI)
+
+**ML_LLMData.md** (Parent - HLD)
+- └─ **ML_LLMDataTI.md** (Child - TI)
 
 ---
 
@@ -345,6 +413,10 @@ MLPlanning.md (Master Planning)
 **MLCreativeReports → MLCreatorMatch**
 - Creator compatibility reports need special format
 - Include coaching notes and compatibility scores
+
+**ML_LLMData → MLCreativeReports**
+- LLM generates report content based on formatted data
+- Report quality depends on data structure sent to Claude API
 
 ---
 
@@ -461,6 +533,12 @@ Examples:
 ### "I need to plan creative reports"
 → Read: **MLCreativeReports.md** (Brainstorm)
 
+### "I need to understand LLM data formatting strategy"
+→ Read: **ML_LLMData.md** (HLD)
+
+### "I need to implement LLM data formatting"
+→ Read: **ML_LLMDataTI.md** (TI)
+
 ---
 
 ## Document Locations
@@ -476,6 +554,8 @@ Examples:
         ├── MLCheckpointResume.md
         ├── MLCheckpointResumeTI.md
         ├── MLCreatorMatch.md
+        ├── ML_LLMData.md
+        ├── ML_LLMDataTI.md
         └── MLCreativeReports.md
 ```
 
@@ -510,8 +590,10 @@ Examples:
 | MLCheckpointResume.md | HLD | ~410 | 0 | Complete |
 | MLCheckpointResumeTI.md | TI | ~450 | ~8 | Complete |
 | MLCreatorMatch.md | HLD | ~350 | ~3 | Complete |
+| ML_LLMData.md | HLD | ~200 | 0 | Complete |
+| ML_LLMDataTI.md | TI | ~600 | ~15 | Complete |
 | MLCreativeReports.md | Brainstorm | ~150 | 0 | In Progress |
-| **Total** | - | **~3,430** | **~33** | - |
+| **Total** | - | **~4,230** | **~48** | - |
 
 ---
 

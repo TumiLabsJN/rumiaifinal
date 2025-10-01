@@ -29,8 +29,8 @@ def validate_temporal_window(window_data, window_name="window"):
     # Validate new features exist and have correct ranges
     if 'dominant_emotion_id' in window_data:
         val = window_data['dominant_emotion_id']
-        if not (1 <= val <= 7):
-            errors.append(f"❌ dominant_emotion_id={val} out of range [1-7] in {window_name}")
+        if not (1 <= val <= 8):
+            errors.append(f"❌ dominant_emotion_id={val} out of range [1-8] in {window_name}")
     else:
         errors.append(f"❌ Missing required feature 'dominant_emotion_id' in {window_name}")
 
