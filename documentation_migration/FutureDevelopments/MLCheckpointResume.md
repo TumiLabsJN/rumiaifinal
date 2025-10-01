@@ -1,5 +1,11 @@
 # Checkpoint Resume System
 
+**Document Type**: High-Level Design (HLD)
+**Technical Implementation**: See [MLCheckpointResumeTI.md](./MLCheckpointResumeTI.md) for code, integration details, and testing
+**Last Updated**: 2025-10-01
+
+---
+
 ## Overview
 
 ### Business Problem
@@ -213,152 +219,44 @@ Processing video 1/480 (bucket_0-3s: 1/60)...
 
 ### Checkpoint Manager Class
 
-```python
-class CheckpointManager:
-    def __init__(self, checkpoint_path):
-        self.path = checkpoint_path
-        self.data = self._load_or_create()
+**Key Responsibilities**:
+- Load/create checkpoint files
+- Mark videos as completed or failed
+- Track progress across duration buckets
+- Validate configuration on resume
+- Provide resume point for interrupted batches
 
-    def _load_or_create(self):
-        """Load existing checkpoint or create new one"""
-        if os.path.exists(self.path):
-            with open(self.path, 'r') as f:
-                return json.load(f)
-        return self._create_new_checkpoint()
+**Core Methods**:
+- `save_config()` - Initialize checkpoint with configuration
+- `validate_config()` - Ensure config matches on resume
+- `save_progress()` - Mark video completed, update checkpoint
+- `get_resume_point()` - Get position to resume from
+- `load_completed_features()` - Load all features for ML training
+- `clear_checkpoint()` - Force restart (discard progress)
 
-    def mark_video_completed(self, video_id, bucket):
-        """Mark video as completed and save checkpoint"""
-        # Update bucket progress
-        self.data['bucket_progress'][bucket]['videos_processed'] += 1
-        self.data['bucket_progress'][bucket]['completed_video_ids'].append(video_id)
-
-        # Update overall progress
-        self.data['progress']['videos_completed'] += 1
-        self.data['progress']['videos_remaining'] -= 1
-        self.data['progress']['percentage'] = (
-            self.data['progress']['videos_completed'] /
-            self.data['progress']['total_videos_target'] * 100
-        )
-
-        # Update timestamp
-        self.data['timestamps']['last_updated'] = datetime.now().isoformat()
-
-        # Save to disk
-        self._save()
-
-    def mark_video_failed(self, video_id, bucket, error):
-        """Log failed video without stopping batch"""
-        self.data['failed_videos'].append({
-            'video_id': video_id,
-            'bucket': bucket,
-            'error': str(error),
-            'timestamp': datetime.now().isoformat(),
-            'retry_count': 0
-        })
-
-        # Update counts
-        self.data['progress']['videos_failed'] += 1
-        self.data['progress']['videos_remaining'] -= 1
-        self.data['bucket_progress'][bucket]['videos_failed'] += 1
-
-        self._save()
-
-    def get_completed_video_ids(self):
-        """Get set of all completed video IDs across buckets"""
-        completed = set()
-        for bucket_data in self.data['bucket_progress'].values():
-            completed.update(bucket_data['completed_video_ids'])
-        return completed
-
-    def mark_completed(self):
-        """Mark entire analysis as completed"""
-        self.data['status'] = 'completed'
-        self.data['timestamps']['completed_at'] = datetime.now().isoformat()
-        self._save()
-
-    def _save(self):
-        """Write checkpoint to disk"""
-        os.makedirs(os.path.dirname(self.path), exist_ok=True)
-        with open(self.path, 'w') as f:
-            json.dump(self.data, f, indent=2)
-```
+**Implementation**: See [MLCheckpointResumeTI.md - CheckpointManager Implementation](./MLCheckpointResumeTI.md#checkpointmanager-implementation)
 
 ---
 
 ### Batch Processing with Auto-Resume
 
-```python
-def run_batch_analysis(client_id, analysis_type, target, config, force=False):
-    """Main batch processing with auto-resume"""
+**Workflow**:
+1. Check for existing checkpoint
+2. If exists: Validate config, load completed IDs, auto-resume
+3. If not exists (or --force): Create new checkpoint, start fresh
+4. Fetch videos via Apify
+5. Bucket and select videos
+6. Filter out completed videos
+7. Process remaining videos with checkpoint updates
+8. Mark analysis complete
 
-    checkpoint_path = f"/data/clients/{client_id}/{analysis_type}/{target}/checkpoints/analysis_state.json"
+**Key Behaviors**:
+- **Auto-resume**: Automatically detects and resumes from checkpoint (no flag needed)
+- **Config validation**: Prevents resuming with different parameters
+- **Skip completed**: Filters out already-processed videos
+- **Fail-fast**: Errors stop batch for debugging (not skip-on-fail)
 
-    # Check for existing checkpoint
-    if os.path.exists(checkpoint_path) and not force:
-        checkpoint = CheckpointManager(checkpoint_path)
-
-        # Validate config matches
-        if not checkpoint.validate_config(config):
-            raise ValueError("Checkpoint config mismatch. Use --force to restart with new config.")
-
-        # Auto-resume
-        print(f"✓ Checkpoint detected: {checkpoint.data['progress']['videos_completed']}/{checkpoint.data['progress']['total_videos_target']} completed")
-        print(f"→ Auto-resuming...")
-
-        completed_ids = checkpoint.get_completed_video_ids()
-
-    else:
-        # Force restart or no checkpoint
-        if force and os.path.exists(checkpoint_path):
-            # Backup old checkpoint
-            backup_path = checkpoint_path.replace('.json', f'_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json')
-            shutil.copy(checkpoint_path, backup_path)
-            print(f"→ Old checkpoint backed up to {backup_path}")
-
-        # Create new checkpoint
-        checkpoint = CheckpointManager(checkpoint_path)
-        checkpoint.initialize(client_id, analysis_type, target, config)
-        completed_ids = set()
-
-        print("→ Starting fresh analysis...")
-
-    # Fetch videos via Apify
-    all_videos = apify_scraper.fetch_videos(target, count=config['video_count'])
-
-    # Bucket and select videos (Top 40 + Bottom 20 per bucket)
-    bucketed_videos = bucket_and_select_videos(all_videos)
-
-    # Filter out completed videos
-    videos_to_process = [v for v in bucketed_videos if v['id'] not in completed_ids]
-
-    print(f"→ Processing {len(videos_to_process)} videos...")
-
-    # Process videos with checkpoint updates
-    for video in videos_to_process:
-        try:
-            # Run RumiAI analysis
-            result = rumiai_runner.process_video(video['id'])
-
-            # Mark as completed in checkpoint
-            checkpoint.mark_video_completed(video['id'], video['bucket'])
-
-            print(f"✓ {video['id']} completed")
-
-        except Exception as e:
-            # Log failure but continue batch (skip-on-fail)
-            checkpoint.mark_video_failed(video['id'], video['bucket'], str(e))
-            print(f"✗ {video['id']} failed: {e}")
-            continue
-
-    # Mark analysis complete
-    checkpoint.mark_completed()
-
-    # Print summary
-    print(f"\n✓ Analysis completed:")
-    print(f"  - Total videos: {checkpoint.data['progress']['total_videos_target']}")
-    print(f"  - Completed: {checkpoint.data['progress']['videos_completed']}")
-    print(f"  - Failed: {checkpoint.data['progress']['videos_failed']}")
-```
+**Implementation**: See [MLCheckpointResumeTI.md - Integration Example](./MLCheckpointResumeTI.md#integration-example)
 
 ---
 
@@ -406,24 +304,7 @@ Options:
   2. Use --force to create new checkpoint
 ```
 
-**Implementation**:
-```python
-def _load_or_create(self):
-    if os.path.exists(self.path):
-        try:
-            with open(self.path, 'r') as f:
-                return json.load(f)
-        except json.JSONDecodeError:
-            print("✗ Checkpoint file corrupted")
-            # Look for backup
-            backup_files = glob.glob(self.path.replace('.json', '_backup_*.json'))
-            if backup_files:
-                latest_backup = sorted(backup_files)[-1]
-                print(f"→ Found backup: {latest_backup}")
-                print("→ Use --force to create fresh checkpoint")
-            raise
-    return self._create_new_checkpoint()
-```
+**Implementation**: Checkpoint manager detects corruption, suggests backup restore or --force flag to create fresh checkpoint
 
 ---
 
@@ -470,69 +351,30 @@ Processing video 127/480...
 ERROR: [Errno 28] No space left on device
 ```
 
-**Handling**:
-```python
-try:
-    checkpoint.mark_video_completed(video_id, bucket)
-except IOError as e:
-    print(f"✗ CRITICAL: Cannot save checkpoint - {e}")
-    print("→ Free up disk space and resume")
-    sys.exit(1)  # Stop batch, preserve last saved checkpoint
-```
+**Handling**: Stop batch immediately, preserve last saved checkpoint, prompt user to free disk space and resume
 
 ---
 
 ## Testing Strategy
 
-### Unit Tests
+### Testing Strategy
 
-```python
-def test_checkpoint_creation():
-    """Test new checkpoint initialization"""
-    checkpoint = CheckpointManager.create_new(
-        client_id="test_client",
-        analysis_type="hashtag",
-        target="#test"
-    )
-    assert checkpoint.data['status'] == 'in_progress'
-    assert checkpoint.data['progress']['videos_completed'] == 0
+**Unit Tests Required**:
+- ✅ Checkpoint creation and initialization
+- ✅ Config save and validation
+- ✅ Config mismatch detection
+- ✅ Save/load progress
+- ✅ Resume point calculation
+- ✅ Load completed features
+- ✅ Clear checkpoint (force restart)
 
-def test_checkpoint_resume():
-    """Test loading existing checkpoint"""
-    # Create checkpoint with some progress
-    checkpoint = CheckpointManager(test_path)
-    checkpoint.mark_video_completed("video_1", "bucket_0-3s")
+**Integration Tests Required**:
+- ✅ Full batch with simulated interruption
+- ✅ Auto-resume verification (no duplicates)
+- ✅ Config mismatch error handling
+- ✅ Checkpoint corruption recovery
 
-    # Load checkpoint
-    checkpoint2 = CheckpointManager(test_path)
-    assert "video_1" in checkpoint2.get_completed_video_ids()
-
-def test_checkpoint_config_validation():
-    """Test config mismatch detection"""
-    checkpoint = CheckpointManager.create_new(config={'video_count': 300})
-
-    # Try to resume with different config
-    with pytest.raises(ValueError):
-        checkpoint.validate_config({'video_count': 250})
-```
-
-### Integration Tests
-
-```python
-def test_batch_with_interruption():
-    """Test full batch with simulated interruption"""
-    videos = generate_test_videos(100)
-
-    # Start batch, interrupt at 50%
-    batch = run_batch_analysis(videos[:50])
-
-    # Resume batch
-    batch = run_batch_analysis(videos, resume=True)
-
-    # Verify no duplicate processing
-    assert batch.videos_processed == 100
-    assert batch.duplicate_count == 0
-```
+**Implementation**: See [MLCheckpointResumeTI.md - Testing](./MLCheckpointResumeTI.md#testing)
 
 ---
 

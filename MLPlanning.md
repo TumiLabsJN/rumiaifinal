@@ -424,3 +424,247 @@ python rumiai_ml_batch.py --config config/acme_nutrition_analysis.yaml
 
 **Priority**: HIGH - Core feature for flexible analysis across different business questions
 
+---
+
+### 3.1 Apify Scraper Investigation & Recommendations
+
+**Date**: 2025-10-01
+**Investigation Goal**: Determine optimal Apify scraper(s) for ML batch processing requirements
+
+#### Current Scraper Setup
+
+**Actor ID**: `GdWCkxBtKWOsKjdch` (clockworks/tiktok-scraper)
+**Current Usage**: Single video scraping via `postURLs` parameter
+**Integration**: `/home/jorge/rumiaifinal/rumiai_v2/api/apify_client.py`
+
+#### Requirements Analysis
+
+Based on MLAnalysisMode.md and system architecture:
+
+**Video Volume per Analysis**:
+- Hashtag analysis: 300+ videos → 480 processed (60 per bucket × 8 buckets)
+- Competitor analysis: 150 videos → all processed
+- Creator analysis: 40 videos → all processed
+
+**Required Apify Parameters**:
+1. **Sorting capability**: `sortBy: engagement` (top mode) OR `sortBy: date` (recent mode)
+2. **Volume support**: 400-800 videos per scrape (hashtag volume with filtering headroom)
+3. **Target types**: Both hashtag URLs (`#nutrition`) AND profile URLs (`@handle`)
+4. **Video downloads**: `shouldDownloadVideos: true`
+5. **Date filtering**: Client-side filtering required (no server-side for hashtags)
+
+**Required Metadata Fields** (from video.py:35-84):
+- ✅ `playCount` → views
+- ✅ `diggCount` → likes
+- ✅ `commentCount` → comments
+- ✅ `shareCount` → shares
+- ✅ `createTime` / `createTimeISO` → create_time
+- ✅ `videoUrl` / `downloadAddr` → download_url
+- ✅ `duration` → duration
+- ✅ `authorMeta.name` → username
+
+#### Scraper Comparison Matrix
+
+| Feature | clockworks/tiktok-scraper | clockworks/tiktok-hashtag-scraper | Recommendation |
+|---------|---------------------------|-----------------------------------|----------------|
+| **Profile scraping** (@handle) | ✅ Yes (`profilesUrls`) | ❌ No | Need current scraper |
+| **Hashtag scraping** (#tag) | ⚠️ Limited (`postURLs` only) | ✅ Yes (`hashtagsUrls`) | Need hashtag scraper |
+| **Sorting by engagement** | ❓ Unknown (needs testing) | ✅ Yes (`sortBy: engagement`) | Hashtag scraper better |
+| **Sorting by date** | ❓ Unknown (needs testing) | ✅ Yes (`sortBy: date`) | Hashtag scraper better |
+| **Volume limit** | 400-800 per hashtag | 400-800 per hashtag | Both sufficient |
+| **Metadata fields** | ✅ All required fields | ✅ All required fields | Both sufficient |
+| **Video downloads** | ✅ Yes | ✅ Yes | Both sufficient |
+| **Cost per video** | ~$0.005 | ~$0.005 | Same |
+
+#### Critical Findings
+
+**✅ GOOD NEWS - Existing Integration Works**:
+- Current `VideoMetadata.from_apify_data()` already handles all required fields
+- Engagement scoring formula ready (MLAnalysisMode.md lines 153-176)
+- Service contracts guarantee valid data structures
+
+**⚠️ LIMITATION DISCOVERED - Hashtag Volume**:
+- **Hard limit**: 400-800 videos per hashtag (TikTok platform limitation, not Apify)
+- **Impact**: When scraping 800 videos for hashtags, after client-side date filtering, may have <480 videos needed
+- **Mitigation**: Accept fewer videos per bucket OR relax date constraints
+
+**❌ CRITICAL GAP - Date Filtering**:
+- ❌ No server-side date filtering for hashtag searches
+- ✅ Date filtering only available for profile scraping
+- **Workaround**: Must scrape 800 videos, then filter client-side (see VideoSelection.md lines 19-45)
+
+**🔄 TWO SCRAPERS REQUIRED**:
+
+**Use Case 1: Hashtag Analysis**
+→ **clockworks/tiktok-hashtag-scraper**
+- Input: `hashtagsUrls: ["#nutrition"]`
+- Sorting: `sortBy: engagement` (top mode) OR `sortBy: date` (recent mode)
+- Volume: `resultsPerPage: 800`
+
+**Use Case 2: Competitor/Creator Analysis**
+→ **clockworks/tiktok-scraper** (current)
+- Input: `profilesUrls: ["@rival_brand"]`
+- Sorting: `sortBy: engagement` OR `sortBy: date`
+- Volume: `resultsPerPage: 150` (competitor) OR `40` (creator)
+
+#### Implementation Recommendations
+
+**Phase 1: Update Apify Client (IMMEDIATE)**
+
+Add hashtag scraper support to existing `apify_client.py`:
+
+```python
+class ApifyClient:
+    def __init__(self, api_token: str):
+        self.api_token = api_token
+        # Two actor IDs based on use case
+        self.profile_scraper_id = "GdWCkxBtKWOsKjdch"  # Current
+        self.hashtag_scraper_id = "TBD_HASHTAG_ACTOR_ID"  # New
+
+    async def scrape_hashtag(
+        self,
+        hashtag: str,
+        video_count: int = 800,
+        analysis_mode: str = "top"  # "top" or "recent"
+    ) -> List[VideoMetadata]:
+        """
+        Scrape videos from hashtag for ML batch processing
+        Supports both top (engagement) and recent (date) modes
+        """
+        sort_by = "engagement" if analysis_mode == "top" else "date"
+
+        actor_input = {
+            "hashtagsUrls": [f"https://www.tiktok.com/tag/{hashtag.lstrip('#')}"],
+            "resultsPerPage": video_count,
+            "shouldDownloadVideos": True,
+            "sortBy": sort_by,
+            "sortOrder": "desc",
+            "proxyConfiguration": {"useApifyProxy": True}
+        }
+
+        # Use hashtag scraper
+        return await self._run_scraper(
+            self.hashtag_scraper_id,
+            actor_input
+        )
+
+    async def scrape_profile(
+        self,
+        handle: str,
+        video_count: int,
+        analysis_mode: str = "top"
+    ) -> List[VideoMetadata]:
+        """
+        Scrape videos from TikTok profile for competitor/creator analysis
+        """
+        sort_by = "engagement" if analysis_mode == "top" else "date"
+
+        actor_input = {
+            "profilesUrls": [f"https://www.tiktok.com/{handle}"],
+            "resultsPerPage": video_count,
+            "shouldDownloadVideos": True,
+            "sortBy": sort_by,
+            "sortOrder": "desc",
+            "proxyConfiguration": {"useApifyProxy": True}
+        }
+
+        # Use profile scraper (existing)
+        return await self._run_scraper(
+            self.profile_scraper_id,
+            actor_input
+        )
+```
+
+**Phase 2: Client-Side Date Filtering (REQUIRED)**
+
+Implement post-scrape filtering as documented in VideoSelection.md:
+
+```python
+def filter_by_date(videos: List[VideoMetadata], date_filter: str) -> List[VideoMetadata]:
+    """
+    Client-side date filtering (required for hashtags)
+
+    Args:
+        date_filter: "last_90_days" or "2024-01-01:2025-01-01"
+    """
+    if date_filter.startswith("last_"):
+        days = int(date_filter.replace("last_", "").replace("_days", ""))
+        min_date = datetime.now() - timedelta(days=days)
+    else:
+        start, end = date_filter.split(":")
+        min_date = datetime.fromisoformat(start)
+
+    return [v for v in videos if v.create_time >= min_date]
+```
+
+**Phase 3: Testing & Validation (NEXT STEP)**
+
+Before implementing ML batch processing:
+
+1. **Test hashtag scraper** with sample hashtag:
+   ```bash
+   python test_apify_hashtag.py --hashtag "#nutrition" --count 100 --mode top
+   ```
+
+2. **Verify sorting works**:
+   - Top mode: Confirm videos sorted by engagement score
+   - Recent mode: Confirm videos sorted by publish date
+
+3. **Validate metadata fields**:
+   - Ensure all required fields present (`playCount`, `shareCount`, etc.)
+   - Confirm `VideoMetadata.from_apify_data()` works without changes
+
+4. **Test date filtering**:
+   - Scrape 800 videos
+   - Apply `last_90_days` filter
+   - Measure retention rate (expect 40-60% after filtering)
+
+#### Cost Analysis (Updated)
+
+**Hashtag Analysis** (300 target, 800 scraped):
+- Scrape cost: 800 videos × $0.005 = **$4.00**
+- After date filtering: ~480 videos (60% retention)
+- Per bucket analysis: 60 videos × 8 buckets = 480 videos
+- **Result**: ✅ Sufficient volume for contrastive analysis
+
+**Competitor Analysis** (150 videos):
+- Scrape cost: 150 videos × $0.005 = **$0.75**
+- No date filtering needed (all videos processed)
+
+**Creator Analysis** (40 videos):
+- Scrape cost: 40 videos × $0.005 = **$0.20**
+- No date filtering needed
+
+**Total per client** (1 hashtag + 2 competitors + 3 creators):
+- 1 × $4.00 + 2 × $0.75 + 3 × $0.20 = **$6.10 per analysis batch**
+
+#### Action Items
+
+**IMMEDIATE (Required for ML batch MVP)**:
+1. ✅ Get hashtag scraper actor ID from Apify dashboard
+2. ✅ Update `apify_client.py` with dual-scraper support
+3. ✅ Implement `scrape_hashtag()` and `scrape_profile()` methods
+4. ✅ Add client-side date filtering function
+5. ✅ Test with real hashtag (#nutrition, #fitness) to validate sorting
+
+**NEXT (Before ML training)**:
+1. ⏭️ Measure actual retention rate after date filtering
+2. ⏭️ Adjust volume targets per bucket (may need <60 if filtering aggressive)
+3. ⏭️ Document minimum sample size thresholds (see VideoSelection.md C.9)
+
+**FUTURE (Post-MVP optimization)**:
+1. 🔮 Investigate "Super TikTok Scraper" for 90% cost savings ($0.0005/video)
+2. 🔮 Add retry logic for failed scrapes
+3. 🔮 Implement rate limiting for large batches
+
+#### Answers to Original Questions
+
+1. **Video volume**: 800 initial scrape → ~480 after filtering ✅
+2. **Sorting capabilities**: Both scrapers support `sortBy: engagement` and `sortBy: date` ✅
+3. **Metadata fields**: All required fields confirmed present ✅
+4. **Profile vs Hashtag**: TWO scrapers required (profile scraper + hashtag scraper) ✅
+5. **Cost**: ~$0.005 per video, $6.10 per typical client analysis ✅
+6. **Date filtering**: Client-side only for hashtags (server-side unavailable) ⚠️
+
+---
+

@@ -1,5 +1,11 @@
 # Analysis Mode System
 
+**Document Type**: High-Level Design (HLD)
+**Technical Implementation**: See [MLAnalysisModeTI.md](./MLAnalysisModeTI.md) for code, integration details, and testing
+**Last Updated**: 2025-10-01
+
+---
+
 ## Overview
 
 ### Business Problem
@@ -97,26 +103,11 @@ python rumiai_ml_batch.py --analysis-type creator --target "@affiliate"
 ```
 
 **Post-Processing**:
-```python
-def calculate_engagement_score(video):
-    """
-    Composite engagement score for ranking
-    Higher weight on shares (viral indicator)
-    """
-    views = video.get('playCount', 0)
-    likes = video.get('diggCount', 0)
-    shares = video.get('shareCount', 0)
-    comments = video.get('commentCount', 0)
+- Calculate composite engagement score: `views × (1 + share_rate × 10)`
+- Sort videos by engagement score descending
+- Select top N videos
 
-    # Share boost: shares indicate viral potential
-    share_boost = 1 + (shares / max(views, 1)) * 10
-
-    return views * share_boost
-
-# Sort by engagement score
-videos = sorted(videos, key=calculate_engagement_score, reverse=True)
-top_videos = videos[:video_count]
-```
+**Implementation**: See [MLAnalysisModeTI.md - Engagement Score Calculation](./MLAnalysisModeTI.md#21-date-filter-implementation)
 
 ---
 
@@ -134,11 +125,10 @@ top_videos = videos[:video_count]
 ```
 
 **Post-Processing**:
-```python
-# Sort by publish date (newest first)
-videos = sorted(videos, key=lambda v: v['createTime'], reverse=True)
-recent_videos = videos[:video_count]
-```
+- Sort videos by `createTime` descending (newest first)
+- Select most recent N videos
+
+**Implementation**: See [MLAnalysisModeTI.md - Date Sorting](./MLAnalysisModeTI.md#21-date-filter-implementation)
 
 ---
 
@@ -150,29 +140,13 @@ For `--analysis-mode top`, videos are ranked by **engagement score** - a composi
 
 ### Formula
 
-```python
-def calculate_engagement_score(video):
-    """
-    Composite engagement score with share boost factor
+**Composite Engagement Score**:
+```
+engagement_score = views × (1 + share_rate × 10)
 
-    Returns higher scores for videos with strong viral indicators
-    """
-    views = video.get('playCount', 0)
-    likes = video.get('diggCount', 0)
-    comments = video.get('commentCount', 0)
-    shares = video.get('shareCount', 0)
-
-    # Calculate share rate (shares as % of views)
-    share_rate = shares / max(views, 1)
-
-    # Share boost factor: shares indicate viral potential
-    # 10x multiplier means 1% share rate = 10% boost
-    share_boost = 1 + (share_rate * 10)
-
-    # Final score = views × share boost
-    engagement_score = views * share_boost
-
-    return engagement_score
+where:
+  share_rate = shares / views
+  share_boost = 1 + (share_rate × 10)
 ```
 
 ### Rationale
@@ -195,62 +169,21 @@ def calculate_engagement_score(video):
 
 ### Examples
 
-#### Example 1: High Views, Low Shares (Not Viral)
-```python
-video_a = {
-    'playCount': 1000000,
-    'shareCount': 2000
-}
+| Video | Views | Shares | Share Rate | Share Boost | Engagement Score |
+|-------|-------|--------|------------|-------------|------------------|
+| **A** (High views, low shares) | 1,000,000 | 2,000 | 0.2% | 1.02 | 1,020,000 |
+| **B** (Medium views, high shares) | 500,000 | 15,000 | 3% | 1.30 | 650,000 |
+| **C** (Lower views, exceptional shares) | 300,000 | 15,000 | 5% | 1.50 | 450,000 |
 
-share_rate = 2000 / 1000000 = 0.002 (0.2%)
-share_boost = 1 + (0.002 * 10) = 1.02
-engagement_score = 1000000 * 1.02 = 1,020,000
-
-# Minimal boost - views alone don't indicate viral pattern
-```
-
-#### Example 2: Medium Views, High Shares (Viral)
-```python
-video_b = {
-    'playCount': 500000,
-    'shareCount': 15000
-}
-
-share_rate = 15000 / 500000 = 0.03 (3%)
-share_boost = 1 + (0.03 * 10) = 1.30
-engagement_score = 500000 * 1.30 = 650,000
-
-# 30% boost for high share rate
-# Would rank LOWER than video_a despite better viral indicators
-```
-
-#### Example 3: Lower Views, Exceptional Shares (Highly Viral)
-```python
-video_c = {
-    'playCount': 300000,
-    'shareCount': 15000
-}
-
-share_rate = 15000 / 300000 = 0.05 (5%)
-share_boost = 1 + (0.05 * 10) = 1.50
-engagement_score = 300000 * 1.50 = 450,000
-
-# 50% boost for exceptional share rate
-# Still lower than video_a, but identifies strong viral pattern
-```
+**Key Insight**: Video A ranks highest by engagement score, but videos B and C have stronger viral indicators (share rate). The formula balances both reach (views) and viral potential (shares).
 
 ### Sorting Logic
 
-Videos are sorted by engagement score in descending order:
+1. Calculate engagement score for each video
+2. Sort by engagement score descending (highest first)
+3. Use `createTime` as tiebreaker for identical scores
 
-```python
-def sort_by_engagement(videos):
-    """Sort videos by composite engagement score"""
-    for video in videos:
-        video['engagement_score'] = calculate_engagement_score(video)
-
-    return sorted(videos, key=lambda v: v['engagement_score'], reverse=True)
-```
+**Implementation**: See [MLAnalysisModeTI.md - Engagement Sorting](./MLAnalysisModeTI.md#21-date-filter-implementation)
 
 ### Data Source
 
@@ -273,117 +206,47 @@ All metrics come from Apify TikTok scraper:
 ### Alternative Considerations
 
 **Simple Engagement Rate (Not Used)**:
-```python
-# Alternative approach (simpler but less effective)
-engagement_rate = (likes + comments + shares) / views
-```
-
-**Why we don't use this**:
-- Treats all interactions equally (shares should be weighted higher)
-- Doesn't account for viral amplification effect
-- Lower correlation with "replicable viral patterns"
+- Formula: `(likes + comments + shares) / views`
+- **Why not**: Treats all interactions equally; doesn't weight shares higher; lower correlation with viral patterns
 
 **Likes + Comments Weighting (Future Enhancement)**:
-```python
-# Potential refinement
-engagement_score = views * (
-    1 +
-    (shares / views * 10) +           # 10x weight
-    (comments / views * 5) +          # 5x weight
-    (likes / views * 1)               # 1x weight
-)
-```
-
-Currently not implemented to keep formula simple and interpretable.
+- Add weighted multipliers: shares (10x), comments (5x), likes (1x)
+- **Status**: Not implemented yet (keeping formula simple for MVP)
 
 ### Usage in ML Pipeline
 
-```python
-def select_top_videos_for_training(videos, per_bucket=40):
-    """
-    Select top-performing videos for ML training
-    Used in hashtag and competitor analysis (top mode)
-    """
-    # Calculate engagement scores
-    for video in videos:
-        video['engagement_score'] = calculate_engagement_score(video)
+**Hashtag Analysis** (contrastive):
+1. Calculate engagement scores for all videos
+2. Sort by engagement score
+3. Bucket by duration (8 buckets)
+4. Select top 40 + bottom 20 per bucket
 
-    # Sort by engagement score
-    sorted_videos = sorted(videos, key=lambda v: v['engagement_score'], reverse=True)
+**Competitor Analysis** (all videos):
+1. Calculate engagement scores for all videos
+2. Sort by engagement score
+3. Process all videos (no top/bottom selection)
 
-    # Bucket by duration
-    bucketed = bucket_by_duration(sorted_videos)
-
-    # Select top 40 + bottom 20 per bucket (contrastive analysis)
-    selected = {}
-    for bucket_name, bucket_videos in bucketed.items():
-        selected[bucket_name] = {
-            'top_40': bucket_videos[:40],
-            'bottom_20': bucket_videos[-20:]
-        }
-
-    return selected
-```
+**Implementation**: See [MLAnalysisModeTI.md - Video Selection](./MLAnalysisModeTI.md#5-integration-example)
 
 ### Quality Filters
 
 Before calculating engagement score, apply minimum thresholds:
 
-```python
-def filter_qualified_videos(videos):
-    """Remove low-quality videos before engagement scoring"""
-    qualified = []
-
-    for video in videos:
-        # Minimum sample size
-        if video['playCount'] < 1000:
-            continue
-
-        # Minimum engagement threshold
-        basic_engagement_rate = (
-            video['diggCount'] +
-            video['commentCount'] +
-            video['shareCount']
-        ) / video['playCount']
-
-        if basic_engagement_rate < 0.02:  # 2% minimum
-            continue
-
-        qualified.append(video)
-
-    return qualified
-```
-
 **Thresholds**:
 - **Minimum 1,000 views**: Ensures statistical significance
-- **Minimum 2% engagement**: Filters "dead" content (bots, low-quality)
+- **Minimum 2% basic engagement rate**: Filters "dead" content (bots, low-quality)
+
+**Implementation**: See [MLAnalysisModeTI.md - Engagement Filtering](./MLAnalysisModeTI.md#21-date-filter-implementation)
 
 ### Validation & Testing
 
-```python
-def test_engagement_score_calculation():
-    """Unit test for engagement score formula"""
+**Test Cases**:
+- Zero shares → no boost (score = views × 1.0)
+- 1% share rate → 10% boost (score = views × 1.10)
+- 5% share rate → 50% boost (score = views × 1.50)
+- Zero views → handled gracefully (score = 0)
 
-    # Test 1: Zero shares = no boost
-    video = {'playCount': 100000, 'shareCount': 0}
-    score = calculate_engagement_score(video)
-    assert score == 100000  # 100000 * 1.0
-
-    # Test 2: 1% share rate = 10% boost
-    video = {'playCount': 100000, 'shareCount': 1000}
-    score = calculate_engagement_score(video)
-    assert score == 110000  # 100000 * 1.10
-
-    # Test 3: 5% share rate = 50% boost
-    video = {'playCount': 100000, 'shareCount': 5000}
-    score = calculate_engagement_score(video)
-    assert score == 150000  # 100000 * 1.50
-
-    # Test 4: Edge case - zero views
-    video = {'playCount': 0, 'shareCount': 10}
-    score = calculate_engagement_score(video)
-    assert score == 0  # Handled gracefully
-```
+**Implementation**: See [MLAnalysisModeTI.md - Testing Scripts](./MLAnalysisModeTI.md#6-testing-scripts)
 
 ---
 
@@ -565,173 +428,59 @@ python rumiai_ml_batch.py \
 
 ### CLI Flag Handling
 
-```python
-def parse_arguments():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--analysis-type', required=True, choices=['hashtag', 'competitor', 'creator'])
-    parser.add_argument('--analysis-mode', choices=['top', 'recent'], default=None)
-    # ... other args
+**Default Mode Selection**:
+- Hashtag/Competitor → `top` (analyze best work)
+- Creator → `recent` (analyze natural style)
+- User can override with explicit `--analysis-mode` flag
 
-    args = parser.parse_args()
-
-    # Apply defaults if not specified
-    if args.analysis_mode is None:
-        if args.analysis_type == 'creator':
-            args.analysis_mode = 'recent'
-        else:  # hashtag or competitor
-            args.analysis_mode = 'top'
-
-    return args
-```
+**Implementation**: See [MLAnalysisModeTI.md - CLI Argument Parsing](./MLAnalysisModeTI.md#3-cli-argument-parsing)
 
 ---
 
 ### Apify Scraper Integration
 
-```python
-class ApifyVideoScraper:
-    def fetch_videos(self, target, video_count, date_filter, analysis_mode):
-        """
-        Fetch videos with sorting based on analysis mode
-        """
+**Two Scrapers Required**:
+- **Hashtag scraper**: clockworks/tiktok-hashtag-scraper
+- **Profile scraper**: clockworks/tiktok-scraper (current)
 
-        # Determine Apify sort parameter
-        sort_by = 'engagement' if analysis_mode == 'top' else 'date'
+**Sorting Strategy**:
+- Top mode → `sortBy: engagement`
+- Recent mode → `sortBy: date`
 
-        # Apify scraper configuration
-        scraper_input = {
-            'resultsPerPage': video_count,
-            'shouldDownloadVideos': True,
-            'sortBy': sort_by,
-            'sortOrder': 'desc'
-        }
-
-        # Add target (hashtag or profile)
-        if target.startswith('#'):
-            scraper_input['hashtagsUrls'] = [f'https://www.tiktok.com/tag/{target[1:]}']
-        else:  # @handle
-            scraper_input['profilesUrls'] = [f'https://www.tiktok.com/{target}']
-
-        # Run Apify scraper
-        videos = self.run_scraper(scraper_input)
-
-        # Post-process based on mode
-        if analysis_mode == 'top':
-            videos = self._sort_by_engagement(videos)
-        else:  # recent
-            videos = self._sort_by_date(videos)
-
-        # Apply date filter
-        videos = self._apply_date_filter(videos, date_filter)
-
-        return videos[:video_count]
-
-    def _sort_by_engagement(self, videos):
-        """Calculate engagement score and sort"""
-        for video in videos:
-            video['engagement_score'] = self._calculate_engagement_score(video)
-        return sorted(videos, key=lambda v: v['engagement_score'], reverse=True)
-
-    def _sort_by_date(self, videos):
-        """Sort by publish date (newest first)"""
-        return sorted(videos, key=lambda v: v['createTime'], reverse=True)
-
-    def _calculate_engagement_score(self, video):
-        """Composite engagement score with share boost"""
-        views = video.get('playCount', 0)
-        shares = video.get('shareCount', 0)
-
-        share_boost = 1 + (shares / max(views, 1)) * 10
-        return views * share_boost
-```
+**Implementation**: See [MLAnalysisModeTI.md - Apify Client](./MLAnalysisModeTI.md#1-apify-client-implementation)
 
 ---
 
 ### Checkpoint Integration
 
-**Checkpoint must store analysis mode** to validate resume:
+**Config Validation on Resume**:
+- Checkpoint stores: `video_count`, `date_filter`, `analysis_mode`
+- Resume validation: Must match or error with `--force` suggestion
+- Prevents resuming with different mode than started with
 
-```json
-{
-  "config": {
-    "video_count": 300,
-    "date_filter": "last_90_days",
-    "analysis_mode": "top"  // ← Must match on resume
-  }
-}
-```
-
-**Resume validation**:
-```python
-def validate_checkpoint_config(checkpoint, new_config):
-    """Ensure analysis mode matches when resuming"""
-    if checkpoint['config']['analysis_mode'] != new_config['analysis_mode']:
-        raise ValueError(
-            f"Cannot resume: checkpoint used '{checkpoint['config']['analysis_mode']}' mode, "
-            f"but you specified '{new_config['analysis_mode']}'. "
-            "Use --force to restart with new mode."
-        )
-```
+**Implementation**: See [MLCheckpointResumeTI.md - CheckpointManager](./MLCheckpointResumeTI.md)
 
 ---
 
 ## Edge Cases & Handling
 
 ### Case 1: Not Enough High-Engagement Videos
-
-**Scenario**: Requesting top 300 videos, but only 150 have >1K views
-
-**Handling**: Take all available videos, log warning
-```python
-if len(high_engagement_videos) < video_count:
-    logger.warning(f"Only {len(high_engagement_videos)} videos meet engagement threshold, using all available")
-    return high_engagement_videos
-```
-
----
+**Scenario**: Requesting top 300 videos, but only 150 meet thresholds
+**Handling**: Use all available videos, log warning
 
 ### Case 2: Creator Has Deleted Recent Videos
-
 **Scenario**: Recent mode requests 40 videos, but only 30 available
-
-**Handling**: Process all available, adjust compatibility confidence
-```json
-{
-  "analysis_type": "recent_40_videos",
-  "total_videos_analyzed": 30,
-  "confidence_penalty": "reduced_sample_size",
-  "note": "Only 30 videos available (requested 40)"
-}
-```
-
----
+**Handling**: Process all available, adjust compatibility confidence score
 
 ### Case 3: Date Filter Eliminates All Videos
-
-**Scenario**: `--date-filter last_7_days` but competitor hasn't posted in 10 days
-
-**Handling**: Error with suggestion
-```
-✗ No videos found matching criteria:
-  - Target: @rival_brand
-  - Date filter: last_7_days
-  - Analysis mode: top
-
-Suggestions:
-  1. Expand date filter (try --date-filter last_30_days)
-  2. Check if account is still active
-```
-
----
+**Scenario**: Date filter too restrictive (e.g., last_7_days but no recent posts)
+**Handling**: Error with helpful suggestions (expand date range, check account status)
 
 ### Case 4: Engagement Ties
-
 **Scenario**: Multiple videos with identical engagement scores
-
 **Handling**: Use `createTime` as tiebreaker (newer first)
-```python
-videos = sorted(videos, key=lambda v: (v['engagement_score'], v['createTime']), reverse=True)
-```
+
+**Implementation**: See [MLAnalysisModeTI.md - Edge Case Handling](./MLAnalysisModeTI.md#21-date-filter-implementation)
 
 ---
 
@@ -778,36 +527,16 @@ Interpretation: Market shifting toward short-form, high-energy content with heav
 
 ## Testing Strategy
 
-### Unit Tests
+### Unit Tests Required
 
-```python
-def test_analysis_mode_defaults():
-    """Test correct defaults per analysis type"""
-    args_hashtag = parse_args(['--analysis-type', 'hashtag', '--target', '#test'])
-    assert args_hashtag.analysis_mode == 'top'
+**Test Coverage**:
+- ✅ Analysis mode defaults per analysis type (hashtag→top, creator→recent)
+- ✅ Engagement score calculation (various share rates)
+- ✅ Date sorting (newest first)
+- ✅ Engagement sorting (highest first)
+- ✅ Edge cases (zero views, missing data)
 
-    args_creator = parse_args(['--analysis-type', 'creator', '--target', '@test'])
-    assert args_creator.analysis_mode == 'recent'
-
-def test_engagement_score_calculation():
-    """Test composite engagement scoring"""
-    video = {'playCount': 100000, 'shareCount': 500}
-    score = calculate_engagement_score(video)
-    # 500 shares / 100k views = 0.005 share rate
-    # boost = 1 + (0.005 * 10) = 1.05
-    # score = 100000 * 1.05 = 105000
-    assert score == 105000
-
-def test_date_sorting():
-    """Test recent mode sorts by date correctly"""
-    videos = [
-        {'createTime': '2025-01-20', 'id': '1'},
-        {'createTime': '2025-01-25', 'id': '2'},
-        {'createTime': '2025-01-15', 'id': '3'}
-    ]
-    sorted_videos = sort_by_date(videos)
-    assert [v['id'] for v in sorted_videos] == ['2', '1', '3']
-```
+**Implementation**: See [MLAnalysisModeTI.md - Testing Scripts](./MLAnalysisModeTI.md#6-testing-scripts)
 
 ---
 
