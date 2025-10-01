@@ -153,6 +153,14 @@ This section documents how to initialize ML batch processing via CLI for each an
 
 **Default Mode**: `--analysis-mode top` (analyze highest-engagement videos)
 
+**Report Types**:
+- `single` (default): Full ML pipeline for one hashtag
+- `comparison`: LLM-based comparison of previously analyzed hashtags (no video processing)
+
+---
+
+#### Single Hashtag Analysis (Default)
+
 **Command**:
 ```bash
 python rumiai_ml_batch.py \
@@ -161,7 +169,8 @@ python rumiai_ml_batch.py \
   --target "#nutrition" \
   --video-count 300 \
   --date-filter "last_90_days" \
-  --analysis-mode top
+  --analysis-mode top \
+  --report-type single  # or omit (default)
 ```
 
 **Inputs**:
@@ -171,6 +180,7 @@ python rumiai_ml_batch.py \
 - `--video-count`: Number of videos to scrape (default: 300)
 - `--date-filter`: Recency filter (e.g., `last_90_days`, `2024-01-01:2025-01-01`)
 - `--analysis-mode`: `top` (default) | `recent`
+- `--report-type`: `single` (default) | `comparison`
 
 **Process (Top Mode)**:
 1. **Apify Scraping**: Fetch 300 videos for #nutrition sorted by engagement
@@ -195,10 +205,67 @@ Same as Top Mode but sorts by publish date instead of engagement. Use case: "Wha
   │   │   └── reports/         # 5 PDF creative strategy reports
   │   └── ... (8 buckets total)
   └── hashtag_summary/
-      └── executive_report.pdf  # Cross-bucket overview for client
+      ├── executive_report.pdf      # Cross-bucket overview for client
+      └── hashtag_metrics.json      # Used for comparison mode
 ```
 
 **Duration**: ~6-8 hours for 300 videos (60-80s per video analysis)
+
+**Cost**: ~$4.00 Apify + compute time
+
+---
+
+#### Multi-Hashtag Comparison
+
+**Command**:
+```bash
+python rumiai_ml_batch.py \
+  --client "client_acme_corp" \
+  --analysis-type hashtag \
+  --target "#nutrition,#fitness,#wellness" \
+  --report-type comparison
+```
+
+**Prerequisites**: All hashtags must be individually analyzed first (single mode)
+
+**Process**:
+1. **Validation**: Check that all hashtags have existing `hashtag_metrics.json`
+2. **Load Data**: Read JSON files for each hashtag
+3. **LLM Analysis**: Send data to Claude API with comparison prompt
+4. **Report Generation**: Create comparison PDF with strategic recommendations
+
+**Outputs**:
+```
+/data/clients/client_acme_corp/hashtags/comparisons/
+  └── nutrition_vs_fitness_vs_wellness_20250128/
+      ├── comparison_input.json     # Data sent to LLM
+      ├── llm_analysis.json         # Raw LLM response
+      └── comparison_report.pdf     # Formatted report
+```
+
+**Duration**: ~30 seconds (LLM call only, no video processing)
+
+**Cost**: ~$0.50 (LLM API call only)
+
+**Error Handling**:
+```bash
+# If any hashtag hasn't been analyzed individually:
+✗ Cannot generate comparison report
+
+Missing individual analyses:
+  ✓ #nutrition - analyzed (2025-01-28)
+  ✓ #fitness - analyzed (2025-01-27)
+  ✗ #wellness - NOT ANALYZED
+
+Run individual analysis first:
+  python rumiai_ml_batch.py --client "acme" --target "#wellness" --report-type single
+```
+
+**Report Contents**:
+- Executive summary (which hashtag to prioritize)
+- Side-by-side comparison table (duration preferences, key patterns, engagement rates)
+- Strategic recommendations per hashtag
+- Priority ranking (viral potential × replicability × strategic fit)
 
 ---
 
@@ -208,7 +275,7 @@ Same as Top Mode but sorts by publish date instead of engagement. Use case: "Wha
 
 **Default Mode**: `--analysis-mode top` (analyze highest-engagement videos)
 
-**Command (Top Mode)** - Benchmark their best:
+**Command (Single Competitor Deep Dive)**:
 ```bash
 python rumiai_ml_batch.py \
   --client "client_acme_corp" \
@@ -216,7 +283,20 @@ python rumiai_ml_batch.py \
   --target "@rival_brand" \
   --video-count 150 \
   --date-filter "last_90_days" \
-  --analysis-mode top
+  --analysis-mode top \
+  --report-type single
+```
+
+**Command (Multi-Competitor Comparison)**:
+```bash
+python rumiai_ml_batch.py \
+  --client "client_acme_corp" \
+  --analysis-type competitor \
+  --target "@rival_brand,@competitor2,@competitor3" \
+  --video-count 150 \
+  --date-filter "last_90_days" \
+  --analysis-mode top \
+  --report-type comparison
 ```
 
 **Command (Recent Mode)** - Track current strategy:
@@ -227,16 +307,18 @@ python rumiai_ml_batch.py \
   --target "@rival_brand" \
   --video-count 150 \
   --date-filter "last_90_days" \
-  --analysis-mode recent
+  --analysis-mode recent \
+  --report-type single
 ```
 
 **Inputs**:
 - `--client`: Client identifier
 - `--analysis-type`: `competitor`
-- `--target`: Competitor TikTok handle (e.g., `@rival_brand`)
-- `--video-count`: Number of videos to scrape (default: 150)
+- `--target`: Single competitor handle (`@rival_brand`) OR comma-separated list (`@rival1,@rival2,@rival3`)
+- `--video-count`: Number of videos to scrape per competitor (default: 150)
 - `--date-filter`: Recency filter
 - `--analysis-mode`: `top` (default) | `recent`
+- `--report-type`: `single` (deep dive on one competitor) | `comparison` (side-by-side comparison of multiple competitors)
 
 **Process (Top Mode)** - "What works for rival?":
 1. **Apify Scraping**: Fetch 150 videos from @rival_brand sorted by engagement

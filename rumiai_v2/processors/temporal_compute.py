@@ -1103,8 +1103,6 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
     if not window_texts:
         return {
             'overlay_unique_count': 0,
-            'overlay_coverage': 0.0,
-            'overlay_persistence': 0.0,
             'has_captions': False
         }
     
@@ -1220,8 +1218,6 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
     if len(text_groups) == 0:
         return {
             'overlay_unique_count': 0,
-            'overlay_coverage': 0.0,
-            'overlay_persistence': 0.0,
             'has_captions': False
         }
     
@@ -1260,56 +1256,17 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
     # Note: Removed event processing for max_simultaneous_texts and text_coverage
     # These metrics were redundant with other features
     
-    # Calculate overlay-specific metrics
-    overlay_coverage = 0.0
-    overlay_persistence = 0.0
+    # Overlay metrics calculation (coverage and persistence removed for MVP)
     if overlay_groups:
         # Debug logging for closing window
         if start == 11.0:
             logger.debug(f"[OVERLAY DEBUG] Overlay groups in closing window:")
             for text, timestamps in overlay_groups.items():
                 logger.debug(f"  Text '{text}': timestamps {sorted(timestamps)}")
-        overlay_lifespans = []
-        for text, timestamps in overlay_groups.items():
-            if text in text_lifespans:
-                overlay_lifespans.append(text_lifespans[text])
-        overlay_persistence = sum(overlay_lifespans) / len(overlay_lifespans) if overlay_lifespans else 0.0
+        # REMOVED: overlay_persistence calculation (see MLimitations.md "Removed Features")
         
-        # Calculate overlay coverage
-        overlay_events = []
-        for text, timestamps in overlay_groups.items():
-            sorted_ts = sorted(timestamps)
-            for i in range(len(sorted_ts)):
-                if i == 0 or sorted_ts[i] - sorted_ts[i-1] > CLUSTER_GAP_THRESHOLD:
-                    overlay_events.append((sorted_ts[i], 'appear'))
-                if i == len(sorted_ts) - 1 or (i < len(sorted_ts) - 1 and sorted_ts[i+1] - sorted_ts[i] > CLUSTER_GAP_THRESHOLD):
-                    overlay_events.append((min(sorted_ts[i] + PERSIST_BUFFER, end), 'disappear'))
-        
-        overlay_events.sort()
-
-        # Debug events for closing window
-        if start == 11.0:
-            logger.debug(f"[OVERLAY DEBUG] Events: {overlay_events}")
-
-        overlay_active = 0
-        overlay_time = 0.0
-        prev_time = start
-        for event_time, event_type in overlay_events:
-            if overlay_active > 0:
-                time_added = event_time - prev_time
-                overlay_time += time_added
-                if start == 11.0:
-                    logger.debug(f"[OVERLAY DEBUG] Active overlay from {prev_time:.2f} to {event_time:.2f}, added {time_added:.2f}s")
-            if event_type == 'appear':
-                overlay_active += 1
-            else:
-                overlay_active = max(0, overlay_active - 1)
-            prev_time = event_time
-
-        if start == 11.0:
-            logger.debug(f"[OVERLAY DEBUG] Total overlay_time: {overlay_time:.2f}s out of {duration}s window")
-
-        overlay_coverage = overlay_time / duration if duration > 0 else 0.0
+        # REMOVED: overlay_coverage calculation (see MLimitations.md "Removed Features")
+        pass  # Coverage and persistence calculation completely removed for MVP
     
     # Simplified caption metric - just binary presence
     has_captions = len(caption_groups) > 0
@@ -1317,9 +1274,7 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
     return {
         # Overlay metrics (marketing text only)
         'overlay_unique_count': overlay_unique_count,
-        'overlay_coverage': float(overlay_coverage),
-        'overlay_persistence': float(overlay_persistence),
-        
+
         # Caption presence (simplified to binary)
         'has_captions': has_captions
         
@@ -1363,8 +1318,64 @@ def calculate_speech_metrics_for_window(speech_segments, start, end, duration, v
     if not speech_segments:
         return 0.0, 0
 
-    # DEBUG: Log what we're calculating
-    logger.warning(f"[DEBUG] calculate_speech_metrics: {len(speech_segments)} segments for window {start}-{end}s")
+    def is_non_speech_segment(text):
+        """Returns True if text is non-speech (music tags or sung lyrics)"""
+        if not text:
+            return False
+
+        text_stripped = text.strip()
+
+        # Check for bracketed non-speech tags
+        NON_SPEECH_TAGS = [
+            '[Music]', '[MUSIC]', '[music]',
+            '[Applause]', '[APPLAUSE]', '[applause]',
+            '[Laughter]', '[LAUGHTER]', '[laughter]',
+            '[BLANK_AUDIO]', '[Silence]', '[silence]',
+            '[Background noise]', '[Inaudible]', '[inaudible]'
+        ]
+
+        if text_stripped in NON_SPEECH_TAGS:
+            return True
+
+        # Check for sung lyrics (musical note symbols)
+        if '♪' in text or '♫' in text or '🎵' in text or '🎶' in text:
+            return True
+
+        # Check if text is ONLY non-speech tags with whitespace
+        # e.g., "[Music] [Music] [Music]"
+        cleaned_text = text
+        for pattern in NON_SPEECH_TAGS:
+            cleaned_text = cleaned_text.replace(pattern, '')
+
+        return not cleaned_text.strip()  # True if nothing left after removing tags
+
+    # Filter out non-speech segments
+    actual_speech_segments = []
+    filtered_count = 0
+
+    for segment in speech_segments:
+        text = segment.get('text', '')
+
+        if not is_non_speech_segment(text):
+            actual_speech_segments.append(segment)
+        else:
+            filtered_count += 1
+            logger.warning(f"[SPEECH_FIX] Filtering non-speech: '{text[:50]}...'")
+
+    # Log filtering results
+    if filtered_count > 0:
+        logger.warning(f"[SPEECH_FIX] Video {video_id}: Filtered {filtered_count}/{len(speech_segments)} non-speech segments")
+
+    # Use filtered segments for calculation
+    speech_segments = actual_speech_segments
+
+    # If no actual speech segments remain, return zeros
+    if not speech_segments:
+        logger.warning(f"[SPEECH_FIX] Video {video_id}: No actual speech found after filtering")
+        return 0.0, 0
+
+    # DEBUG: Log what we're calculating (after filtering)
+    logger.warning(f"[DEBUG] calculate_speech_metrics: {len(speech_segments)} actual speech segments for window {start}-{end}s")
 
     total_speech_duration = 0.0
     total_word_count = 0

@@ -875,3 +875,255 @@ object_count = sum(class_max_counts.values())  # = 3
 - Spatial clustering is planned future enhancement
 
 **Business Decision**: Accept interim limitation in favor of faster deployment of OCR variation fixes
+
+---
+
+## 9. Speech Word Counting with Background Music (Whisper + Timestamp Reliability)
+
+### Current Implementation
+- **Service**: Whisper.cpp-base for speech transcription
+- **Processing**: Word-level timestamp extraction at segment level
+- **Counting Strategy**: Uses precise word timestamps when available, falls back to proportional text splitting
+- **Problem**: Unreliable word timestamps in music+speech scenarios cause significant word loss
+
+### Known Limitations
+
+#### 9.1 Timestamp Quality Dependency (Critical Issue)
+- **The Problem**: Word counting accuracy depends entirely on Whisper's timestamp reliability
+- **Example Case**: Video12SpeechTTAudio.mp4 (speech with background music)
+  ```
+  Transcript: 35 actual words
+  Pre-fix (proportional): 29 words counted (83% accuracy)
+  Post-fix (timestamp): 17 words counted (49% accuracy)
+  Net effect: 34% WORSE accuracy than flawed old system
+  ```
+- **Root Cause**: Background music interferes with Whisper's word-level timing confidence
+
+#### 9.2 Timestamp Clustering Under Audio Interference
+- **Clustered Timestamps**: Multiple words assigned identical timestamps when Whisper is uncertain
+  ```
+  Example from broken case:
+  Words at exactly 7.0s: "to", "see", "basically", "what", "happens", "and", "how", "it", "works"
+  Words at exactly 12.35s: "to", "see", "what", "we", "can", "do", "and", "what", "our"
+  ```
+- **Boundary Exclusion**: Current logic `start <= word_midpoint < end` drops words at exact boundaries
+- **Temporal Spillover**: Words beyond temporal window boundaries (12.35s in 12.0s video) completely lost
+
+#### 9.3 No Reliability Detection
+- **Missing Feature**: System cannot detect when word timestamps are unreliable
+- **Blind Trust**: Always uses timestamp-based counting when word array is populated
+- **No Fallback**: Cannot revert to proportional counting when timestamps are poor quality
+
+### Timestamp Reliability Patterns
+
+#### Working Cases (Good Timestamps)
+```
+27TTMusicSpeech.mp4: 43/46 words (93% accuracy)
+- Well-distributed timestamps: 0.06s, 0.26s, 0.46s, 1.27s, 1.3s, 1.72s...
+- Only final cluster at 12.6s (6 words)
+- Background music present but timestamps mostly reliable
+```
+
+#### Broken Cases (Poor Timestamps)
+```
+Video12SpeechTTAudio.mp4: 17/35 words (49% accuracy)
+- Heavy clustering: 9 words at 7.0s, 10 words at 12.35s
+- Many zero-duration words (start == end)
+- Words outside temporal boundaries (12.35s in 12.0s video)
+```
+
+#### Detection Criteria for Unreliable Timestamps
+1. **Clustering**: >30% of words share identical timestamps
+2. **Boundary Overflow**: >20% of words fall outside video duration
+3. **Zero Duration**: >50% of words have start == end timestamps
+4. **Temporal Concentration**: >5 words clustered at single timestamp
+
+### Better Alternatives
+
+#### Hybrid Counting Approach (Recommended)
+| Method | Pros | Cons | Implementation |
+|--------|------|------|----------------|
+| **Reliability Detection + Fallback** | • Best of both worlds<br>• Automatically adapts to quality<br>• No manual configuration | • Complex detection logic<br>• Edge cases in scoring<br>• 1 week development | 1 week |
+| **Confidence-Weighted Counting** | • Uses Whisper confidence scores<br>• Gradual degradation<br>• More nuanced than binary | • Confidence not always reliable<br>• Complex weighting logic<br>• Limited improvement | 3-4 days |
+| **Always Use Proportional** | • Consistent behavior<br>• Simple implementation<br>• No timestamp dependency | • Loses precision gains<br>• Ignores timing improvements<br>• Backwards step | 1 hour |
+
+#### Alternative Transcription Approaches
+| Service | Timestamp Quality | Accuracy | Implementation |
+|---------|------------------|----------|----------------|
+| **Whisper-large** | Better with music | Higher | Medium (model change) |
+| **Rev.ai API** | Consistent quality | High | Low (API change) |
+| **Azure Speech** | Good with noise | High | Low (cloud service) |
+| **OpenAI Whisper API** | Most reliable | Highest | Low (API change) |
+
+### Recommended Improvements
+
+#### Short-term (1 week) - Reliability Detection
+```python
+def are_timestamps_reliable(words, video_duration):
+    """Detect if word timestamps are reliable enough for precise counting"""
+    if not words:
+        return False
+
+    total_words = len(words)
+    clustered_count = 0
+    out_of_bounds_count = 0
+    zero_duration_count = 0
+
+    # Count problematic patterns
+    timestamp_counts = {}
+    for word in words:
+        start = word.get('start', 0)
+        end = word.get('end', start)
+
+        # Detect clustering
+        timestamp_key = round(start, 1)
+        timestamp_counts[timestamp_key] = timestamp_counts.get(timestamp_key, 0) + 1
+
+        # Count boundary violations
+        if start > video_duration or end > video_duration:
+            out_of_bounds_count += 1
+
+        # Count zero-duration words
+        if abs(start - end) < 0.01:
+            zero_duration_count += 1
+
+    # Calculate reliability metrics
+    for count in timestamp_counts.values():
+        if count >= 5:  # 5+ words at same timestamp
+            clustered_count += count
+
+    cluster_ratio = clustered_count / total_words
+    out_of_bounds_ratio = out_of_bounds_count / total_words
+    zero_duration_ratio = zero_duration_count / total_words
+
+    # Timestamps unreliable if:
+    if cluster_ratio > 0.3:      # >30% clustered
+        return False
+    if out_of_bounds_ratio > 0.2: # >20% out of bounds
+        return False
+    if zero_duration_ratio > 0.5:  # >50% zero duration
+        return False
+
+    return True
+
+def calculate_speech_metrics_with_fallback(speech_segments, start, end, duration):
+    """Count words with reliability detection and fallback"""
+
+    # Check if timestamps are reliable
+    all_words = []
+    for segment in speech_segments:
+        all_words.extend(segment.get('words', []))
+
+    if are_timestamps_reliable(all_words, video_duration):
+        # Use precise timestamp-based counting
+        return calculate_with_timestamps(speech_segments, start, end, duration)
+    else:
+        # Fall back to proportional text splitting
+        return calculate_with_proportional(speech_segments, start, end, duration)
+```
+
+#### Medium-term (2 weeks) - Enhanced Detection
+1. **Multi-Signal Reliability**: Combine timestamp patterns + confidence scores + audio energy
+2. **Gradual Fallback**: Weight timestamp vs proportional based on reliability score
+3. **Logging & Metrics**: Track reliability patterns across video types
+
+#### Long-term (1 month) - Robust Solution
+1. **Whisper Model Upgrade**: Test larger models (medium, large) for music robustness
+2. **Audio Preprocessing**: Separate speech from music before transcription
+3. **Multi-Modal Validation**: Cross-check word counts with audio energy patterns
+
+### Current Workaround
+
+**None** - System blindly trusts word timestamps regardless of quality, leading to catastrophic word loss (49% accuracy) in music+speech scenarios.
+
+### Impact on Analysis
+
+#### What Works Well
+- **Clear Speech**: High accuracy (93%+) when audio conditions are good
+- **Music-Only**: Perfect filtering of `[Music]` tags (0% false speech)
+- **Silent Videos**: Accurate no-speech detection
+
+#### What's Broken
+- **Music+Speech**: Severe undercounting (49% accuracy) due to timestamp unreliability
+- **No Detection**: Cannot identify when timestamps are poor quality
+- **No Recovery**: Cannot fall back to more reliable methods
+- **Inconsistent Behavior**: Same video type produces different accuracy depending on audio conditions
+
+#### Affected Features
+- `speech_coverage`: Severely underestimated in music+speech videos
+- `word_count`: Massive undercounting (losing 18+ words per video)
+- All speech-based ML features become unreliable predictors
+
+### Why Not Fixed
+
+1. **Recent Discovery**: Issue only identified during post-implementation testing
+2. **Complex Solution**: Reliability detection requires sophisticated pattern analysis
+3. **Time Constraint**: Proper fix needs 1 week development + testing
+4. **Risk Assessment**: Current approach works well for clear speech (majority case)
+
+### Recommendation
+
+**Immediate Priority**: Implement reliability detection with proportional fallback. The 34% accuracy loss in music+speech scenarios makes this a critical fix for production deployment.
+
+**Success Criteria**:
+- Music+speech videos achieve >85% word counting accuracy
+- Clear speech videos maintain >90% accuracy
+- System automatically adapts without manual configuration
+
+---
+
+# Removed Features
+
+## overlay_coverage
+
+### Why it was removed
+**MVP Priority**: For the minimum viable product, we determined that overlay coverage provides limited unique value beyond what `overlay_unique_count` already captures.
+
+**Redundancy Analysis**: Data analysis across real videos showed 66.7% correlation between high overlay count (>2) and high coverage (>0.5), suggesting significant overlap in the information these metrics provide.
+
+**Implementation Bug**: The temporal clustering and spatial clustering improvements (FixOCR6) introduced a bug where coverage calculation used dummy timestamps `[0.0]` instead of actual timeline data, resulting in incorrect values (e.g., 0.167 instead of expected 1.0 for full-window overlay presence).
+
+**Not Very Useful for ML**: Coverage essentially measures "percentage of time with text visible" which is largely captured by:
+- `overlay_unique_count`: More overlays usually means more coverage
+- `has_captions`: Indicates text-heavy content style
+
+### What features add some of the "lost" value
+- **`overlay_unique_count`**: Captures the primary signal of text presence and complexity
+- **`has_captions`**: Distinguishes between marketing overlays vs speech-synchronized text
+- **`scene_count`**: Scene changes often correlate with text overlay changes
+- **`speech_coverage`**: For speech-heavy content, this captures time-based text presence through captions
+
+## overlay_persistence
+
+### Why it was removed
+**MVP Priority**: Analysis showed limited discriminative power - most overlay-containing videos clustered around 0.5-0.55 persistence values, providing little variance for machine learning models to learn from.
+
+**Low ML Value**: The metric intended to distinguish "marketing overlays" (long persistence) vs "subtitle-style text" (short persistence), but real data showed most text overlays have similar duration patterns, reducing the feature's predictive value.
+
+**Implementation Bug**: Same issue as coverage - temporal clustering broke the lifespan calculation by using dummy timestamps instead of preserving actual overlay duration data from the timeline.
+
+**Complexity vs Benefit**: Fixing the persistence calculation would require significant refactoring of the temporal clustering system to preserve timeline metadata, representing medium complexity (2-3 hours) for questionable ML value.
+
+### What features add some of the "lost" value
+- **`overlay_unique_count`**: Higher counts often correlate with professional content that uses persistent marketing overlays
+- **`has_captions`**: Binary distinction between marketing text vs speech-synchronized captions captures the main content type signal persistence was trying to measure
+- **`scene_count` + `overlay_unique_count` combination**: Stable overlay count across scene changes implies persistent marketing text
+- **Future: `speech_coverage` vs `overlay_unique_count` ratio**: High speech coverage with low overlay count suggests subtitle-style content
+
+## Additional Sections for Removed Features
+
+### Potential Future Restoration
+Both metrics could be restored if:
+1. **Temporal clustering is refactored** to preserve timeline metadata throughout the processing pipeline
+2. **ML analysis proves significant value** for content classification or engagement prediction
+3. **Coverage shows independence** from count in larger datasets (current 66.7% correlation may be dataset-specific)
+
+### Alternative Implementations Considered
+- **Simplified coverage**: Binary "has overlays" vs percentage calculation
+- **Persistence categories**: Group into "brief/medium/long" buckets instead of continuous values
+- **Composite metrics**: Combine coverage + persistence into single "text intensity" score
+
+### Impact on ML Pipeline
+**Minimal Impact Expected**: The core overlay counting improvement (FixOCR6 spatial clustering reducing overcounting) remains intact. Removing coverage/persistence eliminates potentially confusing or redundant signals while preserving the most valuable overlay information through `overlay_unique_count`.
+
+**Data Consistency**: Removing broken metrics is better than keeping metrics that return incorrect values, improving overall data quality for ML model training.

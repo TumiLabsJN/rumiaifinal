@@ -14,87 +14,6 @@ Creative reports must match analysis flows from MLPlanning.md:
 
 ---
 
-## Decision Log
-
-### Decision 1: Report Quantity (Hashtag Analysis)
-**Decision**: 20 total reports per hashtag (variable distribution across buckets)
-**Date**: 2025-10-01
-**Rationale**:
-- Prioritize buckets with highest video volume (18-33s most common)
-- Avoid weak statistical patterns in low-volume buckets
-- Manageable for content creators (20 PDFs vs 40)
-- Focus resources where impact is greatest
-
-**Distribution**:
-```
-Bucket 0-3s:   1 report  (rare duration, low volume)
-Bucket 3-9s:   2 reports
-Bucket 9-13s:  2 reports
-Bucket 13-18s: 3 reports
-Bucket 18-33s: 5 reports ← MOST COMMON (highest volume)
-Bucket 33-60s: 4 reports
-Bucket 60-90s: 2 reports
-Bucket 90-120s: 1 report  (rare duration, low volume)
-────────────────────────
-Total: 20 reports
-```
-
-### Decision 2: Report Format Strategy
-**Decision**: 2-Page Digital Report (Proof + Implementation)
-**Date**: 2025-10-01
-**Rationale**:
-- Content creators have short attention spans (2-3 minute read max)
-- Must grab attention with proof immediately (show don't tell)
-- Must be dead simple to execute (copy-paste implementation)
-- Mobile-optimized for phone/tablet viewing (no printing)
-- Scannable structure (find what you need fast)
-
-**2-Page Structure**:
-- **Page 1: "Why This Works"** - Hook with proof, show the pattern
-- **Page 2: "How to Execute"** - Copy-paste implementation guide
-
-### Decision 3: Report Length
-**Decision**: Maximum 2 pages per report (digital PDF, mobile-optimized)
-**Date**: 2025-10-01
-**Rationale**:
-- TikTok creators consume rapid-fire content (15-60s videos all day)
-- Reading time: 2-3 minutes maximum
-- Nobody prints PDFs (mobile-first design)
-- Total per hashtag: 20 reports × 2 pages = 40 pages of content (manageable)
-
-### Decision 4: File Naming Convention
-**Decision**: `Pattern_[Number][Letter]_[hashtag].pdf`
-**Date**: 2025-10-01
-**Rationale**:
-- Letter encodes duration bucket (internal organization only)
-- Creators never see file structure (we send them specific reports)
-- Clean system for managing 20 reports per hashtag
-- Easy to identify duration at a glance
-
-**Letter Code System**:
-```
-A = 0-3s     (1 report max)
-B = 3-9s     (2 reports max)
-C = 9-13s    (2 reports max)
-D = 13-18s   (3 reports max)
-E = 18-33s   (5 reports max)  ← Most common duration
-F = 33-60s   (4 reports max)
-G = 60-90s   (2 reports max)
-H = 90-120s  (1 report max)
-```
-
-**Examples**:
-- `Pattern_1E_nutrition.pdf` = Pattern 1 for 18-33s bucket, #nutrition hashtag
-- `Pattern_5E_nutrition.pdf` = Pattern 5 for 18-33s bucket, #nutrition hashtag
-- `Pattern_1A_nutrition.pdf` = Pattern 1 for 0-3s bucket, #nutrition hashtag
-
-**Distribution Workflow**:
-1. Generate all 20 reports per hashtag analysis
-2. Analyze creator's natural content length (e.g., they make 25s videos)
-3. Send relevant reports (e.g., Pattern_1E, Pattern_2E, Pattern_3E)
-4. Creator receives 2-3 targeted reports (never sees full library or letter codes)
-
----
 
 ## Hashtag Analysis
 
@@ -220,18 +139,225 @@ Bottom performers do THIS:
 
 ### Tumi Lab Clients
 
-**Format**
-- One report per hashtag analysis
+**Deliverable**: 1 Client Report per hashtag (sent monthly)
 
+**Purpose**:
+- Prove sophistication of the ML system to business owner
+- Reduce anxiety about the mechanism (show it works)
+- Provide hiring strategy based on market intelligence
+- Connect insights to the 20 creator reports being delivered
 
-**Content**
-Insights into the hashtag analysis
+**Report Characteristics**:
+- **Authoritative**: "This is what works" (not "we think maybe")
+- **Business-focused**: Reader is the business owner (not marketing manager)
+- **Generic insights**: Explain system patterns, not specific creative tactics
+- **Strategic**: Translates data into hiring decisions
+- **Confidence-building**: Shows depth of analysis without overwhelming
 
-% distribution of videos in each bucket
+**Report Length**: 3 pages (digital PDF)
+**Reading Time**: 5-7 minutes (scannable in 2 minutes)
+**Delivery**: Monthly per hashtag
 
-What "works" per Hashtag
+---
 
-Creative profiles we should prioritize
+#### Client Report Structure (3 Pages)
+
+---
+
+**PAGE 1: Scale of Analysis**
+
+**Purpose**: Show the business owner how comprehensive the analysis is
+
+**Header Section**:
+```
+#nutrition Hashtag Analysis
+Analysis Period: January 2025
+Videos Analyzed: 480 (60 per duration bucket)
+Analysis Mode: Top performers (engagement-based)
+```
+
+**What We Analyzed**:
+```
+Total Video Duration: 6.2 hours of content
+Duration Range: 0-120 seconds (8 distinct buckets)
+Content Elements Tracked: 60+ features per video
+  - Hook patterns (first 3 seconds)
+  - Visual composition (scene changes, text overlays)
+  - Audio patterns (music, voice, pacing)
+  - Emotional tone (joy, energy, urgency)
+  - Product presentation (timing, style, prominence)
+
+Analysis Method: Contrastive Learning
+  - Top 40 performers vs Bottom 20 performers per bucket
+  - Identifies what separates viral from average
+```
+
+**Why This Matters**:
+```
+Your 20 creative reports are based on patterns found across 480 videos,
+not guesswork or generic "best practices."
+
+Each pattern recommendation is backed by engagement data showing
+2-5x performance differences between top and bottom performers.
+```
+
+---
+
+**PAGE 2: Hashtag Intelligence Dashboard**
+
+**Purpose**: Show market landscape and where to focus hiring efforts
+
+**1. Duration Distribution** (What's Being Posted):
+```
+[Horizontal bar chart showing % of videos per bucket]
+
+0-3s:   ████ 8%
+3-9s:   ████████ 12%
+9-13s:  ██████████ 15%
+13-18s: ████████████████ 22%  ← HIGH VOLUME
+18-33s: ████████████████████ 28%  ← HIGHEST VOLUME
+33-60s: ██████████ 12%
+60-90s: ██ 2%
+90-120s: █ 1%
+
+Key Insight: 65% of #nutrition content is 13-33s
+```
+
+**2. Engagement by Duration** (What Performs Best):
+```
+0-3s:   5.2% ⭐⭐
+3-9s:   6.1% ⭐⭐
+9-13s:  7.8% ⭐⭐⭐
+13-18s: 8.9% ⭐⭐⭐⭐
+18-33s: 8.4% ⭐⭐⭐⭐
+33-60s: 6.3% ⭐⭐⭐
+60-90s: 4.2% ⭐⭐
+90-120s: 3.1% ⭐
+
+Sweet Spot: 13-33s (highest engagement + sufficient volume)
+```
+
+**3. Content Saturation** (Market Competition):
+```
+0-3s:   LOW  ✓
+3-9s:   MEDIUM
+9-13s:  HIGH
+13-18s: VERY HIGH ⚠️
+18-33s: EXTREME ⚠️
+33-60s: MEDIUM
+60-90s: LOW  ✓
+90-120s: VERY LOW ✓
+
+Opportunity: 60-120s buckets (low saturation, decent engagement)
+```
+
+**4. Trend Direction** (Month-Over-Month Changes):
+```
+0-3s:   8% → 7%   ↓ -12% (declining)
+3-9s:   11% → 12%  ↑ +9%
+9-13s:  16% → 15%  ↓ -6%
+13-18s: 20% → 22%  ↑ +10% (growing)
+18-33s: 30% → 28%  ↓ -7%
+33-60s: 12% → 12%  → Stable
+60-90s: 2% → 2%    → Stable
+90-120s: 1% → 2%   ↑ +100% (emerging)
+
+Market Shift: Mid-length (13-18s) gaining momentum
+```
+
+**5. Creator Profile Priorities** (Where to Focus Hiring):
+```
+TIER 1 (Immediate Hire):
+• 13-18s specialists (high engagement + growing trend)
+• 18-33s specialists (highest engagement + volume)
+
+TIER 2 (Strategic Hire):
+• 9-13s specialists (strong engagement, declining trend)
+• 60-90s specialists (low saturation, stable performance)
+
+AVOID:
+• 0-3s specialists (low engagement + declining)
+• 18-33s generalists (extreme saturation = hard to stand out)
+```
+
+**6. Creator Recommendations** (Next 90 Days):
+```
+→ Hire 3-4 creators in 13-18s bucket (riding growth wave)
+→ Hire 2-3 creators in 18-33s bucket (proven sweet spot)
+→ Test 1-2 creators in 60-90s bucket (low-risk exploration)
+
+Your 20 creative reports target these durations.
+```
+
+---
+
+**PAGE 3: What Your Creators Got**
+
+**Purpose**: Connect the intelligence to the deliverable (20 reports)
+
+**Report Distribution**:
+```
+Your content creators received 20 creative pattern reports:
+
+Bucket 0-3s:   1 report  (low priority, minimal patterns)
+Bucket 3-9s:   2 reports
+Bucket 9-13s:  2 reports
+Bucket 13-18s: 3 reports ← TIER 1 PRIORITY
+Bucket 18-33s: 5 reports ← TIER 1 PRIORITY (most patterns found)
+Bucket 33-60s: 4 reports
+Bucket 60-90s: 2 reports ← TIER 2 OPPORTUNITY
+Bucket 90-120s: 1 report ← TIER 2 EMERGING
+
+Reports prioritized for durations with:
+✓ Highest engagement rates
+✓ Sufficient video volume (statistical validity)
+✓ Clear pattern differentiation (top vs bottom performers)
+```
+
+**How to Use These Reports**:
+```
+1. Match Creator to Duration
+   - Analyze each creator's natural content length
+   - Send reports matching their production style
+   - Example: Creator makes 25s videos → send Pattern_1E through Pattern_5E
+
+2. Coach Based on Patterns
+   - Each report shows what top performers do differently
+   - Use contrastive analysis ("Do This vs Don't Do This")
+   - Track which patterns each creator implements
+
+3. Measure Performance
+   - Track engagement before/after implementing patterns
+   - Identify which patterns work best for each creator
+   - Double down on highest-performing patterns
+```
+
+**What Makes These Reports Effective**:
+```
+✓ 2 pages per report (2-3 minute read)
+✓ Mobile-optimized (creators read on phones)
+✓ Evidence-first (show numbers immediately)
+✓ Copy-paste implementation (second-by-second scripts)
+✓ Example videos included (QR codes to real examples)
+
+Each report answers:
+- WHY this pattern works (proof with numbers)
+- HOW to execute it (literal timeline)
+```
+
+**Next Steps**:
+```
+1. Review hiring priorities (Page 2, Section 5)
+2. Distribute reports to matched creators (by duration)
+3. Track implementation and engagement shifts
+4. Next report: [Date] (monthly per hashtag)
+```
+
+---
+
+**Total Report Length**: 3 pages
+**Format**: Visual dashboards, scannable sections, clear action items
+**Tone**: Authoritative, data-driven, strategic
 
 ## Content Creators
 
