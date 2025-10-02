@@ -247,9 +247,9 @@ class UnifiedMLServices:
         for i in range(0, len(yolo_frames), batch_size):
             batch = yolo_frames[i:i+batch_size]
             
-            # Process batch in thread pool
+            # Process batch in thread pool with scene awareness
             batch_results = await asyncio.to_thread(
-                self._process_yolo_batch, model, batch
+                self._process_yolo_batch_with_scene_awareness, model, batch, video_id
             )
             annotations.extend(batch_results)
         
@@ -272,26 +272,37 @@ class UnifiedMLServices:
         return result
     
     def _process_yolo_batch(self, model, frames: List[FrameData]) -> List[Dict]:
-        """Process frames with YOLO tracking enabled"""
+        """Process frames with proper ByteTrack state persistence"""
         results = []
 
         # Initialize fallback ID counter (high numbers to avoid conflicts with real tracking IDs)
         if not hasattr(self, 'next_fallback_id'):
             self.next_fallback_id = 10000
 
+        # Initialize tracker state if not exists
+        if not hasattr(self, '_bytetrack_state'):
+            self._bytetrack_state = {}
+
         # Sort frames to ensure temporal order for tracking
         sorted_frames = sorted(frames, key=lambda f: f.frame_number)
 
+        # Load ByteTrack configuration
+        config_path = Path(__file__).parent.parent / "config" / "bytetrack_persistent.yaml"
+
         for frame_data in sorted_frames:
-            # Use track() with hardcoded parameters optimized for 3 FPS
-            # No error handling - fail fast if tracking has issues
+            # Enhanced tracking with custom ByteTrack configuration
             detections = model.track(
                 frame_data.image,
-                persist=True,      # Maintain IDs across frames
-                iou=0.3,           # Hardcoded for 0.33s frame gaps
-                conf=0.3,          # Hardcoded for TikTok videos
+                persist=True,
+                tracker=str(config_path),     # Custom config handles all ByteTrack parameters
+                iou=0.7,                      # Higher IOU for better persistence
+                conf=0.2,                     # Keep low confidence for temporary occlusions
                 verbose=False
             )
+
+            # Store updated tracker state
+            if hasattr(model, 'trackers') and model.trackers:
+                self._bytetrack_state = model.trackers[0].get_state() if hasattr(model.trackers[0], 'get_state') else {}
 
             for detection in detections:
                 if detection.boxes is not None:
@@ -308,7 +319,7 @@ class UnifiedMLServices:
                             logger.debug(f"Generated fallback ID {instance_id} for untracked {model.names[int(box.cls)]}")
 
                         results.append({
-                            'trackId': f"obj_{frame_data.frame_number}_{instance_id}",
+                            'trackId': f"obj_{instance_id}",
                             'className': model.names[int(box.cls)],
                             'confidence': float(box.conf),
                             'timestamp': frame_data.timestamp,
@@ -317,7 +328,106 @@ class UnifiedMLServices:
                             'tracked': is_tracked  # Indicates if this has real tracking or fallback
                         })
         return results
-        
+
+    def _get_scene_changes_for_segment(self, video_id: str, start: float, end: float) -> List[float]:
+        """Get scene change timestamps within segment"""
+        try:
+            # Load scene detection data
+            scene_file = Path(f"scene_detection_outputs/{video_id}/{video_id}_scenes.json")
+            if not scene_file.exists():
+                return []
+
+            with open(scene_file, 'r') as f:
+                scenes = json.load(f)
+
+            scene_changes = []
+            for scene in scenes.get('scenes', []):
+                timestamp = scene.get('timestamp', 0)
+                if start <= timestamp <= end:
+                    scene_changes.append(timestamp)
+
+            return scene_changes
+        except Exception as e:
+            logger.warning(f"Could not load scene changes for {video_id}: {e}")
+            return []
+
+    def _process_yolo_batch_with_scene_awareness(self, model, frames: List[FrameData], video_id: str) -> List[Dict]:
+        """Process frames with scene change awareness"""
+        results = []
+
+        # Initialize fallback ID counter and tracker state
+        if not hasattr(self, 'next_fallback_id'):
+            self.next_fallback_id = 10000
+        if not hasattr(self, '_bytetrack_state'):
+            self._bytetrack_state = {}
+
+        # Sort frames to ensure temporal order
+        sorted_frames = sorted(frames, key=lambda f: f.frame_number)
+
+        if not sorted_frames:
+            return results
+
+        # Get segment boundaries from frame timestamps
+        start_time = sorted_frames[0].timestamp
+        end_time = sorted_frames[-1].timestamp
+        scene_changes = self._get_scene_changes_for_segment(video_id, start_time, end_time)
+
+        # Load ByteTrack configuration
+        config_path = Path(__file__).parent.parent / "config" / "bytetrack_persistent.yaml"
+
+        for frame_data in sorted_frames:
+            # Check if this frame is near a scene change
+            is_scene_change = any(abs(frame_data.timestamp - sc) < 0.5 for sc in scene_changes)
+
+            if is_scene_change:
+                # Use more aggressive track persistence near scene changes
+                detections = model.track(
+                    frame_data.image,
+                    persist=True,
+                    tracker=str(config_path),  # Custom config handles track_buffer, match_thresh
+                    iou=0.8,                   # Very high IOU near scene changes
+                    conf=0.1,                  # Very low confidence to maintain tracking
+                    verbose=False
+                )
+            else:
+                # Normal tracking parameters
+                detections = model.track(
+                    frame_data.image,
+                    persist=True,
+                    tracker=str(config_path),  # Custom config handles track_buffer, match_thresh
+                    iou=0.7,                   # Higher IOU for better persistence
+                    conf=0.2,                  # Keep low confidence for temporary occlusions
+                    verbose=False
+                )
+
+            # Store updated tracker state
+            if hasattr(model, 'trackers') and model.trackers:
+                self._bytetrack_state = model.trackers[0].get_state() if hasattr(model.trackers[0], 'get_state') else {}
+
+            for detection in detections:
+                if detection.boxes is not None:
+                    for box in detection.boxes:
+                        # Try to get real tracking ID, fall back if needed
+                        if hasattr(box, 'id') and box.id is not None:
+                            instance_id = int(box.id)
+                            is_tracked = True
+                        else:
+                            instance_id = self.next_fallback_id
+                            self.next_fallback_id += 1
+                            is_tracked = False
+
+                        results.append({
+                            'trackId': f"obj_{instance_id}",
+                            'className': model.names[int(box.cls)],
+                            'confidence': float(box.conf),
+                            'timestamp': frame_data.timestamp,
+                            'bbox': box.xyxy[0].tolist() if len(box.xyxy) > 0 else [0,0,0,0],
+                            'frame_number': frame_data.frame_number,
+                            'tracked': is_tracked,
+                            'scene_change_nearby': is_scene_change  # Debug info
+                        })
+        return results
+
     async def _run_mediapipe_on_frames(self,
                                       frames: List[FrameData],
                                       video_id: str,

@@ -46,9 +46,9 @@ class MLServices:
         """Run ONLY YOLO object detection"""
         video_id = self._get_video_id(video_path)
 
-        # Extract frames (will use cache if available)
+        # Extract frames for YOLO (will use cache if available)
         frame_data = await self.unified_services.frame_manager.extract_frames(
-            video_path, video_id
+            video_path, video_id, service_name='yolo'
         )
 
         if not frame_data.get('success') or not frame_data.get('frames'):

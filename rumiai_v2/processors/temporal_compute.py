@@ -722,7 +722,9 @@ def extract_timelines_for_temporal(analysis_dict: Dict[str, Any]) -> Dict[str, A
             midpoint = (start_time + end_time) / 2
             text_entry_timeline.append({
                 'timestamp': midpoint,
-                'data': {'text': entry.get('data', {}).get('text', '')},
+                'start': start_time,  # FIX: Preserve start time
+                'end': end_time,      # FIX: Preserve end time
+                'data': entry.get('data', {}),  # FIX: Preserve ALL data fields (text, position, size, style)
                 'source': 'timeline'
             })
     
@@ -1142,7 +1144,7 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
     # Calculate speech overlap for EVERY text first
     for entry in window_texts:
         text_content = entry.get('data', {}).get('text', '')
-        timestamp = entry.get('timestamp', 0)
+        timestamp = entry.get('start', entry.get('timestamp', 0))  # FIX: Use 'start' field, fallback to 'timestamp'
         entry['speech_overlap'] = calculate_speech_overlap(text_content, timestamp, speech_segments)
         entry['normalized_text'] = normalize_text(text_content)
     
@@ -1198,7 +1200,7 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
     # Step 5: Final classification
     overlay_texts = high_confidence_overlays
     caption_texts = high_confidence_captions
-    
+
     # Step 4: Calculate metrics for overlays and captions separately
     # OVERLAY PROCESSING: Enhanced with temporal clustering (OCRFix3.md) + spatial clustering (FixOCR6.md)
     overlay_entries = []
@@ -1239,6 +1241,21 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
     # Step 3: Calculate counts using deduplicated texts
     overlay_unique_count = len(overlay_unique_texts)
     caption_unique_count = len(caption_unique_texts)
+
+    # DEBUG: Log final counts for segment_3
+    if 26.6 <= start <= 27.0:
+        print(f"\n--- SEGMENT_3 FINAL DEDUP RESULTS ---")
+        print(f"Overlay entries before dedup: {len(overlay_entries)}")
+        print(f"Overlay unique after dedup: {len(overlay_unique_texts)}")
+        print(f"Caption texts before dedup: {len(caption_normalized_texts)}")
+        print(f"Caption unique after dedup: {len(caption_unique_texts)}")
+        print(f"\nUnique overlays:")
+        for i, text in enumerate(overlay_unique_texts, 1):
+            print(f"  {i}. \"{text}\"")
+        print(f"\nUnique captions (first 10):")
+        for i, text in enumerate(caption_unique_texts[:10], 1):
+            print(f"  {i}. \"{text}\"")
+        print(f"-----------------------------------\n")
 
     # Rebuild groups for compatibility with existing metrics code
     overlay_groups = {text: [0.0] for text in overlay_unique_texts}  # Dummy timestamps
@@ -1887,43 +1904,36 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
                 if tracked:
                     unique_object_classes.add(obj.get('className'))
 
-    # Process persons with overlapping windows (handles fragmentation)
-    # Note: Final windows may be smaller than WINDOW_SIZE to ensure
-    # complete segment coverage. This is preferable to missing detections.
-    window_start = start
+    # Enhanced person counting with dominant track logic to handle ByteTrack fragmentation
+    track_counts = {}
+    for obj in segment_objects:
+        if obj.get('className') == 'person':
+            timestamp = obj.get('timestamp', 0)
+            if start <= timestamp < end:
+                tracked = obj.get('tracked')
+                if tracked is None:
+                    logger.warning(f"Missing 'tracked' flag at {timestamp}s, defaulting to True")
+                    tracked = True
 
-    while window_start < end:
-        window_end = min(window_start + WINDOW_SIZE, end)
+                # Only count tracked detections (fallbacks have tracked=False)
+                if tracked:
+                    track_id = obj.get('trackId')
+                    if track_id:
+                        track_counts[track_id] = track_counts.get(track_id, 0) + 1
 
-        # Collect all person detections in this window
-        window_person_detections = []
-        for obj in segment_objects:
-            if obj.get('className') == 'person':
-                timestamp = obj.get('timestamp', 0)
+    # Calculate person count with dominant track logic
+    if not track_counts:
+        person_count = 0
+    else:
+        total_detections = sum(track_counts.values())
+        max_track_count = max(track_counts.values())
 
-                # Check if detection falls within this window
-                if window_start <= timestamp < window_end:
-                    # Check tracked flag with logging for missing values
-                    tracked = obj.get('tracked')
-                    if tracked is None:
-                        logger.warning(f"Missing 'tracked' flag at {timestamp}s, defaulting to True")
-                        tracked = True
-
-                    # Only count tracked detections (fallbacks have tracked=False)
-                    if tracked:
-                        window_person_detections.append(obj)
-
-        # Apply spatial deduplication to remove double detections
-        unique_people_in_window = spatial_dedup_people(window_person_detections)
-
-        # Track maximum persons across all windows
-        max_persons = max(max_persons, len(unique_people_in_window))
-
-        # Slide window by STRIDE
-        window_start += STRIDE
-        # Loop naturally terminates when window_start >= end
-
-    person_count = max_persons
+        # If one track dominates with >95% of detections, it's the same person with tracking fragmentation
+        if max_track_count / total_detections > 0.95:
+            person_count = 1
+        else:
+            # Multiple balanced tracks = multiple people or uncertain case
+            person_count = len(track_counts)
     object_count = len(unique_object_classes)
 
     # Deduplicate gestures - group consecutive same gestures within 0.8s

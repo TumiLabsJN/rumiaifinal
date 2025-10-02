@@ -62,9 +62,9 @@ class FrameSamplingConfig:
     
     CONFIGS = {
         'yolo': {
-            'max_frames': 300,  # Dynamic limit: covers up to 5min at 1fps, 60s at 5fps
-            'strategy': 'uniform',
-            'rationale': 'Object detection needs consistent temporal coverage'
+            'max_frames': None,  # Process ALL frames for continuous tracking
+            'strategy': 'all',
+            'rationale': 'Object tracking requires continuous frames for ByteTrack algorithm'
         },
         'mediapipe': {
             'max_frames': None,  # Uses ALL extracted frames (adaptive FPS)
@@ -125,11 +125,12 @@ class UnifiedFrameManager:
         self._cache_sizes = {}  # Track size of each cached video
         self._total_cache_size = 0
         
-    async def extract_frames(self, 
-                           video_path: Path, 
+    async def extract_frames(self,
+                           video_path: Path,
                            video_id: str,
                            target_fps: Optional[float] = None,
-                           retry_count: int = 3) -> Dict[str, Any]:
+                           retry_count: int = 3,
+                           service_name: Optional[str] = None) -> Dict[str, Any]:
         """
         Extract frames from video with adaptive sampling and retry logic
         
@@ -168,7 +169,11 @@ class UnifiedFrameManager:
                     
                     # Determine extraction FPS
                     if target_fps is None:
-                        target_fps = self._calculate_adaptive_fps(metadata.duration)
+                        # Special case: YOLO needs full frame rate for tracking
+                        if service_name == 'yolo':
+                            target_fps = metadata.fps  # Use video's native FPS
+                        else:
+                            target_fps = self._calculate_adaptive_fps(metadata.duration)
                     
                     # Try extraction
                     frames = await self._extract_frames_async(
