@@ -716,15 +716,14 @@ def extract_timelines_for_temporal(analysis_dict: Dict[str, Any]) -> Dict[str, A
     text_entry_timeline = []
     for entry in timeline_entries:
         if entry.get('entry_type') == 'text':
-            # Use midpoint of text detection period for more accurate speech overlap
+            # Use start time (when text appears) for caption alignment with speech
             start_time = entry.get('start', 0)
             end_time = entry.get('end', start_time)
-            midpoint = (start_time + end_time) / 2
             text_entry_timeline.append({
-                'timestamp': midpoint,
-                'start': start_time,  # FIX: Preserve start time
-                'end': end_time,      # FIX: Preserve end time
-                'data': entry.get('data', {}),  # FIX: Preserve ALL data fields (text, position, size, style)
+                'timestamp': start_time,  # Changed from midpoint to start_time
+                'start': start_time,
+                'end': end_time,
+                'data': entry.get('data', {}),  # Preserve ALL data fields (text, position, size, style)
                 'source': 'timeline'
             })
     
@@ -996,6 +995,10 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
     def normalize_text(text: str) -> str:
         """Normalize text for grouping similar OCR detections."""
         original = text.strip()
+
+        # Apply OCR error fixes FIRST (before normalization)
+        text = fix_ocr_errors(original)
+
         # Convert to lowercase
         text = text.lower()
 
@@ -1046,6 +1049,17 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
         """Fix common OCR errors that break fuzzy matching."""
         if not text:
             return text
+
+        # STAGE 1: Exact known OCR error fixes (dictionary)
+        text_lower = text.lower()
+        ocr_fixes = {
+            'gvm': 'gym',        # v→y character substitution
+            'sayoh': 'say oh',   # Word merging (missing space)
+        }
+        if text_lower in ocr_fixes:
+            return ocr_fixes[text_lower]
+
+        # STAGE 2: Pattern-based fixes (existing)
         # Split merged words (e.g., "formeI" → "forme I")
         text = re.sub(r'(\w)([A-Z])', r'\1 \2', text)
         # Fix pipe symbols (e.g., "modeland|" → "modeland ")
@@ -1056,12 +1070,16 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
         """Calculate % overlap between text and speech at given timestamp."""
         if not speech_segments:
             return 0.0
-        
+
+        # Grace period for captions appearing slightly after speech ends
+        CAPTION_GRACE_PERIOD = 0.5  # 500ms tolerance
+
         # Find speech segments overlapping this timestamp
         for segment in speech_segments:
             seg_start = segment.get('start', 0)
             seg_end = segment.get('end', seg_start + 1)
-            if seg_start <= timestamp <= seg_end:
+            # Allow captions to appear up to 0.5s after speech ends
+            if seg_start <= timestamp <= seg_end + CAPTION_GRACE_PERIOD:
 
                 # TIMING STRICTNESS: Prevent false positives from thematic overlays
                 time_alignment = min(abs(timestamp - seg_start), abs(timestamp - seg_end))
@@ -1102,6 +1120,29 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
                 # Use the higher of character similarity or word overlap
                 # This handles both OCR errors and partial text captures
                 overlap_ratio = max(char_similarity, word_overlap_ratio)
+
+                # STAGE 3: Edit distance fallback for unknown OCR errors
+                # Only for single words ≤4 letters that didn't match well
+                if len(text_normalized.split()) == 1:
+                    single_word = text_normalized
+                    if len(single_word) <= 4:
+                        try:
+                            from Levenshtein import distance
+                            for speech_word in segment_normalized.split():
+                                if len(speech_word) <= 4:
+                                    edit_dist = distance(single_word, speech_word)
+                                    if edit_dist == 1:
+                                        # 1 character difference - boost overlap to 0.8
+                                        overlap_ratio = max(overlap_ratio, 0.8)
+                                        break
+                                    elif edit_dist == 2 and len(single_word) >= 4:
+                                        # 2 character difference on 4-letter word - boost to 0.6
+                                        overlap_ratio = max(overlap_ratio, 0.6)
+                                        break
+                        except ImportError:
+                            # python-Levenshtein not installed - skip edit distance
+                            pass
+
                 return overlap_ratio
         
         return 0.0
@@ -1238,24 +1279,28 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
     # Apply fuzzy deduplication for captions
     caption_unique_texts = deduplicate_with_fuzzy_matching(caption_normalized_texts)
 
-    # Step 3: Calculate counts using deduplicated texts
+    # Step 3: Remove cross-category duplicates (favor captions over overlays)
+    # If a text appears in both categories, it should only count as a caption
+    overlay_unique_texts_filtered = []
+    for overlay_text in overlay_unique_texts:
+        # Check if this overlay text also appears in captions
+        is_duplicate = False
+        for caption_text in caption_unique_texts:
+            # Use fuzzy matching to check if they're the same
+            from difflib import SequenceMatcher
+            similarity = SequenceMatcher(None, overlay_text, caption_text).ratio()
+            if similarity > 0.85:  # Very similar - consider it a duplicate
+                is_duplicate = True
+                break
+        if not is_duplicate:
+            overlay_unique_texts_filtered.append(overlay_text)
+
+    overlay_unique_texts = overlay_unique_texts_filtered
+
+    # Step 4: Calculate counts using deduplicated texts
     overlay_unique_count = len(overlay_unique_texts)
     caption_unique_count = len(caption_unique_texts)
 
-    # DEBUG: Log final counts for segment_3
-    if 26.6 <= start <= 27.0:
-        print(f"\n--- SEGMENT_3 FINAL DEDUP RESULTS ---")
-        print(f"Overlay entries before dedup: {len(overlay_entries)}")
-        print(f"Overlay unique after dedup: {len(overlay_unique_texts)}")
-        print(f"Caption texts before dedup: {len(caption_normalized_texts)}")
-        print(f"Caption unique after dedup: {len(caption_unique_texts)}")
-        print(f"\nUnique overlays:")
-        for i, text in enumerate(overlay_unique_texts, 1):
-            print(f"  {i}. \"{text}\"")
-        print(f"\nUnique captions (first 10):")
-        for i, text in enumerate(caption_unique_texts[:10], 1):
-            print(f"  {i}. \"{text}\"")
-        print(f"-----------------------------------\n")
 
     # Rebuild groups for compatibility with existing metrics code
     overlay_groups = {text: [0.0] for text in overlay_unique_texts}  # Dummy timestamps
@@ -1962,6 +2007,7 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     # Fix scene counting: Count scenes that overlap with segment, not scene changes within segment
     scene_count = 0
     all_scenes = timelines.get('scene_change_timeline', [])
+    logger.info(f"🔍 TEMPORAL DEBUG: Found {len(all_scenes)} scenes in scene_change_timeline for segment {start}s-{end}s")
     if all_scenes:
         sorted_all_scenes = sorted(all_scenes, key=lambda x: x.get('timestamp', 0))
         for i, scene in enumerate(sorted_all_scenes):
@@ -1975,8 +2021,12 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
             # Check if this scene overlaps with our segment
             if scene_end > start and scene_start < end:
                 scene_count += 1
+                logger.info(f"🔍 TEMPORAL DEBUG: Scene {i+1} ({scene_start}s-{scene_end}s) overlaps with segment {start}s-{end}s")
     else:
+        logger.info(f"🔍 TEMPORAL DEBUG: No scenes found, defaulting to scene_count=1 for segment {start}s-{end}s")
         scene_count = 1  # Default: entire video is one scene if no scene changes detected
+
+    logger.info(f"🔍 TEMPORAL DEBUG: Final scene_count for segment {start}s-{end}s: {scene_count}")
     
     # element_count removed per MLFeaturesGIGO.md - pure derivative
     # ML can compute sum if needed from raw components

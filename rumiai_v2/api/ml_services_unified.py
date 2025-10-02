@@ -961,19 +961,16 @@ class UnifiedMLServices:
             scenes = None
             for threshold in [35.0, 30.0, 25.0, 20.0]:
                 scenes = detect(str(video_path), ContentDetector(threshold=threshold, min_scene_len=10))
-                if scenes:
-                    avg_scene_length = duration / len(scenes) if scenes else duration
-                    # Good detection: scenes between 1-5 seconds average
-                    if len(scenes) > 1:  # At least one scene change found
-                        logger.info(f"Using threshold {threshold} with {len(scenes)} scenes detected")
-                        break
+                if len(scenes) > 1:
+                    break
 
-            # If no good match, use most sensitive threshold
-            if not scenes or avg_scene_length > 5.0:
-                scenes = detect(str(video_path), ContentDetector(threshold=10.0, min_scene_len=10))
-                logger.info(f"Using fallback threshold 10.0 with {len(scenes)} scenes detected")
+            # If no scenes found with reasonable thresholds, accept that some videos have consistent content
+            if not scenes:
+                scenes = []
 
             scene_list = []
+            scene_changes = []
+
             for i, (start, end) in enumerate(scenes):
                 scene_list.append({
                     'scene_number': i + 1,
@@ -982,8 +979,12 @@ class UnifiedMLServices:
                     'duration': (end - start).get_seconds()
                 })
 
+                # Create scene_change entry for timeline_builder (validator expects float timestamps)
+                scene_changes.append(start.get_seconds())
+
             return {
                 'scenes': scene_list,
+                'scene_changes': scene_changes,
                 'total_scenes': len(scene_list),
                 'metadata': {'processed': True}
             }
@@ -992,6 +993,7 @@ class UnifiedMLServices:
             logger.error(f"Scene detection failed: {e}")
             return {
                 'scenes': [],
+                'scene_changes': [],
                 'total_scenes': 0,
                 'metadata': {'processed': False, 'error': str(e)}
             }
