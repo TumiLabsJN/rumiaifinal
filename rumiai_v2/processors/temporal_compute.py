@@ -2007,7 +2007,6 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     # Fix scene counting: Count scenes that overlap with segment, not scene changes within segment
     scene_count = 0
     all_scenes = timelines.get('scene_change_timeline', [])
-    logger.info(f"🔍 TEMPORAL DEBUG: Found {len(all_scenes)} scenes in scene_change_timeline for segment {start}s-{end}s")
     if all_scenes:
         sorted_all_scenes = sorted(all_scenes, key=lambda x: x.get('timestamp', 0))
         for i, scene in enumerate(sorted_all_scenes):
@@ -2021,12 +2020,8 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
             # Check if this scene overlaps with our segment
             if scene_end > start and scene_start < end:
                 scene_count += 1
-                logger.info(f"🔍 TEMPORAL DEBUG: Scene {i+1} ({scene_start}s-{scene_end}s) overlaps with segment {start}s-{end}s")
     else:
-        logger.info(f"🔍 TEMPORAL DEBUG: No scenes found, defaulting to scene_count=1 for segment {start}s-{end}s")
         scene_count = 1  # Default: entire video is one scene if no scene changes detected
-
-    logger.info(f"🔍 TEMPORAL DEBUG: Final scene_count for segment {start}s-{end}s: {scene_count}")
     
     # element_count removed per MLFeaturesGIGO.md - pure derivative
     # ML can compute sum if needed from raw components

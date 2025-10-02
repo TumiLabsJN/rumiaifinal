@@ -31,11 +31,6 @@ class TimelineBuilder:
         Must handle missing/failed analyses gracefully.
         """
         logger.info(f"Building timeline for video {video_id}")
-        logger.info(f"🔍 ML_RESULTS DEBUG: Available ML results: {list(ml_results.keys())}")
-        for model_name, result in ml_results.items():
-            logger.info(f"🔍 ML_RESULTS DEBUG: {model_name} - success: {result.success}")
-            if model_name == 'scene_detection' and result.success:
-                logger.info(f"🔍 ML_RESULTS DEBUG: scene_detection data keys: {list(result.data.keys())}")
 
         # Extract video duration
         duration = video_metadata.get('duration', 0)
@@ -333,24 +328,9 @@ class TimelineBuilder:
         scene_count = 0
         
         # Add scene changes as instantaneous events
-        scene_changes_list = scene_data.get('scene_changes', [])
-        logger.info(f"🔍 SCENE DEBUG: Processing {len(scene_changes_list)} scene_changes from scene_data")
-        logger.info(f"🔍 SCENE DEBUG: scene_data keys: {list(scene_data.keys())}")
-        logger.info(f"🔍 SCENE DEBUG: Raw scene_changes value: {scene_changes_list}")
-        logger.info(f"🔍 SCENE DEBUG: Type of scene_changes: {type(scene_changes_list)}")
-
-        if 'scene_changes' in scene_data:
-            logger.info(f"🔍 SCENE DEBUG: scene_changes key exists, value: {scene_data['scene_changes']}")
-            logger.info(f"🔍 SCENE DEBUG: scene_changes length: {len(scene_data['scene_changes'])}")
-        else:
-            logger.info(f"🔍 SCENE DEBUG: scene_changes key MISSING from scene_data")
-
-        for i, scene_change in enumerate(scene_changes_list):
-            logger.info(f"🔍 SCENE DEBUG: Processing scene_change {i+1}: {scene_change}")
+        for scene_change in scene_data.get('scene_changes', []):
             timestamp = self.ts_validator.validate_timestamp(scene_change, "Scene change")
-            logger.info(f"🔍 SCENE DEBUG: Validated timestamp: {timestamp}")
             if not timestamp:
-                logger.warning(f"🔍 SCENE DEBUG: Invalid timestamp for scene_change {i+1}")
                 continue
 
             entry = TimelineEntry(
@@ -365,7 +345,6 @@ class TimelineBuilder:
 
             timeline.add_entry(entry)
             scene_count += 1
-            logger.info(f"🔍 SCENE DEBUG: Added scene_change entry at {timestamp}s")
         
         # Also add scene segments if available
         for i, scene in enumerate(scene_data.get('scenes', [])):
