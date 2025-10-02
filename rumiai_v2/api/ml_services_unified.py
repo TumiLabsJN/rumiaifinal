@@ -67,16 +67,24 @@ class UnifiedMLServices:
         return self._models.get(model_name)
         
     async def _load_yolo_model(self):
-        """Load YOLO model asynchronously"""
+        """Load YOLO model asynchronously with GPU support"""
         try:
             from ultralytics import YOLO
-            
+            import torch
+
             model_path = '/home/jorge/rumiaifinal/yolov8n.pt'
             if os.path.exists(model_path):
                 model = await asyncio.to_thread(YOLO, model_path)
             else:
                 model = await asyncio.to_thread(YOLO, 'yolov8n.pt')
-            
+
+            # Force GPU usage if available
+            if torch.cuda.is_available():
+                model.to('cuda')
+                logger.info(f"✓ YOLO loaded on GPU: {model.device}")
+            else:
+                logger.warning("⚠ YOLO using CPU (CUDA not available)")
+
             return model
         except Exception as e:
             logger.error(f"Failed to load YOLO: {e}")

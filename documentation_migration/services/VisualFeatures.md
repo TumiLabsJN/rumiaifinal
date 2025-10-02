@@ -53,6 +53,7 @@ How prominently is the creator's face featured throughout different video segmen
 - Face prominence in first 3 seconds is strongest engagement predictor
 - Optimal face size: 15-25% of frame area for talking-head content
 - Dynamic framing (changing ratios) outperforms static framing by 23%
+- **Updated**: Now using 30 FPS native processing for improved temporal precision
 ```
 
 ## 📊 Feature Components
@@ -119,7 +120,7 @@ Temporal Windows Output
 
 ### Dependencies (from Phase 1)
 - **Primary Service**: MediaPipe (VisionServices.md#MediaPipe)
-- **Frame Rate**: 3 FPS sampling from video
+- **Frame Rate**: 30 FPS native processing (optimized from previous 3 FPS sampling)
 - **Performance Impact**: Part of vision services parallel execution
 - **Data Flow**: MediaPipe → timeline_builder.py:290 → temporal_compute.py:1370
 
@@ -411,9 +412,9 @@ How many objects and people are visible, indicating content richness and social 
 ### Legacy ML Insights
 ```
 ⚠️ VERIFIED: From temporal_compute.py:1096-1241 and VisionServices.md
-- person_count uses max unique persons at any timestamp (not sum)
-- object_count includes all YOLO detections (person + objects)
-- Confidence filtering (>0.5) applied for quality control
+- person_count uses ByteTrack optimized tracking with 95% threshold for dominant tracks
+- object_count includes all YOLO detections (person + objects) with improved GPU acceleration
+- Confidence filtering (>0.5) applied for quality control with track persistence (120 frames)
 ```
 
 ## 📊 Feature Components
@@ -443,14 +444,14 @@ Reference: `/insights/7363753427328961834_temporal_windows_updated.json:12,14`
 
 ### Source to Feature Flow
 ```
-YOLO Service (VisionServices.md)
-    ↓ (object detections with className, trackId, confidence)
+YOLO Service (VisionServices.md) with ByteTrack
+    ↓ (optimized object detections with trackId persistence, confidence)
 Timeline Builder
-    ↓ (object entries with timestamps)
+    ↓ (object entries with 30 FPS timestamps)
 temporal_compute.py:1096-1241
-    ↓ (filtering and person counting)
+    ↓ (ByteTrack filtering and person counting with 95% threshold)
 Object Metrics Calculation
-    ↓ (counts per segment)
+    ↓ (counts per segment with track continuity)
 Temporal Windows Output
 ```
 
@@ -469,7 +470,7 @@ Temporal Windows Output
 ### Current Limitations
 - No object type diversity analysis (variety of object classes)
 - Missing object size/prominence metrics
-- No temporal object tracking (appearance/disappearance patterns)
+- **Improved**: ByteTrack provides temporal object tracking with track persistence
 - Object and person counts may be highly correlated
 
 ### Proposed Enhancements

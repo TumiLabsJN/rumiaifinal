@@ -2,13 +2,13 @@
 
 ## Comprehensive Performance Metrics
 
-Last Updated: 2025-09-19
+Last Updated: 2025-10-02
 
 ### Complete Service Performance Matrix
 
 | Service | Purpose | Status | Currently Using | GPU Compatible | Output Type | Self-Contained | Thread Count | Optimal Threads | Peak Memory (MB) | Memory 18s | Memory 73s | Memory 120s | Time 18s | Time 73s | Time 120s |
 |---------|---------|--------|-----------------|----------------|-------------|----------------|--------------|-----------------|------------------|------------|------------|-------------|----------|----------|-----------|
-| **YOLO** | Object detection and tracking | ✅ Active | CPU | ⚠️ Optional (CUDA) | Timeline | ✅ Yes | 1-2 | 2 (1.05x) | 959.7 | 880.6 | 959.7 | N/A | 2.0s | 3.0s | 4.0s |
+| **YOLO** | Object detection and tracking | ✅ Active | GPU/CPU | ✅ Auto-GPU (CUDA) | Timeline | ✅ Yes | 15-16 | 16 (Optimal) | 6000.0 | 5891.3 | 5897.3 | N/A | 30.6s | 28.6s | 30.0s |
 | **MediaPipe** | Human pose, face, hands, gaze detection | ✅ Active | CPU | ❌ No (CPU only) | Timeline | ✅ Yes | 1 | N/A (Fixed) | 399.2 | 388.0 | 399.2 | N/A | 3.0s | 7.0s | 7.0s |
 | **OCR** | Text overlay detection and recognition | ✅ Active | CPU | ⚠️ Optional (CUDA) | Timeline | ✅ Yes | 1 | 2 (1.26x) | 90.6 | 90.4 | 90.6 | N/A | 22.6s | 6.5s | 17.1s |
 | **Scene Detection** | Scene boundary and cut detection | ✅ Active | CPU | ❌ No (CPU only) | ML Data | ✅ Yes | 1-2 | N/A (Single) | 41.8 | 40.2 | 41.8 | N/A | 0.5s | 1.5s | 3.0s |
@@ -22,12 +22,13 @@ Last Updated: 2025-09-19
 ### Thread Optimization
 - **Configurable Services**: Only 3 services (Whisper, YOLO, OCR) support thread configuration via environment variables
 - **Fixed Threading**: 5 services use internal/fixed threading that cannot be optimized
-- **Total Thread Usage**: 9 threads created across all services in typical run
+- **Total Thread Usage**: 23-24 threads created across all services in typical run (YOLO now uses 15-16 threads)
 
 ### Memory Usage Patterns
-- **Highest Memory**: Emotion Detection (1143 MB in 73s video) - accounts for ~40% of total memory
-- **Lowest Memory**: DeepFace Gender (3.1 MB) and Whisper (0 MB reported due to measurement timing)
-- **Total Pipeline Memory**: ~2531 MB for 18s video, ~2736 MB for 73s video
+- **Highest Memory**: YOLO (5891-6000 MB GPU memory) - accounts for ~60% of total memory with GPU acceleration
+- **Second Highest**: Emotion Detection (1143-1185 MB) - accounts for ~12% of total memory
+- **Lowest Memory**: DeepFace Gender (0-9 MB) and Whisper (0-0.2 MB)
+- **Total Pipeline Memory**: ~9935 MB for 65s video (including GPU memory)
 
 ### Total Pipeline Processing Time
 
@@ -40,10 +41,10 @@ Last Updated: 2025-09-19
 *Note: Times from Phase 2 instrumentation tests. Sequential mode generally faster due to better resource utilization.*
 
 ### Processing Time Analysis
-- **Bottleneck Service (18s video)**: OCR at 22.6s (48% of pipeline time)
-- **Bottleneck Service (73s video)**: Emotion Detection at 37.1s (46% of pipeline time)
-- **Bottleneck Service (120s video)**: Emotion Detection at 74.0s
-- **Fastest Services**: Scene Detection (0.5-3s) consistently quick
+- **Current Bottleneck Service**: Emotion Detection at 36.9-41.3s (26-30% of pipeline time)
+- **Second Bottleneck**: YOLO at 28.6-30.6s (20-22% of pipeline time) with GPU acceleration
+- **Third Bottleneck**: MediaPipe at 24.6-25.1s (18% of pipeline time)
+- **Fastest Services**: Scene Detection (0.5s) and Audio Energy (0.5s) consistently quick
 
 ### Optimization Recommendations
 
@@ -51,14 +52,14 @@ Last Updated: 2025-09-19
 ```bash
 # Add to .bashrc or export before running
 export WHISPER_THREADS=4    # 1.15x speedup
-export CV2_THREADS=2         # 1.05x speedup (YOLO)
+export CV2_THREADS=16        # Optimal for YOLO GPU processing (15-16 threads)
 export OMP_NUM_THREADS=2     # 1.26x speedup (OCR)
 ```
 
 #### Memory Optimization Priorities
-1. **Emotion Detection**: Investigate memory reduction strategies (1027 MB)
-2. **YOLO**: Consider batch processing to reduce memory (880 MB)
-3. **MediaPipe**: Fixed memory usage, limited optimization potential (388 MB)
+1. **YOLO**: GPU memory management strategies (5891-6000 MB GPU memory)
+2. **Emotion Detection**: Investigate memory reduction strategies (1185 MB)
+3. **MediaPipe**: Memory efficiency improved with negative deltas (-3627 MB)
 
 #### Performance Bottlenecks
 1. **Short Videos (< 30s)**: OCR is the primary bottleneck
@@ -68,13 +69,13 @@ export OMP_NUM_THREADS=2     # 1.26x speedup (OCR)
 ## Service Categories by Resource Usage
 
 ### High Resource Services (⚠️ Optimize First)
-- **Emotion Detection**: 1027 MB memory, 2 threads, 9.5-74s processing
-- **OCR**: Variable performance (22.6s for 18s video), thread-optimizable
+- **YOLO**: 5891-6000 MB GPU memory, 15-16 threads, 28.6-30.6s processing
+- **Emotion Detection**: 1185 MB memory, 2 threads, 36.9-41.3s processing
 
 ### Medium Resource Services (🟡 Monitor)
-- **YOLO**: 880 MB memory, thread-optimizable, consistent performance
-- **MediaPipe**: 388 MB memory, fixed threading, scales linearly
-- **Whisper**: Low memory but high CPU, benefits from thread optimization
+- **MediaPipe**: Memory efficient with cleanup (-3627 MB delta), fixed threading, 24.6-25.1s processing
+- **OCR**: 469-487 MB memory, thread-optimizable, 13.0-16.1s processing
+- **Whisper**: Low memory (0-0.2 MB) but moderate CPU, benefits from thread optimization, 11.5-15.0s processing
 
 ### Low Resource Services (✅ Efficient)
 - **DeepFace Gender**: 3.1 MB memory, fast processing

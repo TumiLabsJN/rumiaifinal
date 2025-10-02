@@ -59,7 +59,7 @@ Resource Usage (To Be Confirmed - Pending Instrumentation Tests):
 - Memory: TBC GB peak (highest among all services)
 - CPU: TBC% average (TBC cores)
 - GPU Compatible: ✅ Yes (CUDA)
-- GPU Usage (if compatible): TBC% average (competes with YOLO/Whisper)
+- GPU Usage (if compatible): TBC% average (competes with YOLO GPU acceleration and ByteTrack)
 
 Configuration:
 - Parallelizable: Yes (batch processing)
