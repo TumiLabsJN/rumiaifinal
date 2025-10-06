@@ -1,4 +1,14 @@
 >  
+# Brainstorm
+
+## Both (Hashtag + Competitor)
+Due to your success-based bucket selection approach _(analyzing where winners cluster, not where volume is)_
+- You will be able to share:
+    - Video buckets with most Engagement in Tik Tok 
+    
+
+
+
 # Creative Reports Design
 
 **Purpose**: Define creative report structure, content, and generation strategy for RumiAI ML outputs
@@ -17,6 +27,7 @@ Creative reports must match analysis flows from MLPlanning.md:
 
 ## Hashtag Analysis
 
+---
 ### Content Creators
 
 **Deliverable**: 20 Creative Strategy Reports per hashtag
@@ -359,12 +370,18 @@ Each report answers:
 **Format**: Visual dashboards, scannable sections, clear action items
 **Tone**: Authoritative, data-driven, strategic
 
-## Content Creators
+### Internal Report
+- % Gender split (What % was male and what was female)
+- 
 
 
 
 
 ## Competitor Analysis
+
+**Strategic Output**
+What are the most used hashtags 
+
 
 ### Content Creators
 Not applicable

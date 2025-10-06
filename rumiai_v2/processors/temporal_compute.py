@@ -182,6 +182,88 @@ def normalize_text_global(text: str) -> str:
 
     return text
 
+def spatial_cluster_overlays_with_bbox(overlay_entries: List[Dict]) -> List[Dict]:
+    """
+    Group texts by spatial proximity using bbox coordinates.
+    Merge fragments at same vertical position (y) and close horizontal position (x).
+
+    This is the NEW spatial clustering that uses bbox coordinates instead of position metadata.
+    Applied ONLY to overlay_entries (texts classified as overlays by position).
+
+    Returns: List[Dict] with keys 'text', 'timestamp', 'y_pos' to preserve info for temporal clustering
+    """
+    if not overlay_entries:
+        return []
+
+    # Group by time bucket (100ms buckets for same-timestamp grouping)
+    time_buckets = {}
+    for entry in overlay_entries:
+        timestamp = entry.get('timestamp', entry.get('start', 0))
+        if hasattr(timestamp, 'seconds'):
+            timestamp = timestamp.seconds
+
+        bucket = round(timestamp / 0.1) * 0.1  # 100ms buckets
+        if bucket not in time_buckets:
+            time_buckets[bucket] = []
+        time_buckets[bucket].append(entry)
+
+    merged_results = []
+
+    for bucket, bucket_entries in time_buckets.items():
+        # Sort by x-position (left to right)
+        bucket_entries.sort(key=lambda e: e.get('data', {}).get('bbox', [0])[0] if len(e.get('data', {}).get('bbox', [])) >= 4 else 0)
+
+        # Group by y-position proximity (±50 pixels)
+        y_groups = []
+        for entry in bucket_entries:
+            bbox = entry.get('data', {}).get('bbox', [])
+            if len(bbox) >= 4:
+                y_pos = bbox[1]  # y-coordinate
+
+                # Find existing group with similar y-position
+                found_group = False
+                for group in y_groups:
+                    group_y = group['y_avg']
+                    if abs(y_pos - group_y) < 50:  # Within 50 pixels
+                        old_count = len(group['entries'])
+                        group['entries'].append(entry)
+                        # Update running average: (old_avg * old_count + new_value) / new_count
+                        group['y_avg'] = (group_y * old_count + y_pos) / (old_count + 1)
+                        found_group = True
+                        break
+
+                if not found_group:
+                    y_groups.append({
+                        'y_avg': y_pos,
+                        'entries': [entry]
+                    })
+            else:
+                # No bbox data - treat as single text
+                y_groups.append({
+                    'y_avg': 0,
+                    'entries': [entry]
+                })
+
+        # Merge texts within each y-group and preserve timestamp + y_pos
+        for group in y_groups:
+            texts = [e.get('data', {}).get('text', '') for e in group['entries']]
+            merged_text = ' '.join(texts) if len(texts) > 1 else texts[0]
+
+            # Use timestamp from first entry in group
+            first_entry = group['entries'][0]
+            timestamp = first_entry.get('timestamp', first_entry.get('start', 0))
+            if hasattr(timestamp, 'seconds'):
+                timestamp = timestamp.seconds
+
+            merged_results.append({
+                'text': merged_text,
+                'timestamp': timestamp,
+                'y_pos': group['y_avg'],
+                'data': {'text': merged_text}
+            })
+
+    return merged_results
+
 def temporal_cluster_overlays(overlay_entries: List[Dict]) -> List[str]:
     """
     Enhanced temporal clustering with spatial proximity clustering (FixOCR6).
@@ -215,25 +297,46 @@ def temporal_cluster_overlays(overlay_entries: List[Dict]) -> List[str]:
 
 def spatial_cluster_within_bucket(bucket_entries: List[Dict]) -> List[str]:
     """
-    Group texts by spatial metadata and attempt phrase formation (FixOCR6).
+    Group texts by spatial proximity (y-position) within temporal bucket.
+    Now uses y_pos from spatial clustering for accurate grouping.
     """
-    # Group by spatial signature
-    spatial_groups = {}
-    for entry in bucket_entries:
-        spatial_key = (
-            entry.get('position', 'unknown'),  # "right", "left", "center"
-            entry.get('size', 'medium'),       # "small", "medium", "large"
-            entry.get('style', 'normal')       # "normal", "bold", etc.
-        )
-        if spatial_key not in spatial_groups:
-            spatial_groups[spatial_key] = []
-        spatial_groups[spatial_key].append(entry['text'])
+    if not bucket_entries:
+        return []
 
-    # Process each spatial group
+    # Group by y-position proximity (±50 pixels)
+    y_groups = []
+    for entry in bucket_entries:
+        y_pos = entry.get('y_pos', 0)
+        text = entry.get('text', '')
+
+        # Find existing group with similar y-position
+        found_group = False
+        for group in y_groups:
+            if abs(y_pos - group['y_avg']) < 50:  # Within 50 pixels
+                group['texts'].append(text)
+                # Update running average
+                old_count = len(group['texts']) - 1
+                group['y_avg'] = (group['y_avg'] * old_count + y_pos) / len(group['texts'])
+                found_group = True
+                break
+
+        if not found_group:
+            y_groups.append({
+                'y_avg': y_pos,
+                'texts': [text]
+            })
+
+    # Merge texts within each y-group into single overlay
+    # If texts are at same y-position in same time bucket, they're the same overlay
     merged_texts = []
-    for group_texts in spatial_groups.values():
-        merged_group = merge_spatial_group(group_texts)
-        merged_texts.extend(merged_group)
+    for group in y_groups:
+        if len(group['texts']) == 1:
+            merged_texts.append(group['texts'][0])
+        else:
+            # Multiple texts at same y-position = OCR variations of same overlay
+            # Keep the longest one (usually most complete)
+            longest = max(group['texts'], key=len)
+            merged_texts.append(longest)
 
     return merged_texts
 
@@ -971,6 +1074,135 @@ def calculate_middle_segments(video_duration: float) -> Dict[str, Dict[str, floa
 # TEXT OVERLAY PROCESSING
 # ============================================
 
+def classify_text_hybrid(text_entry: Dict, speech_segments: List[Dict], video_height: int = 1080) -> tuple:
+    """
+    Classify single text entry using hybrid position + adaptive fuzzy approach.
+
+    Returns:
+        (classification, reason) where classification is 'caption' or 'overlay'
+    """
+    # Extract bbox
+    bbox = text_entry.get('data', {}).get('bbox', [])
+
+    if len(bbox) < 4:
+        # Fallback: No bbox data, use speech overlap only
+        text_content = text_entry.get('data', {}).get('text', '')
+        timestamp = text_entry.get('start', text_entry.get('timestamp', 0))
+        if hasattr(timestamp, 'seconds'):
+            timestamp = timestamp.seconds
+
+        # Use standard fuzzy matching
+        overlap = calculate_speech_overlap_standard(text_content, timestamp, speech_segments)
+
+        if overlap > 0.7:
+            return 'caption', 'fallback_high_overlap'
+        else:
+            return 'overlay', 'fallback_low_overlap'
+
+    # Calculate vertical position
+    y = bbox[1]
+    height = bbox[3]
+    y_center = y + (height / 2)
+    y_percent = y_center / video_height
+
+    # Calculate speech overlap with adaptive fuzzy
+    text_content = text_entry.get('data', {}).get('text', '')
+    timestamp = text_entry.get('start', text_entry.get('timestamp', 0))
+    if hasattr(timestamp, 'seconds'):
+        timestamp = timestamp.seconds
+
+    speech_overlap = calculate_speech_overlap_adaptive(text_content, timestamp, speech_segments, y_percent)
+
+    # Position-based classification
+    if y_percent > 0.6:
+        # BOTTOM REGION: Caption Zone (position is primary signal)
+        # Text at y>60% is almost always captions, regardless of speech overlap
+        return 'caption', f'bottom_zone_y{y_percent:.2f}_overlap{speech_overlap:.2f}'
+
+    elif y_percent < 0.4:
+        # TOP REGION: Overlay Zone (very strict threshold)
+        if speech_overlap > 0.9:
+            return 'caption', f'top_misplaced_y{y_percent:.2f}_overlap{speech_overlap:.2f}'
+        else:
+            return 'overlay', f'top_zone_y{y_percent:.2f}_overlap{speech_overlap:.2f}'
+
+    else:
+        # MIDDLE REGION: Uncertain Zone (moderate threshold)
+        if speech_overlap > 0.6:
+            return 'caption', f'middle_high_y{y_percent:.2f}_overlap{speech_overlap:.2f}'
+        else:
+            return 'overlay', f'middle_low_y{y_percent:.2f}_overlap{speech_overlap:.2f}'
+
+def calculate_speech_overlap_standard(text: str, timestamp: float, speech_segments: List[Dict]) -> float:
+    """Standard speech overlap calculation (for fallback)."""
+    if not speech_segments:
+        return 0.0
+
+    grace_period = 0.5
+
+    for segment in speech_segments:
+        seg_start = segment.get('start', 0)
+        seg_end = segment.get('end', seg_start + 1)
+
+        if seg_start <= timestamp <= seg_end + grace_period:
+            segment_text = segment.get('text', '').lower()
+            if not segment_text:
+                continue
+
+            text_normalized = text.lower()
+            from difflib import SequenceMatcher
+            char_similarity = SequenceMatcher(None, text_normalized, segment_text).ratio()
+
+            text_words = set(text_normalized.split())
+            segment_words = set(segment_text.split())
+
+            if text_words:
+                common_words = text_words & segment_words
+                word_overlap = len(common_words) / len(text_words)
+            else:
+                word_overlap = 0.0
+
+            return max(char_similarity, word_overlap)
+
+    return 0.0
+
+def calculate_speech_overlap_adaptive(text: str, timestamp: float, speech_segments: List[Dict], y_percent: float) -> float:
+    """Calculate speech overlap with position-adaptive parameters."""
+    if not speech_segments:
+        return 0.0
+
+    # Unified grace period for all zones
+    grace_period = 0.5
+
+    # Find matching segments
+    for segment in speech_segments:
+        seg_start = segment.get('start', 0)
+        seg_end = segment.get('end', seg_start + 1)
+
+        if seg_start <= timestamp <= seg_end + grace_period:
+            segment_text = segment.get('text', '').lower()
+            if not segment_text:
+                continue
+
+            text_normalized = text.lower()
+
+            from difflib import SequenceMatcher
+            char_similarity = SequenceMatcher(None, text_normalized, segment_text).ratio()
+
+            text_words = set(text_normalized.split())
+            segment_words = set(segment_text.split())
+
+            if text_words:
+                common_words = text_words & segment_words
+                word_overlap = len(common_words) / len(text_words)
+            else:
+                word_overlap = 0.0
+
+            # Use word overlap as primary, char similarity as backup
+            return max(char_similarity, word_overlap)
+
+    return 0.0
+
 def process_text_overlays(text_timeline: List[Dict], start: float, end: float, 
                          duration: float, speech_segments: List[Dict] = None) -> Dict[str, Any]:
     """
@@ -1181,106 +1413,44 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
             'has_captions': False
         }
     
-    # Step 2: Speech-first classification on individual texts
-    # Calculate speech overlap for EVERY text first
-    for entry in window_texts:
-        text_content = entry.get('data', {}).get('text', '')
-        timestamp = entry.get('start', entry.get('timestamp', 0))  # FIX: Use 'start' field, fallback to 'timestamp'
-        entry['speech_overlap'] = calculate_speech_overlap(text_content, timestamp, speech_segments)
-        entry['normalized_text'] = normalize_text(text_content)
-    
-    # Step 3: Group by confidence levels
-    # Define thresholds for speech-first classification
-    HIGH_SPEECH_THRESHOLD = 0.7  # >70% = definitely caption
-    LOW_SPEECH_THRESHOLD = 0.3   # <30% = definitely overlay
-    
-    high_confidence_captions = []  
-    high_confidence_overlays = []  
-    uncertain_texts = []            
-    
-    for entry in window_texts:
-        overlap = entry['speech_overlap']
-        if overlap > HIGH_SPEECH_THRESHOLD:
-            high_confidence_captions.append(entry)
-        elif overlap < LOW_SPEECH_THRESHOLD:
-            high_confidence_overlays.append(entry)
-        else:
-            uncertain_texts.append(entry)
-    
-    # Step 4: For uncertain texts, use persistence as tiebreaker
-    # Group uncertain texts by content to check persistence
-    uncertain_by_content = {}
-    for entry in uncertain_texts:
-        text_key = entry['normalized_text']
-        if text_key not in uncertain_by_content:
-            uncertain_by_content[text_key] = []
-        uncertain_by_content[text_key].append(entry)
-    
-    # Classify uncertain texts based on persistence
-    for text_key, entries in uncertain_by_content.items():
-        if len(entries) >= 2:
-            # Text appears multiple times
-            timestamps = [e.get('timestamp', 0) for e in entries]
-            time_span = max(timestamps) - min(timestamps)
-            
-            if time_span > 2.0:
-                # Persists across time = likely overlay
-                high_confidence_overlays.extend(entries)
-            else:
-                # Multiple appearances but close together = likely caption repetition
-                high_confidence_captions.extend(entries)
-        else:
-            # Single appearance of uncertain text
-            # Use 0.5 threshold as final fallback
-            entry = entries[0]
-            if entry['speech_overlap'] > 0.5:
-                high_confidence_captions.append(entry)
-            else:
-                high_confidence_overlays.append(entry)
-    
-    # Step 5: Final classification
-    overlay_texts = high_confidence_overlays
-    caption_texts = high_confidence_captions
-
-    # Step 4: Calculate metrics for overlays and captions separately
-    # OVERLAY PROCESSING: Enhanced with temporal clustering (OCRFix3.md) + spatial clustering (FixOCR6.md)
+    # Step 2: HYBRID CLASSIFICATION - Position + Adaptive Fuzzy
+    caption_entries = []
     overlay_entries = []
-    for entry in overlay_texts:
-        text_content = entry.get('data', {}).get('text', '')
-        if text_content.strip():  # Skip empty texts
-            timestamp = entry.get('timestamp', entry.get('start', 0))
-            # Extract spatial metadata for FixOCR6 spatial clustering
-            data = entry.get('data', {})
-            position = data.get('position', 'unknown')
-            size = data.get('size', 'medium')
-            style = data.get('style', 'normal')
-            overlay_entries.append({
-                'text': text_content,
-                'timestamp': timestamp,
-                'position': position,
-                'size': size,
-                'style': style
-            })
 
-    # Apply temporal clustering + fuzzy matching for overlays
+    for entry in window_texts:
+        classification, reason = classify_text_hybrid(entry, speech_segments, video_height=1080)
+
+        if classification == 'caption':
+            caption_entries.append(entry)
+        else:
+            overlay_entries.append(entry)
+    
+    # Step 3: OVERLAY COUNTING PIPELINE (ONLY for overlays - y<40%)
+    # Multi-stage pipeline: spatial → temporal → aggressive fuzzy
     if overlay_entries:
-        overlay_unique_texts = temporal_cluster_overlays(overlay_entries)
+        # 3a. Spatial clustering: Merge fragments using bbox proximity
+        # Returns List[Dict] with 'text', 'timestamp', 'y_pos'
+        overlay_spatial = spatial_cluster_overlays_with_bbox(overlay_entries)
+
+        # 3b. Temporal clustering: Group same overlay over time (0.5s buckets)
+        # Now receives proper timestamps from spatial clustering
+        overlay_temporal = temporal_cluster_overlays(overlay_spatial)
+
+        # 3c. Aggressive fuzzy matching: Handle OCR errors (0.7/0.6 thresholds)
+        overlay_unique_texts = aggressive_fuzzy_matching(overlay_temporal)
     else:
         overlay_unique_texts = []
 
-    # CAPTION PROCESSING: Traditional approach (unchanged)
-    caption_normalized_texts = []
-    for entry in caption_texts:
-        text_content = entry.get('data', {}).get('text', '')
-        normalized = normalize_text(text_content)
-        if normalized:  # Skip empty normalized texts (e.g., emojis)
-            caption_normalized_texts.append(normalized)
+    # Step 4: CAPTION DEDUPLICATION (simple fuzzy only)
+    # Captions (y>60%) don't need spatial/temporal clustering
+    if caption_entries:
+        caption_texts = [e.get('data', {}).get('text', '') for e in caption_entries]
+        caption_unique_texts = deduplicate_with_fuzzy_matching(caption_texts)
+    else:
+        caption_unique_texts = []
 
-    # Apply fuzzy deduplication for captions
-    caption_unique_texts = deduplicate_with_fuzzy_matching(caption_normalized_texts)
-
-    # Step 3: Remove cross-category duplicates (favor captions over overlays)
-    # If a text appears in both categories, it should only count as a caption
+    # Step 5: CROSS-CATEGORY DEDUPLICATION (safety net)
+    # Remove overlays that also appear as captions (favor captions)
     overlay_unique_texts_filtered = []
     for overlay_text in overlay_unique_texts:
         # Check if this overlay text also appears in captions
@@ -1302,68 +1472,8 @@ def process_text_overlays(text_timeline: List[Dict], start: float, end: float,
     caption_unique_count = len(caption_unique_texts)
 
 
-    # Rebuild groups for compatibility with existing metrics code
-    overlay_groups = {text: [0.0] for text in overlay_unique_texts}  # Dummy timestamps
-    caption_groups = {text: [0.0] for text in caption_unique_texts}  # Dummy timestamps
-    all_texts = overlay_texts + caption_texts
-    text_groups = {**overlay_groups, **caption_groups}
-    
-    # Handle empty case (shouldn't happen after early return, but be safe)
-    if len(text_groups) == 0:
-        return {
-            'overlay_unique_count': 0,
-            'has_captions': False
-        }
-    
-    # Calculate lifespan of each unique text (accounting for gaps)
-    text_lifespans = {}
-    text_appearances = {}  # Track separate appearances
-    
-    for text, timestamps in text_groups.items():
-        timestamps.sort()
-        appearances = []
-        current_appearance = [timestamps[0]]
-        
-        for i in range(1, len(timestamps)):
-            # Check if gap is too large
-            if timestamps[i] - timestamps[i-1] > CLUSTER_GAP_THRESHOLD:
-                # End current appearance, start new one
-                appearances.append(current_appearance)
-                current_appearance = [timestamps[i]]
-            else:
-                current_appearance.append(timestamps[i])
-        appearances.append(current_appearance)
-        
-        text_appearances[text] = appearances
-        
-        # Calculate total lifespan (sum of all appearances)
-        total_lifespan = 0
-        for appearance in appearances:
-            first = appearance[0]
-            last = appearance[-1]
-            # Add buffer for each appearance, but don't exceed segment
-            lifespan = min(last + PERSIST_BUFFER, end) - first
-            total_lifespan += lifespan
-        
-        text_lifespans[text] = total_lifespan
-    
-    # Note: Removed event processing for max_simultaneous_texts and text_coverage
-    # These metrics were redundant with other features
-    
-    # Overlay metrics calculation (coverage and persistence removed for MVP)
-    if overlay_groups:
-        # Debug logging for closing window
-        if start == 11.0:
-            logger.debug(f"[OVERLAY DEBUG] Overlay groups in closing window:")
-            for text, timestamps in overlay_groups.items():
-                logger.debug(f"  Text '{text}': timestamps {sorted(timestamps)}")
-        # REMOVED: overlay_persistence calculation (see MLimitations.md "Removed Features")
-        
-        # REMOVED: overlay_coverage calculation (see MLimitations.md "Removed Features")
-        pass  # Coverage and persistence calculation completely removed for MVP
-    
     # Simplified caption metric - just binary presence
-    has_captions = len(caption_groups) > 0
+    has_captions = len(caption_unique_texts) > 0
     
     return {
         # Overlay metrics (marketing text only)
@@ -2085,15 +2195,19 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
     # Initialize all 7 emotions to ensure consistent features for ML
     all_emotions = ['joy', 'sadness', 'anger', 'fear', 'disgust', 'surprise', 'neutral']
     emotion_counts = {emotion: 0 for emotion in all_emotions}
-    
+
     for e in segment_expressions:
         emotion = e.get('emotion', 'neutral')
         if emotion in emotion_counts:
             emotion_counts[emotion] += 1
-    
+
     total_emotions = len(segment_expressions)
     # Emotion ratios removed per MLFeaturesGIGO.md - perfect multicollinearity
     # Replaced with new non-collinear features below
+
+    # Get face entries for this segment (needed early for emotion fallback logic)
+    segment_faces = [f for f in timelines.get('face_timeline', [])
+                    if start <= f.get('timestamp', 0) < end]
 
     # Calculate new emotion features (MLFeaturesGIGO.md)
     emotion_encoding = {
@@ -2133,7 +2247,7 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
             dominant_emotion_id = 8  # no_person (no face detected)
         emotional_valence = 0.0
         emotion_consistency = 0.0
-    
+
     # Calculate framing distribution from face bbox sizes
     # Since camera_distance entries don't exist, calculate from face entries
     # close (>25% frame), medium (8-25%), wide (<8%), none (no face)
@@ -2141,10 +2255,6 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
 
     # Collect face areas for average calculation (average_face_size feature)
     face_areas = []
-
-    # Get face entries for this segment
-    segment_faces = [f for f in timelines.get('face_timeline', [])
-                    if start <= f.get('timestamp', 0) < end]
 
     for face in segment_faces:
         bbox = face.get('bbox', {})

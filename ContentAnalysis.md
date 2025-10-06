@@ -1,10 +1,15 @@
-# ContentAnalysis.md - Independent Transcript Analysis System
+# ContentAnalysis.md - Independent Content Intelligence System
 
 ## Overview
 
-**Purpose**: Analyze video transcripts to extract content intelligence insights independent of the ML pipeline constraints.
+**Purpose**: Analyze video content (transcripts, captions, hashtags) to extract content intelligence insights independent of the ML pipeline constraints.
 
-**Key Insight**: We have rich transcript data but can't use it in RF/KMeans due to normalization requirements. Solution: Create a separate, semi-structured analysis layer that provides actionable content insights.
+**Key Insight**: We have rich text data (transcripts, descriptions, hashtags) but feeding them to RF/KMeans requires lossy transformations (TF-IDF, embeddings). Solution: Create a separate, semi-structured analysis layer that preserves the full semantic richness of content.
+
+**Content Sources:**
+1. **Transcripts** - Speech-to-text from Whisper (what's being said in the video)
+2. **Description** - Creator-written captions/video descriptions (how creators position their content)
+3. **Hashtag Analysis** - Hashtag strategy metadata (what topics/communities creators target)
 
 ## System Design Philosophy
 
@@ -96,12 +101,14 @@
 }
 ```
 
-## Transcript Repository Structure
+## Content Data Sources
 
-### Location: `/speech_transcriptions/`
+### 1. Transcripts
+**Location**: `/speech_transcriptions/`
 **Overview**: 160+ transcript files ready for analysis
+**Source**: Whisper speech-to-text service
 
-**File Format**: JSON files from Whisper speech-to-text
+**File Format**: JSON files from Whisper
 ```
 /home/jorge/rumiaifinal/speech_transcriptions/
 ├── 126301987701056_whisper.json
@@ -137,6 +144,99 @@
 - `"text"`: Complete transcript (primary content for pattern discovery)
 - `"segments"`: Timestamped chunks (useful for hook analysis - first 3 seconds)
 - `"words"`: Word-level data with confidence scores (quality filtering)
+
+---
+
+### 2. Description (Captions)
+**Source**: Apify TikTok scraper
+**Field**: `description` from video metadata
+**Overview**: Creator-written captions that appear below the video
+
+**Data Type**: String (50-150 characters typical, up to 2,200 max)
+
+**What It Contains**:
+- Hook/headline (attention grabber)
+- Key details/value proposition
+- Call-to-action (Save, Comment, Follow, Link in bio)
+- Hashtags (3-10 typical)
+- Emojis (visual emphasis)
+
+**Real Examples**:
+
+```json
+{
+  "video_id": "7480428850522950920",
+  "description": "Best protein shake recipe! 🍓 High protein, low calorie, tastes amazing. Link in bio for full recipe 👆 #nutrition #protein #healthyrecipes #fitnessmotivation #weightloss"
+}
+```
+
+```json
+{
+  "video_id": "595997271203511",
+  "description": "10 min ab workout 🔥 no equipment needed! Save this for later 💪 #fitness #workout #abs #homeworkout #fitnessmotivation"
+}
+```
+
+```json
+{
+  "video_id": "126301987701056",
+  "description": "How I got 100K followers in 30 days (no paid ads) 📈 Full strategy in comments 👇 #socialmedia #marketing #entrepreneur #growthhacking #tiktokgrowth"
+}
+```
+
+**Why ContentAnalysis vs ML Features?**
+- **Rich semantic content**: "Best protein shake recipe" conveys much more than TF-IDF word counts
+- **Strategic messaging**: CTA patterns ("Save this", "Link in bio") are qualitative insights
+- **Creator intent**: How creators position their content reveals strategy
+- **Lossy transformation problem**: Converting to 50-100 numerical features loses nuanced meaning
+
+**Analysis Opportunities**:
+- Hook pattern identification (question, statement, teaser, command)
+- CTA effectiveness by type (save, comment, link, follow)
+- Hashtag strategy correlation with performance
+- Emoji usage patterns in viral content
+- Caption length vs engagement analysis
+- Positioning strategy (educational, inspirational, promotional)
+
+---
+
+### 3. Hashtag Analysis
+**Source**: Apify TikTok scraper (processed)
+**Field**: `hashtag_analysis` object from video metadata
+**Overview**: Categorized hashtag strategy metadata
+
+**Data Type**: Object (nested structure with counts and classifications)
+
+**Structure**:
+```json
+{
+  "video_id": "7480428850522950920",
+  "hashtag_analysis": {
+    "total_count": 5,
+    "branded_hashtags": ["#fitnessmotivation"],
+    "community_hashtags": ["#nutrition", "#protein", "#healthyrecipes"],
+    "trending_hashtags": ["#weightloss"],
+    "hashtag_count": 5,
+    "branded_hashtag_count": 1,
+    "community_hashtag_count": 3,
+    "trending_hashtag_count": 1
+  }
+}
+```
+
+**Why ContentAnalysis vs ML Features?**
+- **Categorical data**: Hashtag types are qualitative (branded vs community vs trending)
+- **Strategic insight**: Which hashtag mix drives engagement is a content pattern, not a numerical feature
+- **Context-dependent**: #fitness means different things in different niches
+- **List/array data**: Multiple hashtags per video don't normalize well to single features
+
+**Analysis Opportunities**:
+- Optimal hashtag mix (branded vs community vs trending ratio)
+- Hashtag saturation analysis (overused vs underutilized)
+- Hashtag strategy by content type (educational vs promotional)
+- Trending hashtag timing (early adoption vs late adoption)
+- Community hashtag clustering (which combos work together)
+- Branded hashtag effectiveness by niche
 
 ### Simple Training Method
 **Direct Repository Access**:

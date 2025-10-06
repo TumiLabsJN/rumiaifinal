@@ -1,0 +1,285 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Feature transformation configuration for Random Forest and K-Means ML models",
+    "last_updated": "2025-10-03",
+    "total_features": 37
+  },
+
+  "random_forest": {
+    "direct": {
+      "description": "Use raw values directly (RF handles numerical features well)",
+      "features": [
+        "average_face_size",
+        "overlay_unique_count",
+        "scene_count",
+        "shortest_scene",
+        "longest_scene",
+        "scene_duration_variance",
+        "object_count",
+        "person_count",
+        "speech_coverage",
+        "word_count",
+        "energy_level",
+        "energy_variance",
+        "energy_max",
+        "pitch_scatter_ratio",
+        "gesture_count",
+        "gaze_variance",
+        "eye_contact_rate",
+        "digg_count",
+        "play_count",
+        "collect_count",
+        "share_count",
+        "comment_count",
+        "duration",
+        "emotional_valence",
+        "emotion_consistency"
+      ]
+    },
+    "one_hot": {
+      "description": "Convert categorical variables to binary columns",
+      "features": {
+        "has_captions": {
+          "num_categories": 2,
+          "categories": ["no_captions", "has_captions"]
+        },
+        "dominant_emotion_id": {
+          "num_categories": 7,
+          "categories": ["joy", "sadness", "anger", "fear", "disgust", "surprise", "neutral"]
+        }
+      }
+    },
+    "extract_date": {
+      "description": "Extract temporal features from timestamps",
+      "features": {
+        "create_time": {
+          "extracted_features": [
+            "hour_of_day",
+            "day_of_week",
+            "month",
+            "is_weekend",
+            "is_business_hours"
+          ]
+        }
+      }
+    },
+    "extract_fields": {
+      "description": "Extract specific fields from complex objects",
+      "features": {
+        "gender_detection": {
+          "extracted_features": [
+            "gender_label"
+          ],
+          "transform_after_extract": "one_hot (2-3 categories: male/female/unknown)"
+        }
+      }
+    },
+    "content_analysis": {
+      "description": "Text/semantic features analyzed in separate ContentAnalysis system",
+      "features": [
+        "description",
+        "hashtag_analysis"
+      ],
+      "reason": "Rich semantic content - analyzed separately to preserve nuanced insights (see ContentAnalysis.md)"
+    },
+    "exclude": {
+      "description": "Features not used in RF model",
+      "features": [
+        "video_id",
+        "processing_timestamp",
+        "version",
+        "author"
+      ],
+      "reason": "System metadata and non-predictive identifiers"
+    }
+  },
+
+  "kmeans": {
+    "scale_0_1": {
+      "description": "Min-max normalization to [0-1] range (already normalized features)",
+      "features": [
+        "average_face_size",
+        "speech_coverage",
+        "energy_level",
+        "energy_max",
+        "pitch_scatter_ratio",
+        "eye_contact_rate",
+        "emotion_consistency",
+        "duration"
+      ],
+      "method": "MinMaxScaler or identity if already [0-1]"
+    },
+    "log_scale": {
+      "description": "Log transform followed by min-max scaling (for skewed distributions)",
+      "features": [
+        "overlay_unique_count",
+        "scene_count",
+        "shortest_scene",
+        "longest_scene",
+        "scene_duration_variance",
+        "object_count",
+        "person_count",
+        "word_count",
+        "energy_variance",
+        "gesture_count",
+        "gaze_variance",
+        "digg_count",
+        "play_count",
+        "collect_count",
+        "share_count",
+        "comment_count"
+      ],
+      "method": "log1p (log(1 + x)) then MinMaxScaler",
+      "rationale": "Handles right-skewed distributions (counts, metrics with viral outliers)"
+    },
+    "one_hot": {
+      "description": "Convert categorical to binary columns (distance-based clustering friendly)",
+      "features": {
+        "dominant_emotion_id": {
+          "num_categories": 7,
+          "categories": ["joy", "sadness", "anger", "fear", "disgust", "surprise", "neutral"]
+        }
+      }
+    },
+    "cyclical": {
+      "description": "Encode cyclical temporal features using sin/cos transformation",
+      "features": {
+        "create_time": {
+          "extracted_features": [
+            {
+              "name": "hour_of_day",
+              "period": 24,
+              "encoding": ["hour_sin", "hour_cos"]
+            },
+            {
+              "name": "day_of_week",
+              "period": 7,
+              "encoding": ["day_sin", "day_cos"]
+            },
+            {
+              "name": "month",
+              "period": 12,
+              "encoding": ["month_sin", "month_cos"]
+            }
+          ]
+        }
+      },
+      "formula": "sin(2π * value / period), cos(2π * value / period)"
+    },
+    "shift_scale": {
+      "description": "Shift range then scale (for features with negative values)",
+      "features": {
+        "emotional_valence": {
+          "original_range": "[-1, 1]",
+          "shifted_range": "[0, 2]",
+          "final_range": "[0, 1]",
+          "method": "(x + 1) / 2"
+        }
+      }
+    },
+    "label_encode_simple": {
+      "description": "Simple label encoding for low-cardinality categorical features",
+      "features": {
+        "has_captions": {
+          "encoding": {"no_captions": 0, "has_captions": 1}
+        }
+      }
+    },
+    "extract_fields_scale": {
+      "description": "Extract fields from objects, then scale",
+      "features": {
+        "gender_detection": {
+          "extracted_features": [
+            "gender_label"
+          ],
+          "transform_after_extract": {
+            "gender_label": "label encode then scale [0-1]"
+          }
+        }
+      }
+    },
+    "content_analysis": {
+      "description": "Text/semantic features analyzed in separate ContentAnalysis system",
+      "features": [
+        "description",
+        "hashtag_analysis"
+      ],
+      "reason": "Rich semantic content - analyzed separately to preserve nuanced insights (see ContentAnalysis.md)"
+    },
+    "exclude": {
+      "description": "Features not used in K-Means clustering",
+      "features": [
+        "video_id",
+        "processing_timestamp",
+        "version",
+        "author"
+      ],
+      "reason": "System metadata and non-predictive identifiers"
+    }
+  },
+
+  "transform_definitions": {
+    "Direct": "Use raw values without transformation (RF handles well)",
+    "One-hot": "Binary encoding: create N binary columns for N categories",
+    "Label-encode": "Assign integer labels to categories (0, 1, 2, ...)",
+    "Extract-date": "Parse timestamp into hour, day_of_week, month, is_weekend, etc.",
+    "Extract-fields": "Extract nested fields from object/dict structures",
+    "Text-embed": "Convert text to numerical vectors (TF-IDF or embeddings)",
+    "Scale [0-1]": "Min-max normalization: (x - min) / (max - min)",
+    "Log + scale": "Log transform to reduce skewness, then min-max scale",
+    "Cyclical": "Sin/cos encoding for cyclical features (hour, day, month)",
+    "Shift + scale": "Shift negative ranges to positive, then scale",
+    "Exclude": "Do not use this feature in model"
+  },
+
+  "pipeline_usage": {
+    "random_forest": {
+      "input": "Mixed types (numerical, categorical, text)",
+      "preprocessing_steps": [
+        "1. Extract fields from complex objects (gender_detection, hashtag_analysis)",
+        "2. Extract date features from create_time",
+        "3. One-hot encode categorical features (has_captions, dominant_emotion_id)",
+        "4. Label encode author",
+        "5. Text-embed description (TF-IDF or embeddings)",
+        "6. Use all other features directly",
+        "7. Exclude system metadata (video_id, processing_timestamp, version)"
+      ],
+      "output": "Feature matrix ready for RandomForestClassifier/Regressor"
+    },
+    "kmeans": {
+      "input": "All numerical features with similar scales",
+      "preprocessing_steps": [
+        "1. Extract fields from complex objects",
+        "2. Extract and cyclically encode create_time (sin/cos)",
+        "3. Log + scale skewed count features",
+        "4. Scale normalized features [0-1]",
+        "5. Shift + scale emotional_valence from [-1,1] to [0,1]",
+        "6. One-hot encode dominant_emotion_id",
+        "7. Label encode + scale author",
+        "8. Text-embed + PCA + scale description",
+        "9. Exclude system metadata"
+      ],
+      "output": "Normalized feature matrix ready for KMeans clustering",
+      "critical": "All features MUST be scaled to similar ranges (K-Means is distance-based)"
+    }
+  },
+
+  "feature_count_summary": {
+    "total_raw_features": 37,
+    "content_analysis_features": 2,
+    "excluded_features": 4,
+    "ml_features": 31,
+    "rf_features_after_transform": "~39 (26 direct + 9 one-hot + 5 temporal - 1 gender_label)",
+    "km_features_after_transform": "~40 (26 simple + 7 one-hot + 6 cyclical + 1 valence shift)",
+    "breakdown": {
+      "content_analysis": ["description", "hashtag_analysis"],
+      "excluded": ["video_id", "processing_timestamp", "version", "author"],
+      "simple_features": 26,
+      "categorical_one_hot": "has_captions (2) + dominant_emotion_id (7) = 9 features",
+      "temporal": "create_time → 5 RF features, 6 KM features (cyclical)",
+      "complex_objects": "gender_detection → extract gender_label (1 feature)"
+    },
+    "note": "Only 1 feature requires complex transformation: create_time (temporal extraction)"
+  }
+}

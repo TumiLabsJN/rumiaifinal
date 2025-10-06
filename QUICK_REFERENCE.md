@@ -4,7 +4,7 @@
 
 **Current System**: TikTok video analyzer that extracts 60+ ML features through temporal window analysis.
 - **Core**: Processes videos through 9 ML services sequentially
-- **Output**: JSON with ~60 features per temporal window for pattern detection
+- **Output**: JSON with ~20 features per temporal window for pattern detection
 - **Purpose**: Internal tool for Tumi Labs' RippleOS consultancy to identify viral creative patterns
 
 ## 📚 START HERE - Documentation Reading Order
@@ -15,7 +15,7 @@
 3. **[MLROADMAP.md](./MLROADMAP.md)** (5 min) - Future ML pipeline development plans
 
 ### For Deep Technical Dives:
-- **TotalFeatures.md**: `/documentation_migration/services/TotalFeatures.md` - All 60+ features explained
+- **TotalFeatures.md**: `/documentation_migration/services/TotalFeatures.md` - All 20+ features explained
 - **Service docs**: See `/documentation_migration/services/*.md` for individual service details
 
 ## 🚀 Key System Facts
@@ -23,17 +23,31 @@
 ### Current Capabilities
 - **Processing Time**: ~60-80 seconds for a 60-second video
 - **Output**: `temporal_windows_updated.json` with 60+ features per temporal window
-- **Window Structure**:
-  - Hook (0-3s): Always present
-  - Middle segments: Based on video duration
-    - 0-9s videos: None (returns null)
-    - 9-18s videos: 3 segments
-    - 18-33s videos: 4 segments
-    - 33-75s videos: 5 segments
-    - >75s videos: 5 segments (capped)
-  - Closing (last 3s): Always present
+- **Window Structure CODE**:
+  | Duration | Middle Segments | Total Windows (Hook + Middle + Closing) |
+  |----------|-----------------|-----------------------------------------|
+  | 0-9s     | None (null)     | 2 (Hook + Closing only)                 |
+  | 9-18s    | 3               | 5 (Hook + 3 Middle + Closing)           |
+  | 18-33s   | 4               | 6 (Hook + 4 Middle + Closing)           |
+  | 33-75s   | 5               | 7 (Hook + 5 Middle + Closing)           |
+  | >75s     | 5 (capped)      | 7 (Hook + 5 Middle + Closing)           |
+
+  **Window Structure ML Buckets** 
+  ML Buckets - Total 8 - (Downstream - Training)
+  | Bucket  | Duration | Window Structure Used |
+  |---------|----------|-----------------------|
+  | 0-3s    | 0-3s     | 2-window              |
+  | 3-9s    | 3-9s     | 2-window              |
+  | 9-13s   | 9-13s    | 5-window              |
+  | 13-18s  | 13-18s   | 5-window              |
+  | 18-33s  | 18-33s   | 6-window              |
+  | 33-60s  | 33-60s   | 7-window              |
+  | 60-90s  | 60-90s   | 7-window              |
+  | 90-120s | 90-120s  | 7-window              |
+
   - **Critical**: Videos ≤9s return middle_segments as null (not empty array)
   - **ML Note**: ML training will split 9-18s into two buckets (9-13s, 13-18s) for variance handling
+  - **Segment Duration Calculation**: (Total Duration-(Hook+Closing))/Duration Segments
 - **ML Services**: 9 services - YOLO, Whisper, MediaPipe, OCR, Scene Detection, FEAT, DeepFace, Audio Energy, Hashtag Analysis
 - **Processing Modes**: Sequential (default) or Parallel
 - **Architecture**: Self-contained services with fail-fast validation and checkpoint/resume

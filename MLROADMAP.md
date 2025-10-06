@@ -34,7 +34,10 @@ Success for this ML training pipeline is measured through technical and operatio
    - Top-down view for executive stakeholders
 
 #### Key Metrics
-- **Input Scale**: Up to 240 videos per analysis batch (60 per duration bucket: 40 top + 20 bottom)
+- **Input Scale**: User-configurable via --video-count N per qualified bucket
+  - Contrastive default: N=100 per bucket (80 top + 20 bottom), top 3 buckets = ~300 videos
+  - Top default: N=40 per bucket, top 3 buckets = ~120 videos
+  - Only top 3 most active buckets are processed (adaptive bucket processing)
 - **ML Models**: Random Forest and K-means with 16 models total (2 algorithms × 8 duration buckets)
 - **Output**: Duration-specific creative recommendations (5 patterns per bucket)
 - **Processing**: Sequential (one-by-one) with resumption capability
@@ -43,10 +46,31 @@ Success for this ML training pipeline is measured through technical and operatio
 
 ##### 📊 Quality Built Into Selection Process
 > **Key Point**: This system should automatically select high-quality videos through:
-> - Top 40 + Bottom 20 videos per duration bucket for contrastive analysis
-> - User-defined date filters for recency control  
+> - Top 80% + Bottom 20% per qualified duration bucket (N configurable via --video-count, default 100)
+> - Adaptive bucket processing: Only top 3 most active buckets processed
+> - User-defined date filters for recency control (`--date-filter last_N_days`)
 > - Composite scoring (engagement × share boost factor)
 > - No arbitrary thresholds needed - market performance determines quality
+
+**Example CLI Command**:
+```bash
+python rumiai_ml_batch.py \
+  --client "acme" \
+  --analysis-type hashtag \
+  --target "#nutrition" \
+  --analysis-mode top \
+  --selection-strategy contrastive \
+  --video-count 100 \
+  --date-filter last_90_days
+
+# Result:
+# - Scrapes 800 videos from #nutrition (engagement sorted)
+# - Filters to videos from last 90 days
+# - Buckets by duration → identifies top 3 active buckets
+# - Per bucket: Selects top 80 + bottom 20 from qualified videos
+# - Trains RF + K-Means models on selected videos
+# - Generates creative strategy reports
+```
 
 ##### 🔄 Fail-Fast with Checkpoint/Resume Architecture
 > **Key Design Principle**: This system uses fail-fast with automatic checkpointing:
@@ -57,7 +81,9 @@ Success for this ML training pipeline is measured through technical and operatio
 > - Full implementation details in Section 6.5
 
 ##### Analysis Approach: Contrastive + Prescriptive
-- **Contrastive Method**: Analyze 40 top performers vs 20 bottom performers per bucket
+- **Contrastive Method**: Analyze top 80% vs bottom 20% per bucket (e.g., 80 vs 20 if N=100, 120 vs 30 if N=150)
+  * Configurable via --video-count N (default 100 for contrastive)
+  * Adaptive processing: Only top 3 qualified buckets with ≥ N videos
   * Identifies what differentiates viral from poor-performing content
   * Finds patterns with largest performance gaps (e.g., 85% in top vs 20% in bottom)
 - **Prescriptive Output**: Convert patterns to actionable recommendations

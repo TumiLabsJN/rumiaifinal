@@ -203,6 +203,7 @@ class TimelineBuilder:
                 data={
                     'text': text,
                     'position': self._extract_position(text_annotation),
+                    'bbox': text_annotation.get('bbox', []),  # NEW: Preserve bbox coordinates
                     'size': text_annotation.get('size', 'medium'),
                     'style': text_annotation.get('style', 'normal')
                 }

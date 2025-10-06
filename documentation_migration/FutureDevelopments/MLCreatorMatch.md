@@ -1,5 +1,12 @@
 # Creator Match Analysis System
 
+**Stage Impact**: Stages 1, 5, 7 (Selection + ML + Reports)
+**Priority**: HIGH - Critical for affiliate vetting and ROI optimization
+**Parent Document**: MLPlanningv2.md (Part 4, Cross-Stage Enhancements)
+**Last Updated**: 2025-10-06
+
+---
+
 ## Overview
 
 ### Business Problem
