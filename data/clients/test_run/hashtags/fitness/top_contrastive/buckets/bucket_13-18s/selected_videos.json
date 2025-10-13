@@ -1,0 +1,2848 @@
+{
+  "bucket": "13-18s",
+  "strategy": "contrastive",
+  "video_count": 50,
+  "selected_count": 30,
+  "top_count": 24,
+  "bottom_count": 6,
+  "videos": [
+    {
+      "id": "7535660969377172749",
+      "text": "Had to shake back man!!\ud83d\ude24 #fitness #gymtransformation #gymtok #fyp ",
+      "textLanguage": "en",
+      "createTime": 1754532804,
+      "createTimeISO": "2025-08-07T02:13:24.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7360148983748854830",
+        "name": "budfit23",
+        "profileUrl": "https://www.tiktok.com/@budfit23",
+        "nickName": "FitwithBud",
+        "verified": false,
+        "signature": "Fitness \u2022 Weight Loss \u2022 Motivation \nFollow for more tips & transformations\ud83d\udcaa\ud83c\udffe",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/13c4e1cb060b5e1ba5649f4afad18d54~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=dd2f04d8&x-expires=1760122800&x-signature=jtFRUIfp5ghxtxmZB%2BiloJBFQ%2Fc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/13c4e1cb060b5e1ba5649f4afad18d54~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=dd2f04d8&x-expires=1760122800&x-signature=jtFRUIfp5ghxtxmZB%2BiloJBFQ%2Fc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "privateAccount": false,
+        "following": 40,
+        "friends": 0,
+        "fans": 10300,
+        "heart": 795200,
+        "video": 19,
+        "digg": 3155
+      },
+      "musicMeta": {
+        "musicName": "WENT WEST",
+        "musicAuthor": "BabyChiefDoit",
+        "musicOriginal": false,
+        "musicAlbum": "WENT WEST",
+        "playUrl": "https://sf16.tiktokcdn-us.com/obj/tos-alisg-ve-2774/ocfZQt4BCwpL5q1bZZByYXTjgdFiBoC4W9DQfE",
+        "coverMediumUrl": "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/oMoBEdltCDEpwgAAlwhBfFsqLBQyKEexZcXd1A~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "originalCoverMediumUrl": "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/oMoBEdltCDEpwgAAlwhBfFsqLBQyKEexZcXd1A~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "musicId": "7519753354118793232"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@budfit23/video/7535660969377172749",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 13,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-p-0068-tx/ooelSQEQDFCpABChgEf8AbEyVFMC4oDEroiRUU~tplv-tiktokx-origin.image?dr=9636&x-expires=1760122800&x-signature=%2FrZXNFBkUx0FgREQCwBbbRmUi6A%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-p-0068-tx/ooelSQEQDFCpABChgEf8AbEyVFMC4oDEroiRUU~tplv-tiktokx-origin.image?dr=9636&x-expires=1760122800&x-signature=%2FrZXNFBkUx0FgREQCwBbbRmUi6A%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 770700,
+      "shareCount": 45500,
+      "playCount": 5500000,
+      "collectCount": 51000,
+      "commentCount": 6124,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "fitness"
+        },
+        {
+          "name": "gymtransformation"
+        },
+        {
+          "name": "gymtok"
+        },
+        {
+          "name": "fyp"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "242883878",
+          "name": "Flawless Skin",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 13
+    },
+    {
+      "id": "7532819548899151159",
+      "text": "#gymgirl #gymtok #workoutroutine #fitness #bodybuilding #healthy #goviraltiktok ",
+      "textLanguage": "un",
+      "createTime": 1753871239,
+      "createTimeISO": "2025-07-30T10:27:19.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7513457164515738654",
+        "name": "rochet18",
+        "profileUrl": "https://www.tiktok.com/@rochet18",
+        "nickName": "crocheting love \u2763\ufe0f",
+        "verified": false,
+        "signature": "crochet tutorial for beginners \u263a\ufe0f \nfollow me for more \ud83e\udd70",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/be3763eaf50b09e61bb36b63e621e54e~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=dd36b6ce&x-expires=1760122800&x-signature=lM6PVjx2E9OHikimOzR6AneyuEM%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/be3763eaf50b09e61bb36b63e621e54e~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=dd36b6ce&x-expires=1760122800&x-signature=lM6PVjx2E9OHikimOzR6AneyuEM%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "privateAccount": false,
+        "following": 4,
+        "friends": 0,
+        "fans": 11800,
+        "heart": 170800,
+        "video": 250,
+        "digg": 2599
+      },
+      "musicMeta": {
+        "musicName": "original sound - \ud835\udc0c\ud835\udc08\ud835\udc12\ud835\udc07\ud835\udc14\u30b7\ufe0e\ud83e\udd8b\ud83e\udec0",
+        "musicAuthor": "\ud835\udc0c\ud835\udc08\ud835\udc12\ud835\udc07\ud835\udc14\u30b7\ufe0e\ud83e\udd8b\ud83e\udec0",
+        "musicOriginal": false,
+        "playUrl": "https://v58.tiktokcdn.com/video/tos/useast2a/tos-useast2a-v-27dcd7/okiAEkQfr7bEjcKEYYczbAiHmAbBmDogBR1GlA/?a=1180&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=.NpOcInz7ThgJvyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=M3Vnc285cmZwdTMzNzU8M0BpM3Vnc285cmZwdTMzNzU8M0BnL2hhMmRjNGZgLS1kMTZzYSNnL2hhMmRjNGZgLS1kMTZzcw%3D%3D&vvpl=1&l=20251009033652B87EA19FAE978187693E&VExpiration=1760038627&VSignature=-gOeKPOT_zqCZ17UtHXHuw&btag=e00078000&cc=14",
+        "coverMediumUrl": "https://p3-sg.tiktokcdn.com/aweme/200x200/tiktok-obj/7384014270524803857.jpeg",
+        "originalCoverMediumUrl": "https://p3-sg.tiktokcdn.com/aweme/200x200/tiktok-obj/7384014270524803857.jpeg",
+        "musicId": "7414441939317066501"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@rochet18/video/7532819548899151159",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 14,
+        "coverUrl": "https://p16-sign.tiktokcdn-us.com/tos-useast5-p-0068-tx/oUOEkI88AAMMHbe4jFfxfRDCYBEd4EIv4XDMBJ~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=mH%2FYO%2FbM06E%2B59teBlFZlzIYRYg%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "originalCoverUrl": "https://p16-sign.tiktokcdn-us.com/tos-useast5-p-0068-tx/oUOEkI88AAMMHbe4jFfxfRDCYBEd4EIv4XDMBJ~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=mH%2FYO%2FbM06E%2B59teBlFZlzIYRYg%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 52700,
+      "shareCount": 4140,
+      "playCount": 709400,
+      "collectCount": 6566,
+      "commentCount": 863,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "gymgirl"
+        },
+        {
+          "name": "gymtok"
+        },
+        {
+          "name": "workoutroutine"
+        },
+        {
+          "name": "fitness"
+        },
+        {
+          "name": "bodybuilding"
+        },
+        {
+          "name": "healthy"
+        },
+        {
+          "name": "goviraltiktok"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "714100227",
+          "name": "iPhone 15 Pro Max",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "1567175394",
+          "name": "Low Exposure",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 14
+    },
+    {
+      "id": "7556633499323682070",
+      "text": "how to achieve this waist with standing abs workouts!! Also make sure you eat a healthy & protein based diet to achieve this\ud83d\udc97\u2728 @DFYNE gym set, use my code EVE to save hehe\ud83d\udcb8\ud83d\udc97\ud83d\udc97 #abs #workout #athome #model ",
+      "textLanguage": "en",
+      "createTime": 1759415846,
+      "createTimeISO": "2025-10-02T14:37:26.000Z",
+      "isAd": true,
+      "authorMeta": {
+        "id": "79371162274676736",
+        "name": "eveolivia_",
+        "profileUrl": "https://www.tiktok.com/@eveolivia_",
+        "nickName": "eveolivia",
+        "verified": false,
+        "signature": "eveolivia121@gmail.com\ud83d\udc8c\n@DFYNE  & @AYBL athlete \nBoth code EVE to save \ud83e\udd1e\ud83c\udffc\ud83d\udc97\ud83d\udcb8",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p19-common-sign-useastred.tiktokcdn-eu.com/tos-useast2a-avt-0068-euttp/563c6b1b484ed40c29f11e67d0a98ca0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=0ee421eb&x-expires=1760122800&x-signature=8RcEGawJmX5LHmqWBSRzow5z09M%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "avatar": "https://p19-common-sign-useastred.tiktokcdn-eu.com/tos-useast2a-avt-0068-euttp/563c6b1b484ed40c29f11e67d0a98ca0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=0ee421eb&x-expires=1760122800&x-signature=8RcEGawJmX5LHmqWBSRzow5z09M%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "privateAccount": false,
+        "following": 937,
+        "friends": 0,
+        "fans": 346900,
+        "heart": 16500000,
+        "video": 2761,
+        "digg": 126200
+      },
+      "musicMeta": {
+        "musicName": "archangel - Slowed",
+        "musicAuthor": "DJ Anemia & Crier & sixnite",
+        "musicOriginal": false,
+        "musicAlbum": "archangel - Slowed",
+        "playUrl": "https://sf16-ies-music-sg.tiktokcdn.com/obj/tos-alisg-ve-2774/oI9bv8dUQIZ6fbrDjOPaGG9CRY3pg6AeAFfLFz",
+        "coverMediumUrl": "https://p16-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/oMGB8ABazI9FxgEfjFIA2QDPAfKFEDIjCAnePR.jpeg",
+        "originalCoverMediumUrl": "https://p16-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/oMGB8ABazI9FxgEfjFIA2QDPAfKFEDIjCAnePR.jpeg",
+        "musicId": "7467837925402413057"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@eveolivia_/video/7556633499323682070",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 14,
+        "coverUrl": "https://p16-pu-sign-no.tiktokcdn-eu.com/tos-no1a-p-0037-no/o0jXFAfDkQvnRPoE3jHcW30oeBiABE3KFEIjQg~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=Fii1k6hse4aw6xvyA3uvtFkQdco%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "originalCoverUrl": "https://p16-pu-sign-no.tiktokcdn-eu.com/tos-no1a-p-0037-no/o0jXFAfDkQvnRPoE3jHcW30oeBiABE3KFEIjQg~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=Fii1k6hse4aw6xvyA3uvtFkQdco%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 3209,
+      "shareCount": 65,
+      "playCount": 47000,
+      "collectCount": 2273,
+      "commentCount": 25,
+      "mentions": [
+        "@DFYNE"
+      ],
+      "detailedMentions": [
+        {
+          "id": "6712152765151413254",
+          "name": "dfyne.official",
+          "nickName": "DFYNE",
+          "profileUrl": "https://www.tiktok.com/@6712152765151413254"
+        }
+      ],
+      "hashtags": [
+        {
+          "name": ""
+        },
+        {
+          "name": "abs"
+        },
+        {
+          "name": "workout"
+        },
+        {
+          "name": "athome"
+        },
+        {
+          "name": "model"
+        }
+      ],
+      "effectStickers": [],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 14
+    },
+    {
+      "id": "7556257381039033622",
+      "text": "3x50sec \ud83e\udd2f\nIg: fitnives_  \u27a1\ufe0fnew post\ud83e\udd29\n#fyp #foryourpage #fitnesstrainer #tik_tok #viralvideo #croatia #fitnives #tiktokviral #lifestyle #viral #discipline #gymtok #helthylife #fitness #homeworkout #consistancy #abs #ab #absday ",
+      "textLanguage": "en",
+      "createTime": 1759328274,
+      "createTimeISO": "2025-10-01T14:17:54.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "6812138658318533638",
+        "name": "fitnives_",
+        "profileUrl": "https://www.tiktok.com/@fitnives_",
+        "nickName": "FITNivES\u2728",
+        "verified": false,
+        "signature": "\u2709\ufe0fgvozdenovicnives@gmail.com",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/f667619d79ea7e268a9492c364c852a0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=736225a4&x-expires=1760122800&x-signature=qffY7bItNj%2B1xnCRE9ltzUgkqGA%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "avatar": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/f667619d79ea7e268a9492c364c852a0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=736225a4&x-expires=1760122800&x-signature=qffY7bItNj%2B1xnCRE9ltzUgkqGA%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "privateAccount": false,
+        "following": 296,
+        "friends": 0,
+        "fans": 5492,
+        "heart": 140700,
+        "video": 174,
+        "digg": 4317
+      },
+      "musicMeta": {
+        "musicName": "original sound",
+        "musicAuthor": "Denni18",
+        "musicOriginal": true,
+        "playUrl": "https://v77.tiktokcdn.com/f2ba15da23d250fe286cf49d8c7f6913/68e80f29/video/tos/useast2a/tos-useast2a-v-27dcd7/o0iEl3Ew3Cl9AEBjAovKipBkAQE2HA6fgCW0SK/?a=1180&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=.NpOcInz7ThcEvyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=M3BweXE5cnk3NTMzNzU8M0BpM3BweXE5cnk3NTMzNzU8M0AyNGBoMmRrZGxhLS1kMTZzYSMyNGBoMmRrZGxhLS1kMTZzcw%3D%3D&vvpl=1&l=202510090337489F75B12B8630BB750AFE&btag=e00078000&cc=13",
+        "coverMediumUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/051d8c045fee89805c406bc7c5f08aa7~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=ab46f2f4&x-expires=1760122800&x-signature=HwDFzTG7BSGl%2F5kcMnpwEWwdpo4%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "originalCoverMediumUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/051d8c045fee89805c406bc7c5f08aa7~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=ab46f2f4&x-expires=1760122800&x-signature=HwDFzTG7BSGl%2F5kcMnpwEWwdpo4%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "musicId": "7543609071388904198"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@fitnives_/video/7556257381039033622",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 17,
+        "coverUrl": "https://p16-pu-sign-no.tiktokcdn-eu.com/tos-no1a-p-0037-no/o0BIUfmdvAKjDa8IAReEA7DIOLuFET1oRkfn6z~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=vmR0TnPvjh9he9zFw7md5pDXfFo%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my",
+        "originalCoverUrl": "https://p16-pu-sign-no.tiktokcdn-eu.com/tos-no1a-p-0037-no/o0BIUfmdvAKjDa8IAReEA7DIOLuFET1oRkfn6z~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=vmR0TnPvjh9he9zFw7md5pDXfFo%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 218,
+      "shareCount": 7,
+      "playCount": 4370,
+      "collectCount": 106,
+      "commentCount": 2,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "fyp"
+        },
+        {
+          "name": "foryourpage"
+        },
+        {
+          "name": "fitnesstrainer"
+        },
+        {
+          "name": "tik_tok"
+        },
+        {
+          "name": "viralvideo"
+        },
+        {
+          "name": "croatia"
+        },
+        {
+          "name": "fitnives"
+        },
+        {
+          "name": "tiktokviral"
+        },
+        {
+          "name": "lifestyle"
+        },
+        {
+          "name": "viral"
+        },
+        {
+          "name": "discipline"
+        },
+        {
+          "name": "gymtok"
+        },
+        {
+          "name": "helthylife"
+        },
+        {
+          "name": "fitness"
+        },
+        {
+          "name": "homeworkout"
+        },
+        {
+          "name": "consistancy"
+        },
+        {
+          "name": "abs"
+        },
+        {
+          "name": "ab"
+        },
+        {
+          "name": "absday"
+        }
+      ],
+      "effectStickers": [],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 17
+    },
+    {
+      "id": "7555669278813555976",
+      "text": "#motivation #workout #exercise #gymgirl #gymtok ",
+      "textLanguage": "un",
+      "createTime": 1759191353,
+      "createTimeISO": "2025-09-30T00:15:53.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7359613773915685893",
+        "name": "hazel_paul",
+        "profileUrl": "https://www.tiktok.com/@hazel_paul",
+        "nickName": "Hazel \ud83c\udfcb\ud83c\udffb",
+        "verified": false,
+        "signature": "16\n5'3\nMain @hazel",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/c4b10342433497013ad6b1e5602aba14~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=06858430&x-expires=1760122800&x-signature=hDcEFHrqghwUqI4U8jwye1LAgsY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "avatar": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/c4b10342433497013ad6b1e5602aba14~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=06858430&x-expires=1760122800&x-signature=hDcEFHrqghwUqI4U8jwye1LAgsY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "privateAccount": false,
+        "following": 108,
+        "friends": 0,
+        "fans": 237,
+        "heart": 4209,
+        "video": 10,
+        "digg": 1887
+      },
+      "musicMeta": {
+        "musicName": "sonido original",
+        "musicAuthor": "\ud835\udc08\ud835\udc2f\ud835\udc1a\u0301\ud835\udc27 \ud835\udc11\ud835\udc0c\ud835\udc2e\ud835\udc2c\ud835\udc22\ud835\udc1c \ud83c\udfa7",
+        "musicOriginal": true,
+        "playUrl": "https://v77.tiktokcdn.com/1a797a1572032597a093b2ca4c34a24d/68e80f48/video/tos/useast2a/tos-useast2a-v-27dcd7/o4GAigBiNEAwBEAobEKruUEXZu6wBfxAkmmyga/?a=1180&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=.NpOcInz7ThcEvyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=M2hycmo5cnJobzMzNzU8M0BpM2hycmo5cnJobzMzNzU8M0Brby1hMmRjaGFgLS1kMTZzYSNrby1hMmRjaGFgLS1kMTZzcw%3D%3D&vvpl=1&l=202510090337489F75B12B8630BB750AFE&btag=e00050000&cc=13",
+        "coverMediumUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/3bf2ebf8461ba6f2b9e5021d4b5ba085~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=37664d5c&x-expires=1760122800&x-signature=W0muS7tBfoUD2QmY8UaQTNrkEH8%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "originalCoverMediumUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/3bf2ebf8461ba6f2b9e5021d4b5ba085~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=37664d5c&x-expires=1760122800&x-signature=W0muS7tBfoUD2QmY8UaQTNrkEH8%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "musicId": "7303407411267046150"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@hazel_paul/video/7555669278813555976",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 15,
+        "coverUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0037/ooUb2kbRMEewEIwBEoyguEDsF2fAACTADI9bAC~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=3vh4TGR719HvYYP4VPGjJ2jcQuE%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my",
+        "originalCoverUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0037/ooUb2kbRMEewEIwBEoyguEDsF2fAACTADI9bAC~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=3vh4TGR719HvYYP4VPGjJ2jcQuE%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 991,
+      "shareCount": 3,
+      "playCount": 4234,
+      "collectCount": 52,
+      "commentCount": 2,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "motivation"
+        },
+        {
+          "name": "workout"
+        },
+        {
+          "name": "exercise"
+        },
+        {
+          "name": "gymgirl"
+        },
+        {
+          "name": "gymtok"
+        }
+      ],
+      "effectStickers": [],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 15
+    },
+    {
+      "id": "7532978793913437462",
+      "text": "#Fitness #natty #training #workoutmotivation #natural #fit #fyppp #gym #foryou #gymbro #viral #gymtok #gymrat #fyp #mutivation #discipline ",
+      "textLanguage": "un",
+      "createTime": 1753908305,
+      "createTimeISO": "2025-07-30T20:45:05.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7499762887549830166",
+        "name": "sweat_h_ub",
+        "profileUrl": "https://www.tiktok.com/@sweat_h_ub",
+        "nickName": "Sweat_h_ub",
+        "verified": false,
+        "signature": "Gym and Calestanics",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/ef398b4ac4d1d61b30c776f8968610f4~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=0a29a2d8&x-expires=1760122800&x-signature=XnSPXic7MgqfWTX0miaHbdiLllQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/ef398b4ac4d1d61b30c776f8968610f4~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=0a29a2d8&x-expires=1760122800&x-signature=XnSPXic7MgqfWTX0miaHbdiLllQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "privateAccount": false,
+        "following": 59,
+        "friends": 0,
+        "fans": 110,
+        "heart": 1950,
+        "video": 26,
+        "digg": 618
+      },
+      "musicMeta": {
+        "musicName": "original sound - Tzyyy",
+        "musicAuthor": "@k0uTTzy",
+        "musicOriginal": true,
+        "playUrl": "https://v77.tiktokcdn.com/93eba809dcd4cfdbdc604ba185ff5684/68e80ef9/video/tos/alisg/tos-alisg-v-27dcd7/oIoIfzQAgEELoICUFJTrGuelAnGpDCAQOAfQLw/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=.NpOcInz7ThZJvyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=M2Q7aGs5cng0NDMzODU8NEBpM2Q7aGs5cng0NDMzODU8NEBxNF5lMmRjNmJhLS1kMS1zYSNxNF5lMmRjNmJhLS1kMS1zcw%3D%3D&vvpl=1&l=202510090337129BD4FB711D258B487696&btag=e00078000&cc=13",
+        "coverMediumUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/7c14bb553b56491e59cdc65194e2635a~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=441b9cb5&x-expires=1760122800&x-signature=IoFCdDFjq29TQ4AS5SOf5P%2F%2BRz0%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "originalCoverMediumUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/7c14bb553b56491e59cdc65194e2635a~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=441b9cb5&x-expires=1760122800&x-signature=IoFCdDFjq29TQ4AS5SOf5P%2F%2BRz0%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "musicId": "7519908538576980753"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@sweat_h_ub/video/7532978793913437462",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 768,
+        "width": 576,
+        "duration": 16,
+        "coverUrl": "https://p16-pu-sign-no.tiktokcdn-eu.com/tos-no1a-p-0037-no/oQgZcKI62imBDFYhBF4hFqHIE6iB4xRnAaAPE~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=UvhyxqT5rJ5VAbEwRiB%2F%2FXY6hlU%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=maliva",
+        "originalCoverUrl": "https://p16-pu-sign-no.tiktokcdn-eu.com/tos-no1a-p-0037-no/oQgZcKI62imBDFYhBF4hFqHIE6iB4xRnAaAPE~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=UvhyxqT5rJ5VAbEwRiB%2F%2FXY6hlU%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=maliva",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 47,
+      "shareCount": 1,
+      "playCount": 1922,
+      "collectCount": 5,
+      "commentCount": 5,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "fitness"
+        },
+        {
+          "name": "natty"
+        },
+        {
+          "name": "training"
+        },
+        {
+          "name": "workoutmotivation"
+        },
+        {
+          "name": "natural"
+        },
+        {
+          "name": "fit"
+        },
+        {
+          "name": "fyppp"
+        },
+        {
+          "name": "gym"
+        },
+        {
+          "name": "foryou"
+        },
+        {
+          "name": "gymbro"
+        },
+        {
+          "name": "viral"
+        },
+        {
+          "name": "gymtok"
+        },
+        {
+          "name": "gymrat"
+        },
+        {
+          "name": "fyp"
+        },
+        {
+          "name": "mutivation"
+        },
+        {
+          "name": "discipline"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "714100227",
+          "name": "iPhone 15 Pro Max",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 16
+    },
+    {
+      "id": "7555819207405899015",
+      "text": "day.15\n#gym #fitness #fyp #body #traning ",
+      "textLanguage": "en",
+      "createTime": 1759226254,
+      "createTimeISO": "2025-09-30T09:57:34.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7417089738203235336",
+        "name": ".vlog7016",
+        "profileUrl": "https://www.tiktok.com/@.vlog7016",
+        "nickName": "iL",
+        "verified": false,
+        "signature": "Japan.\nInstagram\u2192@il.vro",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/99209d7b6a000c07493b76cd6e5ea204~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=6b8e593c&x-expires=1760122800&x-signature=rvyjTrDGj%2B0lgqoQjyoX9IMPbNc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "avatar": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/99209d7b6a000c07493b76cd6e5ea204~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=6b8e593c&x-expires=1760122800&x-signature=rvyjTrDGj%2B0lgqoQjyoX9IMPbNc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "privateAccount": false,
+        "following": 0,
+        "friends": 0,
+        "fans": 162,
+        "heart": 1831,
+        "video": 15,
+        "digg": 23
+      },
+      "musicMeta": {
+        "musicName": "BRUTALITY! (ULTRA SLOWED)",
+        "musicAuthor": "M4GN & Bl4CKlittle & 7senioR",
+        "musicOriginal": false,
+        "musicAlbum": "BRUTALITY!",
+        "playUrl": "https://sf16-ies-music-sg.tiktokcdn.com/obj/tos-alisg-ve-2774/osECMQ5fiDmIeStZ7KNngQFgzImDlAgBCVm82B",
+        "coverMediumUrl": "https://p16-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/ocPAni8ErAAzilLXVpWCCZYv60A7EwAUDBjOd.jpeg",
+        "originalCoverMediumUrl": "https://p16-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/ocPAni8ErAAzilLXVpWCCZYv60A7EwAUDBjOd.jpeg",
+        "musicId": "7437176038184405008"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@.vlog7016/video/7555819207405899015",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 720,
+        "width": 1280,
+        "duration": 15,
+        "coverUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0037/o8G9bYeEC6v1RLDIUCfCAjoQItQDqIYAj0fF8F~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=KRbf8wC2ccB9OZIbXXjtopzo0hA%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my",
+        "originalCoverUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0037/o8G9bYeEC6v1RLDIUCfCAjoQItQDqIYAj0fF8F~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=KRbf8wC2ccB9OZIbXXjtopzo0hA%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my",
+        "definition": "720p",
+        "format": "mp4"
+      },
+      "diggCount": 247,
+      "shareCount": 13,
+      "playCount": 1440,
+      "collectCount": 20,
+      "commentCount": 15,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "gym"
+        },
+        {
+          "name": "fitness"
+        },
+        {
+          "name": "fyp"
+        },
+        {
+          "name": "body"
+        },
+        {
+          "name": "traning"
+        }
+      ],
+      "effectStickers": [],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 15
+    },
+    {
+      "id": "7554213292428807455",
+      "text": "I weekly update  #gym #gymmotivation #fitnesschallenge2025 #fitnessjourney #update ",
+      "textLanguage": "en",
+      "createTime": 1758852354,
+      "createTimeISO": "2025-09-26T02:05:54.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7543274584011817998",
+        "name": "afitnesspro",
+        "profileUrl": "https://www.tiktok.com/@afitnesspro",
+        "nickName": "AFitness",
+        "verified": false,
+        "signature": "Not sure why my old account got banned\nFITNESS ACCOUNT",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/d8b99ef9bea9a290eb9b56264046d0f7~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=050fe280&x-expires=1760122800&x-signature=V9u0cpO3KezGbJRYl6zzEy8nIHY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/d8b99ef9bea9a290eb9b56264046d0f7~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=050fe280&x-expires=1760122800&x-signature=V9u0cpO3KezGbJRYl6zzEy8nIHY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "privateAccount": false,
+        "following": 66,
+        "friends": 0,
+        "fans": 12,
+        "heart": 272,
+        "video": 8,
+        "digg": 52
+      },
+      "musicMeta": {
+        "musicName": "original sound",
+        "musicAuthor": "twinframeedits \ud83e\ude96",
+        "musicOriginal": true,
+        "playUrl": "https://v77.tiktokcdn.com/057ca992e4a6720ddc00da33e7b98430/68e80ef5/video/tos/maliva/tos-maliva-v-27dcd7c799-us/okfCAboDbQhLIAEWd9OFGooDCfAofIT7t2kEAH/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=.NpOcInz7ThqJvyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=M2d0bnU5cmp1NDMzZzU8NEBpM2d0bnU5cmp1NDMzZzU8NEBuYjQuMmRranJhLS1kMS9zYSNuYjQuMmRranJhLS1kMS9zcw%3D%3D&vvpl=1&l=202510090336598D78B492917BA94B0C1A&btag=e00078000&cc=13",
+        "coverMediumUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/a5f14bc655db912e11cd79321e4e1234~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=15a91875&x-expires=1760122800&x-signature=d2DE9umK55gc2HcRvXIUkOm%2FSpg%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "originalCoverMediumUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/a5f14bc655db912e11cd79321e4e1234~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=15a91875&x-expires=1760122800&x-signature=d2DE9umK55gc2HcRvXIUkOm%2FSpg%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "musicId": "7529379970355825463"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@afitnesspro/video/7554213292428807455",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 15,
+        "coverUrl": "https://p16-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-p-0068-tx2/o0yuIgUG7RK8sDDfQNAFUVQhEf9LjeEFiBfmVA~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=x1rbMR41UpvghK1a4gY%2B%2BjZ27EE%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=maliva",
+        "originalCoverUrl": "https://p16-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-p-0068-tx2/o0yuIgUG7RK8sDDfQNAFUVQhEf9LjeEFiBfmVA~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=x1rbMR41UpvghK1a4gY%2B%2BjZ27EE%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=maliva",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 52,
+      "shareCount": 1,
+      "playCount": 1328,
+      "collectCount": 3,
+      "commentCount": 1,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "gym"
+        },
+        {
+          "name": "gymmotivation"
+        },
+        {
+          "name": "fitnesschallenge2025"
+        },
+        {
+          "name": "fitnessjourney"
+        },
+        {
+          "name": "update"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "714100227",
+          "name": "iPhone 15 Pro Max",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "4533146",
+          "name": "highlighter heart",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 15
+    },
+    {
+      "id": "7551442614239743262",
+      "text": "Practice doesn\u2019t make perfect practice makes improvement \n.\n.\n.\n.\n.\n\n#fitnessvideo #fitness #fitnessmotivation #workout #gym #bodybuilding #fitnessvideos #fitnessjourney #fit #motivation #gymlife #gymrat #gymtok #fitnessgoals #fitfam #workoutvideos #gymtips #workoutmotivation #gymmotivation #fitnessaddict #fitnessnyc #fitnessmodel #workoutvideo #fitnesstraining #inspiration #gymvideos #deadlifts  #fitnesslifestyle #deadication #discipline #fitspo #liftheavy #foryoupage #trending #viral #tiktok #nyc ",
+      "textLanguage": "en",
+      "createTime": 1758207257,
+      "createTimeISO": "2025-09-18T14:54:17.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7393088323231204394",
+        "name": "_millyfitness",
+        "profileUrl": "https://www.tiktok.com/@_millyfitness",
+        "nickName": "millyfitness_",
+        "verified": false,
+        "signature": "26\nNYC\nFitness Life!",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/4f573219b4ac27ec2c1079610a0c071d~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=6e9079d2&x-expires=1760122800&x-signature=Vd4p07XBZEGjZ5VUUz3KqdGQfcY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/4f573219b4ac27ec2c1079610a0c071d~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=6e9079d2&x-expires=1760122800&x-signature=Vd4p07XBZEGjZ5VUUz3KqdGQfcY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "privateAccount": false,
+        "following": 49,
+        "friends": 0,
+        "fans": 76,
+        "heart": 564,
+        "video": 13,
+        "digg": 329
+      },
+      "musicMeta": {
+        "musicName": "original sound",
+        "musicAuthor": "jhelo\ud83d\udd25",
+        "musicOriginal": true,
+        "playUrl": "https://v58.tiktokcdn.com/video/tos/alisg/tos-alisg-v-27dcd7/owAUqoBDkAEXli6OILs3qYlEUCKpuAAC4iAPa/?a=1180&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=.NpOcInz7ThgJvyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=amU1Z3Q5cm41NTMzODU8NEBpamU1Z3Q5cm41NTMzODU8NEBfbHFrMmQ0aDRhLS1kMS1zYSNfbHFrMmQ0aDRhLS1kMS1zcw%3D%3D&vvpl=1&l=20251009033652B87EA19FAE978187693E&VExpiration=1760038626&VSignature=cciTGbhYhxsTz1A6ryX1hg&btag=e00078000&cc=14",
+        "coverMediumUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/e4bfa71ec4faec584891ba80d7a37276~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=c9ab9d57&x-expires=1760122800&x-signature=Av7QzS08APFyZJ36DcZBaE0hCZs%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "originalCoverMediumUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/e4bfa71ec4faec584891ba80d7a37276~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=c9ab9d57&x-expires=1760122800&x-signature=Av7QzS08APFyZJ36DcZBaE0hCZs%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "musicId": "7534005749454883601"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@_millyfitness/video/7551442614239743262",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 14,
+        "coverUrl": "https://p16-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-p-0068-tx2/okH4zbEziAlMBGnnPXnciCRDVMRwAIVIRaBPy~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=ZV5hQmKh0z%2FRl187eAZrUnYh3J0%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "originalCoverUrl": "https://p16-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-p-0068-tx2/okH4zbEziAlMBGnnPXnciCRDVMRwAIVIRaBPy~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=ZV5hQmKh0z%2FRl187eAZrUnYh3J0%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "definition": "540p",
+        "format": "mp4",
+        "subtitleLinks": [
+          {
+            "language": "eng-US",
+            "downloadLink": "https://v16-webapp.tiktok.com/bfebfa06b25e3a694147b0a256dc6ec1/68e96063/video/tos/maliva/tos-maliva-v-0068c799-us/6a7ec2cd510d4d689a70741870699c01/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=24740&bt=12370&ds=4&ft=-ElcommjPD12NMW5wh-UxsoFXY6e3wv25XcAp&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmMzo0cGw5cm80NjMzaTczNEBpMzo0cGw5cm80NjMzaTczNEBjRl5Nc3FePmJKYSNvYF90aHFmOiMwY3M1MmQ0bDNhLS1kMTJzYSMwY3M1MmQ0bDNhLS1kMTJzcw%3D%3D&l=20251009033652B87EA19FAE978187693E&btag=e00078000",
+            "tiktokLink": "https://v16-webapp.tiktok.com/bfebfa06b25e3a694147b0a256dc6ec1/68e96063/video/tos/maliva/tos-maliva-v-0068c799-us/6a7ec2cd510d4d689a70741870699c01/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=24740&bt=12370&ds=4&ft=-ElcommjPD12NMW5wh-UxsoFXY6e3wv25XcAp&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmMzo0cGw5cm80NjMzaTczNEBpMzo0cGw5cm80NjMzaTczNEBjRl5Nc3FePmJKYSNvYF90aHFmOiMwY3M1MmQ0bDNhLS1kMTJzYSMwY3M1MmQ0bDNhLS1kMTJzcw%3D%3D&l=20251009033652B87EA19FAE978187693E&btag=e00078000",
+            "source": "ASR",
+            "sourceUnabbreviated": "automatic speech recognition",
+            "version": "1:big_caption"
+          },
+          {
+            "language": "spa-ES",
+            "downloadLink": "https://v16-webapp.tiktok.com/9daab5dc2729316afba5daf27b969005/68e96063/video/tos/maliva/tos-maliva-v-0068c799-us/1185c3372f2243ce94bb5d3fe2944a94/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=24740&bt=12370&ds=4&ft=-ElcommjPD12NMW5wh-UxsoFXY6e3wv25XcAp&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmMzo0cGw5cm80NjMzaTczNEBpMzo0cGw5cm80NjMzaTczNEBjRl5Nc3FePmJKYSNvYF90aHFmOiMwY3M1MmQ0bDNhLS1kMTJzYSMwY3M1MmQ0bDNhLS1kMTJzcw%3D%3D&l=20251009033652B87EA19FAE978187693E&btag=e00078000",
+            "tiktokLink": "https://v16-webapp.tiktok.com/9daab5dc2729316afba5daf27b969005/68e96063/video/tos/maliva/tos-maliva-v-0068c799-us/1185c3372f2243ce94bb5d3fe2944a94/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=24740&bt=12370&ds=4&ft=-ElcommjPD12NMW5wh-UxsoFXY6e3wv25XcAp&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmMzo0cGw5cm80NjMzaTczNEBpMzo0cGw5cm80NjMzaTczNEBjRl5Nc3FePmJKYSNvYF90aHFmOiMwY3M1MmQ0bDNhLS1kMTJzYSMwY3M1MmQ0bDNhLS1kMTJzcw%3D%3D&l=20251009033652B87EA19FAE978187693E&btag=e00078000",
+            "source": "MT",
+            "sourceUnabbreviated": "machine translation",
+            "version": "4"
+          },
+          {
+            "language": "spa-ES",
+            "downloadLink": "https://v16-webapp.tiktok.com/c70ec45990396ced7f70a65d43e7e6df/68e96063/video/tos/maliva/tos-maliva-v-0068c799-us/da0b5d3a0d8248ee83df7b17f011f501/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=24740&bt=12370&ds=4&ft=-ElcommjPD12NMW5wh-UxsoFXY6e3wv25XcAp&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmMzo0cGw5cm80NjMzaTczNEBpMzo0cGw5cm80NjMzaTczNEBjRl5Nc3FePmJKYSNvYF90aHFmOiMwY3M1MmQ0bDNhLS1kMTJzYSMwY3M1MmQ0bDNhLS1kMTJzcw%3D%3D&l=20251009033652B87EA19FAE978187693E&btag=e00078000",
+            "tiktokLink": "https://v16-webapp.tiktok.com/c70ec45990396ced7f70a65d43e7e6df/68e96063/video/tos/maliva/tos-maliva-v-0068c799-us/da0b5d3a0d8248ee83df7b17f011f501/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=24740&bt=12370&ds=4&ft=-ElcommjPD12NMW5wh-UxsoFXY6e3wv25XcAp&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmMzo0cGw5cm80NjMzaTczNEBpMzo0cGw5cm80NjMzaTczNEBjRl5Nc3FePmJKYSNvYF90aHFmOiMwY3M1MmQ0bDNhLS1kMTJzYSMwY3M1MmQ0bDNhLS1kMTJzcw%3D%3D&l=20251009033652B87EA19FAE978187693E&btag=e00078000",
+            "source": "MT",
+            "sourceUnabbreviated": "machine translation",
+            "version": "4:agent_deepSeek"
+          },
+          {
+            "language": "fra-FR",
+            "downloadLink": "https://v16-webapp.tiktok.com/89de1282e1f540fea6ec82c8a8a8da6b/68e96063/video/tos/maliva/tos-maliva-v-0068c799-us/6ffe631d10ca4f88a38433bc9bfe9743/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=24740&bt=12370&ds=4&ft=-ElcommjPD12NMW5wh-UxsoFXY6e3wv25XcAp&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmMzo0cGw5cm80NjMzaTczNEBpMzo0cGw5cm80NjMzaTczNEBjRl5Nc3FePmJKYSNvYF90aHFmOiMwY3M1MmQ0bDNhLS1kMTJzYSMwY3M1MmQ0bDNhLS1kMTJzcw%3D%3D&l=20251009033652B87EA19FAE978187693E&btag=e00078000",
+            "tiktokLink": "https://v16-webapp.tiktok.com/89de1282e1f540fea6ec82c8a8a8da6b/68e96063/video/tos/maliva/tos-maliva-v-0068c799-us/6ffe631d10ca4f88a38433bc9bfe9743/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=24740&bt=12370&ds=4&ft=-ElcommjPD12NMW5wh-UxsoFXY6e3wv25XcAp&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmMzo0cGw5cm80NjMzaTczNEBpMzo0cGw5cm80NjMzaTczNEBjRl5Nc3FePmJKYSNvYF90aHFmOiMwY3M1MmQ0bDNhLS1kMTJzYSMwY3M1MmQ0bDNhLS1kMTJzcw%3D%3D&l=20251009033652B87EA19FAE978187693E&btag=e00078000",
+            "source": "MT",
+            "sourceUnabbreviated": "machine translation",
+            "version": "4"
+          }
+        ]
+      },
+      "diggCount": 71,
+      "shareCount": 5,
+      "playCount": 1093,
+      "collectCount": 7,
+      "commentCount": 5,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "fitnessvideo"
+        },
+        {
+          "name": "fitness"
+        },
+        {
+          "name": "fitnessmotivation"
+        },
+        {
+          "name": "workout"
+        },
+        {
+          "name": "gym"
+        },
+        {
+          "name": "bodybuilding"
+        },
+        {
+          "name": "fitnessvideos"
+        },
+        {
+          "name": "fitnessjourney"
+        },
+        {
+          "name": "fit"
+        },
+        {
+          "name": "motivation"
+        },
+        {
+          "name": "gymlife"
+        },
+        {
+          "name": "gymrat"
+        },
+        {
+          "name": "gymtok"
+        },
+        {
+          "name": "fitnessgoals"
+        },
+        {
+          "name": "fitfam"
+        },
+        {
+          "name": "workoutvideos"
+        },
+        {
+          "name": "gymtips"
+        },
+        {
+          "name": "workoutmotivation"
+        },
+        {
+          "name": "gymmotivation"
+        },
+        {
+          "name": "fitnessaddict"
+        },
+        {
+          "name": "fitnessnyc"
+        },
+        {
+          "name": "fitnessmodel"
+        },
+        {
+          "name": "workoutvideo"
+        },
+        {
+          "name": "fitnesstraining"
+        },
+        {
+          "name": "inspiration"
+        },
+        {
+          "name": "gymvideos"
+        },
+        {
+          "name": "deadlifts"
+        },
+        {
+          "name": "fitnesslifestyle"
+        },
+        {
+          "name": "deadication"
+        },
+        {
+          "name": "discipline"
+        },
+        {
+          "name": "fitspo"
+        },
+        {
+          "name": "liftheavy"
+        },
+        {
+          "name": "foryoupage"
+        },
+        {
+          "name": "trending"
+        },
+        {
+          "name": "viral"
+        },
+        {
+          "name": "tiktok"
+        },
+        {
+          "name": "nyc"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "714100227",
+          "name": "iPhone 15 Pro Max",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "1567175394",
+          "name": "Low Exposure",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 14
+    },
+    {
+      "id": "7555025503711743264",
+      "text": "#CapCut #gym #fitness ",
+      "textLanguage": "un",
+      "createTime": 1759041537,
+      "createTimeISO": "2025-09-28T06:38:57.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "6909210437066703877",
+        "name": "piotrerowski",
+        "profileUrl": "https://www.tiktok.com/@piotrerowski",
+        "nickName": "Piotr Bogusz",
+        "verified": false,
+        "signature": "",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7333579893806596101~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=0dbf4dd5&x-expires=1760122800&x-signature=GX4UHerZJbWxxdpKsN4PyBlooI4%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "avatar": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7333579893806596101~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=0dbf4dd5&x-expires=1760122800&x-signature=GX4UHerZJbWxxdpKsN4PyBlooI4%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "privateAccount": false,
+        "following": 42,
+        "friends": 0,
+        "fans": 22,
+        "heart": 16,
+        "video": 7,
+        "digg": 451
+      },
+      "musicMeta": {
+        "musicName": "Rock and roll that raises tension(1268838)",
+        "musicAuthor": "Turner",
+        "musicOriginal": false,
+        "playUrl": "https://sf16-ies-music-va.tiktokcdn.com/obj/tos-useast2a-ve-2774/df2130a61a534ea0b4f7d974093216a0",
+        "coverMediumUrl": "https://p16-amd-va.tiktokcdn.com/img/tos-useast2a-v-2774/21ebc5fa64514d34b1af12efb1dcd385~c5_200x200.jpeg",
+        "originalCoverMediumUrl": "https://p16-amd-va.tiktokcdn.com/img/tos-useast2a-v-2774/21ebc5fa64514d34b1af12efb1dcd385~c5_200x200.jpeg",
+        "musicId": "7122518545061120002"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@piotrerowski/video/7555025503711743264",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 14,
+        "coverUrl": "https://p19-common-sign-useastred.tiktokcdn-eu.com/tos-useast2a-p-0037-euttp/oo0XEYkCABiGLotYu2bAfiA1vBzcSI1qIGb9CB~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=9p7Faq5c3Qyk%2BtcDTXAtNCjKfRY%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=maliva",
+        "originalCoverUrl": "https://p19-common-sign-useastred.tiktokcdn-eu.com/tos-useast2a-p-0037-euttp/oo0XEYkCABiGLotYu2bAfiA1vBzcSI1qIGb9CB~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=9p7Faq5c3Qyk%2BtcDTXAtNCjKfRY%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=maliva",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 3,
+      "shareCount": 0,
+      "playCount": 1005,
+      "collectCount": 0,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "capcut"
+        },
+        {
+          "name": "gym"
+        },
+        {
+          "name": "fitness"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "714100227",
+          "name": "iPhone 15 Pro Max",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "4533146",
+          "name": "highlighter heart",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 14
+    },
+    {
+      "id": "7555053083328269590",
+      "text": "#CapCut ",
+      "textLanguage": "un",
+      "createTime": 1759047878,
+      "createTimeISO": "2025-09-28T08:24:38.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7551463430772360225",
+        "name": "patrice.fitjourne",
+        "profileUrl": "https://www.tiktok.com/@patrice.fitjourne",
+        "nickName": "Patrice.fitjourney",
+        "verified": false,
+        "signature": "Instagram>Patrice.fitjourney",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/b2c4c9839c715d8bba09650a49928a2e~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=90ec106b&x-expires=1760122800&x-signature=6C9LYvjNnjyGUL2%2BeWd%2Blsf6g1w%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/b2c4c9839c715d8bba09650a49928a2e~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=90ec106b&x-expires=1760122800&x-signature=6C9LYvjNnjyGUL2%2BeWd%2Blsf6g1w%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "privateAccount": false,
+        "following": 0,
+        "friends": 0,
+        "fans": 9,
+        "heart": 1192,
+        "video": 37,
+        "digg": 23
+      },
+      "musicMeta": {
+        "musicName": "Originalton",
+        "musicAuthor": "Patrice.fitjourney",
+        "musicOriginal": true,
+        "playUrl": "https://v58.tiktokcdn.com/video/tos/no1a/tos-no1a-v-2370-no/o0hAQWJW0QAfNmAAQEQYjGQeeEwRM8eGQy5jjj/?a=1180&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=.NpOcInz7ThIJvyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=ajs0NXE5cmxpNjMzbzU8NUBpajs0NXE5cmxpNjMzbzU8NUBsbjRuMmQ0LmBhLS1kMTFzYSNsbjRuMmQ0LmBhLS1kMTFzcw%3D%3D&vvpl=1&l=202510090337020EEA72B409286A8C08DE&VExpiration=1760038637&VSignature=jiU9sfmzjw0Tk6FDaf3BLw&btag=e00078000&cc=14",
+        "coverMediumUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/b2c4c9839c715d8bba09650a49928a2e~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=90ec106b&x-expires=1760122800&x-signature=6C9LYvjNnjyGUL2%2BeWd%2Blsf6g1w%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "originalCoverMediumUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/b2c4c9839c715d8bba09650a49928a2e~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=90ec106b&x-expires=1760122800&x-signature=6C9LYvjNnjyGUL2%2BeWd%2Blsf6g1w%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "musicId": "7555053076433111810"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@patrice.fitjourne/video/7555053083328269590",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 14,
+        "coverUrl": "https://p16-pu-sign-no.tiktokcdn-eu.com/tos-no1a-p-0037-no/okcQgT2QPwj8FcoAGFPAEpEMYDxMfdArRGBDfk~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=AhYI2kxKRLNd%2BSv4BlDpLKnEEio%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "originalCoverUrl": "https://p16-pu-sign-no.tiktokcdn-eu.com/tos-no1a-p-0037-no/okcQgT2QPwj8FcoAGFPAEpEMYDxMfdArRGBDfk~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=AhYI2kxKRLNd%2BSv4BlDpLKnEEio%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "definition": "540p",
+        "format": "mp4",
+        "subtitleLinks": [
+          {
+            "language": "por-PT",
+            "downloadLink": "https://v16-webapp.tiktok.com/c8aa6fc668c14e2b127928ab14a3d803/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/437dfcb85cdc4c9ba75b2baa8cb0e546/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "tiktokLink": "https://v16-webapp.tiktok.com/c8aa6fc668c14e2b127928ab14a3d803/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/437dfcb85cdc4c9ba75b2baa8cb0e546/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "source": "MT",
+            "sourceUnabbreviated": "machine translation",
+            "version": "4"
+          },
+          {
+            "language": "ita-IT",
+            "downloadLink": "https://v16-webapp.tiktok.com/6194b7b530809f11a997046793a59854/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/9633e7247e0d4e0b82b9ef73bd8d9879/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "tiktokLink": "https://v16-webapp.tiktok.com/6194b7b530809f11a997046793a59854/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/9633e7247e0d4e0b82b9ef73bd8d9879/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "source": "MT",
+            "sourceUnabbreviated": "machine translation",
+            "version": "4"
+          },
+          {
+            "language": "fra-FR",
+            "downloadLink": "https://v16-webapp.tiktok.com/2f258bd5268e622e5d8386608ae4262a/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/c95670d45fb44016950d9e37a1ee87b9/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "tiktokLink": "https://v16-webapp.tiktok.com/2f258bd5268e622e5d8386608ae4262a/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/c95670d45fb44016950d9e37a1ee87b9/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "source": "MT",
+            "sourceUnabbreviated": "machine translation",
+            "version": "4"
+          },
+          {
+            "language": "pol-PL",
+            "downloadLink": "https://v16-webapp.tiktok.com/a71065bd85384e12b52f27658c5e3b5f/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/17b5d09a0b1a40029ac6bdf9e22a76f2/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "tiktokLink": "https://v16-webapp.tiktok.com/a71065bd85384e12b52f27658c5e3b5f/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/17b5d09a0b1a40029ac6bdf9e22a76f2/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "source": "MT",
+            "sourceUnabbreviated": "machine translation",
+            "version": "4"
+          },
+          {
+            "language": "spa-ES",
+            "downloadLink": "https://v16-webapp.tiktok.com/2a2dcbde17619119f4a68999f0619121/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/91f24273146b46c48a5731113edebcfa/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "tiktokLink": "https://v16-webapp.tiktok.com/2a2dcbde17619119f4a68999f0619121/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/91f24273146b46c48a5731113edebcfa/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "source": "MT",
+            "sourceUnabbreviated": "machine translation",
+            "version": "4"
+          },
+          {
+            "language": "ron-RO",
+            "downloadLink": "https://v16-webapp.tiktok.com/16656b3f0e7b58f78478f71926237a16/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/99b24b682bac45a5b3065ac02cf64472/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "tiktokLink": "https://v16-webapp.tiktok.com/16656b3f0e7b58f78478f71926237a16/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/99b24b682bac45a5b3065ac02cf64472/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "source": "MT",
+            "sourceUnabbreviated": "machine translation",
+            "version": "4"
+          },
+          {
+            "language": "ell-GR",
+            "downloadLink": "https://v16-webapp.tiktok.com/7a31ed58c1baa17eae78a42b67f3fa4b/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/01c05699d3674e3f836b631ea1f67f7f/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "tiktokLink": "https://v16-webapp.tiktok.com/7a31ed58c1baa17eae78a42b67f3fa4b/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/01c05699d3674e3f836b631ea1f67f7f/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "source": "MT",
+            "sourceUnabbreviated": "machine translation",
+            "version": "4"
+          },
+          {
+            "language": "eng-US",
+            "downloadLink": "https://v16-webapp.tiktok.com/3489076b03bf628cdaf832d283bfe541/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/058e826d92144387a9e386d9546c944d/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "tiktokLink": "https://v16-webapp.tiktok.com/3489076b03bf628cdaf832d283bfe541/68e9606d/video/tos/no1a/tos-no1a-v-0037-no/058e826d92144387a9e386d9546c944d/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2968&bt=1484&ds=4&ft=IecA0oLBD12NvPHSUWIxRt2SLlBF-UjNS8opiX&mime_type=video_mp4&qs=13&rc=cnF8b2hsc2d3SkBwaHIxaDFybndmM28zcnI5cmppNjMzbzczNUBpM28zcnI5cmppNjMzbzczNUBjRl5Nc3FePmJKYSNvYF90aHFmOiNkcG9nMmQ0LmBhLS1kMTFzYSNkcG9nMmQ0LmBhLS1kMTFzcw%3D%3D&l=202510090337020EEA72B409286A8C08DE&btag=e00078000",
+            "source": "ASR",
+            "sourceUnabbreviated": "automatic speech recognition",
+            "version": "1:big_caption"
+          }
+        ]
+      },
+      "diggCount": 1,
+      "shareCount": 0,
+      "playCount": 781,
+      "collectCount": 0,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "capcut"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "2125221469",
+          "name": "High Quality",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 14
+    },
+    {
+      "id": "7556167645054225686",
+      "text": "#fitnesss ",
+      "textLanguage": "un",
+      "createTime": 1759307387,
+      "createTimeISO": "2025-10-01T08:29:47.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7555778565842928662",
+        "name": "santosfitnesss",
+        "profileUrl": "https://www.tiktok.com/@santosfitnesss",
+        "nickName": "santosfitnesss",
+        "verified": false,
+        "signature": "N\u00famero uno en complementos del mundo fitness",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/96314c9456b99a4b690ae50b1f04f54d~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=bc443c30&x-expires=1760122800&x-signature=AzvzZ0qspBy7Dt6cFyzm9rU6acI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "avatar": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/96314c9456b99a4b690ae50b1f04f54d~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=bc443c30&x-expires=1760122800&x-signature=AzvzZ0qspBy7Dt6cFyzm9rU6acI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "privateAccount": false,
+        "following": 0,
+        "friends": 0,
+        "fans": 1,
+        "heart": 2,
+        "video": 2,
+        "digg": 1
+      },
+      "musicMeta": {
+        "musicName": "AURA",
+        "musicAuthor": "Ogryzek",
+        "musicOriginal": false,
+        "musicAlbum": "AURA",
+        "playUrl": "https://sf16-ies-music-va.tiktokcdn.com/obj/tos-useast2a-ve-2774/o8OBIgD0F1GKhAGRiZK1CBrt6f5IMQOfgmgyEE",
+        "coverMediumUrl": "https://p16-amd-va.tiktokcdn.com/img/tos-useast2a-v-2774/okCroBAA76iArE0PWJAAAABqZGEvHYCgYAiUP~c5_200x200.jpeg",
+        "originalCoverMediumUrl": "https://p16-amd-va.tiktokcdn.com/img/tos-useast2a-v-2774/okCroBAA76iArE0PWJAAAABqZGEvHYCgYAiUP~c5_200x200.jpeg",
+        "musicId": "7387573619378046993"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@santosfitnesss/video/7556167645054225686",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 14,
+        "coverUrl": "https://p16-pu-sign-no.tiktokcdn-eu.com/tos-no1a-p-0037-no/owyBSWnrijkBIniw03CA75nfGK3IAJCbcICFmb~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=O94nYjCaJhflrtVjU%2BzZNJgcqtw%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=maliva",
+        "originalCoverUrl": "https://p16-pu-sign-no.tiktokcdn-eu.com/tos-no1a-p-0037-no/owyBSWnrijkBIniw03CA75nfGK3IAJCbcICFmb~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=O94nYjCaJhflrtVjU%2BzZNJgcqtw%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=maliva",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 2,
+      "shareCount": 0,
+      "playCount": 542,
+      "collectCount": 0,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "fitnesss"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "714100227",
+          "name": "iPhone 15 Pro Max",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "4533146",
+          "name": "highlighter heart",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 14
+    },
+    {
+      "id": "7556171288558210327",
+      "text": "#fitnesss ",
+      "textLanguage": "un",
+      "createTime": 1759308234,
+      "createTimeISO": "2025-10-01T08:43:54.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7555778565842928662",
+        "name": "santosfitnesss",
+        "profileUrl": "https://www.tiktok.com/@santosfitnesss",
+        "nickName": "santosfitnesss",
+        "verified": false,
+        "signature": "N\u00famero uno en complementos del mundo fitness",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/96314c9456b99a4b690ae50b1f04f54d~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=bc443c30&x-expires=1760122800&x-signature=AzvzZ0qspBy7Dt6cFyzm9rU6acI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "avatar": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/96314c9456b99a4b690ae50b1f04f54d~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=bc443c30&x-expires=1760122800&x-signature=AzvzZ0qspBy7Dt6cFyzm9rU6acI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "privateAccount": false,
+        "following": 0,
+        "friends": 0,
+        "fans": 1,
+        "heart": 2,
+        "video": 2,
+        "digg": 1
+      },
+      "musicMeta": {
+        "musicName": "sonido original",
+        "musicAuthor": "santosfitnesss",
+        "musicOriginal": true,
+        "playUrl": "https://v58.tiktokcdn.com/video/tos/no1a/tos-no1a-v-2370-no/o41zNBWACE7viB1lADGwAEAcZYPAaTpcawi6z/?a=1180&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=.NpOcInz7ThIJvyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=M3U1b285cm1oNjMzbzU8NUBpM3U1b285cm1oNjMzbzU8NUBhc2RuMmQ0Z2JhLS1kMTFzYSNhc2RuMmQ0Z2JhLS1kMTFzcw%3D%3D&vvpl=1&l=202510090337020EEA72B409286A8C08DE&VExpiration=1760038637&VSignature=JQSJmUzASCv_CVaBHTUy4g&btag=e00078000&cc=14",
+        "coverMediumUrl": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/96314c9456b99a4b690ae50b1f04f54d~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=bc443c30&x-expires=1760122800&x-signature=AzvzZ0qspBy7Dt6cFyzm9rU6acI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "originalCoverMediumUrl": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/96314c9456b99a4b690ae50b1f04f54d~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=bc443c30&x-expires=1760122800&x-signature=AzvzZ0qspBy7Dt6cFyzm9rU6acI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "musicId": "7556171294879517462"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@santosfitnesss/video/7556171288558210327",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 14,
+        "coverUrl": "https://p16-pu-sign-no.tiktokcdn-eu.com/tos-no1a-p-0037-no/owlSCTfByE34Il0CQ67xXb0ncAcAHiTniAkZIw~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=i2IAKvwjgxwgjT1uQR9Qenie2hs%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "originalCoverUrl": "https://p16-pu-sign-no.tiktokcdn-eu.com/tos-no1a-p-0037-no/owlSCTfByE34Il0CQ67xXb0ncAcAHiTniAkZIw~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=i2IAKvwjgxwgjT1uQR9Qenie2hs%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 0,
+      "shareCount": 0,
+      "playCount": 383,
+      "collectCount": 0,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "fitnesss"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "2125221469",
+          "name": "High Quality",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 14
+    },
+    {
+      "id": "7557524278002879774",
+      "text": "So much of fitness is over commercialized when really it\u2019s simple. Train hard, eat right, rest hard. #fitnesshack #gymcommunity ",
+      "textLanguage": "en",
+      "createTime": 1759623252,
+      "createTimeISO": "2025-10-05T00:14:12.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "6777138429430301702",
+        "name": "ashlyn.mp4",
+        "profileUrl": "https://www.tiktok.com/@ashlyn.mp4",
+        "nickName": "ashlyn.mp4",
+        "verified": false,
+        "signature": "5'10\" \ud83d\ude3a HTX",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/22159e2e5df9876baecb170e8f0aa34b~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=3ba56ed1&x-expires=1760122800&x-signature=mcYcGXK6DVwAONiZIK93zOVEhso%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/22159e2e5df9876baecb170e8f0aa34b~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=3ba56ed1&x-expires=1760122800&x-signature=mcYcGXK6DVwAONiZIK93zOVEhso%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "privateAccount": false,
+        "following": 427,
+        "friends": 0,
+        "fans": 5733,
+        "heart": 389600,
+        "video": 76,
+        "digg": 62700
+      },
+      "musicMeta": {
+        "musicName": "original sound",
+        "musicAuthor": "ashlyn.mp4",
+        "musicOriginal": true,
+        "playUrl": "https://v77.tiktokcdn-eu.com/2ebd27baac782fdb490cf4db28297507/68e80ee4/video/tos/maliva/tos-maliva-v-27dcd7c799-us/oYCAEUFoVEWAAJ2EhyhfBFu4DD5Y8bE3iYFveA/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=.NpOcInz7ThoJvyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=MzV2OnU5cm91NjMzaTU8NEBpMzV2OnU5cm91NjMzaTU8NEBtX2lzMmRrZGRhLS1kMTJzYSNtX2lzMmRrZGRhLS1kMTJzcw%3D%3D&vvpl=1&l=20251008193654CF868423815BC092356F&btag=e00070000",
+        "coverMediumUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/22159e2e5df9876baecb170e8f0aa34b~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=3ba56ed1&x-expires=1760122800&x-signature=mcYcGXK6DVwAONiZIK93zOVEhso%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "originalCoverMediumUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/22159e2e5df9876baecb170e8f0aa34b~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=3ba56ed1&x-expires=1760122800&x-signature=mcYcGXK6DVwAONiZIK93zOVEhso%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "musicId": "7557524234353527582"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@ashlyn.mp4/video/7557524278002879774",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 13,
+        "coverUrl": "https://p16-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oMfQu2JqwCIFBbsICQtuiTAMOdfAFRAZDIjhEf~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=38UcY6ZholD2grYki6hhL6OBAQo%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "originalCoverUrl": "https://p16-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oMfQu2JqwCIFBbsICQtuiTAMOdfAFRAZDIjhEf~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=38UcY6ZholD2grYki6hhL6OBAQo%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 38,
+      "shareCount": 0,
+      "playCount": 351,
+      "collectCount": 0,
+      "commentCount": 8,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "fitnesshack"
+        },
+        {
+          "name": "gymcommunity"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "1091027104",
+          "name": "Soft Plus",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 13
+    },
+    {
+      "id": "7555707413827996959",
+      "text": "My Favorite Core Circuit \ud83e\udef0\ud83c\udffe\ud83e\udee3 #Gymlok #gym #workout #gymgirl #Fitness #fitnessjourney #GymLife #gymreels #gymhumor #coreworkouts #coreworkout #core #abs ",
+      "textLanguage": "en",
+      "createTime": 1759200238,
+      "createTimeISO": "2025-09-30T02:43:58.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7486158651301151790",
+        "name": "liftwlekoh",
+        "profileUrl": "https://www.tiktok.com/@liftwlekoh",
+        "nickName": "liftwlekoh",
+        "verified": false,
+        "signature": "~Kinesiology \n~Let\u2019s Go Lift\ud83c\udfcb\ud83c\udffe\u200d\u2640\ufe0f\n~Matthew 5:14\ud83d\udc95",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/fa388d58b8c0530f110076056a035526~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=c60b6de1&x-expires=1760122800&x-signature=5pcapM0skud4SvB1mBU1dC4NG80%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/fa388d58b8c0530f110076056a035526~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=c60b6de1&x-expires=1760122800&x-signature=5pcapM0skud4SvB1mBU1dC4NG80%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "privateAccount": false,
+        "following": 15,
+        "friends": 0,
+        "fans": 72,
+        "heart": 2268,
+        "video": 39,
+        "digg": 1568
+      },
+      "musicMeta": {
+        "musicName": "PULL UP",
+        "musicAuthor": "Wels",
+        "musicOriginal": false,
+        "musicAlbum": "PULL UP",
+        "playUrl": "https://sf16-ies-music-sg.tiktokcdn.com/obj/tos-alisg-ve-2774/ooDe1PuCfFdIa3LzpOMOXsFg8cAeUTORcaII6G",
+        "coverMediumUrl": "https://p16-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/oAQPEAgGPC0KtrDLIAA9bFI4aDf3etGAkzIeGD.jpeg",
+        "originalCoverMediumUrl": "https://p16-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/oAQPEAgGPC0KtrDLIAA9bFI4aDf3etGAkzIeGD.jpeg",
+        "musicId": "7462865697472612353"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@liftwlekoh/video/7555707413827996959",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 15,
+        "coverUrl": "https://p16-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-p-0068-tx2/o8QtgAQAGDfbACMjaXNz80f8UfKRZQAAUoQ7Jf~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=z1FQpkAKfl%2FjIUUlL7KODS4sfmc%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "originalCoverUrl": "https://p16-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-p-0068-tx2/o8QtgAQAGDfbACMjaXNz80f8UfKRZQAAUoQ7Jf~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=z1FQpkAKfl%2FjIUUlL7KODS4sfmc%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 44,
+      "shareCount": 0,
+      "playCount": 325,
+      "collectCount": 10,
+      "commentCount": 12,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "gymlok"
+        },
+        {
+          "name": "gym"
+        },
+        {
+          "name": "workout"
+        },
+        {
+          "name": "gymgirl"
+        },
+        {
+          "name": "fitness"
+        },
+        {
+          "name": "fitnessjourney"
+        },
+        {
+          "name": "gymlife"
+        },
+        {
+          "name": "gymreels"
+        },
+        {
+          "name": "gymhumor"
+        },
+        {
+          "name": "coreworkouts"
+        },
+        {
+          "name": "coreworkout"
+        },
+        {
+          "name": "core"
+        },
+        {
+          "name": "abs"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "714100227",
+          "name": "iPhone 15 Pro Max",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "1567175394",
+          "name": "Low Exposure",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 15
+    },
+    {
+      "id": "7558150634231450911",
+      "text": "Loca and locked in \ud83e\udd0f\ud83c\udffb\ud83d\ude0c#fitnessjourney #fitnes #fyppp #2025 ",
+      "textLanguage": "en",
+      "createTime": 1759769116,
+      "createTimeISO": "2025-10-06T16:45:16.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7379443232399295534",
+        "name": "lachapariitaa.23",
+        "profileUrl": "https://www.tiktok.com/@lachapariitaa.23",
+        "nickName": "<3",
+        "verified": false,
+        "signature": "23 \ud83d\udc8b\nLatina\ud83c\uddf2\ud83c\uddfd fitness traning\ud83d\udc95\nLike comment share follow(ifb) \n3k besties <3",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/c513a9e2572cc918d1c55851607efe7b~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=878ab1fe&x-expires=1760122800&x-signature=L1ODOmnGPGFV%2BNRoFHaVkjL3jAk%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/c513a9e2572cc918d1c55851607efe7b~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=878ab1fe&x-expires=1760122800&x-signature=L1ODOmnGPGFV%2BNRoFHaVkjL3jAk%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "privateAccount": false,
+        "following": 4773,
+        "friends": 0,
+        "fans": 2941,
+        "heart": 34400,
+        "video": 718,
+        "digg": 167700
+      },
+      "musicMeta": {
+        "musicName": "sonido original",
+        "musicAuthor": "HvMusic",
+        "musicOriginal": true,
+        "playUrl": "https://v77.tiktokcdn.com/63faeb0f48089ef036ca1a3fe17580b8/68e80ef0/video/tos/alisg/tos-alisg-v-27dcd7/ocACAf2GBAC0iAlKONiOpKEhRAoEdONw72Et0B/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=.NpOcInz7ThqJvyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=M3Bua3U5cjptNTMzODU8NEBpM3Bua3U5cjptNTMzODU8NEA0b2hiMmRjaDNhLS1kMS1zYSM0b2hiMmRjaDNhLS1kMS1zcw%3D%3D&vvpl=1&l=202510090336598D78B492917BA94B0C1A&btag=e00078000&cc=13",
+        "coverMediumUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/1ea40d2a2f28799d5dcab767857b22ac~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=062bb296&x-expires=1760122800&x-signature=NXXJ70bsmVp1cm7j8AdceKDw9qc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "originalCoverMediumUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/1ea40d2a2f28799d5dcab767857b22ac~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=062bb296&x-expires=1760122800&x-signature=NXXJ70bsmVp1cm7j8AdceKDw9qc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "musicId": "7533741646626687761"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@lachapariitaa.23/video/7558150634231450911",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 768,
+        "width": 576,
+        "duration": 14,
+        "coverUrl": "https://p16-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oko435j8Ilf5BsPEIKdjyEA7CRih5VfGnAoBki~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=ABIzWNSE5GsSo8qzQLQugeMmd3Y%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=maliva",
+        "originalCoverUrl": "https://p16-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oko435j8Ilf5BsPEIKdjyEA7CRih5VfGnAoBki~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=ABIzWNSE5GsSo8qzQLQugeMmd3Y%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=maliva",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 27,
+      "shareCount": 0,
+      "playCount": 323,
+      "collectCount": 1,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "fitnessjourney"
+        },
+        {
+          "name": "fitnes"
+        },
+        {
+          "name": "fyppp"
+        },
+        {
+          "name": "2025"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "714100227",
+          "name": "iPhone 15 Pro Max",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "4533146",
+          "name": "highlighter heart",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 14
+    },
+    {
+      "id": "7558822244743449887",
+      "text": "Feels so good to stay consistent! Keep going! #fitness #workout #lift #workoutmotivation #consistency ",
+      "textLanguage": "en",
+      "createTime": 1759925461,
+      "createTimeISO": "2025-10-08T12:11:01.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7069761075675890734",
+        "name": "greatlakesrunner40",
+        "profileUrl": "https://www.tiktok.com/@greatlakesrunner40",
+        "nickName": "Zack",
+        "verified": false,
+        "signature": "Hybrid plantbased athlete \nSword Performance/@alter_ego_running",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-avt-0068-tx2/273cd1dd457c4e9452a189fc8baebac1~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=12c0cc3f&x-expires=1760122800&x-signature=nrcEfwKQkEk1dvMmbR9Bft%2Bm%2F2w%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-avt-0068-tx2/273cd1dd457c4e9452a189fc8baebac1~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=12c0cc3f&x-expires=1760122800&x-signature=nrcEfwKQkEk1dvMmbR9Bft%2Bm%2F2w%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "privateAccount": false,
+        "following": 1185,
+        "friends": 0,
+        "fans": 3332,
+        "heart": 125400,
+        "video": 762,
+        "digg": 285800
+      },
+      "musicMeta": {
+        "musicName": "Feel It All",
+        "musicAuthor": "Chance Pe\u00f1a",
+        "musicOriginal": false,
+        "musicAlbum": "Ever-Shifting, Continual Blossoming",
+        "playUrl": "https://sf19.tiktokcdn-us.com/obj/tos-alisg-ve-2774/ooH9DsfDgQ55zZNaufUgP1kvWCwFWE3DFdreYA",
+        "coverMediumUrl": "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/ocJpx7JiAvsWAEOEGAizBhCBwRojAADOfM1WU6~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "originalCoverMediumUrl": "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/ocJpx7JiAvsWAEOEGAizBhCBwRojAADOfM1WU6~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "musicId": "7405648057099880449"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@greatlakesrunner40/video/7558822244743449887",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 14,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oY1eBByfgfRvYe2ZAYiBAJZ9aMOAUVuEfUBFif~tplv-tiktokx-origin.image?dr=9636&x-expires=1760122800&x-signature=86oEY%2FwjM1gEGSbCmo9rnYKQesM%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oY1eBByfgfRvYe2ZAYiBAJZ9aMOAUVuEfUBFif~tplv-tiktokx-origin.image?dr=9636&x-expires=1760122800&x-signature=86oEY%2FwjM1gEGSbCmo9rnYKQesM%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 44,
+      "shareCount": 0,
+      "playCount": 286,
+      "collectCount": 0,
+      "commentCount": 11,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "fitness"
+        },
+        {
+          "name": "workout"
+        },
+        {
+          "name": "lift"
+        },
+        {
+          "name": "workoutmotivation"
+        },
+        {
+          "name": "consistency"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "263840",
+          "name": "Green Screen",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 14
+    },
+    {
+      "id": "7558875306929474824",
+      "text": "#gym #Fitness #Fitness Equipment",
+      "textLanguage": "en",
+      "createTime": 1759937807,
+      "createTimeISO": "2025-10-08T15:36:47.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7489777323094836242",
+        "name": "bulus613",
+        "profileUrl": "https://www.tiktok.com/@bulus613",
+        "nickName": "Fitness Equipment Factory",
+        "verified": false,
+        "signature": "Radafitness equipment supplier from china\nWeChat:RD69688\nWhatsApp:+8613794489405",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/65c8cc325855017cf0ab343ec5ed8c07~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=521b20c3&x-expires=1760122800&x-signature=5V73Peg8yk3MMaQnSPeBYKX50RQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "avatar": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/65c8cc325855017cf0ab343ec5ed8c07~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=521b20c3&x-expires=1760122800&x-signature=5V73Peg8yk3MMaQnSPeBYKX50RQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "privateAccount": false,
+        "following": 2,
+        "friends": 0,
+        "fans": 2972,
+        "heart": 11300,
+        "video": 149,
+        "digg": 24
+      },
+      "musicMeta": {
+        "musicName": "nh\u1ea1c n\u1ec1n - Nolove\ud83d\udda4",
+        "musicAuthor": "Nolove\ud83d\udda4",
+        "musicOriginal": true,
+        "playUrl": "https://v58.tiktokcdn.com/video/tos/alisg/tos-alisg-v-27dcd7/oEEEwozBWv4EgeWaBAEh5riBIAAAEwP9i2KAYH/?a=1180&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=.NpOcInz7ThIJvyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=M3NsOXc5cnhndzMzODU8NEBpM3NsOXc5cnhndzMzODU8NEBfMC0vMmQ0ZGFgLS1kMS1zYSNfMC0vMmQ0ZGFgLS1kMS1zcw%3D%3D&vvpl=1&l=202510090337020EEA72B409286A8C08DE&VExpiration=1760038643&VSignature=RtzSvscUKiVMoM5GYdEfGg&btag=e00078000&cc=14",
+        "coverMediumUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/051745d1dfb036364fe6d16e9eb21e68~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=de4818c3&x-expires=1760122800&x-signature=CYrfAJ8urUiI83emSCbJZfxDXcg%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "originalCoverMediumUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/051745d1dfb036364fe6d16e9eb21e68~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=de4818c3&x-expires=1760122800&x-signature=CYrfAJ8urUiI83emSCbJZfxDXcg%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "musicId": "7447502946847181569"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@bulus613/video/7558875306929474824",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 13,
+        "coverUrl": "https://p77-sign-sg.tiktokcdn.com/tos-alisg-p-0037/o8Uq50tRsETiEhfBEoogMTDmF4fBABQUjICmq3~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=N0G6mNfFEWDyUtkzIEBWdWlHKQs%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "originalCoverUrl": "https://p77-sign-sg.tiktokcdn.com/tos-alisg-p-0037/o8Uq50tRsETiEhfBEoogMTDmF4fBABQUjICmq3~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=N0G6mNfFEWDyUtkzIEBWdWlHKQs%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 11,
+      "shareCount": 0,
+      "playCount": 242,
+      "collectCount": 1,
+      "commentCount": 1,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "gym"
+        },
+        {
+          "name": "fitness"
+        },
+        {
+          "name": "fitness"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "2125221469",
+          "name": "High Quality",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 13
+    },
+    {
+      "id": "7554445648393784584",
+      "text": "#fitness #gimnasio #gymrat #viralvideos #gym@JANE OHARA \u2764\ufe0f\ud83e\ude90\ud83e\udd8b\ud83d\udcaa\u270c\ufe0f vamos por m\u00e1s coach.",
+      "textLanguage": "es",
+      "createTime": 1758906446,
+      "createTimeISO": "2025-09-26T17:07:26.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "6943985073625859078",
+        "name": "bernafit1",
+        "profileUrl": "https://www.tiktok.com/@bernafit1",
+        "nickName": "bernafit1",
+        "verified": false,
+        "signature": "",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/e6039a0ac269689df315b3a6cf4f8cbb~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=2f6f5662&x-expires=1760122800&x-signature=t2mOqhr6595sHpjS%2F6Eo4eG32fI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/e6039a0ac269689df315b3a6cf4f8cbb~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=2f6f5662&x-expires=1760122800&x-signature=t2mOqhr6595sHpjS%2F6Eo4eG32fI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "privateAccount": false,
+        "following": 368,
+        "friends": 0,
+        "fans": 176,
+        "heart": 505,
+        "video": 53,
+        "digg": 653
+      },
+      "musicMeta": {
+        "musicName": "MONTAGEM - VAI VAI - SLOWED + REVERB",
+        "musicAuthor": "PHOROMANE",
+        "musicOriginal": false,
+        "musicAlbum": "MONTAGEM - VAI VAI (SLOWED + REVERB)",
+        "playUrl": "https://sf16-ies-music-sg.tiktokcdn.com/obj/tos-alisg-ve-2774/owjBiARAiWx6F9XEIOZ4ifNCoSIdzMBz0AxswF",
+        "coverMediumUrl": "https://p77-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/okig21l8CjttEvQmZfWBBjwEvEIHIAFIACARfD.jpeg",
+        "originalCoverMediumUrl": "https://p77-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/okig21l8CjttEvQmZfWBBjwEvEIHIAFIACARfD.jpeg",
+        "musicId": "7369090587088586753"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@bernafit1/video/7554445648393784584",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 16,
+        "coverUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0037/oEPWRsWToQUeE5BjyB1FjLdEQNDGADAdKgfrF0~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=SPp7yfC0oxOIfOAfYT5GOmtqjyM%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "originalCoverUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0037/oEPWRsWToQUeE5BjyB1FjLdEQNDGADAdKgfrF0~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=SPp7yfC0oxOIfOAfYT5GOmtqjyM%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 6,
+      "shareCount": 1,
+      "playCount": 218,
+      "collectCount": 2,
+      "commentCount": 3,
+      "mentions": [
+        "@JANE OHARA \u2764\ufe0f\ud83e\ude90\ud83e\udd8b\ud83d\udcaa\u270c\ufe0f"
+      ],
+      "detailedMentions": [
+        {
+          "id": "6936757045048542213",
+          "name": "janeohara1",
+          "nickName": "JANE OHARA \u2764\ufe0f\ud83e\ude90\ud83e\udd8b\ud83d\udcaa\u270c\ufe0f",
+          "profileUrl": "https://www.tiktok.com/@6936757045048542213"
+        }
+      ],
+      "hashtags": [
+        {
+          "name": "fitness"
+        },
+        {
+          "name": "gimnasio"
+        },
+        {
+          "name": "gymrat"
+        },
+        {
+          "name": "viralvideos"
+        },
+        {
+          "name": "gym"
+        },
+        {
+          "name": ""
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "2125221469",
+          "name": "High Quality",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 16
+    },
+    {
+      "id": "7558336173282839821",
+      "text": "#fitness #fitnesstok #fitnesschallenge ",
+      "textLanguage": "un",
+      "createTime": 1759812348,
+      "createTimeISO": "2025-10-07T04:45:48.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7372055373149652011",
+        "name": "jrlocke93",
+        "profileUrl": "https://www.tiktok.com/@jrlocke93",
+        "nickName": "J.R. Locke| Fitness Enthusiast",
+        "verified": false,
+        "signature": "Writerpreneur",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/82e351f165de208c2b92e04fcedd9b98~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=d12c9b46&x-expires=1760122800&x-signature=J1Tu4pFkDsZC08shZa8qNjRtScM%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/82e351f165de208c2b92e04fcedd9b98~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=d12c9b46&x-expires=1760122800&x-signature=J1Tu4pFkDsZC08shZa8qNjRtScM%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "privateAccount": false,
+        "following": 1559,
+        "friends": 0,
+        "fans": 177,
+        "heart": 3942,
+        "video": 182,
+        "digg": 34200
+      },
+      "musicMeta": {
+        "musicName": "original sound",
+        "musicAuthor": "J.R. Locke| Fitness Enthusiast",
+        "musicOriginal": true,
+        "playUrl": "https://v16m.tiktokcdn-eu.com/b56ae0af203a6d0327b0ffd9b02aeb92/68e80ef0/video/tos/maliva/tos-maliva-v-27dcd7c799-us/o4kT3iAEpB0Dc9K1mwACBYvQEvPfM6BinVEAkA/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=.NpOcInz7ThRJvyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=amlvM3E5cnk8NjMzZzU8NEBpamlvM3E5cnk8NjMzZzU8NEA2LWszMmRraWZhLS1kMS9zYSM2LWszMmRraWZhLS1kMS9zcw%3D%3D&vvpl=1&l=202510081937036920FF7C6270AC912FA3&btag=e00078000",
+        "coverMediumUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/82e351f165de208c2b92e04fcedd9b98~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=d12c9b46&x-expires=1760122800&x-signature=J1Tu4pFkDsZC08shZa8qNjRtScM%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "originalCoverMediumUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/82e351f165de208c2b92e04fcedd9b98~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=d12c9b46&x-expires=1760122800&x-signature=J1Tu4pFkDsZC08shZa8qNjRtScM%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "musicId": "7558336358704597815"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@jrlocke93/video/7558336173282839821",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 16,
+        "coverUrl": "https://p19-sign.tiktokcdn-us.com/tos-useast5-p-0068-tx/o0U5mouDfABvD6D5Evpkr6IgqFR6J5AlzSEIDf~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=QY92ZDC6%2Bc3P07%2BX1Th9D5PL%2BDA%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "originalCoverUrl": "https://p19-sign.tiktokcdn-us.com/tos-useast5-p-0068-tx/o0U5mouDfABvD6D5Evpkr6IgqFR6J5AlzSEIDf~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=QY92ZDC6%2Bc3P07%2BX1Th9D5PL%2BDA%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 1,
+      "shareCount": 0,
+      "playCount": 198,
+      "collectCount": 0,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "fitness"
+        },
+        {
+          "name": "fitnesstok"
+        },
+        {
+          "name": "fitnesschallenge"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "2125221469",
+          "name": "High Quality",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 16
+    },
+    {
+      "id": "7558669169676324097",
+      "text": "Gym fitness\n\n#gym #fitness #fitnessmotivation #gymrat ",
+      "textLanguage": "en",
+      "createTime": 1759889910,
+      "createTimeISO": "2025-10-08T02:18:30.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7508511546823214086",
+        "name": "davidsonfit",
+        "profileUrl": "https://www.tiktok.com/@davidsonfit",
+        "nickName": "Davidfit",
+        "verified": false,
+        "signature": "",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/54896bce75046a3345330b009cbaf612~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=586dc10f&x-expires=1760122800&x-signature=UxMFBlSPXwWyBMnujCx4GdfX5g0%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "avatar": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/54896bce75046a3345330b009cbaf612~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=586dc10f&x-expires=1760122800&x-signature=UxMFBlSPXwWyBMnujCx4GdfX5g0%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "privateAccount": false,
+        "following": 1,
+        "friends": 0,
+        "fans": 5,
+        "heart": 87,
+        "video": 6,
+        "digg": 0
+      },
+      "musicMeta": {
+        "musicName": "Fitness",
+        "musicAuthor": "Lazy Tony",
+        "musicOriginal": false,
+        "musicAlbum": "Fitness",
+        "playUrl": "https://sf16-ies-music-va.tiktokcdn.com/obj/tos-useast2a-ve-2774/afffc43119d344bb8e2607230c1ee809",
+        "coverMediumUrl": "https://p16-amd-va.tiktokcdn.com/img/tos-useast2a-v-2774/oYNAxiAsoByCx4W7HwAbB9b0EfZcXnAiPQEAoA~c5_200x200.jpeg",
+        "originalCoverMediumUrl": "https://p16-amd-va.tiktokcdn.com/img/tos-useast2a-v-2774/oYNAxiAsoByCx4W7HwAbB9b0EfZcXnAiPQEAoA~c5_200x200.jpeg",
+        "musicId": "7014521261711706113"
+      },
+      "locationMeta": {
+        "address": "Baja California Sur, Mexico",
+        "city": "",
+        "cityCode": "4000900",
+        "countryCode": "3996063",
+        "locationName": "La Paz",
+        "locationId": "22535865210110188"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@davidsonfit/video/7558669169676324097",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 15,
+        "coverUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0037/oEnDJPRfMkjOQbCIX5AfXggMLAHoyovCoi8uf6~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=FTLBuMtcd1oK09hYfta3ykdfzGQ%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=maliva",
+        "originalCoverUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0037/oEnDJPRfMkjOQbCIX5AfXggMLAHoyovCoi8uf6~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=FTLBuMtcd1oK09hYfta3ykdfzGQ%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=maliva",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 13,
+      "shareCount": 0,
+      "playCount": 198,
+      "collectCount": 2,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "gym"
+        },
+        {
+          "name": "fitness"
+        },
+        {
+          "name": "fitnessmotivation"
+        },
+        {
+          "name": "gymrat"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "714100227",
+          "name": "iPhone 15 Pro Max",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 15
+    },
+    {
+      "id": "7554480617354743095",
+      "text": "#traning #fitness ",
+      "textLanguage": "un",
+      "createTime": 1758914633,
+      "createTimeISO": "2025-09-26T19:23:53.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "6863241504476922885",
+        "name": "migui1986",
+        "profileUrl": "https://www.tiktok.com/@migui1986",
+        "nickName": "BEAST MODE Migui",
+        "verified": false,
+        "signature": "",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/75e2ac0999c9d25f88d106f4dc20bebe~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=e29f5809&x-expires=1760122800&x-signature=FXnnK%2BsIoSBgigJhC9yWZIjiO%2Bc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/75e2ac0999c9d25f88d106f4dc20bebe~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=e29f5809&x-expires=1760122800&x-signature=FXnnK%2BsIoSBgigJhC9yWZIjiO%2Bc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "privateAccount": false,
+        "following": 377,
+        "friends": 0,
+        "fans": 138,
+        "heart": 2609,
+        "video": 141,
+        "digg": 3139
+      },
+      "musicMeta": {
+        "musicName": "GROK - Slowed",
+        "musicAuthor": "VUKEINE & Mc Marolad\u00e3o",
+        "musicOriginal": false,
+        "musicAlbum": "GROK",
+        "playUrl": "https://sf16-ies-music-sg.tiktokcdn.com/obj/tos-alisg-ve-2774/o4ZBtFBjdbFfe3qN0nETCgQpC6QtYq8IDcyrEg",
+        "coverMediumUrl": "https://p77-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/oA6CAp9EvzU1aEyiAtPBuYroAWiBAOAgLZn94.jpeg",
+        "originalCoverMediumUrl": "https://p77-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/oA6CAp9EvzU1aEyiAtPBuYroAWiBAOAgLZn94.jpeg",
+        "musicId": "7469716344331716609"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@migui1986/video/7554480617354743095",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1230,
+        "width": 720,
+        "duration": 13,
+        "coverUrl": "https://p16-sign.tiktokcdn-us.com/tos-useast5-p-0068-tx/oIvapEwIBMgP3A6dwifEAiEFXiqlF0BCm75IuW~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=0rC5gxRQQllU%2FJQnbAQOG58%2BlY8%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "originalCoverUrl": "https://p16-sign.tiktokcdn-us.com/tos-useast5-p-0068-tx/oIvapEwIBMgP3A6dwifEAiEFXiqlF0BCm75IuW~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=0rC5gxRQQllU%2FJQnbAQOG58%2BlY8%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "definition": "720p",
+        "format": "mp4"
+      },
+      "diggCount": 2,
+      "shareCount": 2,
+      "playCount": 190,
+      "collectCount": 0,
+      "commentCount": 1,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "traning"
+        },
+        {
+          "name": "fitness"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "2125221469",
+          "name": "High Quality",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 13
+    },
+    {
+      "id": "7558890838567226636",
+      "text": "Fazendo dar certo \ud83d\udcaa\ud83c\udffb desistir n\u00e3o \u00e9 uma op\u00e7\u00e3o!",
+      "textLanguage": "pt",
+      "createTime": 1759941425,
+      "createTimeISO": "2025-10-08T16:37:05.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7166377190376162310",
+        "name": "raquelvilelafg",
+        "profileUrl": "https://www.tiktok.com/@raquelvilelafg",
+        "nickName": "Raquel",
+        "verified": false,
+        "signature": "\ud83c\udde7\ud83c\uddf7",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/ed4b568dd3c65cfa845ec56b3ecfbdb3~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=c96d210d&x-expires=1760122800&x-signature=28JGlQus461fZFcgXzhrMuCWWoY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "avatar": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/ed4b568dd3c65cfa845ec56b3ecfbdb3~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=c96d210d&x-expires=1760122800&x-signature=28JGlQus461fZFcgXzhrMuCWWoY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "privateAccount": false,
+        "following": 70,
+        "friends": 0,
+        "fans": 47,
+        "heart": 198,
+        "video": 7,
+        "digg": 222
+      },
+      "musicMeta": {
+        "musicName": "Gym Fitness",
+        "musicAuthor": "MIDYTUNES",
+        "musicOriginal": false,
+        "musicAlbum": "Gym Fitness",
+        "playUrl": "https://sf16-ies-music-sg.tiktokcdn.com/obj/tos-alisg-ve-2774/oEK3E2OaAcfzFILwKBMA01FVa7D1gff9CuQGDX",
+        "coverMediumUrl": "https://p77-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/osfiaevCBABEAwgxkXDTQlIVjIASrCZ9QFUtEI.jpeg",
+        "originalCoverMediumUrl": "https://p77-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/osfiaevCBABEAwgxkXDTQlIVjIASrCZ9QFUtEI.jpeg",
+        "musicId": "7293006349269174274"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@raquelvilelafg/video/7558890838567226636",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 17,
+        "coverUrl": "https://p77-sign-va.tiktokcdn.com/tos-maliva-p-0068/o8kLXmLEpHIb5izoAfCIRkvFrfTyJPEJBD6BQg~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=SNEFwBlZ6n7Rm2hpJuuOKLgM21c%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "originalCoverUrl": "https://p77-sign-va.tiktokcdn.com/tos-maliva-p-0068/o8kLXmLEpHIb5izoAfCIRkvFrfTyJPEJBD6BQg~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=SNEFwBlZ6n7Rm2hpJuuOKLgM21c%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my2",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 4,
+      "shareCount": 0,
+      "playCount": 180,
+      "collectCount": 0,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [],
+      "effectStickers": [
+        {
+          "ID": "2125221469",
+          "name": "High Quality",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 17
+    },
+    {
+      "id": "7557931030464793912",
+      "text": "",
+      "textLanguage": "un",
+      "createTime": 1759717958,
+      "createTimeISO": "2025-10-06T02:32:38.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7439578837547189303",
+        "name": "yvann8322",
+        "profileUrl": "https://www.tiktok.com/@yvann8322",
+        "nickName": "Yvann",
+        "verified": false,
+        "signature": "",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/fac2e5312655928274d0bd33e99ae175~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=55c64279&x-expires=1760122800&x-signature=MhoazgiVJFiOai22GVQDomWQxVc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/fac2e5312655928274d0bd33e99ae175~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=55c64279&x-expires=1760122800&x-signature=MhoazgiVJFiOai22GVQDomWQxVc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "privateAccount": false,
+        "following": 2,
+        "friends": 0,
+        "fans": 3,
+        "heart": 3,
+        "video": 1,
+        "digg": 0
+      },
+      "musicMeta": {
+        "musicName": "Fitness",
+        "musicAuthor": "Lazy Tony",
+        "musicOriginal": false,
+        "musicAlbum": "Fitness",
+        "playUrl": "https://sf77-ies-music-sg.tiktokcdn.com/obj/tos-alisg-ve-2774/afffc43119d344bb8e2607230c1ee809",
+        "coverMediumUrl": "https://p77-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/oYNAxiAsoByCx4W7HwAbB9b0EfZcXnAiPQEAoA.jpeg",
+        "originalCoverMediumUrl": "https://p77-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/oYNAxiAsoByCx4W7HwAbB9b0EfZcXnAiPQEAoA.jpeg",
+        "musicId": "7014521261711706113"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@yvann8322/video/7557931030464793912",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 15,
+        "coverUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-p-0068/o0nHgPfBkI4hIr0CLKrtbcuZjAkAgiTkiEw7Io~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=rVUvM7bduwbBC4mZJ%2FUyyEtGbNA%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "originalCoverUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-p-0068/o0nHgPfBkI4hIr0CLKrtbcuZjAkAgiTkiEw7Io~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=rVUvM7bduwbBC4mZJ%2FUyyEtGbNA%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 3,
+      "shareCount": 0,
+      "playCount": 163,
+      "collectCount": 0,
+      "commentCount": 1,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [],
+      "effectStickers": [
+        {
+          "ID": "1091027104",
+          "name": "Soft Plus",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 15
+    },
+    {
+      "id": "7558696238690979103",
+      "text": "#fitness ",
+      "textLanguage": "un",
+      "createTime": 1759896140,
+      "createTimeISO": "2025-10-08T04:02:20.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7286904276969210926",
+        "name": "donduguu677",
+        "profileUrl": "https://www.tiktok.com/@donduguu677",
+        "nickName": "donduguu677",
+        "verified": false,
+        "signature": "",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/9d789b92984b34e794c30901f46431e5~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=730401b2&x-expires=1760122800&x-signature=y3yzYcp3Pj8HgdarET4SMlV8EpU%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/9d789b92984b34e794c30901f46431e5~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=730401b2&x-expires=1760122800&x-signature=y3yzYcp3Pj8HgdarET4SMlV8EpU%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "privateAccount": false,
+        "following": 28,
+        "friends": 0,
+        "fans": 1492,
+        "heart": 14200,
+        "video": 6,
+        "digg": 804
+      },
+      "musicMeta": {
+        "musicName": "TORMENTO (Slowed)",
+        "musicAuthor": "Kobe Mane",
+        "musicOriginal": false,
+        "musicAlbum": "TORMENTO",
+        "playUrl": "https://sf16-ies-music-sg.tiktokcdn.com/obj/tos-alisg-ve-2774/okWoBl81iZziuWbC0gyIpcbjZe4PBBOxtfYMVQ",
+        "coverMediumUrl": "https://p77-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/oYiAEQNfWy5EJ0tZVbposAieYAEBLCgBCGzulB.jpeg",
+        "originalCoverMediumUrl": "https://p77-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/oYiAEQNfWy5EJ0tZVbposAieYAEBLCgBCGzulB.jpeg",
+        "musicId": "7540551131195312129"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@donduguu677/video/7558696238690979103",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 13,
+        "coverUrl": "https://p16-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oIkO7DSixAGlaBhAkLAiXrrAERFalIEiABvi4~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=RsCp3ZxPQ1jb0HHubvM5AHk0d30%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "originalCoverUrl": "https://p16-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oIkO7DSixAGlaBhAkLAiXrrAERFalIEiABvi4~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=RsCp3ZxPQ1jb0HHubvM5AHk0d30%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 4,
+      "shareCount": 0,
+      "playCount": 152,
+      "collectCount": 0,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "fitness"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "2125221469",
+          "name": "High Quality",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 13
+    },
+    {
+      "id": "7557657157869587730",
+      "text": "",
+      "textLanguage": "un",
+      "createTime": 1759654186,
+      "createTimeISO": "2025-10-05T08:49:46.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7550631217206559751",
+        "name": "mrtawwutg8z",
+        "profileUrl": "https://www.tiktok.com/@mrtawwutg8z",
+        "nickName": "Lisa",
+        "verified": false,
+        "signature": "",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p77-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/205aa4640d33eec312434f572992e125~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=71bc833d&x-expires=1760122800&x-signature=Psh%2FnlwuOQ9Gevtlb%2FjoKvwU8og%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "avatar": "https://p77-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/205aa4640d33eec312434f572992e125~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=71bc833d&x-expires=1760122800&x-signature=Psh%2FnlwuOQ9Gevtlb%2FjoKvwU8og%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=maliva",
+        "privateAccount": false,
+        "following": 212,
+        "friends": 0,
+        "fans": 58,
+        "heart": 26,
+        "video": 2,
+        "digg": 0
+      },
+      "musicMeta": {
+        "musicName": "Fitness",
+        "musicAuthor": "Lazy Tony",
+        "musicOriginal": false,
+        "musicAlbum": "Fitness",
+        "playUrl": "https://sf16-ies-music-va.tiktokcdn.com/obj/tos-useast2a-ve-2774/afffc43119d344bb8e2607230c1ee809",
+        "coverMediumUrl": "https://p16-amd-va.tiktokcdn.com/img/tos-useast2a-v-2774/oYNAxiAsoByCx4W7HwAbB9b0EfZcXnAiPQEAoA~c5_200x200.jpeg",
+        "originalCoverMediumUrl": "https://p16-amd-va.tiktokcdn.com/img/tos-useast2a-v-2774/oYNAxiAsoByCx4W7HwAbB9b0EfZcXnAiPQEAoA~c5_200x200.jpeg",
+        "musicId": "7014521261711706113"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@mrtawwutg8z/video/7557657157869587730",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 15,
+        "coverUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0037/ooSiI0Zkc3ziCM7kAAI9d7hf7yswZiIBBjqAZR~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=2bXHImLNiK2kDwMQpP0DJh5UyJc%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=maliva",
+        "originalCoverUrl": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0037/ooSiI0Zkc3ziCM7kAAI9d7hf7yswZiIBBjqAZR~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=2bXHImLNiK2kDwMQpP0DJh5UyJc%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=maliva",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 9,
+      "shareCount": 0,
+      "playCount": 150,
+      "collectCount": 1,
+      "commentCount": 3,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [],
+      "effectStickers": [
+        {
+          "ID": "714100227",
+          "name": "iPhone 15 Pro Max",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "4533146",
+          "name": "highlighter heart",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 15
+    },
+    {
+      "id": "7557346235355581727",
+      "text": "#bodyguard #fyp #fraiser #fitness #security ",
+      "textLanguage": "un",
+      "createTime": 1759581828,
+      "createTimeISO": "2025-10-04T12:43:48.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7557340855776166967",
+        "name": "fraiser_protection",
+        "profileUrl": "https://www.tiktok.com/@fraiser_protection",
+        "nickName": "Joseph \u201cIV\u201d Fraiser",
+        "verified": false,
+        "signature": "Professional\n-Bodyguard \n-Close Protection Agent",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/21380937e4af037b095c89befa03e872~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=001f35ad&x-expires=1760122800&x-signature=Z5l%2BN2hTAALWtcS6uiRRUjdRH9Q%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/21380937e4af037b095c89befa03e872~tplv-tiktokx-cropcenter:720:720.jpeg?dr=14579&refresh_token=001f35ad&x-expires=1760122800&x-signature=Z5l%2BN2hTAALWtcS6uiRRUjdRH9Q%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=my",
+        "privateAccount": false,
+        "following": 0,
+        "friends": 0,
+        "fans": 0,
+        "heart": 0,
+        "video": 5,
+        "digg": 1
+      },
+      "musicMeta": {
+        "musicName": "XXXL Tee",
+        "musicAuthor": "Ray Vaughn",
+        "musicOriginal": false,
+        "musicAlbum": "The Good The Bad The Dollar Menu",
+        "playUrl": "https://sf16-ies-music-sg.tiktokcdn.com/obj/tos-alisg-ve-2774/ooAYk21471A7UICbrQMWaJiOBlsFWgpUiIvAy",
+        "coverMediumUrl": "https://p16-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/ow2tMFa0PgA3XIIQADLeDCAdffzA22IyzAGpa7.jpeg",
+        "originalCoverMediumUrl": "https://p16-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/ow2tMFa0PgA3XIIQADLeDCAdffzA22IyzAGpa7.jpeg",
+        "musicId": "7495807027709560849"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@fraiser_protection/video/7557346235355581727",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 15,
+        "coverUrl": "https://p16-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-p-0068-tx2/o0jVuhIWdinRWoA8BOrFzEOOE1iBJcgwBaAvE~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=xsiTawPAoFGy6VpPYncNkpna1xU%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my",
+        "originalCoverUrl": "https://p16-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-p-0068-tx2/o0jVuhIWdinRWoA8BOrFzEOOE1iBJcgwBaAvE~tplv-tiktokx-origin.image?dr=14575&x-expires=1760122800&x-signature=xsiTawPAoFGy6VpPYncNkpna1xU%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 0,
+      "shareCount": 0,
+      "playCount": 147,
+      "collectCount": 0,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "bodyguard"
+        },
+        {
+          "name": "fyp"
+        },
+        {
+          "name": "fraiser"
+        },
+        {
+          "name": "fitness"
+        },
+        {
+          "name": "security"
+        }
+      ],
+      "effectStickers": [],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 15
+    },
+    {
+      "id": "7556700166460345612",
+      "text": "",
+      "textLanguage": "un",
+      "createTime": 1759431370,
+      "createTimeISO": "2025-10-02T18:56:10.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7036508139079877638",
+        "name": "suomariaalves",
+        "profileUrl": "https://www.tiktok.com/@suomariaalves",
+        "nickName": "maria",
+        "verified": false,
+        "signature": "dan\u00e7a \ud83d\udc83\nsegue l\u00e1 insta \ud83c\udf3c\nmariaalves5368",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/04582a01631be1e2843d2e46c31518c2~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=686e7537&x-expires=1760122800&x-signature=Xy8t%2BOdDAA7IbyijhKvBG5h5A%2Bo%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "avatar": "https://p77-sign-va.tiktokcdn.com/tos-maliva-avt-0068/04582a01631be1e2843d2e46c31518c2~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=686e7537&x-expires=1760122800&x-signature=Xy8t%2BOdDAA7IbyijhKvBG5h5A%2Bo%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "privateAccount": false,
+        "following": 48,
+        "friends": 0,
+        "fans": 2668,
+        "heart": 33200,
+        "video": 1385,
+        "digg": 124
+      },
+      "musicMeta": {
+        "musicName": "Fitness",
+        "musicAuthor": "Gervant galadra",
+        "musicOriginal": false,
+        "musicAlbum": "Real Estates",
+        "playUrl": "https://sf16-ies-music-sg.tiktokcdn.com/obj/tos-alisg-ve-2774/oYAksNhhDCSKQZLkgIe02mQnUbfDKF5DBtBLbM",
+        "coverMediumUrl": "https://p77-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/osBmGIA8IWYAoi1fIF5AfALAs80OlGey8UK4f9.jpeg",
+        "originalCoverMediumUrl": "https://p77-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/osBmGIA8IWYAoi1fIF5AfALAs80OlGey8UK4f9.jpeg",
+        "musicId": "7267568690332567553"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@suomariaalves/video/7556700166460345612",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 15,
+        "coverUrl": "https://p77-sign-va.tiktokcdn.com/tos-maliva-p-0068/o0HlZEB8RmCje3B9CGLIgVGDIvAjuRegQYeRSZ~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=NcjlO5kv848Kd16c6kmzFwcFPEA%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "originalCoverUrl": "https://p77-sign-va.tiktokcdn.com/tos-maliva-p-0068/o0HlZEB8RmCje3B9CGLIgVGDIvAjuRegQYeRSZ~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=NcjlO5kv848Kd16c6kmzFwcFPEA%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 7,
+      "shareCount": 1,
+      "playCount": 146,
+      "collectCount": 1,
+      "commentCount": 1,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [],
+      "effectStickers": [
+        {
+          "ID": "2125221469",
+          "name": "High Quality",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 15
+    },
+    {
+      "id": "7557563470258916663",
+      "text": "TAKE UP SPACE!! #fyp #gymmotivation #gymgirls #viral #fitnes ",
+      "textLanguage": "en",
+      "createTime": 1759632396,
+      "createTimeISO": "2025-10-05T02:46:36.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7157879110839403562",
+        "name": "jacsteve.lifts",
+        "profileUrl": "https://www.tiktok.com/@jacsteve.lifts",
+        "nickName": "jacsteve.lifts",
+        "verified": false,
+        "signature": "\ud83c\udfcb\ud83c\udffb\u200d\u2640\ufe0f\ud83d\udcaa\ud83c\udffb\ud83c\udfcb\ud83c\udffc\nJoin Our Progression\nFollow For More Videos",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/fabbed9783b4b1ee2506a7293e39af66~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=57e94c7e&x-expires=1760122800&x-signature=TDVr00E49EDJEQCzeGRCXCvvmuQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/fabbed9783b4b1ee2506a7293e39af66~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=57e94c7e&x-expires=1760122800&x-signature=TDVr00E49EDJEQCzeGRCXCvvmuQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "privateAccount": false,
+        "following": 9,
+        "friends": 0,
+        "fans": 140,
+        "heart": 3743,
+        "video": 64,
+        "digg": 156
+      },
+      "musicMeta": {
+        "musicName": "original sound",
+        "musicAuthor": "jacsteve.lifts",
+        "musicOriginal": true,
+        "playUrl": "https://v77.tiktokcdn-eu.com/041bd361fbb59b3f0780862a9b156998/68e80ee5/video/tos/maliva/tos-maliva-v-27dcd7c799-us/oAOFADwIkAFdD8OfUggDsSoBuHJi4CEeEInBAz/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=.NpOcInz7ThoJvyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=MzppZ2o5cjZ3NjMzZzU8NEBpMzppZ2o5cjZ3NjMzZzU8NEA2L2YuMmRrbGRhLS1kMS9zYSM2L2YuMmRrbGRhLS1kMS9zcw%3D%3D&vvpl=1&l=20251008193654CF868423815BC092356F&btag=e00078000",
+        "coverMediumUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/fabbed9783b4b1ee2506a7293e39af66~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=57e94c7e&x-expires=1760122800&x-signature=TDVr00E49EDJEQCzeGRCXCvvmuQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "originalCoverMediumUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/fabbed9783b4b1ee2506a7293e39af66~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=57e94c7e&x-expires=1760122800&x-signature=TDVr00E49EDJEQCzeGRCXCvvmuQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "musicId": "7557563547966769934"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@jacsteve.lifts/video/7557563470258916663",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 15,
+        "coverUrl": "https://p19-sign.tiktokcdn-us.com/tos-useast5-p-0068-tx/o8IjufgDlf8VM1G3CAeoLIAkDggLBNpLH7wRuI~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=TXAWHo4kf%2Big09skohjNe6qFMDg%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "originalCoverUrl": "https://p19-sign.tiktokcdn-us.com/tos-useast5-p-0068-tx/o8IjufgDlf8VM1G3CAeoLIAkDggLBNpLH7wRuI~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=TXAWHo4kf%2Big09skohjNe6qFMDg%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 5,
+      "shareCount": 0,
+      "playCount": 139,
+      "collectCount": 0,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "fyp"
+        },
+        {
+          "name": "gymmotivation"
+        },
+        {
+          "name": "gymgirls"
+        },
+        {
+          "name": "viral"
+        },
+        {
+          "name": "fitnes"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "1091027104",
+          "name": "Soft Plus",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 15
+    },
+    {
+      "id": "7558187798398848268",
+      "text": "",
+      "textLanguage": "un",
+      "createTime": 1759777740,
+      "createTimeISO": "2025-10-06T19:09:00.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7019805771925210117",
+        "name": "sta.oliverrp",
+        "profileUrl": "https://www.tiktok.com/@sta.oliverrp",
+        "nickName": "sta.oliverrp",
+        "verified": false,
+        "signature": "",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7e7152716ccb3a4a3b2199409566345a~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=b3c98392&x-expires=1760122800&x-signature=u2mm764aX9HjwnmBB8MWkrBbzgc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "avatar": "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/7e7152716ccb3a4a3b2199409566345a~tplv-tiktokx-cropcenter:720:720.jpeg?dr=10399&refresh_token=b3c98392&x-expires=1760122800&x-signature=u2mm764aX9HjwnmBB8MWkrBbzgc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=no1a",
+        "privateAccount": false,
+        "following": 106,
+        "friends": 0,
+        "fans": 81,
+        "heart": 867,
+        "video": 228,
+        "digg": 405
+      },
+      "musicMeta": {
+        "musicName": "Fitness",
+        "musicAuthor": "Gervant galadra",
+        "musicOriginal": false,
+        "musicAlbum": "Real Estates",
+        "playUrl": "https://sf16-ies-music-sg.tiktokcdn.com/obj/tos-alisg-ve-2774/oYAksNhhDCSKQZLkgIe02mQnUbfDKF5DBtBLbM",
+        "coverMediumUrl": "https://p77-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/osBmGIA8IWYAoi1fIF5AfALAs80OlGey8UK4f9.jpeg",
+        "originalCoverMediumUrl": "https://p77-sg.tiktokcdn.com/aweme/200x200/tos-alisg-v-2774/osBmGIA8IWYAoi1fIF5AfALAs80OlGey8UK4f9.jpeg",
+        "musicId": "7267568690332567553"
+      },
+      "locationMeta": {
+        "address": "Av. Parana\u00edba, 740 - Centro, Patos de Minas - MG, 38700-117, Brazil",
+        "city": "Patos de Minas",
+        "cityCode": "3454783",
+        "countryCode": "3469034",
+        "locationName": "Academia Day Fit",
+        "locationId": "21568295194527938"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@sta.oliverrp/video/7558187798398848268",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 848,
+        "width": 480,
+        "duration": 13,
+        "coverUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-p-0068/oE8fBFKlA8nRtDx6QWEBM8fazKEE5oxJQABkId~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=bZhX7fkK%2F65HOSsAxHux4Gnw9HQ%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "originalCoverUrl": "https://p16-sign-va.tiktokcdn.com/tos-maliva-p-0068/oE8fBFKlA8nRtDx6QWEBM8fazKEE5oxJQABkId~tplv-tiktokx-origin.image?dr=10395&x-expires=1760122800&x-signature=bZhX7fkK%2F65HOSsAxHux4Gnw9HQ%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=no1a",
+        "definition": "480p",
+        "format": "mp4"
+      },
+      "diggCount": 1,
+      "shareCount": 1,
+      "playCount": 117,
+      "collectCount": 0,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [],
+      "effectStickers": [
+        {
+          "ID": "2125221469",
+          "name": "High Quality",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#fitness",
+      "searchHashtag": {
+        "views": 680100000000,
+        "name": "fitness"
+      },
+      "duration": 13
+    }
+  ],
+  "selection_date": "2025-10-08T19:38:49.320182+00:00"
+}

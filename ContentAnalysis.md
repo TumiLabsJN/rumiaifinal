@@ -1,4 +1,14 @@
 # ContentAnalysis.md - Independent Content Intelligence System
+## Brainstorm
+Stage 3.2.5 selects videos from /insights, and distributes them to the unified buckets. 
+
+A. Add to Temporal_compute analysis: 
+   - Captions
+   - All hashtags used
+
+Then, we can refactor part of stage 3.2.5 , to also extract captions and hashtags used and pass them to a new .JSON which Content analysis will use
+
+
 
 ## Overview
 

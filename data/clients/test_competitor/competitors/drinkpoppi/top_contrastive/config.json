@@ -1,0 +1,13 @@
+{
+  "client_id": "test_competitor",
+  "analysis_type": "competitor",
+  "target": "@drinkpoppi",
+  "analysis_mode": "top",
+  "selection_strategy": "contrastive",
+  "video_count": 100,
+  "date_filter": "last_90_days",
+  "report_type": "single",
+  "report_audience": "client",
+  "auto_confirm": true,
+  "run_date": "2025-10-09T12:09:59.519049Z"
+}

@@ -1,0 +1,13 @@
+{
+  "client_id": "test_profile",
+  "analysis_type": "creator",
+  "target": "@hankandroy",
+  "analysis_mode": "recent",
+  "selection_strategy": "top",
+  "video_count": 40,
+  "date_filter": "last_90_days",
+  "report_type": "single",
+  "report_audience": "creator",
+  "auto_confirm": true,
+  "run_date": "2025-10-09T12:04:44.312890Z"
+}

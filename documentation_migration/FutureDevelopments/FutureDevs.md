@@ -2,20 +2,26 @@
 
 This document tracks planned features and enhancements for RumiAI's ML training pipeline. Features are organized by category and phase.
 
----
+## Phase 2
 
-## Phase 2 Features
+### Creator Match Analysis
+
+**Impact**: Stages 1, 5, 7 (Selection + ML + Reports)
+
+**Purpose**: Analyze potential affiliate creators' natural content style and match against client's viral patterns to optimize hiring decisions
+
+**Document**: MLCreatorMatch.md references it. 
 
 ### Top Video Selection Formula Validation
 **Category:** Video Selection
 **Objective:** Validate optimal engagement formula for selecting viral training videos through multi-formula testing
 **Why:** Ensure ML models train on truly viral content, not just high view counts or arbitrary metrics
-**What:** Implement validation framework comparing multiple engagement formulas (views-only, views×shares, weighted-all) using feature separation analysis and RF performance metrics. Select formula that produces clearest creative pattern differences between top/bottom performers, ensuring actionable ML insights for creators.
+**What:** Implement validation framework comparing multiple engagement formulas (views-only, viewsï¿½shares, weighted-all) using feature separation analysis and RF performance metrics. Select formula that produces clearest creative pattern differences between top/bottom performers, ensuring actionable ML insights for creators.
 **Importance:** 7/10
 
 #### Explanation
 
-1. **Multi-Formula Testing Framework**: Implement system to test 3-4 engagement formulas simultaneously (views-only, views×share_rate, weighted engagement including likes/comments/shares, engagement rate). Each formula ranks videos differently, affecting which content trains the ML models.
+1. **Multi-Formula Testing Framework**: Implement system to test 3-4 engagement formulas simultaneously (views-only, viewsï¿½share_rate, weighted engagement including likes/comments/shares, engagement rate). Each formula ranks videos differently, affecting which content trains the ML models.
 
 2. **Feature Separation Analysis**: Measure Cohen's d effect size between top 40 and bottom 20 videos across all creative features. Formula producing highest average separation (d > 0.5) indicates clearest pattern differences, enabling stronger ML training signals.
 
@@ -29,4 +35,43 @@ This document tracks planned features and enhancements for RumiAI's ML training 
 
 7. **Iterative Refinement Strategy**: Post-launch tracking of creator performance after following ML recommendations. If real-world outcomes don't match expectations, re-run validation with adjusted formulas. Close feedback loop between formula selection and business outcomes.
 
+
+## Phase 3
+
+## UNANALYZED
+### SelectionStrategies.md 
+
+#### Performance-Weighted Selection
+**Goal**: Process high-engagement buckets even if lower volume
+
+**Logic**:
+- Calculate average engagement per bucket
+- Process buckets with engagement > 1.5x median, even if volume < threshold
+- Example: "33-60s has only 5% of videos but 2x avg engagement â†’ process it"
+
+**Business Value**: Identify underserved high-performing formats (market gaps)
+
 ---
+
+#### Tiered Processing
+**Goal**: Different analysis depth based on video volume
+
+**Tiers**:
+- **HIGH** (â‰¥80 videos): Full contrastive analysis
+- **MEDIUM** (40-79 videos): Top-only analysis
+- **LOW** (10-39 videos): Descriptive stats only (no ML)
+- **SKIP** (< 10 videos): No processing
+
+**Business Value**: Balanced approach (deep analysis where it matters, light touch on edges)
+
+---
+
+#### Dynamic Thresholds
+**Goal**: Adjust thresholds based on total video count
+
+**Logic**:
+- If scraping 1000 videos, raise threshold to 100 (higher bar for processing)
+- If scraping 100 videos, lower threshold to 30 (adapt to data availability)
+
+**Business Value**: Context-aware processing (what's "sufficient" depends on dataset size)
+

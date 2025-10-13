@@ -1,0 +1,13 @@
+{
+  "client_id": "debug_test",
+  "analysis_type": "competitor",
+  "target": "@nike",
+  "analysis_mode": "top",
+  "selection_strategy": "contrastive",
+  "video_count": 10,
+  "date_filter": "last_90_days",
+  "report_type": "single",
+  "report_audience": "client",
+  "auto_confirm": true,
+  "run_date": "2025-10-08T19:15:13.352831Z"
+}

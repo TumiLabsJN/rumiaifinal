@@ -1,0 +1,769 @@
+{
+  "bucket": "13-18s",
+  "strategy": "top",
+  "video_count": 40,
+  "selected_count": 8,
+  "top_count": 8,
+  "bottom_count": 0,
+  "videos": [
+    {
+      "id": "7534067855197867294",
+      "text": "Come support a small business!!\ud83d\udc9a\ud83e\udef6 #ducks #ducksunlimited #hankandroyco #dogtreats #memphis ",
+      "textLanguage": "en",
+      "createTime": 1754161885,
+      "createTimeISO": "2025-08-02T19:11:25.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7278385194200007722",
+        "name": "hankandroy",
+        "profileUrl": "https://www.tiktok.com/@hankandroy",
+        "nickName": "Hank and Roy Pet Treats",
+        "verified": false,
+        "signature": "All-Natural, Single-Ingredient, Premium Dog Treats. \nAvailable on our Website & TikTok Shop!",
+        "bioLink": "https://hankandroy.com/collections/all",
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "commerceUserInfo": {
+          "commerceUser": true,
+          "downLoadLink": {
+            "ios": "",
+            "android": ""
+          },
+          "category": "Shopping & Retail",
+          "categoryButton": false
+        },
+        "privateAccount": false,
+        "roomId": "",
+        "ttSeller": true,
+        "following": 138,
+        "friends": 26,
+        "fans": 123,
+        "heart": 4621,
+        "video": 86,
+        "digg": 0
+      },
+      "musicMeta": {
+        "musicName": "Country",
+        "musicAuthor": "Evgeny",
+        "musicOriginal": false,
+        "musicAlbum": "Country",
+        "playUrl": "https://sf16.tiktokcdn-us.com/obj/tos-alisg-ve-2774/owCJAtVkDhmQCZAMi8yNBfcejzRFhTIDKwVpZg",
+        "coverMediumUrl": "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/o0AAbIAPjYkCebeaRRDXB88tZA5nsgXNCIbHW1~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "originalCoverMediumUrl": "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/o0AAbIAPjYkCebeaRRDXB88tZA5nsgXNCIbHW1~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "musicId": "7274000854514944036"
+      },
+      "locationMeta": {
+        "address": "Tennessee, United States",
+        "city": "",
+        "cityCode": "4641239",
+        "countryCode": "6252001",
+        "locationName": "Memphis",
+        "locationId": "22535865203979547"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@hankandroy/video/7534067855197867294",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 14,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/okUQVQxfAALHETuIRFf2moDBDtjwWEEkcHNWEc~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=IYP%2BEkzeh1bX7oeYDZ8bk2vGx48%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/okUQVQxfAALHETuIRFf2moDBDtjwWEEkcHNWEc~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=IYP%2BEkzeh1bX7oeYDZ8bk2vGx48%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "definition": "540p",
+        "format": "mp4",
+        "subtitleLinks": [
+          {
+            "language": "eng-US",
+            "downloadLink": "https://v16m-webapp.tiktokcdn-us.com/b24531e29f524bd210c19061ee677590/68ea47f6/video/tos/useast8/tos-useast8-v-0068-tx2/2338119ca3864f048253960f53c23676/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&br=14204&bt=7102&ds=4&ft=4KLMeMzm8Zmo0abEvI4jVz1uQpWrKsd.&mime_type=video_mp4&qs=13&rc=ajd1eHE5cm85NTMzaTczNEBpajd1eHE5cm85NTMzaTczNEAyMWwxMmRrMjRhLS1kMTJzYSMyMWwxMmRrMjRhLS1kMTJzcw%3D%3D&l=20251009120456579A0E984B41E9042653&btag=e00070000",
+            "tiktokLink": "https://v16m-webapp.tiktokcdn-us.com/b24531e29f524bd210c19061ee677590/68ea47f6/video/tos/useast8/tos-useast8-v-0068-tx2/2338119ca3864f048253960f53c23676/?a=1988&bti=ODszNWYuMDE6&ch=0&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C&br=14204&bt=7102&ds=4&ft=4KLMeMzm8Zmo0abEvI4jVz1uQpWrKsd.&mime_type=video_mp4&qs=13&rc=ajd1eHE5cm85NTMzaTczNEBpajd1eHE5cm85NTMzaTczNEAyMWwxMmRrMjRhLS1kMTJzYSMyMWwxMmRrMjRhLS1kMTJzcw%3D%3D&l=20251009120456579A0E984B41E9042653&btag=e00070000",
+            "source": "ASR",
+            "sourceUnabbreviated": "automatic speech recognition",
+            "version": "1:big_caption"
+          }
+        ]
+      },
+      "diggCount": 35,
+      "shareCount": 0,
+      "playCount": 864,
+      "collectCount": 0,
+      "commentCount": 1,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "ducks"
+        },
+        {
+          "name": "ducksunlimited"
+        },
+        {
+          "name": "hankandroyco"
+        },
+        {
+          "name": "dogtreats"
+        },
+        {
+          "name": "memphis"
+        }
+      ],
+      "effectStickers": [],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "@hankandroy",
+      "fromProfileSection": "videos",
+      "duration": 14
+    },
+    {
+      "id": "7540317830432967966",
+      "text": "I think he approves\ud83e\uddb4 #dogsoftiktok #allnatural #naturaldogtreats #tiktokshop #dogtreats ",
+      "textLanguage": "en",
+      "createTime": 1755617063,
+      "createTimeISO": "2025-08-19T15:24:23.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7278385194200007722",
+        "name": "hankandroy",
+        "profileUrl": "https://www.tiktok.com/@hankandroy",
+        "nickName": "Hank and Roy Pet Treats",
+        "verified": false,
+        "signature": "All-Natural, Single-Ingredient, Premium Dog Treats. \nAvailable on our Website & TikTok Shop!",
+        "bioLink": "https://hankandroy.com/collections/all",
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "commerceUserInfo": {
+          "commerceUser": true,
+          "downLoadLink": {
+            "ios": "",
+            "android": ""
+          },
+          "category": "Shopping & Retail",
+          "categoryButton": false
+        },
+        "privateAccount": false,
+        "roomId": "",
+        "ttSeller": true,
+        "following": 138,
+        "friends": 26,
+        "fans": 123,
+        "heart": 4621,
+        "video": 86,
+        "digg": 0
+      },
+      "musicMeta": {
+        "musicName": "Who You Share it With",
+        "musicAuthor": "Layup",
+        "musicOriginal": false,
+        "musicAlbum": "Who You Share it With",
+        "playUrl": "https://sf16.tiktokcdn-us.com/obj/tos-alisg-ve-2774/oADpfFDSr6gDYFzDQCeeLOgaAI0kCXIM1j3dEw",
+        "coverMediumUrl": "https://p19-common.tiktokcdn-us.com/tos-alisg-v-2774/oUCZDEgyIanAaItxIBcAAQFAYTOeNBfhujCluM~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "originalCoverMediumUrl": "https://p19-common.tiktokcdn-us.com/tos-alisg-v-2774/oUCZDEgyIanAaItxIBcAAQFAYTOeNBfhujCluM~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "musicId": "7251810329461147649"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@hankandroy/video/7540317830432967966",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 15,
+        "coverUrl": "https://p19-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oIyIbeSkHAVjGBAIAZeIALEqlISLEKT7RI5fAC~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=UF6BuuxZJiCz6Cdv3udmskaMc%2Bs%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "originalCoverUrl": "https://p19-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oIyIbeSkHAVjGBAIAZeIALEqlISLEKT7RI5fAC~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=UF6BuuxZJiCz6Cdv3udmskaMc%2Bs%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 17,
+      "shareCount": 1,
+      "playCount": 350,
+      "collectCount": 0,
+      "commentCount": 2,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "dogsoftiktok"
+        },
+        {
+          "name": "allnatural"
+        },
+        {
+          "name": "naturaldogtreats"
+        },
+        {
+          "name": "tiktokshop"
+        },
+        {
+          "name": "dogtreats"
+        }
+      ],
+      "effectStickers": [],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "@hankandroy",
+      "fromProfileSection": "videos",
+      "duration": 15
+    },
+    {
+      "id": "7556691167845338398",
+      "text": "It\u2019s always a good day to play #activedogs #dogsoftiktok #hankandroyco #shoplocal #CapCut ",
+      "textLanguage": "en",
+      "createTime": 1759429297,
+      "createTimeISO": "2025-10-02T18:21:37.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7278385194200007722",
+        "name": "hankandroy",
+        "profileUrl": "https://www.tiktok.com/@hankandroy",
+        "nickName": "Hank and Roy Pet Treats",
+        "verified": false,
+        "signature": "All-Natural, Single-Ingredient, Premium Dog Treats. \nAvailable on our Website & TikTok Shop!",
+        "bioLink": "https://hankandroy.com/collections/all",
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "commerceUserInfo": {
+          "commerceUser": true,
+          "downLoadLink": {
+            "ios": "",
+            "android": ""
+          },
+          "category": "Shopping & Retail",
+          "categoryButton": false
+        },
+        "privateAccount": false,
+        "roomId": "",
+        "ttSeller": true,
+        "following": 138,
+        "friends": 26,
+        "fans": 123,
+        "heart": 4621,
+        "video": 86,
+        "digg": 0
+      },
+      "musicMeta": {
+        "musicName": "original sound",
+        "musicAuthor": "Hank and Roy Pet Treats",
+        "musicOriginal": true,
+        "playUrl": "https://v16m.tiktokcdn-us.com/4571974d6bcb8ceb97fab8b8ee97b18c/68e7f959/video/tos/useast8/tos-useast8-v-27dcd7-tx2/oIK3Dfp0UEGVIrwpnAoAFBieI5JsCAgSGEQAN1/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=GSDrKInz7ThGOcyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=am51dm45cmdmNjMzaTU8NEBpam51dm45cmdmNjMzaTU8NEBoLTVtMmQ0MmNhLS1kMTJzYSNoLTVtMmQ0MmNhLS1kMTJzcw%3D%3D&vvpl=1&l=20251009120456579A0E984B41E9042653&btag=e00078000",
+        "coverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "originalCoverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "musicId": "7556691189035010846"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@hankandroy/video/7556691167845338398",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 17,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/o4eheTNAITCIFLA9bMG8qRgrvgyUlwjKYL0Ie2~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=IOQ3JbCwmN2n8HNuR3MIZ93wgOU%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/o4eheTNAITCIFLA9bMG8qRgrvgyUlwjKYL0Ie2~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=IOQ3JbCwmN2n8HNuR3MIZ93wgOU%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 13,
+      "shareCount": 0,
+      "playCount": 201,
+      "collectCount": 0,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "activedogs"
+        },
+        {
+          "name": "dogsoftiktok"
+        },
+        {
+          "name": "hankandroyco"
+        },
+        {
+          "name": "shoplocal"
+        },
+        {
+          "name": "capcut"
+        }
+      ],
+      "effectStickers": [],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "@hankandroy",
+      "fromProfileSection": "videos",
+      "duration": 17
+    },
+    {
+      "id": "7540010573824527647",
+      "text": "Local pups, you\u2019re in luck! #supportsmallbusiness #doglovers #dogsoftiktok #tiktokshop #hankandroyco ",
+      "textLanguage": "en",
+      "createTime": 1755545524,
+      "createTimeISO": "2025-08-18T19:32:04.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7278385194200007722",
+        "name": "hankandroy",
+        "profileUrl": "https://www.tiktok.com/@hankandroy",
+        "nickName": "Hank and Roy Pet Treats",
+        "verified": false,
+        "signature": "All-Natural, Single-Ingredient, Premium Dog Treats. \nAvailable on our Website & TikTok Shop!",
+        "bioLink": "https://hankandroy.com/collections/all",
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "commerceUserInfo": {
+          "commerceUser": true,
+          "downLoadLink": {
+            "ios": "",
+            "android": ""
+          },
+          "category": "Shopping & Retail",
+          "categoryButton": false
+        },
+        "privateAccount": false,
+        "roomId": "",
+        "ttSeller": true,
+        "following": 138,
+        "friends": 26,
+        "fans": 123,
+        "heart": 4621,
+        "video": 86,
+        "digg": 0
+      },
+      "musicMeta": {
+        "musicName": "Reflections on 52nd",
+        "musicAuthor": "AGM3",
+        "musicOriginal": false,
+        "playUrl": "https://sf16.tiktokcdn-us.com/obj/tos-alisg-ve-2774/403ad980d4e3426fbf33aaeb38794d84",
+        "coverMediumUrl": "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/47ccb712fc744e03b97c5b232ff279cc~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "originalCoverMediumUrl": "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/47ccb712fc744e03b97c5b232ff279cc~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "musicId": "6777600386590050306"
+      },
+      "locationMeta": {
+        "address": "Missouri, United States",
+        "city": "",
+        "cityCode": "4393217",
+        "countryCode": "6252001",
+        "locationName": "Kansas City",
+        "locationId": "22535865206014961"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@hankandroy/video/7540010573824527647",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 15,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/osAMAfPxDIFRFAIIzGEfvkI7REqQ8WgA6MjHeA~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=s1HthMRZn9lwm%2BZwctNx9OG1ZdU%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/osAMAfPxDIFRFAIIzGEfvkI7REqQ8WgA6MjHeA~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=s1HthMRZn9lwm%2BZwctNx9OG1ZdU%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 10,
+      "shareCount": 0,
+      "playCount": 162,
+      "collectCount": 0,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "supportsmallbusiness"
+        },
+        {
+          "name": "doglovers"
+        },
+        {
+          "name": "dogsoftiktok"
+        },
+        {
+          "name": "tiktokshop"
+        },
+        {
+          "name": "hankandroyco"
+        }
+      ],
+      "effectStickers": [],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "@hankandroy",
+      "fromProfileSection": "videos",
+      "duration": 15
+    },
+    {
+      "id": "7544037346186890527",
+      "text": "Take 15% off your Hank&Roy order this Labor Day weekend! #laborday #hankandroyco #labordaysale #dogtreats #allnaturaldogtreats ",
+      "textLanguage": "en",
+      "createTime": 1756483084,
+      "createTimeISO": "2025-08-29T15:58:04.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7278385194200007722",
+        "name": "hankandroy",
+        "profileUrl": "https://www.tiktok.com/@hankandroy",
+        "nickName": "Hank and Roy Pet Treats",
+        "verified": false,
+        "signature": "All-Natural, Single-Ingredient, Premium Dog Treats. \nAvailable on our Website & TikTok Shop!",
+        "bioLink": "https://hankandroy.com/collections/all",
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "commerceUserInfo": {
+          "commerceUser": true,
+          "downLoadLink": {
+            "ios": "",
+            "android": ""
+          },
+          "category": "Shopping & Retail",
+          "categoryButton": false
+        },
+        "privateAccount": false,
+        "roomId": "",
+        "ttSeller": true,
+        "following": 138,
+        "friends": 26,
+        "fans": 123,
+        "heart": 4621,
+        "video": 86,
+        "digg": 0
+      },
+      "musicMeta": {
+        "musicName": "So Free (Two AM Music Global)",
+        "musicAuthor": "Oliver Stutz",
+        "musicOriginal": false,
+        "musicAlbum": "Two AM Music Vol.1",
+        "playUrl": "https://sf16.tiktokcdn-us.com/obj/tos-alisg-ve-2774/60245d661b434c08a663a234259e0bfd",
+        "coverMediumUrl": "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/e9878f0f6d984152b748aa65cb8d319d~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "originalCoverMediumUrl": "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/e9878f0f6d984152b748aa65cb8d319d~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "musicId": "7147532385465141250"
+      },
+      "locationMeta": {
+        "address": "Missouri, United States",
+        "city": "",
+        "cityCode": "4393217",
+        "countryCode": "6252001",
+        "locationName": "Kansas City",
+        "locationId": "22535865206014961"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@hankandroy/video/7544037346186890527",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 13,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oQAOHI5oRIefnLDgAGC6VrHYLYwgqgejBIt8j0~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=pQ1%2BKDygc%2BHWpXK3ryfGrXJMbnI%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oQAOHI5oRIefnLDgAGC6VrHYLYwgqgejBIt8j0~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=pQ1%2BKDygc%2BHWpXK3ryfGrXJMbnI%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 10,
+      "shareCount": 0,
+      "playCount": 156,
+      "collectCount": 0,
+      "commentCount": 2,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "laborday"
+        },
+        {
+          "name": "hankandroyco"
+        },
+        {
+          "name": "labordaysale"
+        },
+        {
+          "name": "dogtreats"
+        },
+        {
+          "name": "allnaturaldogtreats"
+        }
+      ],
+      "effectStickers": [],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "@hankandroy",
+      "fromProfileSection": "videos",
+      "duration": 13
+    },
+    {
+      "id": "7555914985348533534",
+      "text": "Park days never disappoint. \n#activedogs #shoplocal #dogsoftiktok #kc #dogtreats ",
+      "textLanguage": "en",
+      "createTime": 1759248576,
+      "createTimeISO": "2025-09-30T16:09:36.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7278385194200007722",
+        "name": "hankandroy",
+        "profileUrl": "https://www.tiktok.com/@hankandroy",
+        "nickName": "Hank and Roy Pet Treats",
+        "verified": false,
+        "signature": "All-Natural, Single-Ingredient, Premium Dog Treats. \nAvailable on our Website & TikTok Shop!",
+        "bioLink": "https://hankandroy.com/collections/all",
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "commerceUserInfo": {
+          "commerceUser": true,
+          "downLoadLink": {
+            "ios": "",
+            "android": ""
+          },
+          "category": "Shopping & Retail",
+          "categoryButton": false
+        },
+        "privateAccount": false,
+        "roomId": "",
+        "ttSeller": true,
+        "following": 138,
+        "friends": 26,
+        "fans": 123,
+        "heart": 4621,
+        "video": 86,
+        "digg": 0
+      },
+      "musicMeta": {
+        "musicName": "Hot Night (Looking For Love) (Vocalese)",
+        "musicAuthor": "David Derose",
+        "musicOriginal": false,
+        "playUrl": "https://sf16.tiktokcdn-us.com/obj/tos-alisg-ve-2774/50fe7ac3c30345ff85ac01adc2a34c80",
+        "coverMediumUrl": "https://p19-common.tiktokcdn-us.com/tos-alisg-v-2774/47ccb712fc744e03b97c5b232ff279cc~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "originalCoverMediumUrl": "https://p19-common.tiktokcdn-us.com/tos-alisg-v-2774/47ccb712fc744e03b97c5b232ff279cc~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "musicId": "6777294017802536962"
+      },
+      "locationMeta": {
+        "address": "Missouri, United States",
+        "city": "",
+        "cityCode": "4393217",
+        "countryCode": "6252001",
+        "locationName": "Kansas City",
+        "locationId": "22535865206014961"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@hankandroy/video/7555914985348533534",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 13,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oIAZw6AjPBOyC0E9TciaIPB6iRNqBLKVIrAEA~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=UhaL95Rxuq2GuShnV9M%2F1aL5MTM%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oIAZw6AjPBOyC0E9TciaIPB6iRNqBLKVIrAEA~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=UhaL95Rxuq2GuShnV9M%2F1aL5MTM%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 8,
+      "shareCount": 0,
+      "playCount": 150,
+      "collectCount": 0,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "activedogs"
+        },
+        {
+          "name": "shoplocal"
+        },
+        {
+          "name": "dogsoftiktok"
+        },
+        {
+          "name": "kc"
+        },
+        {
+          "name": "dogtreats"
+        }
+      ],
+      "effectStickers": [],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "@hankandroy",
+      "fromProfileSection": "videos",
+      "duration": 13
+    },
+    {
+      "id": "7558541197308939551",
+      "text": "We had so much fun supporting the @Kansas Humane Society at Woofstock this past weekend! #Woofstock #wichitakansas #HankAndRoy #dogsoftiktok #woofstock ",
+      "textLanguage": "en",
+      "createTime": 1759860023,
+      "createTimeISO": "2025-10-07T18:00:23.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7278385194200007722",
+        "name": "hankandroy",
+        "profileUrl": "https://www.tiktok.com/@hankandroy",
+        "nickName": "Hank and Roy Pet Treats",
+        "verified": false,
+        "signature": "All-Natural, Single-Ingredient, Premium Dog Treats. \nAvailable on our Website & TikTok Shop!",
+        "bioLink": "https://hankandroy.com/collections/all",
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "commerceUserInfo": {
+          "commerceUser": true,
+          "downLoadLink": {
+            "ios": "",
+            "android": ""
+          },
+          "category": "Shopping & Retail",
+          "categoryButton": false
+        },
+        "privateAccount": false,
+        "roomId": "",
+        "ttSeller": true,
+        "following": 138,
+        "friends": 26,
+        "fans": 123,
+        "heart": 4621,
+        "video": 86,
+        "digg": 0
+      },
+      "musicMeta": {
+        "musicName": "Following The Sun (Whistle Version)",
+        "musicAuthor": "SUPER-Hi & NEEKA",
+        "musicOriginal": false,
+        "musicAlbum": "Following The Sun (Whistle Version)",
+        "playUrl": "https://sf16.tiktokcdn-us.com/obj/tos-alisg-ve-2774/ocoyQNd0NBZIdCFZmB6MftIOoHtdgHfkoL0DEF",
+        "coverMediumUrl": "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/ooWW0AiDDEBsm6ABltAwfBiA0dE3saGAoAsu0A~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "originalCoverMediumUrl": "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/ooWW0AiDDEBsm6ABltAwfBiA0dE3saGAoAsu0A~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast8",
+        "musicId": "7493469663054940161"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@hankandroy/video/7558541197308939551",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 16,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/owIImq0AqI46Z9FlBiEnsci7IRDABAf1iVCatT~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=4HQmUPcJoRmfY%2BNtg8qFTWz6R%2Fc%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/owIImq0AqI46Z9FlBiEnsci7IRDABAf1iVCatT~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=4HQmUPcJoRmfY%2BNtg8qFTWz6R%2Fc%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 8,
+      "shareCount": 0,
+      "playCount": 133,
+      "collectCount": 0,
+      "commentCount": 0,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "woofstock"
+        },
+        {
+          "name": "wichitakansas"
+        },
+        {
+          "name": "hankandroy"
+        },
+        {
+          "name": "dogsoftiktok"
+        },
+        {
+          "name": "woofstock"
+        }
+      ],
+      "effectStickers": [],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "@hankandroy",
+      "fromProfileSection": "videos",
+      "duration": 16
+    },
+    {
+      "id": "7535548697027857694",
+      "text": "Our favorite part\ud83e\udd17\ud83d\udc3e #ducksunlimited #hankandroyco #dogtreats #memphis #allnaturaldogtreats ",
+      "textLanguage": "en",
+      "createTime": 1754506662,
+      "createTimeISO": "2025-08-06T18:57:42.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7278385194200007722",
+        "name": "hankandroy",
+        "profileUrl": "https://www.tiktok.com/@hankandroy",
+        "nickName": "Hank and Roy Pet Treats",
+        "verified": false,
+        "signature": "All-Natural, Single-Ingredient, Premium Dog Treats. \nAvailable on our Website & TikTok Shop!",
+        "bioLink": "https://hankandroy.com/collections/all",
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "commerceUserInfo": {
+          "commerceUser": true,
+          "downLoadLink": {
+            "ios": "",
+            "android": ""
+          },
+          "category": "Shopping & Retail",
+          "categoryButton": false
+        },
+        "privateAccount": false,
+        "roomId": "",
+        "ttSeller": true,
+        "following": 138,
+        "friends": 26,
+        "fans": 123,
+        "heart": 4621,
+        "video": 86,
+        "digg": 0
+      },
+      "musicMeta": {
+        "musicName": "original sound",
+        "musicAuthor": "Hank and Roy Pet Treats",
+        "musicOriginal": true,
+        "playUrl": "https://v16m.tiktokcdn-us.com/d7f1333321affcd4bf89c25705904286/68e7f956/video/tos/useast8/tos-useast8-v-27dcd7-tx2/oEe5TiREIACIAzASeAGfqREaJEAtxpT40LxoCT/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=GSDrKInz7ThGOcyKXq8Zmo&mime_type=audio_mpeg&qs=13&rc=anltbHk5cmR0NTMzaTU8NEBpanltbHk5cmR0NTMzaTU8NEBsZ2MxMmQ0XzZhLS1kMTJzYSNsZ2MxMmQ0XzZhLS1kMTJzcw%3D%3D&vvpl=1&l=20251009120456579A0E984B41E9042653&btag=e00070000",
+        "coverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "originalCoverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/f47e874c85bf6e471e31338141a0aee0~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=a14a2f55&x-expires=1760184000&x-signature=kl%2BCoMdX03yVBYbxWhGqnXa6snE%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "musicId": "7535548668645067551"
+      },
+      "locationMeta": {
+        "address": "Tennessee, United States",
+        "city": "",
+        "cityCode": "4641239",
+        "countryCode": "6252001",
+        "locationName": "Memphis",
+        "locationId": "22535865203979547"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@hankandroy/video/7535548697027857694",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1024,
+        "width": 576,
+        "duration": 14,
+        "coverUrl": "https://p19-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oYKLIqiBRofiUxvGp0dTCztIa0im6IASZRANDA~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=osg7IbgjX3n%2BKc7sN3TwbK20jxY%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "originalCoverUrl": "https://p19-common-sign.tiktokcdn-us.com/tos-useast8-p-0068-tx2/oYKLIqiBRofiUxvGp0dTCztIa0im6IASZRANDA~tplv-tiktokx-origin.image?dr=9636&x-expires=1760184000&x-signature=osg7IbgjX3n%2BKc7sN3TwbK20jxY%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 8,
+      "shareCount": 0,
+      "playCount": 54,
+      "collectCount": 0,
+      "commentCount": 1,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "ducksunlimited"
+        },
+        {
+          "name": "hankandroyco"
+        },
+        {
+          "name": "dogtreats"
+        },
+        {
+          "name": "memphis"
+        },
+        {
+          "name": "allnaturaldogtreats"
+        }
+      ],
+      "effectStickers": [],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "@hankandroy",
+      "fromProfileSection": "videos",
+      "duration": 14
+    }
+  ],
+  "selection_date": "2025-10-09T12:05:06.146819+00:00"
+}

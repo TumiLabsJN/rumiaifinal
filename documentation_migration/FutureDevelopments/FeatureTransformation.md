@@ -110,32 +110,43 @@ Videos are processed through temporal windows (Hook + Middle Segments + Closing)
   - Hook: `scene_count: 2`, `word_count: 10`
   - Middle_1: `scene_count: 3`, `word_count: 15`
   - Middle_2: `scene_count: 2`, `word_count: 12`
-  - ...
+  - Middle_3: `scene_count: 4`, `word_count: 18`
+  - Middle_4: `scene_count: 3`, `word_count: 14`
   - Closing: `scene_count: 1`, `word_count: 8`
 
-**Step 2: Aggregation for ML Training** (this transformation spec)
+**Step 2: Full Temporal Granularity (Stage 3: Feature Aggregation)**
 - **Hook features**: Use hook window values directly
-- **Middle features**: Average across all middle segments
-  - `middle_scene_count = (3 + 2 + ...) / 4 = 2.5`
-  - `middle_word_count = (15 + 12 + ...) / 4 = 13.0`
+  - `hook_scene_count = 2`, `hook_word_count = 10`
+- **Middle features**: Preserve ALL middle segments separately (NO AVERAGING)
+  - `middle_1_scene_count = 3`, `middle_1_word_count = 15`
+  - `middle_2_scene_count = 2`, `middle_2_word_count = 12`
+  - `middle_3_scene_count = 4`, `middle_3_word_count = 18`
+  - `middle_4_scene_count = 3`, `middle_4_word_count = 14`
 - **Closing features**: Use closing window values directly
-- **Global features**: Sum or derive from all windows
-  - `total_scene_count = hook + sum(middles) + closing`
+  - `closing_scene_count = 1`, `closing_word_count = 8`
+- **Metadata features**: Video-level (not per-window)
+  - `duration`, `create_time`, `gender_detection`
 
-**Step 3: Flat Feature Vector**
-- One training sample = one video's aggregated features
-- Feature structure: `[hook_features, avg_middle_features, closing_features, global_features]`
-- Example: `[hook_scene_count, middle_avg_scene_count, closing_scene_count, duration, ...]`
+**Step 3: Bucket-Specific Feature Vector**
+- One training sample = one video's full temporal features
+- **Feature count varies by bucket** (bucket-specific models handle this):
+  - Bucket 0-9s: 21 features × 2 windows + 3 metadata = **45 features**
+  - Bucket 9-18s: 21 features × 5 windows + 3 metadata = **108 features**
+  - Bucket 18-33s: 21 features × 6 windows + 3 metadata = **129 features**
+  - Bucket 33-75s+: 21 features × 7 windows + 3 metadata = **150 features**
+- Feature structure: `[hook_*, middle_1_*, middle_2_*, ..., middle_N_*, closing_*, metadata]`
+- Example (18-33s bucket): `[hook_scene_count, middle_1_scene_count, middle_2_scene_count, middle_3_scene_count, middle_4_scene_count, closing_scene_count, duration, ...]`
 
-**Why Aggregation Works:**
-- **Hook features**: Capture first 3s patterns (attention grab)
-- **Middle features (averaged)**: Capture sustained patterns (content delivery)
-- **Closing features**: Capture last 3s patterns (CTA, engagement hook)
-- **Global features**: Capture overall video characteristics
+**Why Full Granularity (No Averaging):**
+- **Preserves temporal evolution**: Emotional arcs (neutral → happy → sad), pacing changes, narrative structure
+- **Bucket-specific models**: Each bucket trains separate RF and KMeans models, so different feature counts are acceptable
+- **No information loss**: Middle segments capture sustained patterns WITHOUT averaging
+- **Example**: A video that builds suspense (low energy → high energy) would lose this pattern if middle segments were averaged
 
-**Why Not Use Temporal Windows Directly:**
-- Different videos → different # of windows (2 vs 7) → can't train ML
-- Solution: Fixed feature structure via aggregation (hook + avg_middle + closing)
+**Architecture Note:**
+- Each bucket has IDENTICAL window structures (all 18-33s videos have 6 windows)
+- This eliminates ragged arrays WITHIN a bucket
+- Different feature counts ACROSS buckets are handled by per-bucket models
 
 ---
 

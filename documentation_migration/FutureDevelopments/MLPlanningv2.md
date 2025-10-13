@@ -112,6 +112,16 @@ Each processing stage includes:
 │   │   │       │   │   │   │   ├── insights/   # temporal_windows JSON (1 per video)
 │   │   │       │   │   │   │   ├── unified/    # Intermediate timeline+ml_data (debugging)
 │   │   │       │   │   │   │   └── service_debug/  # emotion_detection, audio_energy outputs
+│   │   │       │   │   │   ├── validation/     # Pipeline validation outputs (Stage 2.4)
+│   │   │       │   │   │   │   ├── rolling_stats.json           # Running statistics per feature
+│   │   │       │   │   │   │   └── validation_summary.json      # Summary of anomalies
+│   │   │       │   │   │   ├── flagged_videos/ # Investigation packages for anomalies
+│   │   │       │   │   │   │   └── {video_id}/ # Centralized troubleshooting folder
+│   │   │       │   │   │   │       ├── video.mp4
+│   │   │       │   │   │   │       ├── temporal_windows_updated.json
+│   │   │       │   │   │   │       ├── unified_analysis.json
+│   │   │       │   │   │   │       ├── service_debug/
+│   │   │       │   │   │   │       └── validation_report.json
 │   │   │       │   │   │   ├── ml_analysis/    # ML pipeline outputs
 │   │   │       │   │   │   │   ├── aggregated_features.csv          # Aggregated temporal windows (N videos)
 │   │   │       │   │   │   │   ├── rf_transformed.csv               # RF-ready features
@@ -220,7 +230,7 @@ Each processing stage includes:
 | Asset | Retention | Rationale |
 |-------|-----------|-----------|
 | **Raw Videos** | 30 days | Can re-download if needed, saves space |
-| **ML Analysis** | 6 months | Compressed after 30 days |
+| **ML Analysis** | 6 months | Compressed after 60 days |
 | **ML Models** | Latest 3 versions | Per client/hashtag |
 | **Reports** | Indefinite | Small size, high value |
 | **Checkpoints** | 7 days after completion | Enable resume capability |
@@ -248,7 +258,10 @@ python rumiai_ml_batch.py \
   --selection-strategy {contrastive|top} \           # Stage 0.3: Selection Strategy
   --video-count N \                                  # Stage 0.4: Video Count
   --date-filter last_N_days \                        # Stage 0.5: Date Filter
-  --report-type {single|comparison}                  # Stage 0.6: Report Type
+  --country-code {US|BR|global} \                    # Stage 0.6: Country Code
+  --report-type {single|comparison} \                # Stage 0.7: Report Type
+  --report-audience {client|internal|creator} \      # Stage 0.8: Report Audience
+  --auto-confirm                                     # Skip interactive prompts (CI/CD)
 ```
 
 **Design Principles**:
@@ -327,6 +340,12 @@ where:
   share_rate = shares / views
   share_boost = 1 + (share_rate × 10)
 ```
+
+**Business Rationale**:
+- Shares are 10x more valuable than views alone (viral indicator)
+- Formula prioritizes "share-worthy" content over passive consumption
+- Example: Video A (100K views, 100 shares, score=110K) outranks Video B (105K views, 10 shares, score=106.05K)
+- Validated through initial client feedback showing share rate correlates with campaign success
 
 **Why This Formula**:
 - Shares signal viral potential (10x weight reflects their importance)
@@ -444,13 +463,58 @@ These are orthogonal dimensions:
 - **Competitor**: `last_90_days` (current competitive strategies)
 - **Creator**: `last_30_days` (recent natural style for vetting)
 
-**Child Documents**: 
+**Child Documents**:
 
 **Future TI Document**: VideoDiscoveryTI.md (date filtering logic)
 
 ---
 
-## Stage 0.6: Report Types
+## Stage 0.6: Country Code
+
+**Purpose**: Controls geographic content filtering via Apify proxy routing
+
+**CLI Parameter**: `--country-code {country}`
+
+**Available Values**:
+
+| Value | Proxy Behavior | Content Returned | Use Case |
+|-------|----------------|------------------|----------|
+| `US` | proxyCountryCode: "US" | US-specific trending content | US market analysis (default) |
+| `BR` | proxyCountryCode: "BR" | Brazil-specific trending content | Brazilian market analysis |
+| `global` | No proxy parameter | Unfiltered global content | Cross-market comparison |
+
+**Default**: `US`
+
+**CLI Usage**:
+```bash
+--country-code US      # US market analysis (default)
+--country-code BR      # Brazilian market analysis
+--country-code global  # Global content (no filtering)
+```
+
+**How It Works**:
+- Apify's `proxyCountryCode` parameter routes scraping through country-specific proxies
+- TikTok's algorithm returns region-specific trending content based on proxy location
+- "global" mode omits the parameter, letting Apify use default routing (mixed results)
+
+**Business Value**:
+- **Market-specific insights**: Analyze what works in specific geographic markets
+- **Localization research**: Identify region-specific creative patterns
+- **Multi-market comparison**: Compare US vs BR vs global trends
+- **International expansion**: Understand new market requirements before launch
+
+**Default Per Target Type**:
+- **Hashtag**: `US` (US market research default)
+- **Competitor**: `US` (analyze US-based competitors)
+- **Creator**: `US` (vet US-based creators)
+
+**Child Documents**: None (native to MLPlanning)
+
+**Future TI Document**: VideoDiscoveryTI.md (country code implementation)
+
+---
+
+## Stage 0.7: Report Types
 
 **Purpose**: Determines what type of output is generated
 
@@ -497,6 +561,49 @@ These are orthogonal dimensions:
 
 ---
 
+## Stage 0.8: Report Audience
+
+**Purpose**: Determines target audience for generated reports (affects language, detail level, formatting)
+
+**Available Audiences**:
+
+| Audience | Who It's For | Language Style | Detail Level | Use Case |
+|----------|-------------|----------------|--------------|----------|
+| `client` | Brand stakeholders, marketing teams | Formal, business-oriented | High-level insights, strategic recommendations | Hashtag, Competitor analysis |
+| `internal` | Tumi Labs team, data scientists | Technical, analytical | Full technical details, model metrics, raw data | Debugging, model validation, research |
+| `creator` | Content creators, influencers | Casual, actionable, encouraging | Practical tips, specific actions to take | Creator monitoring, coaching |
+
+**CLI Usage**:
+```bash
+--report-audience client     # Business report for brand stakeholders (default for hashtag/competitor)
+--report-audience internal   # Technical report for Tumi Labs team
+--report-audience creator    # Actionable tips for content creators (default for creator analysis)
+```
+
+**Default Logic**:
+- **Hashtag analysis**: `client` (brands analyzing market trends)
+- **Competitor analysis**: `client` (brands benchmarking against rivals)
+- **Creator analysis**: `creator` (coaching individual creators)
+
+**Impact on Report Generation** (Stage 5):
+- **Client reports**: Focus on "What's working in the market?" with strategic insights
+- **Internal reports**: Include model performance metrics, feature importance, statistical confidence
+- **Creator reports**: Frame insights as "How to improve your content" with specific actionable steps
+
+**Example Output Differences**:
+
+| Insight Type | Client | Internal | Creator |
+|-------------|--------|----------|---------|
+| **Pattern found** | "Top performers use dynamic camera angles" | "Feature: camera_movement, importance: 0.23, p<0.01" | "Try moving your camera! 75% of viral videos use this" |
+| **Timing insight** | "Hook engagement peaks at 1.2s" | "Temporal window: hook, peak_engagement: 1.2s ±0.3s" | "Grab attention in the first 1-2 seconds - that's when viewers decide to stay" |
+| **Music pattern** | "Trending audio increases shareability" | "Audio feature correlation: 0.45 with share_rate" | "Use trending sounds! They get 2x more shares" |
+
+**Child Documents**: None (native to MLPlanning)
+
+**Future TI Document**: ReportGenerationTI.md (audience-specific formatting logic)
+
+---
+
 # Part 3: Processing Pipeline (Linear Stages)
 
 End-to-end pipeline from video discovery to final reports.
@@ -508,8 +615,10 @@ Stage 1: Video Discovery & Selection
     ↓ Selected video list (per bucket)
 Stage 2: Video Processing (RumiAI Pipeline)
     ↓ temporal_windows_updated.json (N videos per qualified bucket)
+    ↓ Stage 2.4: Pipeline Validation
+    ↓ rolling_stats.json + flagged_videos/ (if anomalies detected)
 Stage 3: Feature Aggregation
-    ↓ aggregated_features.csv (N rows × ~35 columns)
+    ↓ aggregated_features.csv (N rows × ~65-215 features per bucket)
 Stage 4: Feature Transformation
     ↓ rf_transformed.csv + km_transformed.csv
 Stage 5: ML Model Training
@@ -618,6 +727,32 @@ else:
 - Typical: ~300 videos total (3 buckets × ~100 videos each)
 - Format: List of video URLs/IDs for Stage 2 processing
 
+### 1.5: Interactive Confirmation
+
+After bucket selection completes, CLI displays summary and prompts user to confirm before proceeding to Stage 2:
+
+```
+Selected Buckets (by winner concentration):
+  1. 15-30s  →  28 videos  (32.0% of winners)
+  2. 30-45s  →  24 videos  (24.0% of winners)
+  3. 45-60s  →  20 videos  (16.0% of winners)
+
+Total: 72 videos across 3 buckets
+
+Proceed to Stage 2 (Download & Analysis)? [Y/n/details]
+```
+
+**Purpose**: Allow user to review bucket selection and abort before expensive operations (downloads, ML inference).
+
+**User Options**:
+- `Y` or `Enter`: Proceed to Stage 2
+- `n`: Abort (exit code 130)
+- `details`: Show full bucket analysis including runners-up
+
+**Bypass**: Use `--auto-confirm` flag to skip prompt for CI/CD pipelines.
+
+**Child Document**: VideoDiscoveryCHILD.md Section 2.3.5 (full implementation details)
+
 **Example Workflow**:
 ```
 Scraped: 800 videos (all-time)
@@ -707,136 +842,553 @@ for video_file in bucket_videos:
 
 ---
 
-## Stage 3: Feature Aggregation
+## Stage 2.5: File Organization (Bucket Assignment)
 
-**Purpose**: Aggregate temporal windows to video-level features
+**Purpose**: Organize temporal_windows_updated.json files from flat /insights/ directory into bucket-specific directories
 
-**Input**: N × `temporal_windows_updated.json` files per qualified bucket (N from --video-count)
+**Why Separate from Stage 2?**:
+- Stage 2 (rumiai_runner.py) processes videos one-at-a-time with no bucket awareness
+- Stage 2 saves all outputs to flat `/insights/` directory (mixed durations)
+- Stage 2.5 is a BATCH operation that runs ONCE after all Stage 2 processing completes
+- Separates concerns: video analysis (Stage 2) vs file organization (Stage 2.5)
+- Stage 3 requires bucket-organized inputs for efficient processing
+
+**Input**:
+- `/insights/{video_id}_temporal_windows_updated.json` (N files, flat structure, mixed durations)
+- Each JSON contains `metadata.duration` field
 
 **Process**:
 
-### 3.1: Temporal Window Aggregation
+### 2.5.1: Batch File Organization
 ```python
+# Read all JSON files from flat insights directory
+for json_file in glob("/insights/*_temporal_windows_updated.json"):
+    # Extract duration from JSON
+    data = load_json(json_file)
+    duration = data['metadata']['duration']
+
+    # Determine bucket assignment
+    bucket = assign_bucket(duration)
+
+    # Move to bucket-specific directory
+    target_path = f"bucket_{bucket}/analysis/insights/{json_file.name}"
+    move_file(json_file, target_path)
+```
+
+### 2.5.2: Bucket Assignment Logic
+```python
+def assign_bucket(duration):
+    """
+    Assign duration to bucket using lower-inclusive boundaries (matches upstream).
+
+    Convention: [lower, upper) - includes lower bound, excludes upper bound
+
+    Examples:
+        0.0s  → bucket_0-3s
+        2.99s → bucket_0-3s
+        3.0s  → bucket_3-9s   (NOT bucket_0-3s)
+        9.0s  → bucket_9-13s  (NOT bucket_3-9s)
+        18.0s → bucket_18-33s
+        119.99s → bucket_90-120s
+        120.0s → ERROR (exceeds maximum)
+    """
+    if duration < 0:
+        raise ValueError(f"Duration {duration}s is negative")
+    if duration >= 120.0:
+        raise ValueError(f"Duration {duration}s exceeds maximum 120s")
+
+    # Lower-inclusive, upper-exclusive boundaries [lower, upper)
+    if duration < 3.0:
+        return '0-3s'
+    elif duration < 9.0:
+        return '3-9s'
+    elif duration < 13.0:
+        return '9-13s'
+    elif duration < 18.0:
+        return '13-18s'
+    elif duration < 33.0:
+        return '18-33s'
+    elif duration < 60.0:
+        return '33-60s'
+    elif duration < 90.0:
+        return '60-90s'
+    else:  # duration < 120.0
+        return '90-120s'
+```
+
+### 2.5.3: Validation & Logging
+```python
+# Track organization results
+organization_summary = {
+    'total_files': len(all_files),
+    'organized_by_bucket': {},
+    'skipped_files': [],
+    'errors': []
+}
+
+# Verify all files organized
+for bucket in BUCKETS:
+    count = len(glob(f"bucket_{bucket}/analysis/insights/*.json"))
+    organization_summary['organized_by_bucket'][bucket] = count
+
+# Log summary
+logger.info(f"Organized {total_files} files into {len(BUCKETS)} buckets")
+logger.info(f"Distribution: {organization_summary['organized_by_bucket']}")
+```
+
+**Output**:
+- Bucket directories populated with organized JSON files:
+  ```
+  bucket_18-33s/analysis/insights/
+  ├── 7428596_temporal_windows_updated.json
+  ├── 238506_temporal_windows_updated.json
+  └── ... (N files with 18.0 <= duration < 33.0)
+
+  bucket_33-60s/analysis/insights/
+  ├── 9876543_temporal_windows_updated.json
+  └── ... (M files with 33.0 <= duration < 60.0)
+  ```
+- Organization summary log (files per bucket, processing time, any errors)
+
+**Error Handling**:
+- **Missing duration field**: Skip file, log error, continue processing
+- **Invalid duration (< 0 or >= 120)**: Skip file, log error, continue processing
+- **Malformed JSON**: Skip file, log error, continue processing
+- **File move failure**: Retry once, then log error and continue
+- **No files to organize**: Log warning, exit gracefully (not an error)
+- **All files fail**: Log critical error, exit with error code
+
+**When This Runs**:
+- **AFTER**: All Stage 2 video processing completes (batch operation)
+- **BEFORE**: Stage 3 Feature Aggregation begins
+- **FREQUENCY**: Once per hashtag analysis run
+
+**Invocation**:
+```bash
+python3 scripts/stage2_5_organize.py \
+  --source-dir="/insights" \
+  --client="test_run" \
+  --target-type="hashtags" \
+  --target-name="fitness" \
+  --strategy="top_contrastive"
+```
+
+**Child Documents**:
+- FileOrganizationCHILD.md (complete HLD with edge cases, validation, error handling)
+
+**Future TI Document**:
+- FileOrganizationTI.md (implementation of batch file organization logic)
+
+**Related Future Features**:
+- None (core pipeline component, not an enhancement)
+
+---
+
+## Stage 3: Feature Aggregation
+
+**Purpose**: Extract fixed-size feature vectors from temporal windows (bucket-specific structure)
+
+**Input**: N × `temporal_windows_updated.json` files per qualified bucket (N from --video-count)
+
+**Key Architectural Insight**:
+Each bucket processes videos with **identical window structures**, eliminating the ragged array problem:
+- Bucket 0-3s, 3-9s: All videos have 2 windows (Hook + Closing only)
+- Bucket 9-13s, 13-18s: All videos have 5 windows (Hook + 3 Middle + Closing)
+- Bucket 18-33s: All videos have 6 windows (Hook + 4 Middle + Closing)
+- Bucket 33-60s, 60-90s, 90-120s: All videos have 7 windows (Hook + 5 Middle + Closing)
+
+This enables **full temporal granularity** without averaging, preserving narrative structure and pacing patterns.
+
+**Process**:
+
+### 3.1: Temporal Window Extraction (Bucket-Specific)
+
+**Bucket 18-33s Example** (4 middle segments - fixed for all videos in this bucket):
+
+```python
+# Base features per window (example subset of ~30 total features)
+BASE_FEATURES = [
+    'scene_count', 'eye_contact_rate', 'word_count', 'speech_coverage',
+    'energy_level', 'joy_ratio', 'surprise_ratio', 'anger_ratio',
+    'close_ratio', 'medium_ratio', 'wide_ratio', 'element_count',
+    # ... ~18 more features
+]
+
 for temporal_windows_json in bucket_jsons:
+    windows = load_json(temporal_windows_json)
     video_features = {}
 
-    # Hook features: Use directly (always 1 hook window)
-    video_features['hook_scene_count'] = windows['hook']['scene_count']
-    video_features['hook_eye_contact_rate'] = windows['hook']['eye_contact_rate']
+    # Hook features (1 window - all ~30 base features)
+    for feature in BASE_FEATURES:
+        video_features[f'hook_{feature}'] = windows['hook'][feature]
 
-    # Middle features: Average across all middle segments
-    middle_windows = windows['middle']  # Variable count (2-7 segments)
-    video_features['middle_avg_word_count'] = mean([w['word_count'] for w in middle_windows])
-    video_features['middle_avg_scene_count'] = mean([w['scene_count'] for w in middle_windows])
+    # Middle features (4 segments - FIXED for bucket 18-33s)
+    # Full temporal granularity - no averaging!
+    middle_segments = windows['middle_segments']  # Always 4 segments
+    for i, segment in enumerate(middle_segments, start=1):
+        for feature in BASE_FEATURES:
+            video_features[f'middle_{i}_{feature}'] = segment[feature]
 
-    # Closing features: Use directly (always 1 closing window)
-    video_features['closing_energy_level'] = windows['closing']['energy_level']
+    # Closing features (1 window - all ~30 base features)
+    for feature in BASE_FEATURES:
+        video_features[f'closing_{feature}'] = windows['closing'][feature]
 
-    # Global features: Sum or derive from all windows
+    # Metadata (non-temporal, non-collinear)
     video_features['duration'] = windows['metadata']['duration']
-    video_features['total_scene_count'] = sum_all_scene_counts(windows)
+    video_features['create_time'] = windows['metadata']['create_time']
+
+    # Gender detection (video-level metadata)
+    video_features['gender'] = windows['metadata'].get('gender_detection', {}).get('gender')
+    video_features['gender_confidence'] = windows['metadata'].get('gender_detection', {}).get('confidence')
+
+    # ❌ NO global features that sum temporal features (avoids collinearity)
+    # DO NOT ADD: total_scene_count, total_word_count, total_energy, etc.
+    # These would be collinear with hook + middle_1 + middle_2 + ... + closing
 
     aggregated_rows.append(video_features)
 ```
 
-### 3.2: Create Aggregated CSV
+**Why This Works**:
+- **No ragged arrays**: All videos in a bucket have IDENTICAL window counts
+- **No averaging**: Preserves temporal evolution (e.g., emotional arc: neutral → happy → sad)
+- **No collinearity**: Global features (like `total_scene_count`) would be mathematical sums of temporal features
+- **Fixed-size vectors**: Required for ML algorithms (one row per video)
+
+### 3.2: Bucket-Specific Feature Counts
+
+**Output Feature Counts by Bucket**:
+
+| Bucket | Middle Segments | Total Windows | Base Features × Windows | Metadata | **Total Features** |
+|--------|-----------------|---------------|-------------------------|----------|-------------------|
+| 0-3s, 3-9s | 0 (null) | 2 | 30 × 2 = 60 | ~5 | **~65** |
+| 9-13s, 13-18s | 3 | 5 | 30 × 5 = 150 | ~5 | **~155** |
+| 18-33s | 4 | 6 | 30 × 6 = 180 | ~5 | **~185** |
+| 33-60s, 60-90s, 90-120s | 5 | 7 | 30 × 7 = 210 | ~5 | **~215** |
+
+**Note**: Exact feature count depends on which RumiAI features are selected. The ~30 base features is an estimate.
+
+### 3.3: Create Aggregated CSV
 ```python
 import pandas as pd
 
 df = pd.DataFrame(aggregated_rows)
 df.to_csv("ml_analysis/aggregated_features.csv", index=False)
+
+# Example output shape for bucket 18-33s with N=100 videos
+# Shape: (100 videos, ~185 features)
 ```
 
 **Output**: `ml_analysis/aggregated_features.csv`
-- Shape: (N videos, ~35 aggregated features)
-- Example columns:
-  - `hook_scene_count`, `hook_eye_contact_rate`, `hook_word_count`
-  - `middle_avg_word_count`, `middle_avg_scene_count`, `middle_avg_energy_level`
-  - `closing_energy_level`, `closing_word_count`
-  - `duration`, `total_scene_count`, `create_time`
+- Shape: **(N videos, ~65-215 features)** depending on bucket
+- Example columns for **bucket 18-33s**:
+  - Hook: `hook_scene_count`, `hook_eye_contact_rate`, `hook_word_count`, ... (30 features)
+  - Middle 1: `middle_1_scene_count`, `middle_1_eye_contact_rate`, ... (30 features)
+  - Middle 2: `middle_2_scene_count`, `middle_2_eye_contact_rate`, ... (30 features)
+  - Middle 3: `middle_3_scene_count`, `middle_3_eye_contact_rate`, ... (30 features)
+  - Middle 4: `middle_4_scene_count`, `middle_4_eye_contact_rate`, ... (30 features)
+  - Closing: `closing_scene_count`, `closing_energy_level`, ... (30 features)
+  - Metadata: `duration`, `create_time`, `gender`, `gender_confidence`, ... (5 features)
 
-**Why Aggregation**:
-- ML algorithms need fixed-size feature vectors (one row per video)
-- Middle segments vary by duration (2-7 windows) → average handles variable count
-- Hook and closing always have 1 window → use directly
+**Collinearity Prevention**:
+```python
+# ❌ WRONG - Creates collinear features
+total_scene_count = hook_scene_count + middle_1_scene_count + ... + closing_scene_count
+
+# ✅ CORRECT - Use only temporal features
+# ML models can learn relationships between temporal features naturally
+# No need for explicit global aggregates
+```
 
 **Child Documents**:
 - FeatureTransformation.md ("Temporal Features to ML Training Input" section)
 
 **Future TI Document**:
-- FeatureAggregationTI.md (aggregation algorithms, validation logic)
+- FeatureAggregationTI.md (extraction logic, bucket-specific handling, validation)
+
+---
+
+## Stage 3.4: Review CSV Generation
+
+**Purpose**: Generate video_review.csv for manual outlier investigation in Excel
+
+**Why Separate from Stage 3.1-3.3?**:
+- Stage 3.1-3.3 generates `aggregated_features.csv` (ML training input, ~65-215 columns)
+- Stage 3.4 generates `video_review.csv` (human review, same features + url column)
+- Review CSV is OPTIONAL - deleting it doesn't impact ML pipeline
+
+**Input**:
+- `temporal_windows_updated.json` (N files per bucket, with metadata.url)
+- Note: Requires Stage 2 modification - temporal_compute.py must include `url` in calculated_metadata
+
+**Process**:
+1. Load all temporal_windows_updated.json files for bucket
+2. Extract features (same logic as aggregated_features.csv)
+3. Check metadata.url presence (skip videos with missing url, log warning)
+4. Build CSV rows: [video_id, url, duration, all_features]
+5. Save as `bucket_{duration}/validation/video_review.csv`
+
+**Output**:
+- `bucket_{duration}/validation/video_review.csv`
+- Row count: N videos (same as aggregated_features.csv, minus videos with missing url)
+- Column count: ~67-217 columns (video_id + url + duration + all temporal features)
+
+**User Workflow**:
+1. Open video_review.csv in Excel
+2. Apply conditional formatting to highlight outliers (Excel built-in feature)
+3. Click `url` column to watch flagged videos on TikTok
+4. Investigate why outliers occurred (encoding issues, edge cases, RumiAI bugs)
+5. All videos still proceed to ML training (no exclusions)
+
+**Stage 2 Prerequisite**:
+Modify `temporal_compute.py` (line ~2650) to pass url through metadata:
+```python
+calculated_metadata = {
+    'video_id': video_id,
+    'duration': video_duration,
+    'url': metadata.get('url'),  # ← ADD THIS LINE
+    'digg_count': metadata.get('likes', 0),
+    ...
+}
+```
+
+**Error Handling**:
+- Videos with missing url: Skip from review CSV, log warning, still included in aggregated_features.csv
+- All videos missing url: Log error, skip video_review.csv generation, continue pipeline
+- Disk full: Fail fast
+
+**Child Documents**:
+- ReviewCSVGenerationCHILD.md (complete HLD with schemas, tests, pseudocode)
+
+**Future TI Document**:
+- ReviewCSVGenerationTI.md (implementation of dual CSV generation logic)
+
+**Related Features**:
+- Phase 1: Manual Outlier Investigation (simplified from automated Pipeline Validation)
 
 ---
 
 ## Stage 4: Feature Transformation
 
-**Purpose**: Transform aggregated features for ML algorithms (RF and K-Means have different requirements)
+**Purpose**: Transform aggregated features into three distinct formats for dual Random Forest + window-level K-Means architecture
 
-**Input**: `ml_analysis/aggregated_features.csv`
+**Input**: `ml_analysis/aggregated_features.csv` (bucket-specific feature count: ~65-215 features)
+
+**Architectural Decision**: This stage creates **3 transformation pipelines** to support:
+1. **Video-Level RF** (cross-window patterns)
+2. **Window-Level RF** (within-window validation)
+3. **Window-Level K-Means** (creative strategies per window)
 
 **Process**:
 
-### 4.1: Random Forest Transformation
+### 4.1: Video-Level Random Forest Transformation
+
+**Purpose**: Detect cross-window interactions and temporal progressions
+
+**Key Principle**: Random Forest is scale-invariant but benefits from categorical encoding and derived temporal features.
+
+**Bucket 18-33s Example** (6 windows: Hook + 4 Middle + Closing):
+
 ```python
-# RF is scale-invariant, needs categorical encoding
-df_rf = df.copy()
+import pandas as pd
+import numpy as np
 
-# One-hot encoding for categorical features
-df_rf = pd.get_dummies(df_rf, columns=['dominant_emotion_id'])
+df_rf_video = df.copy()  # Input: (N videos, ~185 features)
 
-# Extract temporal features from create_time
-df_rf['hour'] = df_rf['create_time'].dt.hour
-df_rf['day_of_week'] = df_rf['create_time'].dt.dayofweek
-df_rf['is_weekend'] = (df_rf['day_of_week'] >= 5).astype(int)
-df_rf['is_business_hours'] = ((df_rf['hour'] >= 9) & (df_rf['hour'] <= 17)).astype(int)
+# ===== 1. Categorical Encoding =====
+# One-hot encoding for gender (if available)
+if 'gender' in df_rf_video.columns:
+    df_rf_video = pd.get_dummies(df_rf_video, columns=['gender'], prefix='gender')
 
-# Numerical features: Use directly (scale-invariant)
-# No scaling needed for Random Forest
+# ===== 2. Temporal Features from create_time =====
+df_rf_video['hour'] = df_rf_video['create_time'].dt.hour
+df_rf_video['day_of_week'] = df_rf_video['create_time'].dt.dayofweek
+df_rf_video['is_weekend'] = (df_rf_video['day_of_week'] >= 5).astype(int)
+df_rf_video['is_business_hours'] = ((df_rf_video['hour'] >= 9) & (df_rf_video['hour'] <= 17)).astype(int)
 
-# Add target variable (for Contrastive strategy)
-df_rf['is_top_performer'] = (df_rf.index < int(N * 0.8)).astype(int)
+# ===== 3. All Temporal Features Used As-Is =====
+# All temporal features (hook_*, middle_1_*, ..., closing_*) used as-is
+# RF is scale-invariant - no normalization needed
 
-df_rf.to_csv("ml_analysis/rf_transformed.csv", index=False)
+# Example features already in df_rf_video:
+# - hook_scene_count, hook_eye_contact_rate, hook_word_count
+# - middle_1_scene_count, middle_1_eye_contact_rate, middle_1_word_count
+# - middle_2_*, middle_3_*, middle_4_*
+# - closing_scene_count, closing_eye_contact_rate, closing_word_count
+
+# ===== 4. Add Target Variable (Contrastive Strategy Only) =====
+# For contrastive: Label top 80% as 1, bottom 20% as 0
+df_rf_video['is_top_performer'] = (df_rf_video.index < int(N * 0.8)).astype(int)
+
+# For top strategy: No target variable (descriptive analysis only)
+
+# ===== 5. Save Transformed Features =====
+df_rf_video.to_csv("ml_analysis/rf_transformed.csv", index=False)
+
+# Output shape: (N videos, ~190 features) = 185 original + 5 temporal features
 ```
 
-### 4.2: K-Means Transformation
+**Output**: `ml_analysis/rf_transformed.csv` (N videos, ~190 features for bucket 18-33s)
+
+**What It Captures**: Cross-window patterns like energy progression, topic consistency, contrast effects, weak link detection
+
+---
+
+### 4.2: Window-Level Random Forest Transformation
+
+**Purpose**: Validate which features matter within each specific window type
+
+**Key Principle**: Separate models per window (hook, middle_1, middle_2, ..., closing) with 21 base features each
+
+**Base Features Per Window** (~21 total):
+- `scene_count`, `eye_contact_rate`, `word_count`, `speech_coverage`
+- `energy_level`, `gesture_count`, `emotional_valence`, `emotion_consistency`
+- `average_face_size`, `overlay_unique_count`, `has_captions`
+- `shortest_scene`, `longest_scene`, `scene_duration_variance`
+- `object_count`, `person_count`, `energy_variance`, `energy_max`
+- `pitch_scatter_ratio`, `gaze_variance`, `dominant_emotion_id`
+
+**Bucket 18-33s Example** (6 window types):
+
 ```python
-# K-Means is scale-sensitive, needs normalization
-df_km = df.copy()
+# For each window type in bucket
+for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']:
+    # Extract window-specific features from aggregated_features.csv
+    window_features = df[[f'{window_type}_{feat}' for feat in BASE_FEATURES]]
+    window_features.columns = BASE_FEATURES  # Remove prefix
 
-# Log + scale for right-skewed features (counts, variances)
-skewed_features = ['hook_scene_count', 'middle_avg_word_count', 'total_scene_count']
-for feature in skewed_features:
-    df_km[f'{feature}_log'] = np.log1p(df_km[feature])  # log(1 + x)
-    df_km[f'{feature}_scaled'] = (df_km[f'{feature}_log'] - df_km[f'{feature}_log'].min()) / \
-                                  (df_km[f'{feature}_log'].max() - df_km[f'{feature}_log'].min())
+    # Add target variable
+    window_features['is_top_performer'] = (window_features.index < int(N * 0.8)).astype(int)
 
-# Scale [0-1] for already-normalized features (rates, percentages)
-normalized_features = ['hook_eye_contact_rate', 'middle_avg_emotion_consistency']
-for feature in normalized_features:
-    df_km[f'{feature}_scaled'] = (df_km[feature] - df_km[feature].min()) / \
-                                  (df_km[feature].max() - df_km[feature].min())
+    # Save per-window transformed data
+    window_features.to_csv(f'ml_analysis/{window_type}_rf_transformed.csv', index=False)
 
-# Cyclical encoding for create_time (time is circular)
-df_km['hour_sin'] = np.sin(2 * np.pi * df_km['create_time'].dt.hour / 24)
-df_km['hour_cos'] = np.cos(2 * np.pi * df_km['create_time'].dt.hour / 24)
-
-# One-hot encoding for dominant_emotion_id
-df_km = pd.get_dummies(df_km, columns=['dominant_emotion_id'])
-
-df_km.to_csv("ml_analysis/km_transformed.csv", index=False)
+# Output shape per window: (N videos, 21 base features + 1 target = 22 columns)
 ```
 
-**Outputs**:
-- `ml_analysis/rf_transformed.csv` (N videos, ~39 features)
-- `ml_analysis/km_transformed.csv` (N videos, ~40 features)
+**Outputs** (for bucket 18-33s):
+- `ml_analysis/hook_rf_transformed.csv` (100 videos, 22 features)
+- `ml_analysis/middle_1_rf_transformed.csv` (100 videos, 22 features)
+- `ml_analysis/middle_2_rf_transformed.csv` (100 videos, 22 features)
+- `ml_analysis/middle_3_rf_transformed.csv` (100 videos, 22 features)
+- `ml_analysis/middle_4_rf_transformed.csv` (100 videos, 22 features)
+- `ml_analysis/closing_rf_transformed.csv` (100 videos, 22 features)
 
-**Why Different Transformations**:
-- **Random Forest**: Scale-invariant, handles raw values well, needs categorical encoding
-- **K-Means**: Scale-sensitive, needs normalization, sensitive to feature scale differences
+**What It Captures**: Within-window feature importance - which features define a "strong hook" vs "weak hook", etc.
+
+---
+
+### 4.3: Window-Level K-Means Transformation
+
+**Purpose**: Cluster windows to discover creative strategies per video section
+
+**Key Principle**: K-Means is scale-sensitive, requiring normalization. Window-level clustering (21 features) avoids curse of dimensionality.
+
+**Bucket 18-33s Example** (6 window types):
+
+```python
+# For each window type in bucket
+for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']:
+    # Extract window-specific features from aggregated_features.csv
+    window_features = df[[f'{window_type}_{feat}' for feat in BASE_FEATURES]]
+    window_features.columns = BASE_FEATURES  # Remove prefix
+
+    df_km_window = window_features.copy()
+
+    # ===== 1. Log + Scale for Right-Skewed Features (Counts) =====
+    count_features = ['scene_count', 'word_count', 'gesture_count', 'object_count', 'person_count']
+
+    for feature in count_features:
+        if feature in df_km_window.columns:
+            # Log transform to reduce skewness
+            df_km_window[f'{feature}_log'] = np.log1p(df_km_window[feature])
+            # MinMax scale to [0, 1]
+            df_km_window[f'{feature}_scaled'] = (
+                (df_km_window[f'{feature}_log'] - df_km_window[f'{feature}_log'].min()) /
+                (df_km_window[f'{feature}_log'].max() - df_km_window[f'{feature}_log'].min())
+            )
+            # Drop original raw feature
+            df_km_window.drop(columns=[feature], inplace=True)
+
+    # ===== 2. MinMax Scale for Already-Normalized Features (Rates, Ratios) =====
+    rate_features = ['eye_contact_rate', 'speech_coverage', 'emotional_valence',
+                     'emotion_consistency', 'energy_level', 'energy_variance',
+                     'pitch_scatter_ratio', 'gaze_variance']
+
+    for feature in rate_features:
+        if feature in df_km_window.columns:
+            # MinMax scale to [0, 1] (no log needed - already normalized)
+            df_km_window[f'{feature}_scaled'] = (
+                (df_km_window[feature] - df_km_window[feature].min()) /
+                (df_km_window[feature].max() - df_km_window[feature].min())
+            )
+            # Drop original feature
+            df_km_window.drop(columns=[feature], inplace=True)
+
+    # ===== 3. Save per-window K-Means transformed data =====
+    df_km_window.to_csv(f'ml_analysis/{window_type}_km_transformed.csv', index=False)
+
+# Output shape per window: (N videos, ~21-40 transformed features)
+# - 5 count features × 2 (log + scaled) = 10 features
+# - 8 rate features × 1 (scaled) = 8 features
+# - ~13 other features (binary, categorical, etc.)
+```
+
+**Outputs** (for bucket 18-33s):
+- `ml_analysis/hook_km_transformed.csv` (100 videos, ~30 features)
+- `ml_analysis/middle_1_km_transformed.csv` (100 videos, ~30 features)
+- `ml_analysis/middle_2_km_transformed.csv` (100 videos, ~30 features)
+- `ml_analysis/middle_3_km_transformed.csv` (100 videos, ~30 features)
+- `ml_analysis/middle_4_km_transformed.csv` (100 videos, ~30 features)
+- `ml_analysis/closing_km_transformed.csv` (100 videos, ~30 features)
+
+**What It Captures**: Creative patterns per window - "3 distinct hook strategies that all lead to viral success"
+
+---
+
+### 4.4: Complete Outputs Summary
+
+**For bucket 18-33s** (6 windows):
+
+| Transformation Type | Files Generated | Features per File | Purpose |
+|-------------------|-----------------|-------------------|---------|
+| **Video-Level RF** | 1 file | ~190 features | Cross-window pattern detection |
+| **Window-Level RF** | 6 files | 21-22 features each | Within-window feature validation |
+| **Window-Level K-Means** | 6 files | ~30 features each | Per-window creative strategies |
+| **Total** | **13 files** | — | Complete ML architecture |
+
+**File Structure**:
+```
+bucket_18-33s/ml_analysis/
+├── aggregated_features.csv              # Stage 3 output (input to Stage 4)
+├── rf_transformed.csv                   # Video-level RF (190 features)
+├── hook_rf_transformed.csv              # Window-level RF (22 features)
+├── middle_1_rf_transformed.csv          # Window-level RF (22 features)
+├── middle_2_rf_transformed.csv          # Window-level RF (22 features)
+├── middle_3_rf_transformed.csv          # Window-level RF (22 features)
+├── middle_4_rf_transformed.csv          # Window-level RF (22 features)
+├── closing_rf_transformed.csv           # Window-level RF (22 features)
+├── hook_km_transformed.csv              # Window-level K-Means (~30 features)
+├── middle_1_km_transformed.csv          # Window-level K-Means (~30 features)
+├── middle_2_km_transformed.csv          # Window-level K-Means (~30 features)
+├── middle_3_km_transformed.csv          # Window-level K-Means (~30 features)
+├── middle_4_km_transformed.csv          # Window-level K-Means (~30 features)
+└── closing_km_transformed.csv           # Window-level K-Means (~30 features)
+```
+
+**Why Three Transformation Pipelines**:
+- **Video-Level RF**: Captures cross-window interactions (energy progression, topic consistency)
+- **Window-Level RF**: Validates per-window feature importance (direct K-Means validation)
+- **Window-Level K-Means**: Discovers creative strategies with interpretable centroids (21 features vs 150)
+
+**Architectural Advantages**:
+- **Complete Pattern Coverage**: Cross-window AND within-window patterns captured
+- **LLM-Friendly**: Window-level centroids (21 features) vs video-level (150 features) = 7x smaller context
+- **Actionable Insights**: Per-section strategies ("Use this hook type") vs abstract patterns
+- **No Blind Spots**: Dual RF ensures both temporal progressions AND window-specific features are validated
 
 **Child Documents**:
 - FeatureTransformation.md (complete transformation specifications, feature lists)
+- KmeansClusteringStage6.md (dual RF + window-level K-Means architecture rationale)
 
 **Future TI Document**:
 - FeatureTransformationTI.md (transformation code, validation, edge cases)
@@ -845,104 +1397,353 @@ df_km.to_csv("ml_analysis/km_transformed.csv", index=False)
 
 ## Stage 5: ML Model Training
 
-**Purpose**: Train Random Forest and K-Means models per bucket
+**Purpose**: Train dual Random Forest models (video-level + window-level) and window-level K-Means models per bucket
 
-**Input**:
-- `ml_analysis/rf_transformed.csv` (with `is_top_performer` labels)
-- `ml_analysis/km_transformed.csv`
+**Architectural Decision**: This stage trains **90 models total** across 8 buckets:
+1. **8 Video-Level RF models** (1 per bucket) - Cross-window patterns
+2. **41 Window-Level RF models** (1 per window per bucket) - Within-window validation
+3. **41 Window-Level K-Means models** (1 per window per bucket) - Creative strategies
+
+**Input** (from Stage 4):
+- `ml_analysis/rf_transformed.csv` (video-level RF, ~190 features)
+- `ml_analysis/{window}_rf_transformed.csv` (window-level RF, 22 features × 6 windows)
+- `ml_analysis/{window}_km_transformed.csv` (window-level K-Means, ~30 features × 6 windows)
 
 **Process**:
 
-### 5.1: Random Forest Training (Classification)
-```python
-# Classification: Top 80% vs Bottom 20% performers
-X = rf_transformed.drop(['is_top_performer'], axis=1)  # (N, 39)
-y = rf_transformed['is_top_performer']  # (N,) - binary labels
+### 5.1: Video-Level Random Forest Training (Cross-Window Patterns)
 
-# Train Random Forest
-rf_model = RandomForestClassifier(
+**Purpose**: Detect cross-window interactions, temporal progressions, and weak link effects
+
+**Bucket 18-33s Example**:
+
+```python
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+import joblib
+
+# Load video-level transformed data
+X = pd.read_csv('ml_analysis/rf_transformed.csv')  # (100 videos, ~190 features)
+y = X['is_top_performer']  # Binary labels (top 80% vs bottom 20%)
+X = X.drop(['is_top_performer'], axis=1)
+
+# Train video-level Random Forest
+rf_video = RandomForestClassifier(
     n_estimators=100,
     max_depth=10,
     random_state=42
-).fit(X, y)
+)
+rf_video.fit(X, y)
 
 # Extract feature importance
 feature_importance = pd.DataFrame({
     'feature': X.columns,
-    'importance': rf_model.feature_importances_
+    'importance': rf_video.feature_importances_
 }).sort_values('importance', ascending=False)
 
 # Generate predictions
-predictions = rf_model.predict_proba(X)[:, 1]  # Probability of top performer
+predictions = rf_video.predict_proba(X)[:, 1]  # Probability of top performer
+
+# Calculate model metrics
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+y_pred = rf_video.predict(X)
+metrics = {
+    'accuracy': accuracy_score(y, y_pred),
+    'precision': precision_score(y, y_pred),
+    'recall': recall_score(y, y_pred),
+    'f1_score': f1_score(y, y_pred)
+}
 
 # Save model
-joblib.dump(rf_model, "models/random_forest_v1.pkl")
+joblib.dump(rf_video, 'models/rf_video_18-33s.pkl')
 ```
 
-### 5.2: K-Means Training (Clustering)
+**Output**: `models/rf_video_18-33s.pkl`
+
+**What It Captures**:
+- **Sequential patterns**: "Energy builds from hook → middle → closing predicts virality"
+- **Consistency patterns**: "Hook topic matches middle topic increases viral rate by 35%"
+- **Contrast effects**: "Large energy gap between middle avg and closing peak predicts virality"
+- **Weak link detection**: "Videos with strong hooks and middles but weak closings still fail"
+
+---
+
+### 5.2: Window-Level Random Forest Training (Within-Window Validation)
+
+**Purpose**: Validate which features matter within each specific window type (hook, middle_1, ..., closing)
+
+**Bucket 18-33s Example** (6 window types):
+
 ```python
-# Clustering: Identify creative patterns
-X = km_transformed  # (N, 40)
+# For each window type in bucket
+for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']:
+    # Load window-specific transformed data
+    X = pd.read_csv(f'ml_analysis/{window_type}_rf_transformed.csv')  # (100 videos, 22 features)
+    y = X['is_top_performer']  # Binary labels
+    X = X.drop(['is_top_performer'], axis=1)
 
-# Fit scalers per bucket (save for inference)
-scalers = {}
-for feature in X.columns:
-    scaler = MinMaxScaler()
-    scalers[feature] = scaler.fit(X[[feature]])
+    # Train window-level Random Forest
+    rf_window = RandomForestClassifier(
+        n_estimators=100,
+        max_depth=10,
+        random_state=42
+    )
+    rf_window.fit(X, y)
 
-X_scaled = pd.DataFrame({
-    col: scalers[col].transform(X[[col]]).flatten()
-    for col in X.columns
-})
+    # Extract feature importance
+    feature_importance = pd.DataFrame({
+        'feature': X.columns,
+        'importance': rf_window.feature_importances_
+    }).sort_values('importance', ascending=False)
 
-# Train K-Means
-kmeans_model = KMeans(
-    n_clusters=3,
-    random_state=42,
-    n_init=10
-).fit(X_scaled)
+    # Save model
+    joblib.dump(rf_window, f'models/rf_{window_type}_18-33s.pkl')
 
-cluster_assignments = kmeans_model.labels_
-cluster_centroids = kmeans_model.cluster_centers_
-
-# Save models
-joblib.dump(kmeans_model, "models/kmeans_v1.pkl")
-joblib.dump(scalers, "models/scalers.pkl")
+# Total: 6 window-level RF models for bucket 18-33s
 ```
 
-### 5.3: Model Metrics
+**Outputs** (for bucket 18-33s):
+- `models/rf_hook_18-33s.pkl`
+- `models/rf_middle_1_18-33s.pkl`
+- `models/rf_middle_2_18-33s.pkl`
+- `models/rf_middle_3_18-33s.pkl`
+- `models/rf_middle_4_18-33s.pkl`
+- `models/rf_closing_18-33s.pkl`
+
+**What It Captures**:
+- Which features define a "strong hook" vs "weak hook"
+- Which features define a "strong middle" vs "weak middle"
+- Which features define a "strong closing" vs "weak closing"
+- Direct validation for K-Means cluster defining features
+
+---
+
+### 5.3: Window-Level K-Means Training (Creative Strategies)
+
+**Purpose**: Discover creative patterns per video section with interpretable centroids
+
+**Key Principle**: Window-level clustering (21 features) produces interpretable centroids that can be sent directly to LLM
+
+**Bucket 18-33s Example** (6 window types):
+
+```python
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import MinMaxScaler
+
+# For each window type in bucket
+for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']:
+    # Load window-specific K-Means transformed data
+    X = pd.read_csv(f'ml_analysis/{window_type}_km_transformed.csv')  # (100 videos, ~30 features)
+
+    # Fit scalers per feature (save for inference)
+    scalers = {}
+    for feature in X.columns:
+        scaler = MinMaxScaler()
+        scalers[feature] = scaler.fit(X[[feature]])
+
+    # Apply scaling
+    X_scaled = pd.DataFrame({
+        col: scalers[col].transform(X[[col]]).flatten()
+        for col in X.columns
+    })
+
+    # Train K-Means (3 clusters per window)
+    kmeans = KMeans(
+        n_clusters=3,
+        random_state=42,
+        n_init=10
+    )
+    kmeans.fit(X_scaled)
+
+    # Get cluster assignments and centroids
+    cluster_assignments = kmeans.labels_
+    cluster_centroids = kmeans.cluster_centers_  # Shape: (3 clusters, ~30 features)
+
+    # Calculate metrics
+    from sklearn.metrics import silhouette_score
+    silhouette = silhouette_score(X_scaled, cluster_assignments)
+
+    # Save models
+    joblib.dump(kmeans, f'models/{window_type}_kmeans_18-33s.pkl')
+    joblib.dump(scalers, f'models/{window_type}_scalers_18-33s.pkl')
+
+# Total: 6 K-Means models + 6 scaler sets for bucket 18-33s
+```
+
+**Outputs** (for bucket 18-33s):
+- `models/hook_kmeans_18-33s.pkl`
+- `models/middle_1_kmeans_18-33s.pkl`
+- `models/middle_2_kmeans_18-33s.pkl`
+- `models/middle_3_kmeans_18-33s.pkl`
+- `models/middle_4_kmeans_18-33s.pkl`
+- `models/closing_kmeans_18-33s.pkl`
+- `models/hook_scalers_18-33s.pkl` (and 5 more scaler files)
+
+**What It Captures**:
+- **3 distinct hook strategies** that all lead to viral success
+- **3 distinct middle strategies** for sustained engagement
+- **3 distinct closing strategies** for CTAs and completion
+
+**Centroid Interpretability**:
+- Centroids: 21 features (not 150!) = **LLM-friendly**
+- Example: "3 clusters × 21 features = 63 numbers per window" (manageable for LLM)
+- No complex pre-processing needed - all features can be sent to LLM
+
+---
+
+### 5.4: Model Count Per Bucket
+
+**Window Count by Bucket** (determines model count):
+
+| Bucket | Windows | Video-Level RF | Window-Level RF | Window-Level K-Means | **Total Models** |
+|--------|---------|----------------|-----------------|----------------------|------------------|
+| 0-3s | 1 (hook only) | 1 | 1 | 1 | **3** |
+| 3-9s | 2 (hook, closing) | 1 | 2 | 2 | **5** |
+| 9-13s | 3 (hook, middle_agg, closing) | 1 | 3 | 3 | **7** |
+| 13-18s | 3 (hook, middle_agg, closing) | 1 | 3 | 3 | **7** |
+| 18-33s | 6 (hook, middle_1-4, closing) | 1 | 6 | 6 | **13** |
+| 33-60s | 7 (hook, middle_1-5, closing) | 1 | 7 | 7 | **15** |
+| 60-90s | 7 | 1 | 7 | 7 | **15** |
+| 90-120s | 7 | 1 | 7 | 7 | **15** |
+| **TOTAL** | **41 windows** | **8** | **41** | **41** | **90 models** |
+
+**Why 90 Models?**:
+- 90 models is only 16% more than K-Means alone (41 models)
+- But provides **complete pattern coverage** with no blind spots:
+  - Cross-window patterns (video-level RF)
+  - Within-window patterns (window-level RF)
+  - Creative strategies (window-level K-Means)
+
+---
+
+### 5.5: Complete File Architecture (Bucket 18-33s Example)
+
+```
+bucket_18-33s/
+├── ml_analysis/
+│   ├── aggregated_features.csv              # Stage 3 output
+│   ├── rf_transformed.csv                   # Stage 4 output (video-level RF)
+│   ├── hook_rf_transformed.csv              # Stage 4 output (window-level RF)
+│   ├── middle_1_rf_transformed.csv          # Stage 4 output
+│   ├── middle_2_rf_transformed.csv          # Stage 4 output
+│   ├── middle_3_rf_transformed.csv          # Stage 4 output
+│   ├── middle_4_rf_transformed.csv          # Stage 4 output
+│   ├── closing_rf_transformed.csv           # Stage 4 output
+│   ├── hook_km_transformed.csv              # Stage 4 output (window-level K-Means)
+│   ├── middle_1_km_transformed.csv          # Stage 4 output
+│   ├── middle_2_km_transformed.csv          # Stage 4 output
+│   ├── middle_3_km_transformed.csv          # Stage 4 output
+│   ├── middle_4_km_transformed.csv          # Stage 4 output
+│   └── closing_km_transformed.csv           # Stage 4 output
+│
+└── models/
+    ├── rf_video_18-33s.pkl                  # Stage 5 output (video-level RF)
+    │
+    ├── rf_hook_18-33s.pkl                   # Stage 5 output (window-level RF)
+    ├── rf_middle_1_18-33s.pkl               # Stage 5 output
+    ├── rf_middle_2_18-33s.pkl               # Stage 5 output
+    ├── rf_middle_3_18-33s.pkl               # Stage 5 output
+    ├── rf_middle_4_18-33s.pkl               # Stage 5 output
+    ├── rf_closing_18-33s.pkl                # Stage 5 output
+    │
+    ├── hook_kmeans_18-33s.pkl               # Stage 5 output (K-Means models)
+    ├── middle_1_kmeans_18-33s.pkl           # Stage 5 output
+    ├── middle_2_kmeans_18-33s.pkl           # Stage 5 output
+    ├── middle_3_kmeans_18-33s.pkl           # Stage 5 output
+    ├── middle_4_kmeans_18-33s.pkl           # Stage 5 output
+    ├── closing_kmeans_18-33s.pkl            # Stage 5 output
+    │
+    ├── hook_scalers_18-33s.pkl              # Stage 5 output (K-Means scalers)
+    ├── middle_1_scalers_18-33s.pkl          # Stage 5 output
+    ├── middle_2_scalers_18-33s.pkl          # Stage 5 output
+    ├── middle_3_scalers_18-33s.pkl          # Stage 5 output
+    ├── middle_4_scalers_18-33s.pkl          # Stage 5 output
+    ├── closing_scalers_18-33s.pkl           # Stage 5 output
+    │
+    └── model_metrics.json                   # Stage 5 output (performance metrics)
+```
+
+**Total Files for Bucket 18-33s**: 13 models + 6 scaler files + 1 metrics file = **20 files**
+
+---
+
+### 5.6: Model Metrics Summary
+
 ```json
 {
-  "random_forest": {
-    "accuracy": 0.88,
-    "precision": 0.85,
-    "recall": 0.92,
-    "f1_score": 0.88,
+  "bucket": "18-33s",
+  "total_videos": 100,
+
+  "video_level_rf": {
+    "model_type": "random_forest",
+    "input_features": 190,
+    "accuracy": 0.87,
+    "precision": 0.89,
+    "recall": 0.84,
+    "f1_score": 0.86,
     "top_feature": "hook_eye_contact_rate",
-    "top_feature_importance": 0.22
+    "top_feature_importance": 0.22,
+    "purpose": "Cross-window pattern detection"
   },
-  "kmeans": {
-    "n_clusters": 3,
-    "inertia": 45.2,
-    "silhouette_score": 0.65,
-    "cluster_sizes": [22, 35, 43]
+
+  "window_level_rf": {
+    "hook": {
+      "model_type": "random_forest",
+      "input_features": 21,
+      "accuracy": 0.82,
+      "precision": 0.85,
+      "recall": 0.78,
+      "top_feature": "eye_contact_rate",
+      "top_feature_importance": 0.35
+    },
+    "middle_1": {...},
+    "middle_2": {...},
+    "middle_3": {...},
+    "middle_4": {...},
+    "closing": {...}
+  },
+
+  "window_level_kmeans": {
+    "hook": {
+      "model_type": "kmeans",
+      "input_features": 30,
+      "n_clusters": 3,
+      "inertia": 12.5,
+      "silhouette_score": 0.68,
+      "cluster_sizes": [35, 42, 23]
+    },
+    "middle_1": {...},
+    "middle_2": {...},
+    "middle_3": {...},
+    "middle_4": {...},
+    "closing": {...}
   }
 }
 ```
 
-**Outputs**:
-- `models/random_forest_v1.pkl`
-- `models/kmeans_v1.pkl`
-- `models/scalers.pkl` (for K-Means inference)
-- `models/model_metrics.json`
+---
 
-**Why Two Models**:
-- **Random Forest**: Answers "what differentiates top from bottom?" (contrastive learning)
-- **K-Means**: Answers "what are the creative patterns?" (segmentation)
+### 5.7: Architectural Summary
+
+**Why Dual RF + Window-Level K-Means?**:
+
+| Benefit | Video-Level RF | Window-Level RF | Window-Level K-Means |
+|---------|----------------|-----------------|----------------------|
+| **Cross-window patterns** | ✅ Captures | ❌ Misses | ❌ Misses |
+| **Within-window validation** | ❌ Mixed signal | ✅ Perfect alignment | — |
+| **K-Means validation** | ⚠️ Indirect | ✅ Direct (same granularity) | — |
+| **Temporal progressions** | ✅ Quantified | ❌ Not visible | ❌ Not visible |
+| **Feature importance clarity** | ⚠️ Fragmented | ✅ Per-window clarity | — |
+| **Creative strategies** | — | — | ✅ Interpretable centroids (21 features) |
+| **LLM context size** | Large (190 features) | Small (21 features) | **Optimal (21 features)** |
+
+**Complete Pattern Coverage**: All three model types work together to ensure no blind spots in viral video analysis.
 
 **Child Documents**:
 - Kmeans.md (K-Means specific design, scaler fitting details)
 - KMValidation.md (validation approach)
+- KmeansClusteringStage6.md (dual RF + window-level K-Means architecture rationale)
 
 **Future TI Document**:
 - MLModelTrainingTI.md (training code, hyperparameter tuning, cross-validation)
@@ -954,17 +1755,29 @@ joblib.dump(scalers, "models/scalers.pkl")
 
 ## Stage 6: ML Analysis Generation
 
-**Purpose**: Generate ML analysis JSONs for LLM consumption
+**Purpose**: Generate ML analysis JSONs for LLM consumption (13 JSON files per bucket for dual RF + window-level K-Means architecture)
+
+**Architectural Decision**: This stage generates **13 JSON files per bucket**:
+1. **1 Video-Level RF JSON** (~30KB) - Cross-window patterns
+2. **6 Window-Level RF JSONs** (~5KB each) - Within-window feature importance
+3. **6 Window-Level K-Means JSONs** (~5KB each) - Cluster centroids per window
+
+**Total per bucket**: ~95KB across 13 files
 
 **Input**:
-- Trained models + transformed features
-- `ml_analysis/aggregated_features.csv` (raw features for context)
+- Trained models (90 models total from Stage 5)
+- Transformed features (from Stage 4)
+- `ml_analysis/aggregated_features.csv` (raw features for distribution analysis)
 
 **Process**:
 
-### 6.1: Random Forest Analysis JSON
+### 6.1: Video-Level Random Forest Analysis JSON
 ```python
 # Extract feature importance and video-level predictions
+# Load data for distribution analysis
+top_videos = aggregated_features[aggregated_features['is_top_performer'] == 1]
+bottom_videos = aggregated_features[aggregated_features['is_top_performer'] == 0]
+
 rf_analysis = {
     "analysis_type": "random_forest",
     "bucket": bucket,
@@ -977,9 +1790,27 @@ rf_analysis = {
             "importance": 0.22,
             "top_performer_avg": 0.88,
             "bottom_performer_avg": 0.45,
-            "gap": 0.43
+            "gap": 0.43,
+
+            # NEW: Distribution percentages for actionable insights
+            "distribution": {
+                "thresholds": {
+                    "high": 0.6,    # Determined by 66th percentile or domain knowledge
+                    "low": 0.4      # Determined by 33rd percentile
+                },
+                "top_performers": {
+                    "high_percentage": 0.70,    # 70% of top have >= 0.6
+                    "medium_percentage": 0.25,  # 25% have 0.4-0.6
+                    "low_percentage": 0.05      # 5% have < 0.4
+                },
+                "bottom_performers": {
+                    "high_percentage": 0.05,    # 5% of bottom have >= 0.6
+                    "medium_percentage": 0.15,  # 15% have 0.4-0.6
+                    "low_percentage": 0.80      # 80% have < 0.4
+                }
+            }
         },
-        # ... top 10 features
+        # ... top 10 features (each with distribution data)
     ],
 
     "videos": [
@@ -1000,62 +1831,260 @@ rf_analysis = {
 save("ml_analysis/random_forest_analysis.json", rf_analysis)
 ```
 
-### 6.2: K-Means Analysis JSON
+**Distribution Computation Logic**:
 ```python
-# Extract cluster assignments and centroids
-kmeans_analysis = {
-    "analysis_type": "kmeans",
-    "bucket": bucket,
-    "hashtag": hashtag,
-    "n_clusters": 3,
+def compute_feature_distribution(feature_name, top_videos, bottom_videos):
+    """
+    Compute distribution percentages for top and bottom performers.
 
-    "cluster_summary": [
-        {
-            "cluster_id": 0,
-            "cluster_name": "The Educator Pattern",
-            "video_count": 22,
-            "avg_engagement": 125000,
-            "top_performer_percentage": 0.68,
-            "defining_features": {
-                "hook": {"high_eye_contact": 0.85, "moderate_scene_count": 3.2},
-                "middle": {"high_word_count": 55, "consistent_emotion": 0.8},
-                "closing": {"high_energy": 0.8}
-            }
+    Returns thresholds and percentage breakdowns (high/medium/low).
+    """
+    # Combine all videos to determine global thresholds
+    all_values = pd.concat([top_videos[feature_name], bottom_videos[feature_name]])
+
+    # Determine thresholds (66th and 33rd percentile)
+    threshold_high = all_values.quantile(0.66)
+    threshold_low = all_values.quantile(0.33)
+
+    # Compute percentages for top performers
+    top_high = len(top_videos[top_videos[feature_name] >= threshold_high]) / len(top_videos)
+    top_medium = len(top_videos[(top_videos[feature_name] >= threshold_low) &
+                                 (top_videos[feature_name] < threshold_high)]) / len(top_videos)
+    top_low = len(top_videos[top_videos[feature_name] < threshold_low]) / len(top_videos)
+
+    # Compute percentages for bottom performers
+    bottom_high = len(bottom_videos[bottom_videos[feature_name] >= threshold_high]) / len(bottom_videos)
+    bottom_medium = len(bottom_videos[(bottom_videos[feature_name] >= threshold_low) &
+                                       (bottom_videos[feature_name] < threshold_high)]) / len(bottom_videos)
+    bottom_low = len(bottom_videos[bottom_videos[feature_name] < threshold_low]) / len(bottom_videos)
+
+    return {
+        "thresholds": {"high": threshold_high, "low": threshold_low},
+        "top_performers": {
+            "high_percentage": top_high,
+            "medium_percentage": top_medium,
+            "low_percentage": top_low
         },
-        # ... 3 clusters
-    ],
+        "bottom_performers": {
+            "high_percentage": bottom_high,
+            "medium_percentage": bottom_medium,
+            "low_percentage": bottom_low
+        }
+    }
 
-    "videos": [
-        {
-            "video_id": "123",
-            "cluster_id": 0,
-            "distance_to_centroid": 0.12,
-            "features": {
-                # ... all features
-            }
-        },
-        # ... all N videos
-    ]
-}
-
-save("ml_analysis/kmeans_analysis.json", kmeans_analysis)
+# Apply to top 10 features
+for feature_data in feature_importance_list[:10]:
+    feature_name = feature_data['feature']
+    feature_data['distribution'] = compute_feature_distribution(
+        feature_name, top_videos, bottom_videos
+    )
 ```
 
-**Output Size**: ~30KB per JSON (2 JSONs per bucket = ~60KB)
+**Output**: `ml_analysis/rf_video_analysis.json` (~30KB)
 
-**Outputs**:
-- `ml_analysis/random_forest_analysis.json` (~30KB)
-- `ml_analysis/kmeans_analysis.json` (~30KB)
+**What It Contains**: Cross-window feature importance with pattern type labels (cross_window vs single_window)
 
-**Why Separate JSONs**:
-- Smaller context per LLM call (30KB vs 60KB)
-- More focused analysis prompts
-- Easier to debug if one analysis fails
-- Can run LLM calls in parallel
+---
+
+### 6.2: Window-Level Random Forest Analysis JSONs
+
+**Purpose**: Generate per-window feature importance for direct validation of K-Means clusters
+
+**Bucket 18-33s Example** (6 window types):
+
+```python
+# For each window type in bucket
+for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']:
+    # Load trained window-level RF model
+    rf_window = joblib.load(f'models/rf_{window_type}_18-33s.pkl')
+
+    # Load window-level transformed data
+    X = pd.read_csv(f'ml_analysis/{window_type}_rf_transformed.csv')
+    y = X['is_top_performer']
+    X = X.drop(['is_top_performer'], axis=1)
+
+    # Extract feature importance
+    feature_importance = pd.DataFrame({
+        'feature': X.columns,
+        'importance': rf_window.feature_importances_
+    }).sort_values('importance', ascending=False)
+
+    # Calculate top/bottom performer averages
+    top_videos = X[y == 1]
+    bottom_videos = X[y == 0]
+
+    # Build analysis JSON
+    window_rf_analysis = {
+        "model_type": "window_level_rf",
+        "window_type": window_type,
+        "bucket": "18-33s",
+        "total_videos": len(X),
+        "input_features": len(X.columns),
+        "model_performance": {
+            "accuracy": accuracy_score(y, rf_window.predict(X)),
+            "precision": precision_score(y, rf_window.predict(X)),
+            "recall": recall_score(y, rf_window.predict(X))
+        },
+        "feature_importance": [
+            {
+                "feature": row['feature'],
+                "importance": row['importance'],
+                "top_performer_avg": top_videos[row['feature']].mean(),
+                "bottom_performer_avg": bottom_videos[row['feature']].mean(),
+                "gap": top_videos[row['feature']].mean() - bottom_videos[row['feature']].mean(),
+                "rank": idx + 1
+            }
+            for idx, row in feature_importance.head(10).iterrows()
+        ]
+    }
+
+    # Save per-window RF analysis
+    with open(f'ml_analysis/{window_type}_rf_analysis.json', 'w') as f:
+        json.dump(window_rf_analysis, f, indent=2)
+```
+
+**Outputs** (for bucket 18-33s):
+- `ml_analysis/hook_rf_analysis.json` (~5KB)
+- `ml_analysis/middle_1_rf_analysis.json` (~5KB)
+- `ml_analysis/middle_2_rf_analysis.json` (~5KB)
+- `ml_analysis/middle_3_rf_analysis.json` (~5KB)
+- `ml_analysis/middle_4_rf_analysis.json` (~5KB)
+- `ml_analysis/closing_rf_analysis.json` (~5KB)
+
+**What It Contains**: Top 10 features per window with importance scores, top/bottom averages, and gaps
+
+---
+
+### 6.3: Window-Level K-Means Analysis JSONs
+
+**Purpose**: Generate cluster centroids and assignments per window (21 features = LLM-friendly)
+
+**Bucket 18-33s Example** (6 window types):
+
+```python
+# For each window type in bucket
+for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']:
+    # Load trained K-Means model and scalers
+    kmeans = joblib.load(f'models/{window_type}_kmeans_18-33s.pkl')
+    scalers = joblib.load(f'models/{window_type}_scalers_18-33s.pkl')
+
+    # Load window-specific transformed data
+    X = pd.read_csv(f'ml_analysis/{window_type}_km_transformed.csv')
+
+    # Apply scaling
+    X_scaled = pd.DataFrame({
+        col: scalers[col].transform(X[[col]]).flatten()
+        for col in X.columns
+    })
+
+    # Get cluster assignments
+    labels = kmeans.predict(X_scaled)
+    centroids = kmeans.cluster_centers_  # Shape: (3 clusters, ~30 features)
+
+    # Calculate distances to centroids
+    from sklearn.metrics import euclidean_distances
+    distances = euclidean_distances(X_scaled, centroids)
+
+    # Build analysis JSON
+    kmeans_analysis = {
+        "window_type": window_type,
+        "bucket": "18-33s",
+        "total_videos": len(X),
+        "n_clusters": 3,
+        "clusters": []
+    }
+
+    for cluster_id in range(3):
+        cluster_videos = X[labels == cluster_id]
+        cluster_indices = np.where(labels == cluster_id)[0]
+
+        kmeans_analysis['clusters'].append({
+            "cluster_id": cluster_id,
+            "size": len(cluster_videos),
+            "centroid": dict(zip(X.columns, centroids[cluster_id])),  # All 21-30 features
+            "videos": [
+                {
+                    "video_id": f"video_{idx}",
+                    "distance_to_centroid": float(distances[idx, cluster_id])
+                }
+                for idx in cluster_indices
+            ]
+        })
+
+    # Save per-window K-Means analysis
+    with open(f'ml_analysis/{window_type}_kmeans_analysis.json', 'w') as f:
+        json.dump(kmeans_analysis, f, indent=2)
+```
+
+**Outputs** (for bucket 18-33s):
+- `ml_analysis/hook_kmeans_analysis.json` (~5KB)
+- `ml_analysis/middle_1_kmeans_analysis.json` (~5KB)
+- `ml_analysis/middle_2_kmeans_analysis.json` (~5KB)
+- `ml_analysis/middle_3_kmeans_analysis.json` (~5KB)
+- `ml_analysis/middle_4_kmeans_analysis.json` (~5KB)
+- `ml_analysis/closing_kmeans_analysis.json` (~5KB)
+
+**What It Contains**:
+- 3 clusters per window
+- 21-30 dimensional centroids (ALL features sent to LLM - no summarization needed!)
+- Video assignments with distances to centroids
+
+**Centroid Interpretability**:
+- LLM receives: 3 clusters × 21 features = **63 numbers per window** (manageable!)
+- No complex pre-processing - LLM can identify defining features directly
+- Example: "Cluster 0: high eye_contact_rate (0.87), low word_count (14.2)"
+
+---
+
+### 6.4: Complete Outputs Summary
+
+**For Bucket 18-33s** (6 windows):
+
+| JSON Type | Count | Size Each | Total Size | LLM Consumer |
+|-----------|-------|-----------|------------|--------------|
+| **Video-Level RF** | 1 | ~30KB | ~30KB | Stage 7 Phase 2 (cross-window patterns) |
+| **Window-Level RF** | 6 | ~5KB | ~30KB | Stage 7 Phase 1 (feature validation) |
+| **Window-Level K-Means** | 6 | ~5KB | ~30KB | Stage 7 Phase 1 (cluster insights) |
+| **TOTAL** | **13 files** | — | **~95KB** | — |
+
+**File Structure** (bucket 18-33s/ml_analysis/):
+```
+bucket_18-33s/ml_analysis/
+├── rf_video_analysis.json               # Video-level RF (cross-window patterns)
+├── hook_rf_analysis.json                # Window-level RF
+├── middle_1_rf_analysis.json            # Window-level RF
+├── middle_2_rf_analysis.json            # Window-level RF
+├── middle_3_rf_analysis.json            # Window-level RF
+├── middle_4_rf_analysis.json            # Window-level RF
+├── closing_rf_analysis.json             # Window-level RF
+├── hook_kmeans_analysis.json            # Window-level K-Means (3 clusters, 21D centroids)
+├── middle_1_kmeans_analysis.json        # Window-level K-Means
+├── middle_2_kmeans_analysis.json        # Window-level K-Means
+├── middle_3_kmeans_analysis.json        # Window-level K-Means
+├── middle_4_kmeans_analysis.json        # Window-level K-Means
+└── closing_kmeans_analysis.json         # Window-level K-Means
+```
+
+---
+
+### 6.5: Why 13 JSON Files?
+
+**Advantages**:
+- **LLM-Friendly Context**: Window-level K-Means centroids (21 features) vs video-level (150 features) = 7x smaller
+- **Focused Analysis**: Each window type analyzed independently for clarity
+- **Direct Validation**: Window-level RF validates K-Means cluster defining features (same granularity)
+- **Actionable Insights**: Per-section strategies ("Use this hook type") vs abstract patterns
+- **Complete Pattern Coverage**: Video-level RF + Window-level RF + Window-level K-Means = no blind spots
+
+**Trade-offs**:
+- More files to manage (13 vs 2)
+- Slightly more complex Stage 7 LLM integration
+- But: **Better insights, higher actionability, complete pattern coverage**
 
 **Child Documents**:
 - ML_LLMData.md (JSON format strategy, schema specifications)
 - ML_LLMDataTI.md (JSON generation technical specs)
+- KmeansClusteringStage6.md (dual RF + window-level K-Means architecture rationale)
 
 **Future TI Document**:
 - MLAnalysisGenerationTI.md (JSON generation code, schema validation)
@@ -1065,324 +2094,721 @@ save("ml_analysis/kmeans_analysis.json", kmeans_analysis)
 
 ---
 
-## Stage 7: LLM Report Generation
+## Stage 7: LLM Analysis - Hybrid Two-Phase Approach
 
-**Purpose**: Generate creative strategy reports via Claude API
+**Purpose**: Generate creative insights from K-Means clustering results, validated by dual Random Forest analysis
 
-**Input**:
-- `ml_analysis/random_forest_analysis.json` (~30KB)
-- `ml_analysis/kmeans_analysis.json` (~30KB)
+**Input** (from Stage 6):
+- **Video-Level RF** (1 JSON): `rf_video_analysis.json` (~30KB) - Cross-window feature importance
+- **Window-Level RF** (6 JSONs): `{window_type}_rf_analysis.json` (~5KB each) - Per-window feature importance
+- **Window-Level K-Means** (6 JSONs): `{window_type}_kmeans_analysis.json` (~5KB each) - Per-window cluster centroids
+- **Total**: 13 JSON files (~95KB) per bucket
+
+**Architecture**: Two-phase hybrid approach minimizes hallucination risk with small, focused contexts in Phase 1, then combines insights in Phase 2. Random Forest provides both within-window validation (Phase 1) and cross-window pattern detection (Phase 2).
 
 **Process**:
 
-### 7.1: Analysis LLM Calls (Insight Extraction)
+### 7.1: Phase 1 - Per-Window Analysis (Parallel Execution)
 
-**Purpose**: Extract structured insights from ML analysis without formatting concerns
+**Purpose**: Analyze each window type independently with window-level RF validation
 
-**RF Analysis Call**:
+**Execution**: 6-7 parallel API calls (one per window: hook, middle_1-4, closing)
+
+**Input per Window** (Example: Hook):
+1. K-Means: `hook_kmeans_analysis.json` - 3 clusters × 21 features = 63 numbers
+2. Window-Level RF: `hook_rf_analysis.json` - Top 10 features × 5 metrics = 50 numbers
+3. **Combined Context**: 113 numbers total (small, focused)
+
+**LLM Prompt Template** (Phase 1):
 ```python
-prompt = f"""
-You are an ML analysis expert. Analyze Random Forest feature importance data.
+def analyze_window(window_type: str, kmeans_data: dict, rf_data: dict, bucket: str, hashtag: str) -> dict:
+    """
+    Analyze one window type's K-Means clusters with RF validation.
 
-HASHTAG: {hashtag}
-BUCKET: {bucket}
+    Returns: Phase 1 analysis JSON
+    """
+    prompt = f"""
+You are analyzing {window_type} segments from 100 viral videos in the {bucket} duration bucket for #{hashtag}.
 
-INPUT DATA:
-{rf_analysis_json}
+Context:
+- These are all TOP-PERFORMING videos (high engagement)
+- You are identifying DIFFERENT STRATEGIES that all lead to success
+- Focus on what makes each cluster DISTINCT from the others
 
-TASK:
-Extract insights in JSON format:
+K-Means clustering has identified 3 distinct {window_type} patterns:
 
+CLUSTER 0 ({kmeans_data['clusters'][0]['size']} videos):
+{format_centroid_features(kmeans_data['clusters'][0]['centroid'])}
+
+CLUSTER 1 ({kmeans_data['clusters'][1]['size']} videos):
+{format_centroid_features(kmeans_data['clusters'][1]['centroid'])}
+
+CLUSTER 2 ({kmeans_data['clusters'][2]['size']} videos):
+{format_centroid_features(kmeans_data['clusters'][2]['centroid'])}
+
+Random Forest Feature Importance ({window_type}-specific predictive power):
+
+The features that BEST PREDICT viral success within {window_type} segments:
+
+1. {rf_data['feature_importance'][0]['feature']} (importance: {rf_data['feature_importance'][0]['importance']}, top avg: {rf_data['feature_importance'][0]['top_performer_avg']}, bottom avg: {rf_data['feature_importance'][0]['bottom_performer_avg']}, gap: {rf_data['feature_importance'][0]['gap']})
+2. {rf_data['feature_importance'][1]['feature']} (importance: ..., top avg: ..., bottom avg: ..., gap: ...)
+... (top 10 features)
+
+Your task:
+1. **Name each cluster** with a memorable, creator-friendly label (e.g., "The Direct Eye Contact Hook")
+2. **Identify 3-5 defining features** per cluster that differentiate it from the others
+   - PRIORITIZE features with high RF importance scores (these are most predictive of viral success)
+   - Emphasize features with large top/bottom gaps (biggest performance differentiators)
+3. **Describe the strategy** each cluster represents (what creative approach does it use?)
+4. **Generate actionable recommendations** - what should creators DO to replicate this pattern?
+   - Focus on high-importance RF features first
+   - Include target values based on top_performer_avg from RF data
+
+Output format: JSON
 {{
-  "top_features": [
-    {{
-      "feature": "hook_eye_contact_rate",
-      "importance": 0.22,
-      "interpretation": "Why this feature matters",
-      "top_performer_avg": 0.88,
-      "bottom_performer_avg": 0.45,
-      "gap": 0.43,
-      "actionable_advice": "Maintain direct eye contact throughout hook"
-    }},
-    ... (top 5 features)
-  ],
-  "improvement_opportunities": [...],
-  "model_performance": {{...}}
-}}
-
-Focus on INSIGHTS, not formatting. Be precise with numbers.
-"""
-
-rf_insights = claude_api.generate(prompt)
-save("llm_reports/analysis/call_1_rf_raw_response.json", rf_insights)
-```
-
-**K-Means Analysis Call**:
-```python
-prompt = f"""
-You are an ML analysis expert. Analyze K-Means clustering results.
-
-HASHTAG: {hashtag}
-BUCKET: {bucket}
-
-INPUT DATA:
-{kmeans_analysis_json}
-
-TASK:
-Extract insights in JSON format:
-
-{{
+  "window_type": "{window_type}",
   "clusters": [
     {{
       "cluster_id": 0,
-      "name": "The Educator",
-      "video_count": 22,
-      "avg_engagement": 125000,
-      "top_performer_percentage": 0.68,
-      "defining_features": {{...}},
-      "strategy_summary": "2-3 sentence description"
+      "name": "Creative strategy name",
+      "defining_features": [
+        "feature_name: value (interpretation)"
+      ],
+      "rf_validation": {{
+        "top_predictive_features_in_cluster": [...],
+        "insight": "How this cluster uses RF-validated features"
+      }},
+      "strategy_description": "What makes this cluster unique",
+      "creator_recommendations": [
+        "PRIORITY: Specific actionable step with RF targets",
+        "Specific actionable step 2",
+        "Specific actionable step 3"
+      ]
     }},
-    ... (3 clusters)
-  ],
-  "recommendations": {{...}}
+    // ... clusters 1 and 2
+  ]
 }}
 
-Focus on INSIGHTS, not formatting. Be precise with numbers.
+Important:
+- Be specific and concrete (not generic advice)
+- Focus on DIFFERENCES between clusters (not universal best practices)
+- Recommendations should be replicable creative techniques
 """
 
-kmeans_insights = claude_api.generate(prompt)
-save("llm_reports/analysis/call_1_kmeans_raw_response.json", kmeans_insights)
-```
-
-**Consolidate Insights**:
-```python
-insights = {
-    "bucket": bucket,
-    "hashtag": hashtag,
-    "rf_insights": json.loads(rf_insights),
-    "kmeans_insights": json.loads(kmeans_insights),
-    "generated_at": timestamp
-}
-save("llm_reports/analysis/insights.json", insights)
-```
-
-**Outputs**:
-- `llm_reports/analysis/call_1_rf_prompt.txt`
-- `llm_reports/analysis/call_1_rf_raw_response.json`
-- `llm_reports/analysis/call_1_kmeans_prompt.txt`
-- `llm_reports/analysis/call_1_kmeans_raw_response.json`
-- `llm_reports/analysis/insights.json` (consolidated)
-
-**LLM Calls per Bucket**: 2 (RF + K-Means)
-
----
-
-### 7.2: Formatting LLM Call (Report Generation)
-
-**Purpose**: Convert structured insights into polished, actionable creative strategy reports
-
-**Input**: `llm_reports/analysis/insights.json`
-
-```python
-prompt = f"""
-You are a creative strategy consultant. Generate polished markdown reports.
-
-HASHTAG: {hashtag}
-BUCKET: {bucket}
-
-INPUT INSIGHTS:
-{insights_json}
-
-TASK:
-Generate 5 markdown reports with professional formatting.
-Each report should be clearly separated with "---REPORT: filename---" markers.
-
----REPORT: rf_feature_importance.md---
-
-# Random Forest Feature Importance: {hashtag} ({bucket})
-
-## Executive Summary
-[2-3 sentences on what drives success for this bucket]
-
-## Top 5 Success Drivers
-
-### 1. {{feature.name}} (Importance: {{feature.importance}})
-
-**What it means**: {{feature.interpretation}}
-
-**The Gap**:
-- Top performers: {{feature.top_performer_avg}}
-- Bottom performers: {{feature.bottom_performer_avg}}
-- Difference: {{feature.gap}}
-
-**Action**: {{feature.actionable_advice}}
-
-[Repeat for features 2-5]
-
----REPORT: strategy_1_the_educator.md---
-
-# Strategy 1: The Educator
-
-## Overview
-{{cluster.strategy_summary}}
-
-**Success Metrics**:
-- Videos using this pattern: {{cluster.video_count}}
-- Average engagement: {{cluster.avg_engagement}}
-- Top performer rate: {{cluster.top_performer_percentage * 100}}%
-
-## Key Features
-
-### Hook (First 3 seconds)
-[List defining characteristics]
-
-### Middle Segments
-[List defining characteristics]
-
-### Closing (Last 3 seconds)
-[List defining characteristics]
-
-## Creation Checklist
-- [ ] Hook: Maintain direct eye contact (0.85+ rate)
-- [ ] Hook: Use moderate pacing (3-4 scene cuts)
-- [ ] Middle: High word density (50-60 words)
-...
-
----REPORT: strategy_2_visual_storyteller.md---
-[Similar structure for cluster 1]
-
----REPORT: strategy_3_personal_journey.md---
-[Similar structure for cluster 2]
-
----REPORT: bucket_summary.md---
-
-# Bucket Summary: {hashtag} ({bucket})
-
-## Pattern Overview
-
-We identified 3 distinct creative strategies:
-
-1. **{{cluster_1.name}}** ({{cluster_1.percentage}}%) - {{top_performer_rate}}% success rate
-2. **{{cluster_2.name}}** ({{cluster_2.percentage}}%) - {{top_performer_rate}}% success rate
-3. **{{cluster_3.name}}** ({{cluster_3.percentage}}%) - {{top_performer_rate}}% success rate
-
-## Recommendations
-
-**Start here**: {{recommendations.best_for_beginners}}
-
-**Why**: {{recommendations.reasoning}}
-
-IMPORTANT:
-- Use markdown formatting (##, ###, bold, lists)
-- Keep language actionable and specific
-- Include exact numbers from insights
-- Each report should be standalone
-"""
-
-reports = claude_api.generate(prompt)
-
-# Parse LLM response (split by ---REPORT: markers)
-parsed_reports = parse_multiple_reports(reports)
-
-save("llm_reports/formatted/rf_feature_importance.md", parsed_reports['rf'])
-save("llm_reports/formatted/strategy_1_the_educator.md", parsed_reports['strategy_1'])
-save("llm_reports/formatted/strategy_2_visual_storyteller.md", parsed_reports['strategy_2'])
-save("llm_reports/formatted/strategy_3_personal_journey.md", parsed_reports['strategy_3'])
-save("llm_reports/formatted/bucket_summary.md", parsed_reports['summary'])
-```
-
-**Outputs**:
-- `llm_reports/formatted/call_2_prompt.txt`
-- `llm_reports/formatted/call_2_raw_response.json`
-- `llm_reports/formatted/rf_feature_importance.md`
-- `llm_reports/formatted/strategy_1_the_educator.md`
-- `llm_reports/formatted/strategy_2_visual_storyteller.md`
-- `llm_reports/formatted/strategy_3_personal_journey.md`
-- `llm_reports/formatted/bucket_summary.md`
-
-**LLM Calls per Bucket**: 1 (all 5 reports in single call)
-
----
-
-### 7.3: PDF Generation (No LLM)
-
-**Purpose**: Convert markdown reports to professional PDFs
-
-**Input**: `llm_reports/formatted/*.md` (5 markdown files per bucket)
-
-```python
-from markdown2pdf import convert_markdown_to_pdf
-
-reports = [
-    "rf_feature_importance",
-    "strategy_1_the_educator",
-    "strategy_2_visual_storyteller",
-    "strategy_3_personal_journey",
-    "bucket_summary"
-]
-
-for report in reports:
-    md_path = f"llm_reports/formatted/{report}.md"
-    pdf_path = f"reports/{report}.pdf"
-
-    convert_markdown_to_pdf(
-        md_path,
-        pdf_path,
-        css_template="creative_report.css"  # Custom styling
+    client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=4000,
+        temperature=0.3,  # Lower temperature for consistency
+        messages=[{"role": "user", "content": prompt}]
     )
+
+    analysis = json.loads(response.content[0].text)
+    analysis['analysis_metadata'] = {
+        'llm_model': 'claude-sonnet-4',
+        'timestamp': datetime.now().isoformat(),
+        'api_latency_seconds': response.usage.total_time_seconds
+    }
+
+    return analysis
+
+
+def run_phase1_parallel(bucket: str, hashtag: str, window_types: list) -> dict:
+    """
+    Run Phase 1 analysis for all windows in parallel.
+
+    Args:
+        bucket: '18-33s'
+        hashtag: '#nutrition'
+        window_types: ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']
+
+    Returns: {window_type: analysis_json} for all windows
+    """
+    window_analyses = {}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {}
+        for window_type in window_types:
+            # Load K-Means and RF data for this window
+            kmeans_data = load_json(f'ml_analysis/{window_type}_kmeans_analysis.json')
+            rf_data = load_json(f'ml_analysis/{window_type}_rf_analysis.json')
+
+            # Submit analysis task
+            future = executor.submit(
+                analyze_window,
+                window_type=window_type,
+                kmeans_data=kmeans_data,
+                rf_data=rf_data,
+                bucket=bucket,
+                hashtag=hashtag
+            )
+            futures[window_type] = future
+
+        # Collect results
+        for window_type, future in futures.items():
+            try:
+                analysis = future.result(timeout=60)
+                window_analyses[window_type] = analysis
+                save_json(f'ml_analysis/llm/{window_type}_analysis.json', analysis)
+            except Exception as e:
+                logging.error(f"Phase 1 failed for {window_type}: {e}")
+
+    return window_analyses
 ```
 
-**Outputs** (`reports/` directory):
-- `rf_feature_importance.pdf`
-- `strategy_1_the_educator.pdf`
-- `strategy_2_visual_storyteller.pdf`
-- `strategy_3_personal_journey.pdf`
-- `bucket_summary.pdf`
+**Phase 1 Output Example** (`hook_analysis.json`):
+```json
+{
+  "window_type": "hook",
+  "bucket": "18-33s",
+  "hashtag": "#nutrition",
+  "total_videos": 100,
+  "clusters": [
+    {
+      "cluster_id": 0,
+      "size": 35,
+      "name": "The Direct Eye Contact Hook",
+      "defining_features": [
+        "eye_contact_rate: 0.87 (RF rank #1, importance 0.35, gap 0.43 - HIGHEST PREDICTOR)",
+        "word_count: 14 (RF rank #3, importance 0.18, low count strategy)",
+        "energy_level: 0.55 (RF rank #2, importance 0.22, moderate-calm approach)"
+      ],
+      "rf_validation": {
+        "top_predictive_features_in_cluster": [
+          "eye_contact_rate: Cluster value 0.87 matches top performer avg 0.88 (RF validated)"
+        ],
+        "insight": "This cluster leverages the #1 most predictive hook feature at optimal levels."
+      },
+      "strategy_description": "Creator looks directly at camera with minimal speech, establishing immediate connection through eye contact rather than information density.",
+      "creator_recommendations": [
+        "PRIORITY: Maintain 85-90% eye contact (RF #1 predictor, importance 0.35, gap 0.43)",
+        "Keep opening statement under 15 words (RF #3 predictor)",
+        "Target moderate energy 0.55-0.60 (RF #2 predictor)"
+      ]
+    },
+    {
+      "cluster_id": 1,
+      "size": 42,
+      "name": "The Text Overlay Hook",
+      "defining_features": [
+        "overlay_unique_count: 3.5 (high - multiple text overlays)",
+        "eye_contact_rate: 0.28 (low - looking away or at product)",
+        "word_count: 48 (very high - talking while showing text)"
+      ],
+      "strategy_description": "Fast-paced, text-heavy opening with multiple scene cuts.",
+      "creator_recommendations": [
+        "Add 2-3 text overlays in first 3 seconds",
+        "Use dynamic cuts (3-4 scenes in hook)",
+        "Speak quickly - aim for 45-50 words in 3 seconds"
+      ]
+    },
+    {
+      "cluster_id": 2,
+      "size": 23,
+      "name": "The Action-Driven Hook",
+      "defining_features": [
+        "object_count: 4.8 (high - multiple props/products visible)",
+        "gesture_count: 7.5 (very high - active hand movements)",
+        "energy_level: 0.75 (high - dynamic movement)"
+      ],
+      "strategy_description": "Single continuous shot with high-energy physical action.",
+      "creator_recommendations": [
+        "Film in one continuous take - avoid cuts in first 3 seconds",
+        "Use 6-8 hand gestures (pointing, grabbing, showing products)",
+        "Show 4-5 different objects/products early"
+      ]
+    }
+  ]
+}
+```
 
-**Report Structure**:
-- Professional formatting (headers, lists, bold text)
-- Branded styling (Tumi Labs colors, fonts)
-- Actionable checklists
-- Specific numbers and metrics
-- Example video references
+**Phase 1 Outputs** (per bucket):
+- `ml_analysis/llm/hook_analysis.json`
+- `ml_analysis/llm/middle_1_analysis.json`
+- `ml_analysis/llm/middle_2_analysis.json`
+- `ml_analysis/llm/middle_3_analysis.json`
+- `ml_analysis/llm/middle_4_analysis.json`
+- `ml_analysis/llm/closing_analysis.json`
 
-**No LLM Calls**: Pure formatting (no API costs, fast execution)
+**Phase 1 Execution Time**: ~5-10 seconds wall-clock (all 6 calls run in parallel)
+
+**LLM Calls per Bucket (Phase 1)**: 6 parallel calls
+
+---
+
+### 7.2: Phase 2 - Cross-Window Synthesis (Single Call)
+
+**Purpose**: Synthesize cross-window patterns and identify "Winning Formulas" with video-level RF validation
+
+**Input Preparation**:
+1. All Phase 1 window analyses (6 JSONs)
+2. Video cluster paths across windows (extracted from K-Means outputs)
+3. Video-Level RF cross-window feature importance (`rf_video_analysis.json`)
+
+**Extract Video Cluster Paths**:
+```python
+def extract_cluster_paths(window_analyses: dict, kmeans_outputs: dict) -> list:
+    """
+    Extract each video's cluster assignment across all windows.
+
+    Returns:
+        [
+            {'video_id': 'video_001', 'path': [0, 1, 0, 1, 2, 0],
+             'path_str': 'Hook-0 → M1-1 → M2-0 → M3-1 → M4-2 → Closing-0'},
+            ...
+        ]
+    """
+    video_paths = []
+    for video_id in all_video_ids:
+        path = []
+        for window_type in window_types:
+            cluster_id = get_video_cluster(video_id, window_type, kmeans_outputs)
+            path.append(cluster_id)
+
+        path_str = format_path(path, window_types)
+        video_paths.append({
+            'video_id': video_id,
+            'path': path,
+            'path_str': path_str
+        })
+
+    return video_paths
+
+
+def analyze_path_frequencies(video_paths: list) -> list:
+    """
+    Identify most common cluster path combinations.
+
+    Returns top 10 most common paths with frequencies.
+    """
+    path_counts = Counter([tuple(vp['path']) for vp in video_paths])
+
+    top_paths = []
+    for path, count in path_counts.most_common(10):
+        top_paths.append({
+            'path': list(path),
+            'frequency': count,
+            'percentage': round(count / len(video_paths) * 100, 1),
+            'path_str': format_path(path, window_types)
+        })
+
+    return top_paths
+```
+
+**Video-Level RF Cross-Window Patterns** (Example features):
+```json
+{
+  "feature_importance": [
+    {
+      "feature": "hook_eye_contact_rate",
+      "importance": 0.22,
+      "top_performer_avg": 0.88,
+      "bottom_performer_avg": 0.45,
+      "gap": 0.43,
+      "rank": 1
+    },
+    {
+      "feature": "hook_to_middle_energy_delta",
+      "importance": 0.12,
+      "interpretation": "Energy change from hook to middle average",
+      "top_performer_avg": 0.15,
+      "bottom_performer_avg": -0.08,
+      "gap": 0.23,
+      "rank": 4,
+      "pattern_type": "cross_window"
+    },
+    {
+      "feature": "middle_to_closing_contrast",
+      "importance": 0.10,
+      "interpretation": "Energy gap between middle avg and closing peak",
+      "top_performer_avg": 0.28,
+      "bottom_performer_avg": 0.05,
+      "gap": 0.23,
+      "rank": 5,
+      "pattern_type": "cross_window"
+    },
+    {
+      "feature": "eye_contact_consistency",
+      "importance": 0.08,
+      "interpretation": "Std deviation of eye contact across all windows",
+      "top_performer_avg": 0.12,
+      "bottom_performer_avg": 0.35,
+      "gap": 0.23,
+      "rank": 6,
+      "pattern_type": "cross_window"
+    }
+  ]
+}
+```
+
+**LLM Prompt Template** (Phase 2):
+```python
+def run_phase2_synthesis(
+    window_analyses: dict,
+    kmeans_outputs: dict,
+    rf_video_data: dict,
+    bucket: str,
+    hashtag: str
+) -> dict:
+    """
+    Synthesize cross-window patterns from Phase 1 analyses.
+
+    Returns: Phase 2 synthesis JSON (winning formulas)
+    """
+    # Extract video cluster paths
+    video_paths = extract_cluster_paths(window_analyses, kmeans_outputs)
+    top_paths = analyze_path_frequencies(video_paths)
+
+    prompt = f"""
+You are synthesizing creative insights for viral videos in the {bucket} duration bucket for #{hashtag}.
+
+You have analyzed 100 viral videos across 6 temporal windows. Each window has been clustered into 3 distinct strategies.
+
+## Per-Window Cluster Analyses
+
+### Hook Analysis:
+{json.dumps(window_analyses['hook'], indent=2)}
+
+### Middle_1 Analysis:
+{json.dumps(window_analyses['middle_1'], indent=2)}
+
+### Middle_2 Analysis:
+{json.dumps(window_analyses['middle_2'], indent=2)}
+
+### Middle_3 Analysis:
+{json.dumps(window_analyses['middle_3'], indent=2)}
+
+### Middle_4 Analysis:
+{json.dumps(window_analyses['middle_4'], indent=2)}
+
+### Closing Analysis:
+{json.dumps(window_analyses['closing'], indent=2)}
+
+## Most Common Cluster Paths (Video Journey Patterns)
+
+The 10 most common combinations of window strategies:
+
+{format_top_paths(top_paths)}
+
+## Video-Level Random Forest (Cross-Window Pattern Detection)
+
+The features that BEST PREDICT viral success across the ENTIRE VIDEO JOURNEY:
+
+Top Single-Window Features:
+{format_single_window_features(rf_video_data)}
+
+Top Cross-Window Features (these only exist at video-level):
+{format_cross_window_features(rf_video_data)}
+
+Key Cross-Window Insights from RF:
+- Energy progression matters: Building from hook → middle (delta +0.15) predicts virality
+- Closing contrast matters: Large energy gap between middle avg and closing peak (0.28) predicts virality
+- Consistency matters: Low variance in eye_contact across windows (std 0.12) predicts virality
+
+## Your Task
+
+Identify 3-5 "Winning Formulas" - specific combinations of window strategies that represent successful video archetypes.
+
+For each formula:
+1. **Name**: Creative, memorable name (e.g., "The Educator's Arc")
+2. **Structure**: Which cluster combination (e.g., Hook-0 + Middle_1-1 + Closing-0)
+3. **Frequency**: How common is this pattern?
+4. **Temporal Progression**: How do key features evolve across windows?
+   - VALIDATE against video-level RF cross-window features
+5. **RF Cross-Window Validation**: Which cross-window RF patterns does this formula exhibit?
+   - Does it show hook_to_middle_energy_delta near +0.15 (RF rank #4)?
+   - Does it show middle_to_closing_contrast near 0.28 (RF rank #5)?
+   - Does it show eye_contact_consistency near 0.12 std dev (RF rank #6)?
+6. **Strategy Description**: What is the overall creative approach?
+7. **When to Use**: What type of content/creator fits this formula?
+8. **Step-by-Step Template**: Concrete steps to replicate this formula
+   - Include cross-window targets (e.g., "Energy should increase by ~0.15 from hook to middle")
+
+Output format: JSON
+{{
+  "winning_formulas": [
+    {{
+      "name": "Formula name",
+      "structure": {{
+        "hook": "Cluster name from Phase 1",
+        "middle_pattern": "Cluster progression description",
+        "closing": "Cluster name from Phase 1"
+      }},
+      "cluster_path": [0, 1, 0, 1, 2, 0],
+      "frequency": 18,
+      "percentage": 18.0,
+      "temporal_progressions": [
+        {{
+          "feature": "energy_level",
+          "hook": 0.55,
+          "middle_avg": 0.65,
+          "closing": 0.85,
+          "pattern": "Builds from moderate to high",
+          "hook_to_middle_delta": 0.16,
+          "middle_to_closing_contrast": 0.27
+        }}
+      ],
+      "rf_cross_window_validation": {{
+        "matches_top_patterns": [...],
+        "insight": "How formula matches RF predictions",
+        "rf_validation_score": "9/10"
+      }},
+      "strategy_description": "Overall creative approach",
+      "when_to_use": "Content types and creator profiles",
+      "step_by_step_template": [
+        "Step 1: ...",
+        "CROSS-WINDOW TARGETS (RF validated): ..."
+      ]
+    }}
+  ],
+  "cross_window_insights": [
+    "Key insight about temporal patterns",
+    "Key insight about transitions between windows"
+  ]
+}}
+
+Important:
+- Prioritize most frequent paths (top 3-5)
+- Highlight temporal evolutions (how features change across windows)
+- Be specific about when/why creators should use each formula
+"""
+
+    client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=8000,
+        temperature=0.4,
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    synthesis = json.loads(response.content[0].text)
+    synthesis['bucket'] = bucket
+    synthesis['hashtag'] = hashtag
+    synthesis['total_videos'] = len(video_paths)
+    synthesis['analysis_metadata'] = {
+        'llm_model': 'claude-sonnet-4',
+        'timestamp': datetime.now().isoformat(),
+        'api_latency_seconds': response.usage.total_time_seconds
+    }
+
+    save_json('ml_analysis/llm/winning_formulas.json', synthesis)
+
+    return synthesis
+```
+
+**Phase 2 Output Example** (`winning_formulas.json`):
+```json
+{
+  "bucket": "18-33s",
+  "hashtag": "#nutrition",
+  "total_videos": 100,
+  "winning_formulas": [
+    {
+      "name": "The Educator's Arc",
+      "structure": {
+        "hook": "The Direct Eye Contact Hook (Cluster 0)",
+        "middle_pattern": "Information Dense Middle (Cluster 1 → 1 → 1 → 2)",
+        "closing": "High Energy CTA (Cluster 0)"
+      },
+      "cluster_path": [0, 1, 0, 1, 2, 0],
+      "frequency": 18,
+      "percentage": 18.0,
+      "temporal_progressions": [
+        {
+          "feature": "energy_level",
+          "hook": 0.55,
+          "middle_1": 0.60,
+          "middle_2": 0.62,
+          "middle_3": 0.68,
+          "middle_4": 0.75,
+          "closing": 0.85,
+          "pattern": "Steady build from moderate (0.55) to high (0.85)",
+          "hook_to_middle_delta": 0.16,
+          "middle_to_closing_contrast": 0.27
+        }
+      ],
+      "rf_cross_window_validation": {
+        "matches_top_patterns": [
+          "hook_to_middle_energy_delta: 0.16 (matches RF top performer avg 0.15, RF rank #4)",
+          "middle_to_closing_contrast: 0.27 (matches RF top performer avg 0.28, RF rank #5)"
+        ],
+        "insight": "This formula exhibits ALL THREE major cross-window patterns identified by video-level RF.",
+        "rf_validation_score": "9/10"
+      },
+      "strategy_description": "Start with intimate eye contact to build trust, deliver dense educational content in middle segments, return to direct eye contact for high-energy call-to-action.",
+      "when_to_use": "Educational nutrition content, product explanations, how-to videos.",
+      "step_by_step_template": [
+        "Hook (0-3s): Direct eye contact (0.87), minimal words (14), moderate energy (0.55)",
+        "Middle_1 (3-8s): Shift to product view, increase talking speed (50+ words), build energy to 0.60",
+        "Middle_2-4 (8-23s): Continue information delivery, steady energy progression",
+        "Closing (23-26s): Return to direct eye contact (0.82), peak energy (0.85), clear CTA",
+        "CROSS-WINDOW TARGETS (RF validated):",
+        "  - Energy delta hook→middle: +0.16 (RF target: +0.15)",
+        "  - Energy contrast middle→closing: 0.27 gap (RF target: 0.28)"
+      ]
+    }
+  ],
+  "cross_window_insights": [
+    "78% of high-performing videos use 'bookend' eye contact pattern (high in hook/closing, lower in middle)",
+    "Energy builds are common (65% of videos), but 12% succeed with consistent energy",
+    "Closing energy should match or exceed middle average (85% of top performers follow this)"
+  ]
+}
+```
+
+**Phase 2 Output**:
+- `ml_analysis/llm/winning_formulas.json`
+
+**Phase 2 Execution Time**: ~15-20 seconds
+
+**LLM Calls per Bucket (Phase 2)**: 1 call
+
+---
+
+### 7.3: Complete Stage 7 Pipeline
+
+**Orchestration Code**:
+```python
+def run_stage7_llm_analysis(bucket: str, hashtag: str) -> dict:
+    """
+    Complete Stage 7 pipeline: Phase 1 + Phase 2.
+
+    Returns: Complete creative analysis with window insights + winning formulas
+    """
+    logger.info(f"Starting Stage 7 LLM Analysis for {bucket} / {hashtag}")
+
+    # Determine window types for this bucket
+    window_types = get_window_types_for_bucket(bucket)
+    # e.g., ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']
+
+    # Phase 1: Analyze each window in parallel
+    logger.info("Phase 1: Analyzing each window type...")
+    start_time = time.time()
+
+    window_analyses = run_phase1_parallel(
+        bucket=bucket,
+        hashtag=hashtag,
+        window_types=window_types
+    )
+
+    phase1_time = time.time() - start_time
+    logger.info(f"Phase 1 completed in {phase1_time:.1f}s ({len(window_types)} windows in parallel)")
+
+    # Validate Phase 1 outputs
+    if len(window_analyses) != len(window_types):
+        logger.warning(f"Phase 1 incomplete: {len(window_analyses)}/{len(window_types)} windows analyzed")
+
+    # Phase 2: Synthesize cross-window patterns
+    logger.info("Phase 2: Synthesizing winning formulas...")
+    start_time = time.time()
+
+    # Load K-Means outputs for cluster path extraction
+    kmeans_outputs = load_kmeans_outputs(bucket, window_types)
+
+    # Load video-level RF for cross-window validation
+    rf_video_data = load_json('ml_analysis/rf_video_analysis.json')
+
+    synthesis = run_phase2_synthesis(
+        window_analyses=window_analyses,
+        kmeans_outputs=kmeans_outputs,
+        rf_video_data=rf_video_data,
+        bucket=bucket,
+        hashtag=hashtag
+    )
+
+    phase2_time = time.time() - start_time
+    logger.info(f"Phase 2 completed in {phase2_time:.1f}s")
+
+    # Combine Phase 1 + Phase 2 into final output
+    complete_analysis = {
+        'bucket': bucket,
+        'hashtag': hashtag,
+        'window_analyses': window_analyses,
+        'winning_formulas': synthesis['winning_formulas'],
+        'cross_window_insights': synthesis['cross_window_insights'],
+        'execution_metrics': {
+            'phase1_time_seconds': phase1_time,
+            'phase2_time_seconds': phase2_time,
+            'total_time_seconds': phase1_time + phase2_time,
+            'api_calls': len(window_types) + 1
+        }
+    }
+
+    # Save complete analysis
+    save_json(f'ml_analysis/llm/complete_analysis_{bucket}.json', complete_analysis)
+
+    logger.info(f"Stage 7 complete. Total time: {phase1_time + phase2_time:.1f}s")
+
+    return complete_analysis
+```
 
 ---
 
 ### Stage 7 Summary
 
-**LLM Calls per Bucket**:
-- Analysis calls: 2 (RF + K-Means)
-- Formatting calls: 1 (all 5 reports)
-- **Total**: 3 calls per bucket
+**Output File Structure** (per bucket):
+```
+bucket_18-33s/
+└── ml_analysis/
+    └── llm/
+        ├── hook_analysis.json              # Phase 1 (3 clusters, named strategies)
+        ├── middle_1_analysis.json          # Phase 1
+        ├── middle_2_analysis.json          # Phase 1
+        ├── middle_3_analysis.json          # Phase 1
+        ├── middle_4_analysis.json          # Phase 1
+        ├── closing_analysis.json           # Phase 1
+        ├── winning_formulas.json           # Phase 2 (3-5 formulas)
+        └── complete_analysis_18-33s.json   # Combined Phase 1 + Phase 2
+```
+
+**LLM Calls per Bucket** (e.g., 18-33s with 6 windows):
+- Phase 1: 6 calls (parallel)
+- Phase 2: 1 call
+- **Total**: 7 calls per bucket
 
 **LLM Calls per Hashtag** (3 qualified buckets):
-- Analysis calls: 6 (2 × 3)
-- Formatting calls: 3 (1 × 3)
-- **Total**: 9 calls per hashtag
+- Assuming top 3 buckets: 18-33s (6 windows), 33-60s (7 windows), 60-90s (7 windows)
+- Phase 1 calls: 6 + 7 + 7 = 20 calls
+- Phase 2 calls: 1 + 1 + 1 = 3 calls
+- **Total**: 23 calls per hashtag
 
-**Cost Estimate** (assuming $0.15 per call):
-- Per bucket: $0.45
-- Per hashtag: $1.35
+**Cost Estimate**:
+- Per bucket (6 windows): ~$0.26
+- Per hashtag (3 buckets): ~$0.78
 
 **Duration Estimate**:
-- Analysis calls: ~30 seconds each
-- Formatting calls: ~45 seconds each
-- PDF generation: ~5 seconds per report
-- **Total per hashtag**: ~8-12 minutes (if sequential), ~3-5 minutes (if parallel)
+- Phase 1: ~5-10s wall-clock (parallel execution)
+- Phase 2: ~15-20s per bucket
+- **Total per bucket**: ~25-30s
+- **Total per hashtag**: ~90s (if buckets run sequentially), ~30s (if buckets run in parallel)
 
-**Why Two-Call Approach**:
-- Better quality through separation of concerns
-- Easier iteration (change formatting without re-analysis)
-- Intermediate insights valuable for debugging and reuse
-- Only moderate cost increase vs single-call approach
+**Advantages of Dual RF Hybrid Approach**:
+
+| Metric | Dual RF Hybrid (Approved) | Single Call (Old) |
+|--------|---------------------------|-------------------|
+| **Context per call** | Phase 1: 113 numbers | 1000+ numbers |
+| **Hallucination risk** | Low (focused prompts) | Higher (overwhelming) |
+| **Parallelization** | Yes (6-7 calls Phase 1) | No |
+| **Fault tolerance** | High (window failures don't block others) | Low |
+| **Cross-window patterns** | ✅ Video-level RF in Phase 2 | ❌ Limited |
+| **Within-window validation** | ✅ Window-level RF in Phase 1 | ❌ Not available |
+| **Pattern coverage** | Complete (no blind spots) | Incomplete |
+| **API calls** | 7 per bucket | 3 per bucket |
+| **Cost** | ~$0.26 per bucket | ~$0.45 per bucket |
+| **Total time** | ~25-30s | ~8-12 minutes |
+
+**Key Insights**:
+- **Dual RF validation**: Both within-window (Phase 1) AND cross-window (Phase 2) pattern detection
+- **Window-level granularity**: Each window analyzed independently with focused context (113 numbers vs 1000+)
+- **Winning formulas**: Explicit video journey patterns with RF validation (e.g., "Hook-0 → Middle-1 → Closing-0")
+- **Temporal progression**: Track feature evolution across windows (energy builds, eye contact bookends, etc.)
+- **Error handling**: Graceful degradation - one window failure doesn't block entire analysis
 
 **Child Documents**:
-- MLCreativeReports.md (report design & LLM prompts)
+- LLMAnalysis7.md (complete Stage 7 architecture with dual RF integration)
 
 **Future TI Document**:
-- LLMReportGenerationTI.md (LLM integration code, prompt templates, PDF generation)
+- LLMAnalysisTI.md (LLM integration code, prompt templates, Phase 1/2 orchestration)
 
 **Related Future Features**:
 - Phase 1: Creative Report Output (Stage 7 core feature)

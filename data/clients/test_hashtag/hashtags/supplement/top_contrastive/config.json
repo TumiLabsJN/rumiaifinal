@@ -1,0 +1,13 @@
+{
+  "client_id": "test_hashtag",
+  "analysis_type": "hashtag",
+  "target": "#supplement",
+  "analysis_mode": "top",
+  "selection_strategy": "contrastive",
+  "video_count": 100,
+  "date_filter": "last_90_days",
+  "report_type": "single",
+  "report_audience": "client",
+  "auto_confirm": true,
+  "run_date": "2025-10-09T12:13:56.054462Z"
+}
