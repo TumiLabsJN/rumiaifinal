@@ -1,0 +1,125 @@
+{
+  "text": "5 unsexy supplements that will make you sexier starting with number one Which is when I have to take right now my liposomal hair growth something like if I'm really trying to get my hair to be growing long and thick Which I have been I will always be taking this one Seamoth gel specifically a cacha superfoods because I can pack it with me anywhere on the go Seamoth gel has been such a game changer for my hair skin and now similar to semas We have mineral drops having more minerals in your diet. We are so mineral deficient We'll just help with your skin health really nourishing it from the inside out because seamoth also has a ton of minerals Which is so good for hydrating your body from the inside out I don't hear anyone talking about this supplement an elglutamine will be your best friend Especially if you're trying to get rid of bloating any excess waterway Helps with muscle recovery like I swear whatever. I'm completely like consistent with elglutamine My body just looks completely different. Lastly we have armra colostrum I was skeptical of colostrum from all the ads that I was seeing everywhere But once I started consistently taking it I saw a difference with my hair and my skin Especially with my immunity health and when you are healthy you are sexy. So take care of yourself from the inside out",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 4.24,
+      "text": "5 unsexy supplements that will make you sexier starting with number one",
+      "words": []
+    },
+    {
+      "id": 1,
+      "start": 4.24,
+      "end": 12.28,
+      "text": "Which is when I have to take right now my liposomal hair growth something like if I'm really trying to get my hair to be growing long and thick",
+      "words": []
+    },
+    {
+      "id": 2,
+      "start": 12.28,
+      "end": 16.08,
+      "text": "Which I have been I will always be taking this one",
+      "words": []
+    },
+    {
+      "id": 3,
+      "start": 16.08,
+      "end": 21.52,
+      "text": "Seamoth gel specifically a cacha superfoods because I can pack it with me anywhere on the go",
+      "words": []
+    },
+    {
+      "id": 4,
+      "start": 21.52,
+      "end": 26.88,
+      "text": "Seamoth gel has been such a game changer for my hair skin and now similar to semas",
+      "words": []
+    },
+    {
+      "id": 5,
+      "start": 26.88,
+      "end": 32.08,
+      "text": "We have mineral drops having more minerals in your diet. We are so mineral deficient",
+      "words": []
+    },
+    {
+      "id": 6,
+      "start": 32.08,
+      "end": 38.56,
+      "text": "We'll just help with your skin health really nourishing it from the inside out because seamoth also has a ton of minerals",
+      "words": []
+    },
+    {
+      "id": 7,
+      "start": 38.56,
+      "end": 42.2,
+      "text": "Which is so good for hydrating your body from the inside out",
+      "words": []
+    },
+    {
+      "id": 8,
+      "start": 42.2,
+      "end": 46.16,
+      "text": "I don't hear anyone talking about this supplement an elglutamine will be your best friend",
+      "words": []
+    },
+    {
+      "id": 9,
+      "start": 46.16,
+      "end": 49.92,
+      "text": "Especially if you're trying to get rid of bloating any excess waterway",
+      "words": []
+    },
+    {
+      "id": 10,
+      "start": 49.92,
+      "end": 56.32,
+      "text": "Helps with muscle recovery like I swear whatever. I'm completely like consistent with elglutamine",
+      "words": []
+    },
+    {
+      "id": 11,
+      "start": 57.04,
+      "end": 61.36,
+      "text": "My body just looks completely different. Lastly we have armra colostrum",
+      "words": []
+    },
+    {
+      "id": 12,
+      "start": 61.36,
+      "end": 64.24,
+      "text": "I was skeptical of colostrum from all the ads that I was seeing everywhere",
+      "words": []
+    },
+    {
+      "id": 13,
+      "start": 64.24,
+      "end": 66.08,
+      "text": "But once I started consistently taking it",
+      "words": []
+    },
+    {
+      "id": 14,
+      "start": 66.08,
+      "end": 68.08,
+      "text": "I saw a difference with my hair and my skin",
+      "words": []
+    },
+    {
+      "id": 15,
+      "start": 68.08,
+      "end": 73.36,
+      "text": "Especially with my immunity health and when you are healthy you are sexy. So take care of yourself from the inside out",
+      "words": []
+    }
+  ],
+  "language": "en",
+  "duration": 73.36,
+  "metadata": {
+    "model": "whisper.cpp-base",
+    "processed": true,
+    "success": true,
+    "backend": "whisper.cpp"
+  }
+}

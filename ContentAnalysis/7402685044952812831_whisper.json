@@ -1,0 +1,139 @@
+{
+  "text": "Every single night I make this protein shake. It is what I look forward to all day. It's so good. So easy to make. This is the protein powder that I use. Active stocks. The best thing. And then I pulse in chocolate chips. So it's like a chocolate chip vibe. It's, it tastes like a chocolate chip frosty. Honestly, it's so good. And I add in some of the raw dairy farms creamer. And it literally makes it, it makes it so good. Mmm. You need to make this. It's like the best thing. Wendy's frosty vibe. Love, love, love.",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 1.84,
+      "text": "Every single night I make this protein shake.",
+      "words": []
+    },
+    {
+      "id": 1,
+      "start": 1.84,
+      "end": 3.84,
+      "text": "It is what I look forward to all day.",
+      "words": []
+    },
+    {
+      "id": 2,
+      "start": 3.84,
+      "end": 5.2,
+      "text": "It's so good.",
+      "words": []
+    },
+    {
+      "id": 3,
+      "start": 5.2,
+      "end": 6.12,
+      "text": "So easy to make.",
+      "words": []
+    },
+    {
+      "id": 4,
+      "start": 6.12,
+      "end": 8.04,
+      "text": "This is the protein powder that I use.",
+      "words": []
+    },
+    {
+      "id": 5,
+      "start": 8.04,
+      "end": 8.88,
+      "text": "Active stocks.",
+      "words": []
+    },
+    {
+      "id": 6,
+      "start": 8.88,
+      "end": 9.88,
+      "text": "The best thing.",
+      "words": []
+    },
+    {
+      "id": 7,
+      "start": 9.88,
+      "end": 12.04,
+      "text": "And then I pulse in chocolate chips.",
+      "words": []
+    },
+    {
+      "id": 8,
+      "start": 12.04,
+      "end": 15.4,
+      "text": "So it's like a chocolate chip vibe.",
+      "words": []
+    },
+    {
+      "id": 9,
+      "start": 15.4,
+      "end": 18.6,
+      "text": "It's, it tastes like a chocolate chip frosty.",
+      "words": []
+    },
+    {
+      "id": 10,
+      "start": 18.6,
+      "end": 20.04,
+      "text": "Honestly, it's so good.",
+      "words": []
+    },
+    {
+      "id": 11,
+      "start": 20.04,
+      "end": 23.96,
+      "text": "And I add in some of the raw dairy farms creamer.",
+      "words": []
+    },
+    {
+      "id": 12,
+      "start": 23.96,
+      "end": 26.4,
+      "text": "And it literally makes it, it makes it so good.",
+      "words": []
+    },
+    {
+      "id": 13,
+      "start": 27.4,
+      "end": 28.4,
+      "text": "Mmm.",
+      "words": []
+    },
+    {
+      "id": 14,
+      "start": 28.4,
+      "end": 34.4,
+      "text": "You need to make this.",
+      "words": []
+    },
+    {
+      "id": 15,
+      "start": 34.4,
+      "end": 40.4,
+      "text": "It's like the best thing.",
+      "words": []
+    },
+    {
+      "id": 16,
+      "start": 40.4,
+      "end": 42.4,
+      "text": "Wendy's frosty vibe.",
+      "words": []
+    },
+    {
+      "id": 17,
+      "start": 42.4,
+      "end": 44.4,
+      "text": "Love, love, love.",
+      "words": []
+    }
+  ],
+  "language": "en",
+  "duration": 44.4,
+  "metadata": {
+    "model": "whisper.cpp-base",
+    "processed": true,
+    "success": true,
+    "backend": "whisper.cpp"
+  }
+}

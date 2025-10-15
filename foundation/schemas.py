@@ -29,11 +29,26 @@ class Config(BaseModel):
     @field_validator("target")
     @classmethod
     def validate_target_format(cls, v: str, info) -> str:
-        """Validate target format based on analysis_type."""
+        """
+        Validate target format based on analysis_type.
+
+        Updated to support cluster names for hashtag analysis.
+        Source: HashtagVolumeV2_TI.md DECISION 1
+        """
+        import re
         analysis_type = info.data.get("analysis_type")
         if analysis_type == "hashtag":
-            if not v.startswith("#") or len(v) < 2:
-                raise ValueError("Hashtag target must start with # and have at least 2 characters")
+            # Allow both cluster names and single hashtags (deprecated)
+            # Cluster names: alphanumeric + underscore (e.g., "nutrition", "fitness_tips")
+            # Single hashtags: start with # (e.g., "#nutrition") - deprecated in video_discovery.py
+            if v.startswith("#"):
+                # Single hashtag format (deprecated but valid for schema)
+                if len(v) < 2:
+                    raise ValueError("Hashtag target must have at least 2 characters")
+            else:
+                # Cluster name format - validate alphanumeric + underscore
+                if not re.match(r"^[a-zA-Z0-9_]+$", v):
+                    raise ValueError("Cluster name must be alphanumeric + underscore only (e.g., 'nutrition', 'fitness_tips')")
         elif analysis_type in ["competitor", "creator"]:
             if not v.startswith("@") or len(v) < 2:
                 raise ValueError(f"{analysis_type.capitalize()} target must start with @ and have at least 2 characters")

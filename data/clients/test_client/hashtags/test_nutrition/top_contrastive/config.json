@@ -1,0 +1,13 @@
+{
+  "client_id": "test_client",
+  "analysis_type": "hashtag",
+  "target": "test_nutrition",
+  "analysis_mode": "top",
+  "selection_strategy": "contrastive",
+  "video_count": 50,
+  "date_filter": "last_90_days",
+  "report_type": "single",
+  "report_audience": "client",
+  "auto_confirm": true,
+  "run_date": "2025-10-13T12:56:22.542884Z"
+}

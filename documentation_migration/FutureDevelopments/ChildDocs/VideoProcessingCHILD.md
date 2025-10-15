@@ -65,6 +65,10 @@ Input: Selected video list from Stage 1 (List[video_metadata])
        Video metadata from Apify (id, download_url, duration, engagement)
        Config.json from FoundationCHILD.md Section 5.1
    ↓
+Process Step 0: Initialize Bucket Directories (NEW - Section 2.3.0)
+       Create all 8 bucket directories with complete subdirectory structure
+       Idempotent (safe to re-run on resume)
+   ↓
 Process Step 1: Load/Create Checkpoint (Section 2.3.1)
        Check if checkpoint exists for this bucket
        If exists → Load completed_video_ids, auto-resume
@@ -98,6 +102,285 @@ Output: temporal_windows_updated.json (N files)
 ```
 
 ### 2.3 Detailed Process
+
+#### Step 2.3.0: Bucket Directory Initialization
+
+**Purpose**: Create all 8 bucket directories with complete subdirectory structure before video processing begins
+
+**When This Runs**:
+- Immediately after Stage 1 completes (before any video downloads)
+- Only runs once per analysis (idempotent - safe to re-run)
+- Runs before checkpoint initialization to ensure infrastructure exists
+
+**Which Buckets to Create**:
+
+All 8 potential bucket directories are created upfront, even though only the top 3 winning buckets (identified by Stage 1.3) will be populated with videos:
+
+```
+bucket_0-3s/     # Created ✅ | Usually empty (ultra-short videos rarely win)
+bucket_3-9s/     # Created ✅ | Usually empty (short hooks rarely win)
+bucket_9-13s/    # Created ✅ | Sometimes populated (depends on winner distribution)
+bucket_13-18s/   # Created ✅ | Often populated (TikTok sweet spot ~15s)
+bucket_18-33s/   # Created ✅ | Often populated (medium-form content, high winner rate)
+bucket_33-60s/   # Created ✅ | Often populated (long-form content, high winner rate)
+bucket_60-90s/   # Created ✅ | Sometimes populated (extended content)
+bucket_90-120s/  # Created ✅ | Usually empty (maximum TikTok length, rare winners)
+```
+
+**Rationale for Creating All 8**:
+- **Infrastructure consistency**: Predictable directory structure regardless of which buckets contain videos
+- **Stage 1 compatibility**: `winner_analysis.json` may reference buckets with 0 videos selected
+- **Future-proofing**: Different targets have different winning bucket distributions
+- **Minimal overhead**: Empty directories consume negligible disk space (~4KB × 8 = ~32KB total)
+- **Simplifies downstream stages**: Stages 3-7 can iterate over all buckets without existence checks
+
+**Complete Subdirectory Structure Per Bucket** (from FoundationCHILD.md Section 2.1):
+
+```
+bucket_{duration}/
+├── videos/              # Raw MP4 files downloaded from Apify
+├── analysis/
+│   ├── insights/        # temporal_windows_updated.json (1 per video)
+│   ├── unified/         # Intermediate timeline+ml_data from RumiAI
+│   └── service_debug/   # ML service debug outputs (YOLO, FEAT, etc.)
+├── validation/          # Pipeline validation outputs (Stage 2.4)
+│   ├── rolling_stats.json
+│   └── validation_summary.json
+├── flagged_videos/      # Investigation packages for outliers
+│   └── {video_id}/
+│       ├── video.mp4
+│       ├── temporal_windows_updated.json
+│       ├── unified_analysis.json
+│       ├── service_debug/
+│       └── validation_report.json
+├── ml_analysis/         # ML pipeline outputs (Stage 3+)
+│   ├── aggregated_features.csv
+│   ├── rf_transformed.csv
+│   ├── km_transformed.csv
+│   ├── random_forest_analysis.json
+│   └── kmeans_analysis.json
+├── models/              # Trained ML models (Stage 5)
+│   ├── random_forest_v1.pkl
+│   ├── kmeans_v1.pkl
+│   ├── scalers.pkl
+│   └── model_metrics.json
+├── llm_reports/         # LLM-generated reports (Stage 7)
+│   ├── analysis/        # LLM Call 1 (insight extraction)
+│   │   ├── call_1_rf_prompt.txt
+│   │   ├── call_1_rf_raw_response.json
+│   │   ├── call_1_kmeans_prompt.txt
+│   │   ├── call_1_kmeans_raw_response.json
+│   │   └── insights.json
+│   └── formatted/       # LLM Call 2 (report generation)
+│       ├── call_2_prompt.txt
+│       ├── call_2_raw_response.json
+│       ├── rf_feature_importance.md
+│       ├── strategy_1_the_educator.md
+│       ├── strategy_2_visual_storyteller.md
+│       ├── strategy_3_personal_journey.md
+│       └── bucket_summary.md
+├── reports/             # Final PDFs (Stage 7)
+│   ├── rf_feature_importance.pdf
+│   ├── strategy_1_the_educator.pdf
+│   ├── strategy_2_visual_storyteller.pdf
+│   ├── strategy_3_personal_journey.pdf
+│   └── bucket_summary.pdf
+├── checkpoints/         # Processing state checkpoints
+│   └── stage_{X}_checkpoint.json
+└── logs/                # Processing logs
+    └── processing_{date}.log
+```
+
+**Logic**:
+```python
+def initialize_bucket_directories(config):
+    """
+    Create all 8 bucket directories with complete subdirectory structure.
+
+    This function creates directories for ALL 8 potential buckets, even though
+    only the top 3 winning buckets will be populated with videos. This ensures
+    consistent infrastructure and simplifies downstream stages.
+
+    Args:
+        config: dict, loaded from config.json (FoundationCHILD Section 5.1)
+
+    Returns:
+        dict: Created paths mapped to bucket names
+
+    Raises:
+        OSError: If directory creation fails (permissions, disk space)
+    """
+    # Define all 8 bucket names (from FoundationCHILD Section 6)
+    BUCKET_NAMES = [
+        "0-3s",
+        "3-9s",
+        "9-13s",
+        "13-18s",
+        "18-33s",
+        "33-60s",
+        "60-90s",
+        "90-120s"
+    ]
+
+    # Base path template (from FoundationCHILD Section 2.2)
+    data_root = os.getenv('DATA_ROOT', '/data')
+    analysis_base = f"{data_root}/clients/{config['client_id']}/{config['analysis_type']}s/{config['target']}/{config['analysis_mode']}_{config['selection_strategy']}/"
+
+    # Subdirectory structure per bucket (from FoundationCHILD Section 2.1, lines 113-164)
+    SUBDIRECTORIES = [
+        "videos/",
+        "analysis/",
+        "analysis/insights/",
+        "analysis/unified/",
+        "analysis/service_debug/",
+        "validation/",
+        "flagged_videos/",
+        "ml_analysis/",
+        "models/",
+        "llm_reports/",
+        "llm_reports/analysis/",
+        "llm_reports/formatted/",
+        "reports/",
+        "checkpoints/",
+        "logs/"
+    ]
+
+    created_paths = {}
+
+    # Create all 8 buckets with full subdirectory structure
+    for bucket_name in BUCKET_NAMES:
+        bucket_path = f"{analysis_base}buckets/bucket_{bucket_name}/"
+
+        logger.info(f"Creating bucket directory structure: bucket_{bucket_name}")
+
+        # Create bucket root
+        try:
+            os.makedirs(bucket_path, exist_ok=True)
+        except OSError as e:
+            raise OSError(f"Failed to create bucket directory {bucket_path}: {e}")
+
+        # Create all subdirectories for this bucket
+        for subdir in SUBDIRECTORIES:
+            subdir_path = f"{bucket_path}{subdir}"
+            try:
+                os.makedirs(subdir_path, exist_ok=True)
+            except OSError as e:
+                raise OSError(f"Failed to create subdirectory {subdir_path}: {e}")
+
+        created_paths[bucket_name] = bucket_path
+        logger.debug(f"  ✓ Created {len(SUBDIRECTORIES)} subdirectories for bucket_{bucket_name}")
+
+    logger.info(f"✓ Successfully created all 8 bucket directories with complete subdirectory structure")
+
+    return created_paths
+
+
+def validate_bucket_structure(bucket_path, bucket_name):
+    """
+    Validate that bucket directory has complete subdirectory structure.
+
+    Used for verification after initialization or when resuming from checkpoint.
+
+    Args:
+        bucket_path: str, full path to bucket directory
+        bucket_name: str, bucket name (e.g., "18-33s")
+
+    Raises:
+        ValueError: If any required subdirectories are missing
+    """
+    REQUIRED_SUBDIRS = [
+        "videos/",
+        "analysis/insights/",
+        "analysis/unified/",
+        "analysis/service_debug/",
+        "checkpoints/"
+    ]
+
+    missing = []
+    for subdir in REQUIRED_SUBDIRS:
+        subdir_path = f"{bucket_path}{subdir}"
+        if not os.path.exists(subdir_path):
+            missing.append(subdir)
+
+    if missing:
+        raise ValueError(
+            f"Bucket {bucket_name} missing required subdirectories: {missing}. "
+            f"Run bucket initialization before processing."
+        )
+```
+
+**Example Output** (typical hashtag analysis):
+```
+Stage 1.3: Winner Analysis Complete
+  Top 3 buckets identified:
+    1. bucket_18-33s (45% of winners)
+    2. bucket_33-60s (30% of winners)
+    3. bucket_13-18s (20% of winners)
+
+Stage 2.0: Initializing Bucket Directories
+  Creating bucket directory structure: bucket_0-3s
+    ✓ Created 15 subdirectories for bucket_0-3s
+  Creating bucket directory structure: bucket_3-9s
+    ✓ Created 15 subdirectories for bucket_3-9s
+  Creating bucket directory structure: bucket_9-13s
+    ✓ Created 15 subdirectories for bucket_9-13s
+  Creating bucket directory structure: bucket_13-18s
+    ✓ Created 15 subdirectories for bucket_13-18s
+  Creating bucket directory structure: bucket_18-33s
+    ✓ Created 15 subdirectories for bucket_18-33s
+  Creating bucket directory structure: bucket_33-60s
+    ✓ Created 15 subdirectories for bucket_33-60s
+  Creating bucket directory structure: bucket_60-90s
+    ✓ Created 15 subdirectories for bucket_60-90s
+  Creating bucket directory structure: bucket_90-120s
+    ✓ Created 15 subdirectories for bucket_90-120s
+  ✓ Successfully created all 8 bucket directories
+
+Stage 2.1-2.3: Processing Videos (Winning Buckets Only)
+  → Processing bucket_18-33s (100 videos)
+  → Processing bucket_33-60s (100 videos)
+  → Processing bucket_13-18s (100 videos)
+  ✓ Skipping bucket_0-3s (0 videos selected - not a winning bucket)
+  ✓ Skipping bucket_3-9s (0 videos selected - not a winning bucket)
+  ✓ Skipping bucket_9-13s (0 videos selected - not a winning bucket)
+  ✓ Skipping bucket_60-90s (0 videos selected - not a winning bucket)
+  ✓ Skipping bucket_90-120s (0 videos selected - not a winning bucket)
+```
+
+**Edge Cases**:
+
+| Scenario | Handling | Rationale |
+|----------|----------|-----------|
+| Directories already exist | Skip creation (idempotent via `exist_ok=True`) | Safe to re-run after interruption |
+| Insufficient disk space | Fail-fast with OSError | Cannot proceed without storage |
+| Missing parent directories | Auto-create parents via `os.makedirs()` | Graceful handling of fresh installs |
+| Permission denied | Fail-fast with OSError | User must fix permissions before proceeding |
+| Partial directory structure exists | Complete missing subdirectories | Resume-friendly (creates only what's missing) |
+
+**Validation on Resume**:
+
+When resuming from checkpoint, validate bucket structure before processing:
+
+```python
+def resume_video_processing(checkpoint, config):
+    """Resume video processing from checkpoint."""
+    bucket_name = checkpoint['bucket']
+    bucket_path = get_bucket_path(config, bucket_name)
+
+    # Validate bucket structure before resuming
+    try:
+        validate_bucket_structure(bucket_path, bucket_name)
+    except ValueError as e:
+        logger.error(f"Bucket structure validation failed: {e}")
+        logger.info("Re-initializing bucket directories...")
+        initialize_bucket_directories(config)
+
+    # Continue with normal resume logic
+    remaining_videos = load_remaining_videos(checkpoint)
+    # ...
+```
+
+---
 
 #### Step 2.3.1: Checkpoint Initialization
 
@@ -842,10 +1125,10 @@ def finalize_checkpoint(checkpoint):
 
 | Dependency | Source | Format | Required Fields | Failure Mode |
 |------------|--------|--------|-----------------|--------------|
-| **Foundation setup** | FoundationCHILD.md (FoundationTI.md implementation) | Directory structure + config.json | client_id, bucket, analysis_mode, selection_strategy, video_count, base_paths | Fail-fast if directories don't exist or config.json missing |
+| **Foundation setup** | FoundationCHILD.md (FoundationTI.md implementation) | config.json + analysis_base directory | client_id, analysis_type, target, analysis_mode, selection_strategy, video_count | Fail-fast if config.json missing or analysis_base doesn't exist |
 | Selected video list | Stage 1 output | List[dict] | `id`, `videoMeta.downloadAddr`, `duration`, `engagement` | Fail-fast if empty list |
 | Config.json | FoundationCHILD.md Section 5.1 | JSON | `video_count`, `selection_strategy`, `date_filter`, `run_date` | Fail-fast with error message |
-| Bucket directory | FoundationCHILD.md Section 2 (Client Architecture) | Directory path | Must exist with write access | Fail-fast if Foundation didn't create directories |
+| Bucket directories | **Created by Step 2.3.0** (this stage) | Directory structure | All 8 buckets with 15 subdirectories each | Auto-created if missing, fail-fast on permission/disk errors |
 | RumiAI pipeline | Existing rumiai_runner.py | Python module | VideoAnalyzer class | Fail-fast if rumiai_runner.py not available |
 
 ### 3.2 Output Contracts
@@ -1077,10 +1360,11 @@ def validate_inputs(video_list, config, bucket):
     if missing:
         raise ValueError(f"Config.json missing required fields: {missing}")
 
-    # 3. Check bucket directory exists
-    bucket_path = f"/data/clients/{config['client_id']}/{config['analysis_type']}s/{config['target']}/bucket_{bucket}/"
-    if not os.path.exists(bucket_path):
-        raise ValueError(f"Bucket directory does not exist: {bucket_path}. Did Foundation setup run?")
+    # 3. Check analysis_base directory exists (parent of buckets/)
+    data_root = os.getenv('DATA_ROOT', '/data')
+    analysis_base = f"{data_root}/clients/{config['client_id']}/{config['analysis_type']}s/{config['target']}/{config['analysis_mode']}_{config['selection_strategy']}/"
+    if not os.path.exists(analysis_base):
+        raise ValueError(f"Analysis base directory does not exist: {analysis_base}. Did Foundation setup run?")
 
     # 4. Validate each video has required metadata
     for video in video_list:
@@ -1089,15 +1373,14 @@ def validate_inputs(video_list, config, bucket):
         if 'videoMeta' not in video or 'downloadAddr' not in video['videoMeta']:
             raise ValueError(f"Video {video['id']} missing download URL")
 
-    # 5. Check write permissions
-    test_file = f"{bucket_path}/checkpoints/test_write.tmp"
+    # 5. Check write permissions to analysis_base
+    test_file = f"{analysis_base}/test_write.tmp"
     try:
-        os.makedirs(os.path.dirname(test_file), exist_ok=True)
         with open(test_file, 'w') as f:
             f.write("test")
         os.remove(test_file)
     except Exception as e:
-        raise ValueError(f"No write permission to {bucket_path}: {e}")
+        raise ValueError(f"No write permission to {analysis_base}: {e}")
 ```
 
 ### 6.2 Error Cases
@@ -1106,7 +1389,7 @@ def validate_inputs(video_list, config, bucket):
 |-------|-----------|----------|--------------|-----------|
 | Empty video list | `len(video_list) == 0` | Fail-fast | `"No videos to process. Did Stage 1 complete successfully?"` | 1 |
 | Missing config.json | `not os.path.exists(config_path)` | Fail-fast | `"Config.json not found. Did Foundation setup run?"` | 2 |
-| Bucket directory missing | `not os.path.exists(bucket_path)` | Fail-fast | `"Bucket directory {bucket} does not exist. Did Foundation setup run?"` | 3 |
+| Analysis base directory missing | `not os.path.exists(analysis_base)` | Fail-fast | `"Analysis base directory does not exist. Did Foundation setup run?"` | 3 |
 | Config mismatch on resume | Config validation | Fail-fast | `"Config mismatch: checkpoint video_count={X}, provided video_count={Y}"` | 4 |
 | Cached file too small | `file_size < MIN_VIDEO_SIZE` on resume | Remove file, re-download (self-healing) | `"Existing file too small ({size} bytes), removing and re-downloading"` | 0 (auto-retry) |
 | Downloaded file too small | `file_size < MIN_VIDEO_SIZE` (100KB) | Retry (max 3), then skip-on-fail | `"Downloaded file too small: {size} bytes (minimum: 100KB). Skipping after 3 attempts."` | 0 (skip-on-fail) |
@@ -1218,6 +1501,14 @@ def validate_stage_outputs(bucket, checkpoint):
 
 ### 8.1 Unit Tests
 
+- [ ] **Test bucket directory initialization**
+  - Create all 8 buckets with 15 subdirectories each
+  - Idempotent creation (safe to re-run, uses exist_ok=True)
+  - Validate bucket structure (check required subdirectories exist)
+  - Handle missing parent directories (auto-create via os.makedirs)
+  - Handle permission denied (fail-fast with OSError)
+  - Handle disk full (fail-fast with OSError)
+
 - [ ] **Test checkpoint initialization**
   - New checkpoint creation (no existing checkpoint)
   - Load existing checkpoint (auto-resume)
@@ -1285,10 +1576,11 @@ def validate_stage_outputs(bucket, checkpoint):
   - Resume and verify only remaining 5 videos processed
 
 - [ ] **Error handling integration test**
-  - Inject disk full error (mock filesystem, should fail-fast with exit code 5)
+  - Inject disk full error during bucket creation (should fail-fast with OSError)
+  - Inject permission denied during bucket creation (should fail-fast with OSError)
   - Inject config mismatch on resume (different video_count, should exit code 4)
   - Inject missing config.json (should exit code 2)
-  - Inject missing bucket directory (should exit code 3)
+  - Inject missing analysis_base directory (should exit code 3)
   - Inject download timeout (should retry 3x, then skip video)
   - Inject RumiAI timeout (should mark video as failed, continue batch)
   - Verify checkpoint tracks all failures correctly

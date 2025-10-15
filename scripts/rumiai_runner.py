@@ -282,18 +282,39 @@ class RumiAIRunner:
             # Use temporal_compute with unified dict (wrapper handles extraction)
             try:
                 temporal_windows = compute_temporal_windows(unified_analysis.to_dict())
-                prompt_results['temporal_windows'] = temporal_windows
-                
+
+                # OPTION 2 VALIDATION: Explicit validation for better error reporting
+                # Validate non-empty result
+                if not temporal_windows or not isinstance(temporal_windows, dict):
+                    raise ValueError(
+                        f"compute_temporal_windows returned invalid result: "
+                        f"type={type(temporal_windows).__name__}, "
+                        f"is_empty={not temporal_windows}"
+                    )
+
+                # Validate required structure
+                required_keys = ['hook', 'middle_segments', 'closing']
+                missing_keys = [k for k in required_keys if k not in temporal_windows]
+                if missing_keys:
+                    raise ValueError(
+                        f"compute_temporal_windows missing required keys: {missing_keys}. "
+                        f"Got keys: {list(temporal_windows.keys())}"
+                    )
+
                 # Save temporal windows as a single JSON file
-                if temporal_windows:
-                    # Save directly as single JSON in insights folder
-                    temporal_path = self.insights_handler.get_path(f"{video_id}_temporal_windows_updated.json")
-                    with open(temporal_path, 'w') as f:
-                        json.dump(temporal_windows, f, indent=2)
-                    logger.info(f"✅ Temporal windows saved to {temporal_path}")
+                temporal_path = self.insights_handler.get_path(f"{video_id}_temporal_windows_updated.json")
+                with open(temporal_path, 'w') as f:
+                    json.dump(temporal_windows, f, indent=2)
+                logger.info(f"✅ Temporal windows saved to {temporal_path}")
+
+                # Only assign after successful validation and save
+                prompt_results['temporal_windows'] = temporal_windows
+
             except Exception as e:
-                logger.error(f"Temporal windows computation failed: {e}")
+                # Add exc_info=True for full stack trace in logs
+                logger.error(f"Temporal windows computation failed: {e}", exc_info=True)
                 prompt_results['temporal_windows'] = {}
+                # Continue processing (silent failure preserved)
 
             # Step 7: Generate final report
             print("📊 generating_report... (95%)")

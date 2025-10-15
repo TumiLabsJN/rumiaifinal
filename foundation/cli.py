@@ -230,11 +230,23 @@ def validate_cli_args(args: argparse.Namespace) -> None:
 
     # Validate target format based on analysis_type
     if args.analysis_type == "hashtag":
-        if not args.target.startswith("#") or len(args.target) < 2:
-            raise ValueError(
-                f"Invalid --target '{args.target}' for analysis_type 'hashtag'. "
-                f"Must start with # and have at least 2 characters (e.g., #nutrition)."
-            )
+        # Allow both cluster names (alphanumeric) and single hashtags (deprecated, caught later)
+        # Cluster names: alphanumeric + underscore (e.g., "nutrition", "fitness_tips")
+        # Single hashtags: start with # (e.g., "#nutrition") - deprecated in video_discovery.py
+        if args.target.startswith("#"):
+            # Single hashtag format (will be caught as deprecated in detect_target_type)
+            if len(args.target) < 2:
+                raise ValueError(
+                    f"Invalid --target '{args.target}' for analysis_type 'hashtag'. "
+                    f"Must have at least 2 characters (e.g., #nutrition)."
+                )
+        else:
+            # Cluster name format - validate alphanumeric + underscore
+            if not re.match(r"^[a-zA-Z0-9_]+$", args.target):
+                raise ValueError(
+                    f"Invalid --target '{args.target}' for analysis_type 'hashtag'. "
+                    f"Cluster names must be alphanumeric + underscore only (e.g., 'nutrition', 'fitness_tips')."
+                )
     elif args.analysis_type in ["competitor", "creator"]:
         if not args.target.startswith("@") or len(args.target) < 2:
             raise ValueError(

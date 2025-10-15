@@ -73,7 +73,11 @@
   - Contrastive default: N=100 per bucket (80 top + 20 bottom), top 3 buckets = ~300 videos
   - Top default: N=40 per bucket, top 3 buckets = ~120 videos
   - Only top 3 most active buckets are processed (adaptive bucket processing)
-- **ML Models**: Random Forest and K-means with a capacity of 16 models total (2 algorithms × 8 duration buckets)
+- **ML Models**: 90 models total across 8 duration buckets for complete pattern coverage:
+  - 8 Video-Level Random Forest models (1 per bucket) - Detects cross-window patterns and temporal progressions
+  - 41 Window-Level Random Forest models (1 per window per bucket) - Validates window-specific feature importance
+  - 41 Window-Level K-Means models (1 per window per bucket) - Discovers creative strategies within each video section
+  - Architecture rationale: Dual RF + window-level K-Means prevents blind spots (video-level RF captures "hook→middle consistency", window-level captures "what makes a strong hook", K-Means discovers "3 ways to do strong hooks")
 - **Output**: Duration-specific creative recommendations (report count being finalized)
 - **Processing**: Sequential (one-by-one) with resumption capability
 
@@ -92,11 +96,21 @@
 
 **Complete Structure**:
 ```
+/config/
+├── hashtag_clusters/                      # Cluster configuration directory (NEW)
+│   ├── {cluster_id}.json                  # Cluster config (e.g., nutrition.json)
+│   ├── test_nutrition.json                # Example: test cluster (2 hashtags × 1 run)
+│   └── nutrition_example.json             # Example: full cluster (4 hashtags × 2 runs)
+
 /data/
 ├── clients/
 │   ├── {client_id}/                       # e.g., "acme_corp"
 │   │   ├── hashtags/                       # Analysis type: hashtag
-│   │   │   └── {hashtag_name}/             # e.g., "nutrition" (# removed)
+│   │   │   └── {cluster_id}/               # Cluster ID (e.g., "nutrition", NOT "#nutrition")
+│   │   │       ├── cluster_analytics.json  # Cluster health metrics (NEW)
+│   │   │       │                           # Schema: ClusterAnalyticsSchema (Section 5.4)
+│   │   │       │                           # Contains: scrape summary, per-hashtag contribution,
+│   │   │       │                           #           pairwise overlaps, run effectiveness
 │   │   │       ├── top_contrastive/        # Mode: top, Strategy: contrastive
 │   │   │       │   ├── config.json         # {client_id, analysis_type, target, analysis_mode, selection_strategy, video_count, date_filter, report_type, report_audience, auto_confirm, run_date}
 │   │   │       │   ├── buckets/            # 8 duration buckets
@@ -185,6 +199,12 @@
 **For TI Implementation**:
 ```python
 BASE_PATHS = {
+    # ===== CLUSTER CONFIGURATION PATHS (NEW) =====
+    "cluster_config_dir": "/config/hashtag_clusters/",
+    "cluster_config_file": "/config/hashtag_clusters/{cluster_id}.json",
+    "cluster_analytics_file": "/data/clients/{client_id}/hashtag/{cluster_id}/cluster_analytics.json",
+
+    # ===== CLIENT DATA PATHS =====
     "client_base": "/data/clients/{client_id}/",
     "analysis_type_base": "{client_base}/{analysis_type}s/",  # Note: plural form
     "target_base": "{analysis_type_base}/{target}/",
@@ -322,11 +342,33 @@ All RumiAI analyses use **multiple orthogonal configuration dimensions**. These 
 
 **Available Types**:
 
-| Type | CLI Flag | Target Format | Data Source | Primary Use Case |
-|------|----------|---------------|-------------|------------------|
-| `hashtag` | `--analysis-type hashtag` | `#nutrition` | TikTok hashtag search | Market research - identify viral patterns |
-| `competitor` | `--analysis-type competitor` | `@rival_brand` | TikTok profile | Competitive intelligence - understand rivals |
-| `creator` | `--analysis-type creator` | `@potential_affiliate` | TikTok profile | Creator vetting - assess fit for hiring |
+| Type | CLI Flag | Target Format | Data Source | Primary Use Case | Scraping Mode |
+|------|----------|---------------|-------------|------------------|---------------|
+| `hashtag` | `--analysis-type hashtag` | `nutrition` (cluster ID) | TikTok hashtag search (multi-hashtag cluster) | Market research - identify viral patterns | **Cluster mode** (4 hashtags × 2 runs) |
+| `competitor` | `--analysis-type competitor` | `@rival_brand` | TikTok profile | Competitive intelligence - understand rivals | Single mode (1 profile, 800 videos) |
+| `creator` | `--analysis-type creator` | `@potential_affiliate` | TikTok profile | Creator vetting - assess fit for hiring | Single mode (1 profile, 800 videos) |
+
+**Cluster Mode (Hashtag Analysis Only)**:
+
+**What it is**: Multi-hashtag scraping strategy that combines semantically related hashtags to maximize unique video discovery.
+
+**Why it matters**: Single hashtag scraping with US geographic filtering reduces video volume by 57%. Cluster mode provides 2-3x more unique videos while maintaining semantic relevance.
+
+**Architecture**:
+- **Cluster config**: `/config/hashtag_clusters/{cluster_id}.json`
+- **Example**: `nutrition` cluster = `#nutrition` + `#nutritionist` + `#nutritiontips` + `#nutritioncoach`
+- **Scraping**: 4 hashtags × 2 runs = 8 scrapes with provenance tracking
+- **Result**: ~1,900 videos scraped → ~1,400 unique videos after deduplication
+
+**Key Concepts**:
+- **Narrow semantic clustering**: Related hashtags with 20-30% overlap (not too broad, not too narrow)
+- **Provenance tracking**: System tracks which hashtags/runs found each video (`source_hashtags`, `source_runs`)
+- **Cluster analytics**: Per-hashtag contribution, pairwise overlaps, run effectiveness metrics
+- **Single hashtag deprecated**: As of 2025-10-10, single hashtag scraping (e.g., `--target "#nutrition"`) is deprecated. Use cluster mode instead.
+
+**When to use**:
+- **Hashtag analysis**: Use cluster mode (default, recommended)
+- **Competitor/Creator analysis**: Use single profile mode (no clusters needed)
 
 **Key Differences**:
 
@@ -845,6 +887,180 @@ CheckpointSchema = {
 
 ---
 
+### 5.4 Cluster Configuration Schema (NEW)
+
+**Source**: VideoDiscoveryCHILD.md Section 5.2a (from HashtagVolumeV2.md DECISION 1)
+
+**Location**: `/config/hashtag_clusters/{cluster_id}.json`
+
+**Purpose**: Defines multi-hashtag scraping clusters for hashtag analysis
+
+**Schema**:
+```python
+ClusterConfigSchema = {
+    "cluster_id": str,             # Required, cluster identifier (alphanumeric + underscore)
+                                   # Example: "nutrition"
+
+    "description": str,            # Required, human-readable description
+                                   # Example: "Nutrition niche - narrow semantic cluster"
+
+    "primary_hashtag": str,        # Required, original target hashtag (starts with #)
+                                   # Example: "#nutrition"
+
+    "variant_hashtags": list[str], # Required, 1-10 variant hashtags (each starts with #)
+                                   # Example: ["#nutritionist", "#nutritiontips", "#nutritioncoach"]
+
+    "scrape_config": {             # Required, scraping parameters
+        "runs_per_hashtag": int,   # Required, runs per hashtag (1-5)
+                                   # Example: 2
+
+        "delay_between_runs_ms": int,  # Required, delay between scrapes (60000-600000ms)
+                                       # Example: 120000 (2 minutes)
+
+        "results_per_page": int,   # Required, videos per scrape (100-800)
+                                   # Example: 800
+    },
+
+    "metadata": {                  # Optional, user metadata
+        "created_date": str,       # Optional, ISO 8601 timestamp
+        "created_by": str,         # Optional, creator username
+        "notes": str,              # Optional, additional notes
+    }
+}
+```
+
+**Validation Requirements**:
+- `cluster_id`: Regex `^[a-zA-Z0-9_]+$` (min 1 char)
+- `primary_hashtag`: Regex `^#[a-zA-Z0-9_]+$` (min 2 chars)
+- `variant_hashtags`: Array length 1-10, each element matches hashtag regex
+- `runs_per_hashtag`: Range 1-5
+- `delay_between_runs_ms`: Range 60000-600000 (1-10 minutes)
+- `results_per_page`: Range 100-800
+
+**Example**:
+```json
+{
+  "cluster_id": "nutrition",
+  "description": "Nutrition niche - narrow semantic cluster (20-30% overlap)",
+  "primary_hashtag": "#nutrition",
+  "variant_hashtags": ["#nutritionist", "#nutritiontips", "#nutritioncoach"],
+  "scrape_config": {
+    "runs_per_hashtag": 2,
+    "delay_between_runs_ms": 120000,
+    "results_per_page": 800
+  },
+  "metadata": {
+    "created_date": "2025-10-10T14:30:00Z",
+    "created_by": "RumiAI Team",
+    "notes": "4 hashtags × 2 runs = 8 scrapes, ~1400 unique videos expected"
+  }
+}
+```
+
+---
+
+### 5.5 Cluster Analytics Schema (NEW)
+
+**Source**: VideoDiscoveryCHILD.md Section 5.2b (from HashtagVolumeV2.md DECISION 3)
+
+**Location**: `/data/clients/{client_id}/hashtag/{cluster_id}/cluster_analytics.json`
+
+**Purpose**: Cluster health analytics for optimization and monitoring
+
+**Schema**:
+```python
+ClusterAnalyticsSchema = {
+    "cluster_id": str,             # Required, cluster identifier
+                                   # Example: "nutrition"
+
+    "execution_date": str,         # Required, ISO 8601 timestamp
+                                   # Example: "2025-10-10T14:30:00Z"
+
+    "scrape_summary": {            # Required, overall scraping statistics
+        "total_scrapes_attempted": int,  # Example: 8 (4 hashtags × 2 runs)
+        "total_scrapes_succeeded": int,  # Example: 8
+        "total_scraped_videos": int,     # Example: 1939 (before dedup)
+        "total_unique_videos": int,      # Example: 1400 (after dedup)
+        "overall_duplication_rate": float,  # Example: 27.8 (percentage)
+        "failed_scrapes": list[dict],    # Example: [] or [{"hashtag": str, "run": int, "error": str}]
+    },
+
+    "per_hashtag_contribution": dict[str, dict],  # Key: hashtag name
+                                                  # Value: {
+                                                  #   "total_found": int,
+                                                  #   "exclusive_videos": int,
+                                                  #   "contribution_percentage": float
+                                                  # }
+
+    "pairwise_overlaps": dict[str, float],  # Key: "hashtag1_vs_hashtag2" (alphabetical)
+                                            # Value: overlap percentage
+                                            # Example: {"nutrition_vs_nutritionist": 18.2}
+
+    "run_effectiveness": dict[str, dict],   # Key: hashtag name
+                                            # Value: {
+                                            #   "run_1_videos": int,
+                                            #   "run_2_videos": int,
+                                            #   "run_2_new_videos": int,
+                                            #   "run_2_new_percentage": float
+                                            # }
+
+    "bucket_distribution_by_source": dict[str, dict],  # Key: bucket name (e.g., "60-90s")
+                                                       # Value: {
+                                                       #   "total_videos": int,
+                                                       #   "by_hashtag": dict[str, int]
+                                                       # }
+}
+```
+
+**Usage**:
+- Generated by Stage 1 (Video Discovery) after deduplication
+- Used for cluster optimization: identify low-contributing hashtags for removal
+- Used for cost savings: analyze run effectiveness (2 runs vs 3 runs)
+- Used for root cause analysis: diagnose bucket deficiencies by source hashtag
+
+**Example**:
+```json
+{
+  "cluster_id": "nutrition",
+  "execution_date": "2025-10-10T14:45:00Z",
+  "scrape_summary": {
+    "total_scrapes_attempted": 8,
+    "total_scrapes_succeeded": 8,
+    "total_scraped_videos": 1939,
+    "total_unique_videos": 1400,
+    "overall_duplication_rate": 27.8,
+    "failed_scrapes": []
+  },
+  "per_hashtag_contribution": {
+    "#nutrition": {
+      "total_found": 782,
+      "exclusive_videos": 450,
+      "contribution_percentage": 55.9
+    },
+    "#nutritionist": {
+      "total_found": 420,
+      "exclusive_videos": 180,
+      "contribution_percentage": 30.0
+    }
+  },
+  "pairwise_overlaps": {
+    "nutrition_nutritionist": 18.2,
+    "nutrition_nutritiontips": 25.1
+  },
+  "run_effectiveness": {
+    "#nutrition": {
+      "run_1_videos": 690,
+      "run_2_videos": 720,
+      "run_2_new_videos": 92,
+      "run_2_new_percentage": 12.8
+    }
+  },
+  "bucket_distribution_by_source": {}
+}
+```
+
+---
+
 ## 6. Bucket Definitions
 
 **8 Duration Buckets**:
@@ -1020,6 +1236,36 @@ All stage-specific Child HLDs reference this document:
 - Target type determines discovery method in Stage 1
 - Directory: `/data/clients/{client_id}/targets/{target}/`
 - Used in: Stages 0, 1, 7
+
+**Cluster Mode (NEW)**
+- Multi-hashtag scraping strategy for hashtag analysis
+- Combines semantically related hashtags to maximize unique video discovery
+- Example: `nutrition` cluster = #nutrition + #nutritionist + #nutritiontips + #nutritioncoach
+- Provides 2-3x more unique videos than single hashtag scraping
+- Configuration file: `/config/hashtag_clusters/{cluster_id}.json`
+- Used in: Stage 1 (Video Discovery) for hashtag analysis only
+
+**Narrow Semantic Clustering (NEW)**
+- Strategy for selecting related hashtags with 20-30% overlap
+- Not too broad (> 30% overlap = redundant data)
+- Not too narrow (< 20% overlap = unrelated content)
+- Goal: Maximize unique video discovery while maintaining semantic relevance
+- Used in: Cluster configuration design (Stage 1 input)
+
+**Provenance Tracking (NEW)**
+- System capability to track which hashtags/runs found each video
+- Fields added to video metadata: `source_hashtags` (list), `source_runs` (list)
+- Example: Video found by #nutrition run 1 AND #nutritiontips run 2 → `source_hashtags: ["#nutrition", "#nutritiontips"]`, `source_runs: [1, 2]`
+- Purpose: Enable cluster optimization (identify low-contributing hashtags)
+- Used in: Stage 1 (Video Discovery), cluster analytics generation
+
+**Cluster Analytics (NEW)**
+- Health metrics report generated after cluster scraping
+- 5 sections: scrape summary, per-hashtag contribution, pairwise overlaps, run effectiveness, bucket distribution by source
+- Output file: `/data/clients/{client_id}/hashtag/{cluster_id}/cluster_analytics.json`
+- Use cases: Identify low-contributing hashtags, optimize run count, diagnose bucket deficiencies
+- Schema: ClusterAnalyticsSchema (Section 5.5)
+- Used in: Stage 1 (Video Discovery), cluster optimization
 
 ### ML-Specific Terms
 

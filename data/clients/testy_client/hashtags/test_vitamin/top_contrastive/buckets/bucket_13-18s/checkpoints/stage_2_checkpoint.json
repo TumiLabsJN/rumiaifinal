@@ -1,0 +1,27 @@
+{
+  "stage": "video_processing",
+  "bucket": "13-18s",
+  "total_videos": 8,
+  "completed": 0,
+  "failed": 0,
+  "remaining": 8,
+  "last_checkpoint": "2025-10-14T14:51:58.642172",
+  "completed_video_ids": [],
+  "failed_video_ids": [],
+  "config": {
+    "client_id": "testy_client",
+    "analysis_type": "hashtag",
+    "target": "test_vitamin",
+    "analysis_mode": "top",
+    "selection_strategy": "contrastive",
+    "video_count": 10,
+    "date_filter": "last_90_days",
+    "report_type": "single",
+    "report_audience": "client",
+    "auto_confirm": true,
+    "run_date": "2025-10-14T14:38:32.407083Z"
+  },
+  "status": "in_progress",
+  "pause_reason": null,
+  "pause_timestamp": null
+}

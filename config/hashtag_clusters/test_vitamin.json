@@ -1,0 +1,20 @@
+{
+  "cluster_id": "test_vitamin",
+  "description": "Test cluster for vitamin niche - full pipeline validation",
+  "primary_hashtag": "#vitamin",
+  "variant_hashtags": [
+    "#vitamins",
+    "#dailyvitamins",
+    "#vitamintok"
+  ],
+  "scrape_config": {
+    "runs_per_hashtag": 2,
+    "delay_between_runs_ms": 120000,
+    "results_per_page": 600
+  },
+  "metadata": {
+    "created_date": "2025-10-14T07:20:00Z",
+    "created_by": "pipeline_test",
+    "notes": "Full pipeline test - 4 hashtags × 2 runs × 600 results = 8 scrapes, ~1,200-1,500 unique videos expected"
+  }
+}

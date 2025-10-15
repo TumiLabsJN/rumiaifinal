@@ -36,7 +36,7 @@
   ML Buckets - Total 8 - (Downstream - Training)
   | Bucket  | Duration | Window Structure Used |
   |---------|----------|-----------------------|
-  | 0-3s    | 0-3s     | 2-window              |
+  | 0-3s    | 0-3s     | 1-window (Hook)       |
   | 3-9s    | 3-9s     | 2-window              |
   | 9-13s   | 9-13s    | 5-window              |
   | 13-18s  | 13-18s   | 5-window              |

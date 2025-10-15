@@ -69,6 +69,28 @@ Selection strategies determine **what videos to analyze** after sorting. They co
 
 ### 1.2 Where This Fits in Pipeline
 
+### 1.2.1 Cluster Mode (Multi-Hashtag Strategy)
+
+**What is it**: Scrape multiple semantically related hashtags (e.g., #nutrition + #nutritionist + #nutritiontips) to maximize unique video discovery.
+
+**Why it matters**: Single hashtag scraping with US geographic filtering reduces video volume by 57%. Cluster mode provides 2-3x more unique videos while maintaining semantic relevance.
+
+**When to use**:
+- **Hashtag analysis**: Use cluster mode (default, recommended)
+- **Competitor/Creator analysis**: Use single profile mode (no clusters needed)
+
+**Example**:
+- Target: `nutrition` (cluster name, NOT `#nutrition`)
+- Cluster config: `#nutrition` + `#nutritionist` + `#nutritiontips` + `#nutritioncoach`
+- Result: ~1,900 videos scraped → ~1,400 unique videos after deduplication
+
+**Key concepts**:
+- **Narrow semantic clustering**: Related hashtags with 20-30% overlap (not too broad, not too narrow)
+- **Provenance tracking**: System tracks which hashtags/runs found each video
+- **Cluster analytics**: Per-hashtag contribution, pairwise overlaps, run effectiveness metrics
+
+### 1.2.2 Pipeline Position
+
 **Foundation Dependencies**: This stage depends on FoundationCHILD.md for:
 - **Section 2 (Client Architecture)**: Directory structure and path templates
 - **Section 3 (Configuration Dimensions)**: Target types, analysis modes, selection strategies
@@ -86,6 +108,41 @@ Stage 2: Video Processing (RumiAI Pipeline)
    ↓ temporal_windows_updated.json (N videos per winning bucket)
 Stage 3: Feature Aggregation
 ```
+
+### 1.2.3 Path Template Definitions
+
+**Path Construction** (from CLI parameters):
+
+```python
+# Base paths
+DATA_ROOT = os.getenv('DATA_ROOT', '/data')
+client_base = f"{DATA_ROOT}/clients/{client_id}"
+analysis_type_base = f"{client_base}/{analysis_type}s/"  # Plural: hashtags, competitors, creators
+target_base = f"{analysis_type_base}/{target}/"
+
+# Analysis instance (mode + strategy)
+analysis_base = f"{target_base}/{analysis_mode}_{selection_strategy}/"
+
+# Bucket-specific
+bucket_base = f"{analysis_base}/buckets/bucket_{bucket_name}/"
+```
+
+**Stage 1 Output File Locations**:
+
+| File | Template | Full Example |
+|------|----------|--------------|
+| cluster_analytics.json | `{target_base}/cluster_analytics.json` | `/data/clients/acme/hashtags/nutrition/cluster_analytics.json` |
+| winner_analysis.json | `{analysis_base}/winner_analysis.json` | `/data/clients/acme/hashtags/nutrition/top_contrastive/winner_analysis.json` |
+| selected_videos.json | `{bucket_base}/selected_videos.json` | `/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s/selected_videos.json` |
+| config.json | `{analysis_base}/config.json` | `/data/clients/acme/hashtags/nutrition/top_contrastive/config.json` |
+
+**Rationale**:
+- **cluster_analytics.json** at target level: Cluster-scoped, shared across analysis runs (tracks multi-hashtag scraping metrics)
+- **winner_analysis.json** at analysis level: Run-specific winner distribution (mode + strategy + date_filter specific)
+- **selected_videos.json** at bucket level: Per-duration-bucket selections (e.g., 100 videos for bucket_18-33s)
+- **config.json** at analysis level: Captures run parameters for reproducibility
+
+---
 
 ### 1.3 Success Criteria
 
@@ -139,57 +196,209 @@ Output: selected_videos.json (per bucket)
 
 #### Step 2.3.1: Apify Scraping (Stage 1.1)
 
-**Purpose**: Scrape 800 videos from target and sort by engagement client-side
+**Purpose**: Scrape videos from target using cluster mode (multi-hashtag) or single mode (profile)
 
-**Logic**:
+**Architecture Decision** (from HashtagVolumeV2.md):
+- **Hashtag analysis**: Use cluster mode (4 hashtags × 2 runs = 8 scrapes with provenance tracking)
+- **Competitor/Creator analysis**: Use single mode (1 profile, 800 videos)
+
+**Cluster Mode Architecture** (for hashtag analysis):
+
 ```python
-def scrape_videos(target, analysis_type, analysis_mode, country_code):
+def scrape_videos_cluster_mode(cluster_config, apify_client, analysis_mode, country_code):
     """
-    Scrape 800 videos from TikTok via Apify and sort by engagement.
+    Orchestrate multi-hashtag scraping with retry and provenance tracking.
+
+    Source: HashtagVolumeV2.md DECISION 2 (lines 409-441)
+
+    Architecture:
+    1. Load cluster config (4 hashtags, 2 runs per hashtag)
+    2. Loop: For each hashtag, for each run:
+       - Call Apify with retry logic (3 attempts, exponential backoff [5s, 15s, 45s])
+       - Tag videos with source_hashtags and source_runs (provenance)
+       - Delay 2 minutes between scrapes (avoid rate limiting)
+    3. Return: (all_videos, failed_scrapes)
+
+    Key Decisions:
+    - Continue on individual scrape failure (resilience over completeness)
+    - Track provenance for analytics (enables cluster optimization)
+    - Log progress for user feedback ("[3/8] Scraping #nutrition run 2...")
 
     Args:
-        target: str, target identifier (#nutrition, @rival_brand)
-        analysis_type: str, "hashtag" or "competitor" or "creator"
+        cluster_config: dict, cluster configuration loaded from /config/hashtag_clusters/{cluster_id}.json
+                       Schema: ClusterConfigSchema (Section 5.2)
+        apify_client: ApifyClient, authenticated Apify client
         analysis_mode: str, "top" or "recent"
         country_code: str, "US" or "BR" or "global"
 
     Returns:
-        list: Apify video metadata objects (800 videos, sorted by engagement)
+        tuple: (all_videos, failed_scrapes)
+               - all_videos: list[dict], all scraped videos with provenance tags
+               - failed_scrapes: list[dict], failed scrape details
     """
-    # Select scraper based on analysis_type
-    if analysis_type == "hashtag":
-        scraper = "clockworks/tiktok-hashtag-scraper"
-        input_param = "hashtagsUrls"
-    else:  # competitor or creator
-        scraper = "clockworks/tiktok-scraper"
-        input_param = "profilesUrls"
+    # Extract cluster parameters
+    all_hashtags = [cluster_config['primary_hashtag']] + cluster_config['variant_hashtags']
+    runs_per_hashtag = cluster_config['scrape_config']['runs_per_hashtag']
+    delay_ms = cluster_config['scrape_config']['delay_between_runs_ms']
+    results_per_page = cluster_config['scrape_config']['results_per_page']
 
-    # Configure scraper parameters
+    total_scrapes = len(all_hashtags) * runs_per_hashtag
+    all_videos = []
+    failed_scrapes = []
+    scrape_count = 0
+
+    # Multi-hashtag orchestration loop
+    for hashtag in all_hashtags:
+        for run in range(1, runs_per_hashtag + 1):
+            scrape_count += 1
+            logger.info(f"[{scrape_count}/{total_scrapes}] Scraping {hashtag} (run {run})")
+
+            # Retry logic: 3 attempts with exponential backoff
+            videos = scrape_with_retry(
+                hashtag=hashtag,
+                run_number=run,
+                results_per_page=results_per_page,
+                apify_client=apify_client,
+                analysis_mode=analysis_mode,
+                country_code=country_code,
+                max_retries=3
+            )
+
+            if videos:
+                # Tag videos with provenance (which hashtag/run found them)
+                for video in videos:
+                    video['source_hashtags'] = [hashtag]  # Initialize as single-element list
+                    video['source_runs'] = [run]          # Initialize as single-element list
+
+                all_videos.extend(videos)
+                logger.info(f"✓ Scraped {len(videos)} videos from {hashtag} run {run}")
+            else:
+                # Scrape failed after retries - log and continue with cluster
+                failed_scrapes.append({
+                    "hashtag": hashtag,
+                    "run": run,
+                    "error": "Failed after 3 retries"
+                })
+                logger.warning(f"✗ Failed to scrape {hashtag} run {run}. Continuing cluster.")
+
+            # Delay between scrapes (except after last scrape)
+            if scrape_count < total_scrapes:
+                delay_seconds = delay_ms / 1000
+                logger.info(f"Waiting {delay_seconds}s before next scrape...")
+                time.sleep(delay_seconds)
+
+    logger.info(f"Cluster scraping complete: {len(all_videos)} videos from {total_scrapes - len(failed_scrapes)}/{total_scrapes} scrapes")
+
+    return (all_videos, failed_scrapes)
+
+
+def scrape_with_retry(hashtag, run_number, results_per_page, apify_client,
+                     analysis_mode, country_code, max_retries=3):
+    """
+    Single hashtag scrape with automatic retry on failure.
+
+    Source: HashtagVolumeV2.md DECISION 2 (lines 445-466)
+
+    Retry policy: Exponential backoff [5s, 15s, 45s]
+    Failure handling: Return empty list after max retries (allows cluster to continue)
+
+    Args:
+        hashtag: str, hashtag to scrape (e.g., "#nutrition")
+        run_number: int, run number (1-5)
+        results_per_page: int, videos per scrape (100-800)
+        apify_client: ApifyClient, authenticated client
+        analysis_mode: str, "top" or "recent"
+        country_code: str, "US" or "BR" or "global"
+        max_retries: int, maximum retry attempts (default 3)
+
+    Returns:
+        list[dict]: Scraped videos (ApifyVideoMetadataSchema), or [] if all retries fail
+    """
+    backoff_delays = [5, 15, 45]  # seconds
+
+    for attempt in range(max_retries):
+        try:
+            # Configure scraper
+            apify_input = {
+                "hashtags": [hashtag],
+                "resultsPerPage": results_per_page,
+                "shouldDownloadVideos": False
+            }
+
+            # Apply geographic filtering
+            if country_code != "global":
+                apify_input["proxyCountryCode"] = country_code
+
+            # Call Apify actor
+            run = apify_client.actor(APIFY_ACTOR_ID).call(
+                run_input=apify_input,
+                timeout_secs=APIFY_TIMEOUT
+            )
+
+            # Get results
+            videos = apify_client.dataset(run["defaultDatasetId"]).list_items().items
+
+            # Client-side sorting
+            if analysis_mode == "top":
+                videos = sorted(videos, key=lambda v: v.get('playCount', 0), reverse=True)
+            else:
+                videos = sorted(videos, key=lambda v: v.get('createTime', 0), reverse=True)
+
+            return videos  # Success
+
+        except Exception as e:
+            if attempt < max_retries - 1:
+                delay = backoff_delays[attempt]
+                logger.warning(f"Retry {attempt+1}/{max_retries} in {delay}s... (Error: {str(e)})")
+                time.sleep(delay)
+            else:
+                logger.error(f"Skipping {hashtag} run {run_number} after {max_retries} failed attempts")
+                return []  # Return empty, allow cluster to continue
+
+    return []  # Safety fallback
+
+
+def scrape_videos_single_mode(target, analysis_type, analysis_mode, country_code, apify_client):
+    """
+    Single-target scraping for competitor/creator analysis (non-cluster mode).
+
+    Architecture:
+    - Single Apify call (800 videos)
+    - Client-side sorting by engagement
+    - Inline deduplication (no provenance tracking needed)
+
+    Args:
+        target: str, profile handle (e.g., "@nike")
+        analysis_type: str, "competitor" or "creator"
+        analysis_mode: str, "top" or "recent"
+        country_code: str, "US" or "BR" or "global"
+        apify_client: ApifyClient, authenticated client
+
+    Returns:
+        list[dict]: Unique video metadata objects (sorted by engagement)
+    """
+    # Configure scraper
     apify_input = {
-        input_param: [target],
+        "profiles": [target],
         "resultsPerPage": 800,
-        "shouldDownloadVideos": True
+        "shouldDownloadVideos": False
     }
 
-    # Apply geographic filtering via proxy routing
+    # Apply geographic filtering
     if country_code != "global":
-        apify_input["proxyCountryCode"] = country_code  # "US" or "BR"
-    # If country_code == "global", omit proxyCountryCode (no geographic filtering)
+        apify_input["proxyCountryCode"] = country_code
 
     # Call Apify API
-    run = apify_client.actor(scraper).call(run_input=apify_input)
+    run = apify_client.actor(APIFY_ACTOR_ID).call(run_input=apify_input)
     videos = apify_client.dataset(run["defaultDatasetId"]).list_items().items
 
-    # Client-side sorting by engagement
+    # Client-side sorting
     if analysis_mode == "top":
-        # Sort by view count (playCount) descending
         videos = sorted(videos, key=lambda v: v.get('playCount', 0), reverse=True)
-    else:  # recent mode
-        # Sort by publication date (createTime) descending
+    else:
         videos = sorted(videos, key=lambda v: v.get('createTime', 0), reverse=True)
 
-    # Deduplicate by video ID (keep first occurrence)
-    # TikTok videos can appear multiple times (reposts, cross-hashtag appearances, Apify duplicates)
+    # Deduplicate (inline, no provenance needed)
     seen_ids = set()
     unique_videos = []
     for video in videos:
@@ -197,50 +406,236 @@ def scrape_videos(target, analysis_type, analysis_mode, country_code):
             seen_ids.add(video['id'])
             unique_videos.append(video)
 
-    # Log deduplication stats
-    duplicate_count = len(videos) - len(unique_videos)
-    if duplicate_count > 0:
-        logger.info(f"Removed {duplicate_count} duplicate videos ({duplicate_count/len(videos)*100:.1f}%)")
     logger.info(f"Scraped {len(videos)} videos → {len(unique_videos)} unique")
 
-    return unique_videos  # List of unique video metadata objects (sorted)
+    return unique_videos
 ```
 
 **Apify Scraper Selection**:
 
-| Analysis Type | Scraper | Input Parameter | Target Format |
-|---------------|---------|-----------------|---------------|
-| `hashtag` | clockworks/tiktok-hashtag-scraper | `hashtagsUrls` | `["#nutrition"]` |
-| `competitor` | clockworks/tiktok-scraper | `profilesUrls` | `["@rival_brand"]` |
-| `creator` | clockworks/tiktok-scraper | `profilesUrls` | `["@creator_name"]` |
+| Analysis Type | Actor | Input Parameter | Example |
+|--------------|-------|-----------------|---------|
+| `hashtag` | clockworks/tiktok-scraper (GdWCkxBtKWOsKjdch) | `hashtags` | `["#nutrition"]` |
+| `competitor` | clockworks/tiktok-scraper (GdWCkxBtKWOsKjdch) | `profilesUrls` | `["@rival_brand"]` |
+| `creator` | clockworks/tiktok-scraper (GdWCkxBtKWOsKjdch) | `profilesUrls` | `["@creator_name"]` |
 
-**Client-Side Engagement Sorting**:
+**Note**: We use the unified Profile Scraper (GdWCkxBtKWOsKjdch) for ALL analysis types. This actor supports both hashtags and profiles.
 
-Apify returns videos in default order (not sorted by engagement). RumiAI sorts videos client-side by view count:
+---
+
+#### Step 2.3.1a: Deduplication with Provenance Tracking (Stage 1.1)
+
+**Purpose**: Deduplicate videos while tracking which hashtags/runs found each video (cluster mode only)
+
+**Architecture Decision** (from HashtagVolumeV2.md DECISION 3):
+- **Cluster mode**: Use provenance-aware deduplication (track all sources)
+- **Single mode**: Use inline deduplication (no provenance needed)
+
+**Provenance-Aware Deduplication** (cluster mode):
 
 ```python
-# Sort by playCount (views) descending
-sorted_videos = sorted(videos, key=lambda v: v['playCount'], reverse=True)
+def deduplicate_with_provenance(all_videos, cluster_config, failed_scrapes):
+    """
+    Deduplicate videos while tracking which hashtags/runs found each video.
+
+    Source: HashtagVolumeV2.md DECISION 3 (lines 546-560)
+
+    Architecture:
+    1. Build video_id → video mapping
+    2. On duplicate: Merge source_hashtags and source_runs arrays
+    3. Generate cluster analytics (per-hashtag contribution, overlaps)
+    4. Return: (unique_videos, analytics)
+
+    Key Decision: Track provenance for cluster optimization (identify low-contributing hashtags)
+
+    Args:
+        all_videos: list[dict], all scraped videos from cluster (with duplicates)
+                    Each video has: source_hashtags=[str], source_runs=[int]
+        cluster_config: dict, cluster configuration (for analytics generation)
+        failed_scrapes: list[dict], failed scrape details
+
+    Returns:
+        tuple: (unique_videos, analytics)
+               - unique_videos: list[dict], deduplicated videos with merged provenance
+               - analytics: dict, cluster health analytics (ClusterAnalyticsSchema)
+    """
+    unique_map = {}
+
+    for video in all_videos:
+        video_id = video['id']
+        source_hashtag = video['source_hashtags'][0]  # Single element from scraping
+        source_run = video['source_runs'][0]
+
+        if video_id in unique_map:
+            # Duplicate: Merge provenance
+            existing = unique_map[video_id]
+
+            if source_hashtag not in existing['source_hashtags']:
+                existing['source_hashtags'].append(source_hashtag)
+
+            if source_run not in existing['source_runs']:
+                existing['source_runs'].append(source_run)
+        else:
+            # New video: Add to map
+            unique_map[video_id] = video
+
+    unique_videos = list(unique_map.values())
+
+    # Calculate deduplication rate
+    total_scraped = len(all_videos)
+    total_unique = len(unique_videos)
+    duplication_rate = (total_scraped - total_unique) / total_scraped * 100 if total_scraped > 0 else 0
+
+    logger.info(f"Deduplication: {total_scraped} → {total_unique} unique ({duplication_rate:.1f}% overlap)")
+
+    # Generate cluster analytics
+    analytics = generate_cluster_analytics(all_videos, unique_videos, cluster_config, failed_scrapes)
+
+    return (unique_videos, analytics)
 ```
 
-**Rationale**:
-- View count (`playCount`) is the primary engagement metric
-- Simple, transparent, and universally understood
-- Aligns with "top performers" business definition (most-viewed = most successful)
+**Why Track Provenance?**:
+- **Cluster optimization**: Identify which hashtags contribute unique vs duplicate videos
+- **Cost savings**: Remove low-contributing hashtags (25%+ potential savings)
+- **Root cause analysis**: Diagnose bucket deficiencies by source hashtag
+- **Run effectiveness**: Determine if 2 runs vs 3 runs is optimal
 
-**Deduplication Strategy**:
+**Provenance Example**:
+```json
+{
+  "id": "7428596413707144481",
+  "source_hashtags": ["#nutrition", "#nutritiontips"],
+  "source_runs": [1, 2],
+  "duration": 67,
+  "playCount": 125000
+}
+```
 
-Duplicates are removed **immediately after scraping** (Stage 1.1) for these reasons:
-- **Clean dataset from start**: All downstream stages (date filtering, winner analysis, bucket selection) work with unique videos only
-- **Keeps first occurrence**: After engagement sorting, first occurrence is highest-engagement version
-- **Transparent logging**: User knows exactly how many duplicates removed
-- **Resource efficient**: Stage 2 doesn't waste time processing same video multiple times
-- **Consistent statistics**: Winner analysis and ML training not skewed by duplicate videos
+This video was found by:
+- `#nutrition` run 1 (first occurrence)
+- `#nutritiontips` run 2 (duplicate, provenance merged)
 
-**Common Duplicate Sources**:
-- Same video posted to multiple accounts (reposts/collaborations)
-- Same video appearing in multiple hashtags (cross-hashtag scraping)
-- Apify scraper returning duplicate IDs (API behavior)
+---
+
+#### Step 2.3.1b: Cluster Analytics Generation (Stage 1.1)
+
+**Purpose**: Generate cluster health analytics for optimization
+
+**Architecture** (from HashtagVolumeV2.md DECISION 3):
+
+```python
+def generate_cluster_analytics(all_videos, unique_videos, cluster_config, failed_scrapes):
+    """
+    Generate comprehensive cluster health analytics report.
+
+    Source: HashtagVolumeV2.md DECISION 3 (lines 589-685)
+
+    Architecture - 5 Analytics Sections:
+    1. Scrape summary: Total attempts, successes, duplication rate
+    2. Per-hashtag contribution: Which hashtags contribute most unique videos
+    3. Pairwise overlaps: Overlap percentage between hashtag pairs
+    4. Run effectiveness: Does run 2 add significant new videos?
+    5. Bucket distribution by source: Which hashtags contribute to which buckets
+
+    Args:
+        all_videos: list[dict], all scraped videos (before deduplication)
+        unique_videos: list[dict], deduplicated videos with provenance
+        cluster_config: dict, cluster configuration
+        failed_scrapes: list[dict], failed scrape details
+
+    Returns:
+        dict: Cluster analytics report (ClusterAnalyticsSchema, Section 5.2)
+    """
+    all_hashtags = [cluster_config['primary_hashtag']] + cluster_config['variant_hashtags']
+    runs_per_hashtag = cluster_config['scrape_config']['runs_per_hashtag']
+    cluster_id = cluster_config['cluster_id']
+
+    # 1. SCRAPE SUMMARY
+    total_scrapes_attempted = len(all_hashtags) * runs_per_hashtag
+    total_scrapes_succeeded = total_scrapes_attempted - len(failed_scrapes)
+    duplication_rate = (len(all_videos) - len(unique_videos)) / len(all_videos) * 100 if all_videos else 0
+
+    scrape_summary = {
+        "total_scrapes_attempted": total_scrapes_attempted,
+        "total_scrapes_succeeded": total_scrapes_succeeded,
+        "total_scraped_videos": len(all_videos),
+        "total_unique_videos": len(unique_videos),
+        "overall_duplication_rate": duplication_rate,
+        "failed_scrapes": failed_scrapes
+    }
+
+    # 2. PER-HASHTAG CONTRIBUTION
+    per_hashtag_contribution = {}
+    for hashtag in all_hashtags:
+        found_by_hashtag = [v for v in unique_videos if hashtag in v['source_hashtags']]
+        exclusive = [v for v in found_by_hashtag if len(v['source_hashtags']) == 1]
+
+        per_hashtag_contribution[hashtag] = {
+            "total_found": len(found_by_hashtag),
+            "exclusive_videos": len(exclusive),
+            "contribution_percentage": len(found_by_hashtag) / len(unique_videos) * 100 if unique_videos else 0
+        }
+
+    # 3. PAIRWISE OVERLAPS
+    pairwise_overlaps = {}
+    for i, hashtag_a in enumerate(all_hashtags):
+        for hashtag_b in all_hashtags[i+1:]:
+            overlap = [
+                v for v in unique_videos
+                if hashtag_a in v['source_hashtags'] and hashtag_b in v['source_hashtags']
+            ]
+
+            set_a_size = len([v for v in unique_videos if hashtag_a in v['source_hashtags']])
+            set_b_size = len([v for v in unique_videos if hashtag_b in v['source_hashtags']])
+            smaller_size = min(set_a_size, set_b_size)
+
+            overlap_pct = len(overlap) / smaller_size * 100 if smaller_size > 0 else 0
+            key = f"{hashtag_a.replace('#', '')}_{hashtag_b.replace('#', '')}"
+            pairwise_overlaps[key] = round(overlap_pct, 1)
+
+    # 4. RUN EFFECTIVENESS
+    run_effectiveness = {}
+    if runs_per_hashtag >= 2:
+        for hashtag in all_hashtags:
+            run_1_videos = [v for v in unique_videos if hashtag in v['source_hashtags'] and 1 in v['source_runs']]
+            run_2_videos = [v for v in unique_videos if hashtag in v['source_hashtags'] and 2 in v['source_runs']]
+            run_2_new = [v for v in run_2_videos if 1 not in v['source_runs']]
+
+            run_effectiveness[hashtag] = {
+                "run_1_videos": len(run_1_videos),
+                "run_2_videos": len(run_2_videos),
+                "run_2_new_videos": len(run_2_new),
+                "run_2_new_percentage": len(run_2_new) / len(run_2_videos) * 100 if run_2_videos else 0
+            }
+
+    # 5. BUCKET DISTRIBUTION BY SOURCE (computed later after bucket assignment)
+    bucket_distribution_by_source = {}
+
+    analytics = {
+        "cluster_id": cluster_id,
+        "execution_date": datetime.now(timezone.utc).isoformat(),
+        "scrape_summary": scrape_summary,
+        "per_hashtag_contribution": per_hashtag_contribution,
+        "pairwise_overlaps": pairwise_overlaps,
+        "run_effectiveness": run_effectiveness,
+        "bucket_distribution_by_source": bucket_distribution_by_source
+    }
+
+    logger.info("✓ Cluster analytics generated")
+
+    return analytics
+```
+
+**Analytics Output**:
+- **File**: `/data/{client}/hashtag/{cluster_id}/cluster_analytics.json`
+- **Schema**: ClusterAnalyticsSchema (Section 5.2)
+- **Use Cases**:
+  - Identify low-contributing hashtags for removal
+  - Optimize run count (1 vs 2 vs 3 runs)
+  - Diagnose bucket deficiencies
+  - Validate cluster health (18-30% overlap target)
+
+---
 
 **Edge Cases**:
 
@@ -1015,7 +1410,7 @@ from apify_client import ApifyClient  # 1.6.0+ - Apify SDK
 
 **File System**:
 - Read access: Environment variable `APIFY_API_KEY`
-- Write access: `{analysis_base}/buckets/{bucket}/selected_videos.json`
+- Write access: `{bucket_base}/selected_videos.json`
 - Write access: `{analysis_base}/config.json`
 
 **Environment Variables**:
@@ -1053,25 +1448,18 @@ from apify_client import ApifyClient  # 1.6.0+ - Apify SDK
 ### 4.2 Internal Configuration
 
 ```python
-# Apify actor configuration
+# Unified actor for all analysis types (hashtag, competitor, creator)
 # NOTE: Actor IDs don't include version numbers. If Apify releases breaking changes:
-# 1. Test new version in staging environment
-# 2. Update actor ID below after validation
-# 3. Document migration in change log
-# 4. Monitor Apify marketplace for deprecation notices
-APIFY_PROFILE_SCRAPER_ID = "GdWCkxBtKWOsKjdch"  # clockworks/tiktok-scraper (VERIFIED in production, last checked: 2025-01-28)
+#       1. Test new version in staging environment
+#       2. Update actor ID below after validation
 
-# Hashtag scraper - TO BE CONFIGURED BEFORE DEPLOYMENT
-# How to obtain:
-#   1. Visit https://apify.com/store
-#   2. Search for "tiktok hashtag scraper" or "clockworks tiktok"
-#   3. Select scraper that supports: hashtag URLs, 800+ results, video metadata
-#   4. Copy actor ID from URL (format: username/actor-name or alphanumeric ID)
-#   5. Test with sample hashtag (#nutrition) to verify schema matches Section 5.2
-#   6. Replace "TBD" below with actual actor ID
-APIFY_HASHTAG_SCRAPER_ID = "TBD"  # clockworks/tiktok-hashtag-scraper (MUST OBTAIN FROM APIFY MARKETPLACE - see instructions above)
+APIFY_ACTOR_ID = "GdWCkxBtKWOsKjdch"
+# clockworks/tiktok-scraper (unified Profile Scraper)
+# Supports: hashtags, profiles, 800+ results, video metadata
+# Works for: hashtag analysis, competitor analysis, creator analysis
 
-APIFY_ACTOR_LAST_VALIDATED = "2025-01-28"  # Date actors were last tested (quarterly validation recommended)
+APIFY_ACTOR_LAST_VALIDATED = "2025-10-13"
+# Date actor was last tested (quarterly validation recommended)
 
 # Apify scraping configuration
 APIFY_SCRAPE_COUNT = 800  # Total videos to scrape per target
@@ -1116,6 +1504,58 @@ ENGAGEMENT_SHARE_WEIGHT = 10  # 10x weight for shares in engagement score
 
 # Interactive confirmation
 AUTO_CONFIRM = False  # Skip Stage 1 confirmation prompt when True (CLI flag --auto-confirm overrides this)
+
+# ===== CLUSTER CONFIGURATION (from HashtagVolumeV2.md) =====
+# Source: HashtagVolumeV2.md DECISION 1, 2, 3
+
+# Cluster configuration paths
+CLUSTER_CONFIG_DIR = "/config/hashtag_clusters/"
+# Directory containing cluster configuration JSON files
+# Example file: /config/hashtag_clusters/nutrition.json
+
+CLUSTER_CONFIG_PATH_TEMPLATE = "/config/hashtag_clusters/{cluster_id}.json"
+# Path template for cluster config files (format string)
+
+CLUSTER_ANALYTICS_PATH_TEMPLATE = "/data/clients/{client_id}/hashtags/{cluster_id}/cluster_analytics.json"
+# Path template for cluster analytics output (format string)
+
+# Cluster scraping defaults
+DEFAULT_RUNS_PER_HASHTAG = 2
+# Default scrapes per hashtag if not specified in cluster config
+# Range: 1-5, Typical: 2 (balance volume with cost)
+
+DEFAULT_DELAY_BETWEEN_RUNS_MS = 120000  # 2 minutes
+# Default delay between scrapes in milliseconds
+# Range: 60000-600000 (1-10 minutes), Typical: 120000 (2 minutes)
+
+DEFAULT_RESULTS_PER_PAGE = 800
+# Default videos per scrape
+# Range: 100-800, Typical: 800 (maximum)
+
+# Cluster validation ranges
+MIN_VARIANT_HASHTAGS = 1
+MAX_VARIANT_HASHTAGS = 10
+# Variant hashtag count range (1-10 provides flexibility while keeping overlap manageable)
+
+MIN_RUNS_PER_HASHTAG = 1
+MAX_RUNS_PER_HASHTAG = 5
+# Runs per hashtag range (1=quick test, 5=maximum data)
+
+MIN_DELAY_BETWEEN_RUNS_MS = 60000   # 1 minute
+MAX_DELAY_BETWEEN_RUNS_MS = 600000  # 10 minutes
+# Delay range balances rate limiting with execution speed
+
+MIN_RESULTS_PER_PAGE = 100
+MAX_RESULTS_PER_PAGE = 800
+# Results per page range (100=quick test, 800=maximum data)
+
+# Retry configuration
+RETRY_MAX_ATTEMPTS = 3
+# Maximum retry attempts (3 retries balance reliability with speed)
+
+RETRY_BACKOFF_DELAYS = [5, 15, 45]  # seconds
+# Exponential backoff for cluster scraping retries
+# Handles transient network issues
 ```
 
 ---
@@ -1149,7 +1589,124 @@ AUTO_CONFIRM = False  # Skip Stage 1 confirmation prompt when True (CLI flag --a
 - `videoMeta.downloadAddr`: str - MP4 download URL (used by Stage 2)
 - `authorMeta.name`: str - Creator username (informational)
 
+**Cluster Mode Extension** (from HashtagVolumeV2.md DECISION 3):
+
+For hashtag analysis (cluster mode), videos are extended with provenance fields:
+
+- `source_hashtags`: list[str] - Hashtags that found this video (e.g., `["#nutrition", "#nutritiontips"]`)
+- `source_runs`: list[int] - Runs that found this video (e.g., `[1, 2]`)
+
+**Purpose**: Track which hashtags/runs found each video for cluster analytics and optimization.
+
 **Note**: All fields from Apify are passed through to `selected_videos.json`. Stage 1 only validates required fields for its own processing. Stage 2 uses additional fields (`videoMeta.downloadAddr` for video download).
+
+---
+
+### 5.2a Cluster Configuration Schema (NEW)
+
+**Source**: HashtagVolumeV2.md DECISION 1 (lines 213-234)
+
+**Location**: `/config/hashtag_clusters/{cluster_id}.json`
+
+```python
+ClusterConfigSchema = {
+    "cluster_id": str,             # Required, cluster identifier (alphanumeric + underscore)
+                                   # Example: "nutrition"
+
+    "description": str,            # Required, human-readable description
+                                   # Example: "Nutrition niche - narrow semantic cluster"
+
+    "primary_hashtag": str,        # Required, original target hashtag (starts with #)
+                                   # Example: "#nutrition"
+
+    "variant_hashtags": list[str], # Required, 1-10 variant hashtags (each starts with #)
+                                   # Example: ["#nutritionist", "#nutritiontips", "#nutritioncoach"]
+
+    "scrape_config": {             # Required, scraping parameters
+        "runs_per_hashtag": int,   # Required, runs per hashtag (1-5)
+                                   # Example: 2
+
+        "delay_between_runs_ms": int,  # Required, delay between scrapes (60000-600000ms)
+                                       # Example: 120000 (2 minutes)
+
+        "results_per_page": int,   # Required, videos per scrape (100-800)
+                                   # Example: 800
+    },
+
+    "metadata": {                  # Optional, user metadata
+        "created_date": str,       # Optional, ISO 8601 timestamp
+        "created_by": str,         # Optional, creator username
+        "notes": str,              # Optional, additional notes
+    }
+}
+```
+
+**Validation Requirements**:
+- `cluster_id`: Regex `^[a-zA-Z0-9_]+$` (min 1 char)
+- `primary_hashtag`: Regex `^#[a-zA-Z0-9_]+$` (min 2 chars)
+- `variant_hashtags`: Array length 1-10, each element matches hashtag regex
+- `runs_per_hashtag`: Range 1-5
+- `delay_between_runs_ms`: Range 60000-600000 (1-10 minutes)
+- `results_per_page`: Range 100-800
+
+---
+
+### 5.2b Cluster Analytics Schema (NEW)
+
+**Source**: HashtagVolumeV2.md DECISION 3 (lines 589-685)
+
+**Location**: `/data/clients/{client_id}/hashtags/{cluster_id}/cluster_analytics.json`
+
+```python
+ClusterAnalyticsSchema = {
+    "cluster_id": str,             # Required, cluster identifier
+                                   # Example: "nutrition"
+
+    "execution_date": str,         # Required, ISO 8601 timestamp
+                                   # Example: "2025-10-10T14:30:00Z"
+
+    "scrape_summary": {            # Required, overall scraping statistics
+        "total_scrapes_attempted": int,  # Example: 8 (4 hashtags × 2 runs)
+        "total_scrapes_succeeded": int,  # Example: 8
+        "total_scraped_videos": int,     # Example: 1939 (before dedup)
+        "total_unique_videos": int,      # Example: 1400 (after dedup)
+        "overall_duplication_rate": float,  # Example: 27.8 (percentage)
+        "failed_scrapes": list[dict],    # Example: [] or [{"hashtag": str, "run": int, "error": str}]
+    },
+
+    "per_hashtag_contribution": dict[str, dict],  # Key: hashtag name
+                                                  # Value: {
+                                                  #   "total_found": int,
+                                                  #   "exclusive_videos": int,
+                                                  #   "contribution_percentage": float
+                                                  # }
+
+    "pairwise_overlaps": dict[str, float],  # Key: "hashtag1_vs_hashtag2" (alphabetical)
+                                            # Value: overlap percentage
+                                            # Example: {"nutrition_vs_nutritionist": 18.2}
+
+    "run_effectiveness": dict[str, dict],   # Key: hashtag name
+                                            # Value: {
+                                            #   "run_1_videos": int,
+                                            #   "run_2_videos": int,
+                                            #   "run_2_new_videos": int,
+                                            #   "run_2_new_percentage": float
+                                            # }
+
+    "bucket_distribution_by_source": dict[str, dict],  # Key: bucket name (e.g., "60-90s")
+                                                       # Value: {
+                                                       #   "total_videos": int,
+                                                       #   "by_hashtag": dict[str, int]
+                                                       # }
+}
+```
+
+**Usage**:
+- Generated by `generate_cluster_analytics()` (Section 2.3.1b)
+- Saved after deduplication (Stage 1.1)
+- Used for cluster optimization and health monitoring
+
+---
 
 ### 5.3 Output Schema
 
@@ -1313,6 +1870,16 @@ def validate_cli_params(client_id, analysis_type, target, video_count, date_filt
 | Winning bucket empty | Bucket video count | Skip bucket | `"Bucket {bucket} has 0 videos. Skipping."` | 0 (warning) |
 | User aborted at confirmation prompt | User input ('n') | Exit gracefully | `"Analysis aborted by user."` | 130 |
 | Write permission denied | File write exception | Fail-fast | `"Cannot write to {path}. Check permissions."` | 5 |
+| **Cluster config not found (NEW)** | `os.path.exists(cluster_path)` is False | **Fail-fast** | `"Cluster config not found: {path}. Create cluster config with: python generate_cluster.py"` | **10** |
+| **Cluster config invalid (NEW)** | Schema validation fails | **Fail-fast** | `"Cluster config invalid: {error}. Check {path}"` | **11** |
+| **Single hashtag deprecated (NEW)** | Target starts with # in hashtag mode | **Fail-fast** | `"Single hashtag scraping is deprecated as of 2025-10-10. Please create a cluster configuration."` | **12** |
+| **All cluster scrapes failed (NEW)** | All scrapes return [] | **Fail-fast** | `"All {count} scrapes failed. Check network connectivity and Apify status."` | **13** |
+
+**Cluster Error Codes** (from HashtagVolumeV2.md DECISION 6):
+- **Exit code 10**: Cluster config file not found at expected path
+- **Exit code 11**: Cluster config JSON validation failed (schema mismatch)
+- **Exit code 12**: User provided single hashtag (e.g., `--target "#nutrition"`) but single hashtag scraping is deprecated
+- **Exit code 13**: All scrapes in cluster failed after retries (no videos available for analysis)
 
 ### 6.3 Output Validation
 

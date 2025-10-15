@@ -1,0 +1,275 @@
+{
+  "stage": "video_processing",
+  "bucket": "60-90s",
+  "total_videos": 8,
+  "completed": 35,
+  "failed": 35,
+  "remaining": -62,
+  "last_checkpoint": "2025-10-14T22:55:57.038598",
+  "completed_video_ids": [
+    "7528143196287733006",
+    "7557713386427911455",
+    "7534352746665757974",
+    "7558810700181802262",
+    "7558760923008158989",
+    "7560029352327400726",
+    "7558052741998726422",
+    "7560281328004893965",
+    "7555197896077970702",
+    "7560771306501819651",
+    "7553354929306406175",
+    "7553768504017587486",
+    "7560513620925320478",
+    "7560830185419951390",
+    "7560990374592810271",
+    "7556932957580184887",
+    "7554206894433389837",
+    "7558216375618096398",
+    "7533062661525769486",
+    "7558456786353802518",
+    "7535137114594282807",
+    "7549317319722323213",
+    "7533996320898420023",
+    "7557388182937996574",
+    "7532514471483280662",
+    "7560086555193380110",
+    "7559569845180796191",
+    "7560443128885366046",
+    "7535470657652428063",
+    "7560811559090638102",
+    "7557775207377865986",
+    "7557307087290633503",
+    "7551490716795555127",
+    "7560652726527364366",
+    "7546425205590215991"
+  ],
+  "failed_video_ids": [
+    {
+      "video_id": "7528143196287733006",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.623571"
+    },
+    {
+      "video_id": "7557713386427911455",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.623910"
+    },
+    {
+      "video_id": "7534352746665757974",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.624165"
+    },
+    {
+      "video_id": "7558810700181802262",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.624477"
+    },
+    {
+      "video_id": "7558760923008158989",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.624847"
+    },
+    {
+      "video_id": "7560029352327400726",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.625120"
+    },
+    {
+      "video_id": "7558052741998726422",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.625636"
+    },
+    {
+      "video_id": "7560281328004893965",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.625923"
+    },
+    {
+      "video_id": "7555197896077970702",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.626211"
+    },
+    {
+      "video_id": "7560771306501819651",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.626484"
+    },
+    {
+      "video_id": "7553354929306406175",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.626747"
+    },
+    {
+      "video_id": "7553768504017587486",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.627021"
+    },
+    {
+      "video_id": "7560513620925320478",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.627297"
+    },
+    {
+      "video_id": "7560830185419951390",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.627547"
+    },
+    {
+      "video_id": "7560990374592810271",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.627797"
+    },
+    {
+      "video_id": "7556932957580184887",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.628050"
+    },
+    {
+      "video_id": "7554206894433389837",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.628335"
+    },
+    {
+      "video_id": "7558216375618096398",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.628617"
+    },
+    {
+      "video_id": "7533062661525769486",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.628926"
+    },
+    {
+      "video_id": "7558456786353802518",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.629224"
+    },
+    {
+      "video_id": "7535137114594282807",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.629531"
+    },
+    {
+      "video_id": "7549317319722323213",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.629885"
+    },
+    {
+      "video_id": "7533996320898420023",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.630194"
+    },
+    {
+      "video_id": "7557388182937996574",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.630555"
+    },
+    {
+      "video_id": "7532514471483280662",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.630961"
+    },
+    {
+      "video_id": "7560086555193380110",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.631271"
+    },
+    {
+      "video_id": "7559569845180796191",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.631575"
+    },
+    {
+      "video_id": "7560443128885366046",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.631884"
+    },
+    {
+      "video_id": "7535470657652428063",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.632247"
+    },
+    {
+      "video_id": "7560811559090638102",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.632584"
+    },
+    {
+      "video_id": "7557775207377865986",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.632914"
+    },
+    {
+      "video_id": "7557307087290633503",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.633227"
+    },
+    {
+      "video_id": "7551490716795555127",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.633539"
+    },
+    {
+      "video_id": "7560652726527364366",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.633851"
+    },
+    {
+      "video_id": "7546425205590215991",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.634264"
+    }
+  ],
+  "config": {
+    "client_id": "test_final",
+    "analysis_type": "hashtag",
+    "target": "test_vitamin",
+    "analysis_mode": "top",
+    "selection_strategy": "contrastive",
+    "video_count": 50,
+    "date_filter": "last_90_days",
+    "report_type": "single",
+    "report_audience": "client",
+    "auto_confirm": true,
+    "run_date": "2025-10-14T16:22:00.260658Z"
+  },
+  "status": "completed",
+  "pause_reason": null,
+  "pause_timestamp": null,
+  "completion_time": "2025-10-14T22:55:57.039527"
+}

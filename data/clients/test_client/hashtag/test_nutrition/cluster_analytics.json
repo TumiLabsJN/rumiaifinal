@@ -1,0 +1,33 @@
+{
+  "cluster_id": "test_nutrition",
+  "execution_date": "2025-10-13T13:01:42.708728+00:00",
+  "scrape_summary": {
+    "total_scrapes_attempted": 2,
+    "total_scrapes_succeeded": 2,
+    "total_scraped_videos": 467,
+    "total_unique_videos": 402,
+    "overall_duplication_rate": 13.9186295503212,
+    "failed_scrapes": []
+  },
+  "per_hashtag_contribution": {
+    "#nutrition": {
+      "total_found": 236,
+      "unique_videos": 236,
+      "overlap_videos": 65,
+      "exclusive_videos": 171,
+      "contribution_percentage": 58.70646766169154
+    },
+    "#nutritionist": {
+      "total_found": 231,
+      "unique_videos": 231,
+      "overlap_videos": 65,
+      "exclusive_videos": 166,
+      "contribution_percentage": 57.46268656716418
+    }
+  },
+  "pairwise_overlaps": {
+    "nutrition_nutritionist": 28.1
+  },
+  "run_effectiveness": {},
+  "bucket_distribution_by_source": {}
+}

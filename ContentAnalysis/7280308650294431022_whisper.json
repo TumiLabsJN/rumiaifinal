@@ -1,0 +1,118 @@
+{
+  "text": "If you like salads but hate preparing them, this video is for you. I'm a dietitian and welcome back to Realistic Nutrition Tips. Instead of taking the time to chop everything individually, just add everything to a veggie chopper. And don't empty it along the way, just make your entire salad in here. This video will have an easy chop salad without the mess and energy of preparing it. There's this girl on here that's been doing this, and I think it's an excellent tip for people with ADHD, people with chronic illness, and people who just don't like to chop things or wash dishes. I've had my veggie chopper for more than two years, and this really helps me getting more vegetables. Like having my whole salad in here is just so helpful. Also, salad just hits different when it's chopped. I don't make the girls. Also, I'm gonna add some grilled chicken because it chops that too, and also I want some protein. After you're done, add your toppings, and adding some feta, some sunflower seeds, and my dressing. Now I'm just gonna put this back on and give this a shake. And now you have an easy chop salad, such a quick salad and so easy to prepare. Hmm.",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 2.8,
+      "text": "If you like salads but hate preparing them, this video is for you.",
+      "words": []
+    },
+    {
+      "id": 1,
+      "start": 2.8,
+      "end": 5.96,
+      "text": "I'm a dietitian and welcome back to Realistic Nutrition Tips.",
+      "words": []
+    },
+    {
+      "id": 2,
+      "start": 5.96,
+      "end": 9.72,
+      "text": "Instead of taking the time to chop everything individually, just add everything to a veggie chopper.",
+      "words": []
+    },
+    {
+      "id": 3,
+      "start": 9.72,
+      "end": 12.72,
+      "text": "And don't empty it along the way, just make your entire salad in here.",
+      "words": []
+    },
+    {
+      "id": 4,
+      "start": 12.72,
+      "end": 16.16,
+      "text": "This video will have an easy chop salad without the mess and energy of preparing it.",
+      "words": []
+    },
+    {
+      "id": 5,
+      "start": 16.16,
+      "end": 22.2,
+      "text": "There's this girl on here that's been doing this, and I think it's an excellent tip for people with ADHD, people with chronic illness,",
+      "words": []
+    },
+    {
+      "id": 6,
+      "start": 22.2,
+      "end": 24.44,
+      "text": "and people who just don't like to chop things or wash dishes.",
+      "words": []
+    },
+    {
+      "id": 7,
+      "start": 24.44,
+      "end": 29.24,
+      "text": "I've had my veggie chopper for more than two years, and this really helps me getting more vegetables.",
+      "words": []
+    },
+    {
+      "id": 8,
+      "start": 29.24,
+      "end": 32.16,
+      "text": "Like having my whole salad in here is just so helpful.",
+      "words": []
+    },
+    {
+      "id": 9,
+      "start": 32.16,
+      "end": 35.2,
+      "text": "Also, salad just hits different when it's chopped. I don't make the girls.",
+      "words": []
+    },
+    {
+      "id": 10,
+      "start": 35.2,
+      "end": 39.44,
+      "text": "Also, I'm gonna add some grilled chicken because it chops that too, and also I want some protein.",
+      "words": []
+    },
+    {
+      "id": 11,
+      "start": 39.44,
+      "end": 43.84,
+      "text": "After you're done, add your toppings, and adding some feta, some sunflower seeds, and my dressing.",
+      "words": []
+    },
+    {
+      "id": 12,
+      "start": 43.84,
+      "end": 45.84,
+      "text": "Now I'm just gonna put this back on and give this a shake.",
+      "words": []
+    },
+    {
+      "id": 13,
+      "start": 45.84,
+      "end": 50.04,
+      "text": "And now you have an easy chop salad, such a quick salad and so easy to prepare.",
+      "words": []
+    },
+    {
+      "id": 14,
+      "start": 50.04,
+      "end": 52.04,
+      "text": "Hmm.",
+      "words": []
+    }
+  ],
+  "language": "en",
+  "duration": 52.04,
+  "metadata": {
+    "model": "whisper.cpp-base",
+    "processed": true,
+    "success": true,
+    "backend": "whisper.cpp"
+  }
+}

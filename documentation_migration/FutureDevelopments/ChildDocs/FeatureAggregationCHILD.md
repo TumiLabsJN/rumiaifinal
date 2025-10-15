@@ -13,6 +13,8 @@
 
 Machine learning algorithms require fixed-size feature vectors, but raw temporal window data has variable-length structures (2-7 windows depending on video duration). This component eliminates the ragged array problem by organizing videos into duration buckets where all videos share identical temporal window structures. Each bucket processes videos with consistent window counts, enabling direct CSV aggregation while preserving full temporal granularity and narrative pacing patterns critical for creative analysis.
 
+**Middle Segment Aggregation**: For buckets 9-13s and 13-18s, middle segments are aggregated into a single "middle_aggregate" window instead of kept separate (middle_1, middle_2, middle_3). This ensures all 21 base features are reliably measured, as individual middle windows in these buckets are too short (1-4s) for features like scene_count, speech_coverage, and scene_duration_variance to produce stable values. The aggregation uses four strategies: SUM for count features (scene_count, word_count), MIN/MAX for extreme values (shortest_scene, longest_scene), MODE for categorical features (dominant_emotion_id, has_captions), and AVERAGE for all continuous/ratio features. Buckets 18-33s and longer preserve separate middle segments as their windows (3-22.8s each) are long enough for reliable feature extraction.
+
 ### 1.2 Where This Fits in Pipeline
 
 **Foundation Dependencies**: This component depends on MLPlanningv2.md Part 1 for:
@@ -38,7 +40,7 @@ Stage 4: Feature Transformation
 ### 1.3 Success Criteria
 
 - [ ] Process 30-200 videos per bucket in under 5 minutes with < 2GB memory
-- [ ] Generate valid aggregated_features.csv with exact column count matching bucket configuration (45/108/129/150 features)
+- [ ] Generate valid aggregated_features.csv with exact column count matching bucket configuration (44/65/128/149 features)
 - [ ] Graceful error handling - skip bad videos with clear logging, fail only if zero valid videos remain
 - [ ] Dual output - clean ML training CSV + metadata summary JSON for debugging
 - [ ] All output schemas validated before saving (atomic write pattern prevents partial corruption)
@@ -196,32 +198,79 @@ def extract_features(temporal_windows_json: Path, bucket: str):
 
     # Middle features (0-5 segments depending on bucket)
     middle_segments = windows.get('middle_segments')
+
     if middle_segments is None or len(middle_segments) == 0:
         # For buckets 0-3s, 3-9s: middle_segments is null (expected)
-        # For longer buckets: this is an error (Source: QA Q5)
         if bucket not in ['0-3s', '3-9s']:
             raise ValueError(
                 f"Video {video_id}: null or empty middle_segments "
                 f"(bucket {bucket} requires middle segments)"
             )
     else:
-        # Extract features from each middle segment
-        for i, segment in enumerate(middle_segments, start=1):
+        # **NEW: Aggregate middle segments for short-window buckets**
+        if bucket in AGGREGATE_MIDDLE_BUCKETS:
+            # Aggregate all middle segments into single "middle_aggregate"
+            # Reason: Short windows (1-4s) produce unreliable scene/speech features
+            # Aggregation creates longer window (4.5-9.3s) for reliable measurements
+
+            import numpy as np
+            import pandas as pd
+
             for feature in BASE_FEATURES:
-                video_features[f'middle_{i}_{feature}'] = segment.get(feature)
+                # Collect non-null feature values from all middle segments
+                feature_values = [
+                    seg.get(feature)
+                    for seg in middle_segments
+                    if seg.get(feature) is not None
+                ]
 
-    # Closing features (1 window - always present)
-    for feature in BASE_FEATURES:
-        video_features[f'closing_{feature}'] = windows['closing'].get(feature)
+                # Skip if all values are None
+                if len(feature_values) == 0:
+                    video_features[f'middle_aggregate_{feature}'] = None
+                    continue
 
-    # Metadata (3 fields - video-level, not per-window)
-    video_features['duration'] = metadata.get('duration')
+                # Apply aggregation strategy based on feature type
+                if feature in SUM_FEATURES:
+                    # Cumulative features: sum across segments
+                    video_features[f'middle_aggregate_{feature}'] = sum(feature_values)
+                elif feature in MIN_FEATURES:
+                    # Extreme value features: pick minimum
+                    video_features[f'middle_aggregate_{feature}'] = min(feature_values)
+                elif feature in MAX_FEATURES:
+                    # Extreme value features: pick maximum
+                    video_features[f'middle_aggregate_{feature}'] = max(feature_values)
+                elif feature in CATEGORICAL_FEATURES:
+                    # Categorical features: use mode (most common value)
+                    mode_series = pd.Series(feature_values).mode()
+                    video_features[f'middle_aggregate_{feature}'] = mode_series[0] if len(mode_series) > 0 else None
+                else:
+                    # Default: average for continuous/ratio features
+                    video_features[f'middle_aggregate_{feature}'] = np.mean(feature_values)
+
+            logger.debug(
+                f"Video {video_id}: Aggregated {len(middle_segments)} middle segments "
+                f"into middle_aggregate (bucket {bucket} has short windows)"
+            )
+
+        else:
+            # **ORIGINAL: Keep separate middle segments for longer buckets**
+            # Buckets 18-33s, 33-60s, 60-90s, 90-120s have longer windows (3-22.8s)
+            # All features reliable at this duration
+            for i, segment in enumerate(middle_segments, start=1):
+                for feature in BASE_FEATURES:
+                    video_features[f'middle_{i}_{feature}'] = segment.get(feature)
+
+    # Closing features (1 window - skip for bucket 0-3s)
+    if bucket != '0-3s':
+        for feature in BASE_FEATURES:
+            video_features[f'closing_{feature}'] = windows['closing'].get(feature)
+
+    # Metadata (2 fields - video-level, not per-window)
     video_features['create_time'] = metadata.get('create_time')
 
     # Gender detection (optional field - use .get() with None default)
     gender_data = metadata.get('gender_detection', {})
     video_features['gender'] = gender_data.get('gender')
-    video_features['gender_confidence'] = gender_data.get('confidence')
 
     return video_features
 ```
@@ -401,9 +450,13 @@ def save_aggregated_csv(df: pd.DataFrame, output_path: Path):
 | aggregated_features.csv | CSV | (N rows, 45-150 columns) - N = valid videos, columns = bucket-specific feature count | Stage 4 (Feature Transformation) | Assert row count > 0, column count matches expected for bucket |
 | aggregation_summary.json | JSON | Metadata: timestamp, counts, skip reasons, column names | Debugging only (NOT consumed by downstream stages) | None - optional metadata file |
 
-**Column Count by Bucket**:
-- 0-3s, 3-9s: 45 features (21 × 2 windows + 3 metadata)
-- 9-13s, 13-18s: 108 features (21 × 5 windows + 3 metadata)
+**Column Count by Bucket** (UPDATED - Middle Aggregation + 0-3s Hook Only):
+- 0-3s: 24 features (21 × 1 window + 3 metadata: video_id, create_time, gender)
+- 3-9s: 45 features (21 × 2 windows + 3 metadata)
+- 9-13s, 13-18s: 66 features (21 × 3 windows + 3 metadata) [CHANGED - middle segments aggregated]
+  - Structure: hook_* (21) + middle_aggregate_* (21) + closing_* (21) + metadata (3)
+  - Reason: Short middle windows (1-4s) aggregated for feature reliability
+  - Aggregation strategy: SUM for counts, AVG for ratios, MIN/MAX for extremes, MODE for categorical
 - 18-33s: 129 features (21 × 6 windows + 3 metadata)
 - 33-60s, 60-90s, 90-120s: 150 features (21 × 7 windows + 3 metadata)
 
@@ -426,13 +479,15 @@ def save_aggregated_csv(df: pd.DataFrame, output_path: Path):
 
 **Python Libraries**:
 ```python
-import pandas as pd  # 2.0.0+ (DataFrame creation, CSV I/O)
-import numpy as np  # 1.24.0+ (not used directly, pandas dependency)
+import pandas as pd  # 2.0.0+ (DataFrame creation, CSV I/O, Series.mode for categorical aggregation)
+import numpy as np  # 1.24.0+ (mean aggregation for continuous features)
 import json  # standard library (JSON parsing)
 import shutil  # standard library (atomic move)
 from pathlib import Path  # standard library (path operations)
 from collections import defaultdict  # standard library (skip reason tracking)
 import logging  # standard library (logging)
+
+# Note: scipy NOT required - using pandas.Series.mode() for categorical features instead of scipy.stats.mode()
 ```
 
 **File System**:
@@ -494,8 +549,8 @@ BASE_FEATURES = [
     'emotion_consistency'       # Float, [0-1]
 ]
 
-# Metadata fields (3 video-level fields)
-METADATA_FIELDS = ['duration', 'create_time', 'gender']
+# Metadata fields (2 video-level fields)
+METADATA_FIELDS = ['create_time', 'gender']
 
 # Bucket configurations (window counts) - Source: MLPlanningv2.md Stage 3
 BUCKET_MIDDLE_SEGMENTS = {
@@ -509,12 +564,39 @@ BUCKET_MIDDLE_SEGMENTS = {
     '90-120s': 5
 }
 
-# Expected feature counts (for validation)
+# **NEW: Buckets that aggregate middle segments (short windows)**
+# These buckets have middle windows of 1-4s, which produce unreliable measurements
+# for scene_count, scene_duration_variance, speech_coverage, word_count, etc.
+# Aggregation creates 4.5-9.3s windows where all 21 features are reliable.
+AGGREGATE_MIDDLE_BUCKETS = ['9-13s', '13-18s']
+
+# **NEW: Feature aggregation strategies**
+# SUM: Cumulative/count features (discrete events)
+SUM_FEATURES = [
+    'scene_count', 'word_count', 'object_count',
+    'person_count', 'overlay_unique_count', 'gesture_count'
+]
+
+# MIN: Pick minimum value (shortest scene)
+MIN_FEATURES = ['shortest_scene']
+
+# MAX: Pick maximum value (longest scene)
+MAX_FEATURES = ['longest_scene']
+
+# MODE: Categorical features (most common value)
+CATEGORICAL_FEATURES = ['dominant_emotion_id', 'has_captions']
+
+# AVERAGE (default): All other features use mean
+# - speech_coverage, eye_contact_rate, energy_level, energy_variance, energy_max
+# - pitch_scatter_ratio, gaze_variance, emotional_valence, emotion_consistency
+# - average_face_size, scene_duration_variance
+
+# Expected feature counts (for validation) - UPDATED with middle aggregation and 0-3s hook only
 EXPECTED_FEATURE_COUNTS = {
-    '0-3s': 45,   # 21 × 2 windows + 3 metadata
-    '3-9s': 45,
-    '9-13s': 108,  # 21 × 5 windows + 3 metadata
-    '13-18s': 108,
+    '0-3s': 24,   # 21 × 1 window (hook only) + 3 metadata (video_id, create_time, gender)
+    '3-9s': 45,   # 21 × 2 windows + 3 metadata
+    '9-13s': 66,  # 21 × 3 windows (hook + middle_aggregate + closing) + 3 metadata
+    '13-18s': 66, # 21 × 3 windows (hook + middle_aggregate + closing) + 3 metadata
     '18-33s': 129, # 21 × 6 windows + 3 metadata
     '33-60s': 150, # 21 × 7 windows + 3 metadata
     '60-90s': 150,
@@ -546,7 +628,6 @@ LOG_PROGRESS_INTERVAL = 10  # Log every N videos
 | Field Path | Type | Range | Nulls? | Description | Example |
 |------------|------|-------|--------|-------------|---------|
 | `video_id` | str | - | No | Video identifier | "238506412723073" |
-| `duration` | float | 3.0-120.0 | No | Total video duration (seconds) | 50.0 |
 | `temporal_windows.hook.scene_count` | int | 0-20 | No | Scene cuts in hook window (0-3s) | 1 |
 | `temporal_windows.hook.eye_contact_rate` | float | 0.0-1.0 | No | Eye contact proportion in hook | 0.8673 |
 | `temporal_windows.hook.word_count` | int | 0-200 | No | Words spoken in hook | 7 |
@@ -555,12 +636,12 @@ LOG_PROGRESS_INTERVAL = 10  # Log every N videos
 | `temporal_windows.closing.energy_level` | float | 0.0-1.0 | No | Audio energy in closing window | 0.0163 |
 | `metadata.create_time` | str | ISO 8601 | No | Video publish timestamp | "2025-10-02T18:42:05.970516" |
 | `metadata.gender_detection.gender` | str | male/female | Yes | Detected gender (optional) | "male" |
-| `metadata.gender_detection.confidence` | float | 0.0-1.0 | Yes | Gender detection confidence | 0.9863 |
 
 **Total Fields per Window**: 21 base features (see Section 4.2 for complete list)
 
 **Windows by Bucket**:
-- 0-3s, 3-9s: 2 windows (hook + closing, no middle_segments)
+- 0-3s: 1 window (hook only, no middle or closing)
+- 3-9s: 2 windows (hook + closing, no middle_segments)
 - 9-13s, 13-18s: 5 windows (hook + 3 middle + closing)
 - 18-33s: 6 windows (hook + 4 middle + closing)
 - 33-60s, 60-90s, 90-120s: 7 windows (hook + 5 middle + closing)
@@ -571,13 +652,13 @@ LOG_PROGRESS_INTERVAL = 10  # Log every N videos
 
 **Format**: CSV with header row, one row per video, flat column naming with underscores
 
-**Column Naming Convention** (Source: QA Q9):
+**Column Naming Convention** (Source: QA Q9, updated with aggregation and 0-3s):
 ```
-video_id, duration, create_time, gender, gender_confidence,
-hook_scene_count, hook_word_count, hook_audio_energy, ...,
-middle_1_scene_count, middle_1_word_count, middle_1_audio_energy, ...,
-middle_2_scene_count, middle_2_word_count, middle_2_audio_energy, ...,
-closing_scene_count, closing_word_count, closing_audio_energy, ...
+video_id, create_time, gender,
+hook_scene_count, hook_word_count, hook_energy_level, ...,
+middle_1_scene_count, middle_1_word_count, middle_1_energy_level, ...  # For buckets 18-33s+
+middle_aggregate_scene_count, middle_aggregate_word_count, ...         # For buckets 9-13s, 13-18s
+closing_scene_count, closing_word_count, closing_energy_level, ...     # For buckets 3-9s+
 ```
 
 **Schema (Bucket 18-33s example - 6 windows)**:
@@ -585,10 +666,8 @@ closing_scene_count, closing_word_count, closing_audio_energy, ...
 | Column | Type | Range | Nulls? | Description | Example |
 |--------|------|-------|--------|-------------|---------|
 | `video_id` | str | - | No | Primary key | "238506412723073" |
-| `duration` | float | 3.0-120.0 | No | Video duration (seconds) | 50.0 |
 | `create_time` | str | ISO 8601 | No | Publish timestamp | "2025-10-02T18:42:05.970516" |
 | `gender` | str | male/female/null | Yes | Detected gender | "male" |
-| `gender_confidence` | float | 0.0-1.0 | Yes | Detection confidence | 0.9863 |
 | `hook_scene_count` | int | 0-20 | No | Scene cuts in hook | 1 |
 | `hook_eye_contact_rate` | float | 0.0-1.0 | No | Eye contact in hook | 0.8673 |
 | `hook_word_count` | int | 0-200 | No | Words in hook | 7 |
@@ -604,9 +683,12 @@ closing_scene_count, closing_word_count, closing_audio_energy, ...
 | `closing_energy_level` | float | 0.0-1.0 | No | Audio energy in closing | 0.0163 |
 | ... | ... | ... | ... | (All 21 base features × 6 windows) | ... |
 
-**Total Columns by Bucket**:
-- 0-3s, 3-9s: 45 columns (2 windows × 21 features + 5 metadata)
-- 9-13s, 13-18s: 108 columns (5 windows × 21 features + 3 metadata)
+**Total Columns by Bucket** (UPDATED - Middle Aggregation + 0-3s Hook Only):
+- 0-3s: 24 columns (1 window × 21 features + 3 metadata)
+- 3-9s: 45 columns (2 windows × 21 features + 3 metadata)
+- 9-13s, 13-18s: 66 columns (3 windows × 21 features + 3 metadata)
+  - Column naming: hook_*, middle_aggregate_*, closing_*, metadata
+  - Note: middle_1_*, middle_2_*, middle_3_* replaced by single middle_aggregate_*
 - 18-33s: 129 columns (6 windows × 21 features + 3 metadata)
 - 33-60s, 60-90s, 90-120s: 150 columns (7 windows × 21 features + 3 metadata)
 
@@ -676,8 +758,10 @@ def validate_input(data: dict, video_id: str, bucket: str):
     if 'hook' not in windows:
         raise ValueError(f"Video {video_id}: Missing 'hook' window")
 
-    if 'closing' not in windows:
-        raise ValueError(f"Video {video_id}: Missing 'closing' window")
+    # Closing window validation (not required for bucket 0-3s)
+    if bucket != '0-3s':
+        if 'closing' not in windows:
+            raise ValueError(f"Video {video_id}: Missing 'closing' window")
 
     # 3. Validate middle_segments (bucket-specific)
     middle_segments = windows.get('middle_segments')
@@ -691,10 +775,13 @@ def validate_input(data: dict, video_id: str, bucket: str):
                 f"(bucket {bucket} requires {expected_middle_count} segments)"
             )
 
+        # **NEW: Flexible validation for aggregation buckets (Option B)**
+        # Warn if segment count doesn't match expected, but proceed with aggregation
         if len(middle_segments) != expected_middle_count:
             logger.warning(
                 f"Video {video_id}: Expected {expected_middle_count} middle segments, "
-                f"found {len(middle_segments)}"
+                f"found {len(middle_segments)}. "
+                f"{'Aggregation will proceed with available segments.' if bucket in AGGREGATE_MIDDLE_BUCKETS else 'Proceeding anyway.'}"
             )
     else:
         # Bucket 0-3s, 3-9s - middle_segments should be null
@@ -706,13 +793,11 @@ def validate_input(data: dict, video_id: str, bucket: str):
     # 4. Validate metadata required fields
     metadata = data['metadata']
 
-    if 'duration' not in metadata:
-        raise ValueError(f"Video {video_id}: Missing metadata.duration")
-
     if 'create_time' not in metadata:
         raise ValueError(f"Video {video_id}: Missing metadata.create_time")
 
     # Note: gender_detection is optional - use .get() with None default in extraction
+    # Note: duration removed (redundant with bucket assignment)
 ```
 
 ### 6.2 Error Cases
@@ -756,7 +841,7 @@ def validate_output(df: pd.DataFrame, bucket: str):
         f"Column count mismatch: expected {expected_cols}, got {actual_cols}"
 
     # 3. Check required columns exist
-    required_cols = ['video_id', 'duration', 'create_time']
+    required_cols = ['video_id', 'create_time']
     missing_cols = [c for c in required_cols if c not in df.columns]
 
     assert len(missing_cols) == 0, f"Missing required columns: {missing_cols}"
@@ -826,13 +911,17 @@ Performance estimates based on system architecture and pandas benchmarks:
   - Empty insights directory (raises ValueError with Stage 2.5 message)
   - Missing required fields (raises ValueError with field name)
   - Null middle_segments in long bucket (raises ValueError)
+  - Missing closing window for bucket 0-3s (passes - closing not required)
+  - Missing closing window for bucket 3-9s+ (raises ValueError)
   - Valid input with all fields (passes without error)
   - Optional gender field missing (uses None, no error)
 
 - [ ] **Test feature extraction**
   - Correct column naming: `hook_scene_count`, `middle_1_word_count` (not dotted notation)
-  - Correct feature count per bucket (45/108/129/150)
-  - Metadata fields extracted correctly (duration, create_time, gender)
+  - Correct feature count per bucket (24 for 0-3s, 45 for 3-9s, 66 for 9-18s, 129 for 18-33s, 150 for 33-60s+)
+  - Bucket 0-3s: only hook columns, no closing columns
+  - Bucket 3-9s+: hook + closing columns (+ middle if applicable)
+  - Metadata fields extracted correctly (video_id, create_time, gender)
   - Null values preserved (not replaced with defaults)
 
 - [ ] **Test error handling**
@@ -893,10 +982,10 @@ Performance estimates based on system architecture and pandas benchmarks:
 }
 ```
 
-**Expected Output CSV** (bucket 33-60s, 7 windows = 150 columns):
+**Expected Output CSV** (bucket 33-60s, 7 windows = 149 columns):
 ```csv
-video_id,duration,create_time,gender,gender_confidence,hook_scene_count,hook_eye_contact_rate,hook_word_count,hook_energy_level,...,middle_1_scene_count,middle_1_word_count,...,closing_scene_count,closing_energy_level
-238506412723073,50.0,2025-10-02T18:42:05.970516,male,0.9863,1,0.8673,7,0.0106,...,6,19,...,2,0.0163
+video_id,create_time,gender,hook_scene_count,hook_eye_contact_rate,hook_word_count,hook_energy_level,...,middle_1_scene_count,middle_1_word_count,...,closing_scene_count,closing_energy_level
+238506412723073,2025-10-02T18:42:05.970516,male,1,0.8673,7,0.0106,...,6,19,...,2,0.0163
 ```
 
 ### 8.4 Test Execution
@@ -1044,6 +1133,52 @@ python3 scripts/stage3_aggregation.py \
 - **Trade-offs**: One extra file per bucket, but negligible size (~1 KB) and high debugging value.
 - **Date**: 2025-01-09 (Source: QA Q12)
 
+**Decision 7**: Aggregate middle segments for buckets 9-13s and 13-18s with 4-strategy approach
+- **Context**: Middle windows in buckets 9-13s (1-2.3s each) and 13-18s (2.3-4s each) are too short to produce reliable measurements for 8 out of 21 features (38%): scene_count, shortest_scene, longest_scene, scene_duration_variance, speech_coverage, word_count, gesture_count, gaze_variance.
+- **Alternatives Considered**:
+  - Option A: Keep separate middle segments, accept unreliable features - Rejected (pollutes ML training data)
+  - Option B: Aggregate middle segments into single "middle_aggregate" window - **CHOSEN**
+  - Option C: Remove unreliable features for these buckets only - Rejected (creates inconsistent feature sets across buckets)
+  - Option D: Do nothing, rely on ML to handle noise - Rejected (high-dimensional noise degrades cluster quality)
+- **Rationale**:
+  - Feature reliability: 13/21 reliable in 1-2.3s windows → 21/21 reliable in 4.5-9.3s aggregated window
+  - Four aggregation strategies preserve data semantics:
+    - **SUM** for cumulative features (scene_count, word_count): Total events across segments
+    - **MIN/MAX** for extreme values (shortest_scene, longest_scene): True extremes preserved
+    - **MODE** for categorical features (dominant_emotion_id, has_captions): Most common value
+    - **AVERAGE** for continuous/ratio features (speech_coverage, energy_level): Representative value
+  - Bucket-specific models already handle different feature counts (44, 65, 128, 149)
+  - Temporal granularity loss acceptable (middle progressions unreliable anyway in short segments)
+  - Simpler than feature filtering (maintains consistent 21-feature schema across all windows)
+- **Metadata Reduction Decision**: Removed `duration` (redundant with bucket assignment) and `gender_confidence` (not needed for ML). Reduced metadata from 5 to 2 fields (create_time, gender).
+- **Trade-offs**:
+  - Lose middle segment progression for 9-18s videos (e.g., can't detect "word_count increases middle_1 → middle_3")
+  - But: This progression data was unreliable due to short windows (noise, not signal)
+  - Feature count reduced from 108 → 65 for these buckets (40% reduction)
+  - But: Fewer high-quality features better than more low-quality features for ML
+- **Impact**:
+  - Stage 3: +60 lines of code (4-strategy aggregation logic + configuration)
+  - Stage 4-7: Column name changes only (middle_aggregate_* instead of middle_1_*, middle_2_*, middle_3_*)
+  - K-Means clustering: Better quality (21 reliable features instead of 13 reliable + 8 noisy)
+  - Downstream stages: No logic changes (just different column names in DataFrame)
+- **Date**: 2025-01-10 (Source: FeatureAggregationCHANGE.md analysis of temporal window reliability)
+
+**Decision 8**: Bucket 0-3s has hook only (no closing window)
+- **Context**: For videos 0-3s long, the full video is already captured by the hook window (0-3s). A closing window (last 3s) would completely overlap with the hook.
+- **Alternatives Considered**:
+  - Option A: Hook only (1 window) - **CHOSEN**
+  - Option B: Hook + closing (2 windows with complete overlap) - Rejected (creates duplicate data)
+- **Rationale**:
+  - Temporal impossibility: Cannot extract separate 3s hook + 3s closing from a video shorter than 6s
+  - SystemArchitecturev2.md Line 194 explicitly states "0-3s | None (null) | Hook only"
+  - No redundant data: Hook already covers 100% of video content
+  - Consistent with production temporal_compute.py logic
+- **Impact**:
+  - Stage 3: +5 lines of code (conditional skip closing for 0-3s)
+  - Column count: 0-3s bucket reduced from 45 → 24 columns (21 features, not 42)
+  - Stage 4-7: No changes needed (already handle variable window counts per bucket)
+- **Date**: 2025-10-14 (Source: Stage 3-4 Compatibility Analysis Q4)
+
 ---
 
 ## Appendix B: Example Data
@@ -1140,15 +1275,15 @@ python3 scripts/stage3_aggregation.py \
 }
 ```
 
-### B.2 Sample Output (bucket 33-60s, 7 windows = 150 columns)
+### B.2 Sample Output (bucket 33-60s, 7 windows = 149 columns)
 
 **File**: `ml_analysis/aggregated_features.csv`
 
-**Note**: Showing subset of columns for readability. Actual CSV has all 21 base features × 7 windows + 5 metadata = 150 total columns.
+**Note**: Showing subset of columns for readability. Actual CSV has all 21 base features × 7 windows + 2 metadata = 149 total columns.
 
 ```csv
-video_id,duration,create_time,gender,gender_confidence,hook_scene_count,hook_eye_contact_rate,hook_word_count,hook_speech_coverage,hook_energy_level,middle_1_scene_count,middle_1_word_count,middle_1_energy_level,middle_2_scene_count,middle_2_word_count,middle_2_energy_level,middle_3_scene_count,middle_3_word_count,middle_3_energy_level,middle_4_scene_count,middle_4_word_count,middle_4_energy_level,middle_5_scene_count,middle_5_word_count,middle_5_energy_level,closing_scene_count,closing_energy_level,closing_eye_contact_rate
-238506412723073,50.0,2025-10-02T18:42:05.970516,male,0.9863,1,0.8673,7,1.0,0.0106,6,19,0.0088,4,23,0.0113,3,19,0.0142,2,16,0.0147,3,22,0.0127,2,0.0163,0.8837
+video_id,create_time,gender,hook_scene_count,hook_eye_contact_rate,hook_word_count,hook_speech_coverage,hook_energy_level,middle_1_scene_count,middle_1_word_count,middle_1_energy_level,middle_2_scene_count,middle_2_word_count,middle_2_energy_level,middle_3_scene_count,middle_3_word_count,middle_3_energy_level,middle_4_scene_count,middle_4_word_count,middle_4_energy_level,middle_5_scene_count,middle_5_word_count,middle_5_energy_level,closing_scene_count,closing_energy_level,closing_eye_contact_rate
+238506412723073,2025-10-02T18:42:05.970516,male,1,0.8673,7,1.0,0.0106,6,19,0.0088,4,23,0.0113,3,19,0.0142,2,16,0.0147,3,22,0.0127,2,0.0163,0.8837
 ```
 
 ### B.3 Sample Summary JSON
@@ -1173,9 +1308,9 @@ video_id,duration,create_time,gender,gender_confidence,hook_scene_count,hook_eye
   "output_csv": {
     "path": "ml_analysis/aggregated_features.csv",
     "rows": 43,
-    "columns": 150,
+    "columns": 149,
     "column_names": [
-      "video_id", "duration", "create_time", "gender", "gender_confidence",
+      "video_id", "create_time", "gender",
       "hook_scene_count", "hook_eye_contact_rate", "hook_word_count",
       "middle_1_scene_count", "middle_1_word_count", "middle_1_energy_level",
       "middle_2_scene_count", "middle_2_word_count", "middle_2_energy_level",

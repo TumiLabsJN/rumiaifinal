@@ -6,6 +6,22 @@
 
 ---
 
+## Implementation Status Tracker
+
+| Feature | Status | Implementation Date | Notes |
+|---------|--------|-------------------|-------|
+| **Hashtag Cluster Strategy** | ✅ IMPLEMENTED | 2025-10-13 | Multi-hashtag scraping with provenance tracking |
+| Checkpoint Resume System | 📋 PLANNED | TBD | Stage 2 resume capability |
+| Pipeline Validation | 📋 PLANNED | TBD | Stage 2.4 outlier detection |
+| ML Model Validation Framework | 📋 PLANNED | TBD | Stage 5 improvement |
+
+**Legend**:
+- ✅ IMPLEMENTED: Feature is live in production
+- 🔄 IN PROGRESS: Active development
+- 📋 PLANNED: Documented, not yet started
+
+---
+
 ## Document Overview
 
 ### Purpose
@@ -47,9 +63,9 @@ Each processing stage includes:
    - Implement checkpoint/resume system for failure recovery
 
 2. **Client-Centric Data Organization**
-   - Multi-tenant data structure: Client → Hashtags → Duration Buckets → Videos
-   - Bucket-specific analysis within client/hashtag boundaries
-   - Persistent client/hashtag/duration configuration management
+   - Multi-tenant data structure: Client → Analysis Type → Target → Mode+Strategy → Buckets → Videos
+   - Bucket-specific analysis within client/target boundaries
+   - Persistent configuration management via config.json
 
 3. **Duration-Specific ML Pattern Recognition**
    - Train separate ML models for each duration bucket
@@ -86,7 +102,11 @@ Each processing stage includes:
   - Contrastive default: N=100 per bucket (80 top + 20 bottom), top 3 buckets = ~300 videos
   - Top default: N=40 per bucket, top 3 buckets = ~120 videos
   - Only top 3 most active buckets are processed (adaptive bucket processing)
-- **ML Models**: Random Forest and K-means with a capacity of 16 models total (2 algorithms × 8 duration buckets)
+- **ML Models**: 90 models total across 8 duration buckets for complete pattern coverage:
+  - 8 Video-Level Random Forest models (1 per bucket) - Detects cross-window patterns and temporal progressions
+  - 41 Window-Level Random Forest models (1 per window per bucket) - Validates window-specific feature importance
+  - 41 Window-Level K-Means models (1 per window per bucket) - Discovers creative strategies within each video section
+  - Architecture rationale: Dual RF + window-level K-Means prevents blind spots (video-level RF captures "hook→middle consistency", window-level captures "what makes a strong hook", K-Means discovers "3 ways to do strong hooks")
 - **Output**: Duration-specific creative recommendations (Total Creative Reports being defined)
 - **Processing**: Sequential (one-by-one) with resumption capability
 
@@ -97,13 +117,22 @@ Each processing stage includes:
 ### Directory Structure
 
 ```
+/config/
+├── hashtag_clusters/                       # Cluster configuration files (NEW: 2025-10-13)
+│   ├── nutrition.json                      # Multi-hashtag cluster definition
+│   ├── fitness.json                        # Example cluster config
+│   └── wellness.json                       # Example cluster config
+│
 /data/
 ├── clients/
 │   ├── {client_id}/
-│   │   ├── hashtags/                       # Hashtag-based analyses
-│   │   │   └── {hashtag_name}/             # e.g., "nutrition", "fitness"
+│   │   ├── hashtags/                       # Hashtag-based analyses (supports cluster mode)
+│   │   │   └── {cluster_id}/               # e.g., "nutrition", "fitness" (cluster name, NOT "#nutrition")
+│   │   │       ├── cluster_analytics.json  # Cluster scraping metrics (NEW: 2025-10-13)
+│   │   │       │                           # Provenance, per-hashtag contribution, overlaps
 │   │   │       ├── top_contrastive/        # Analysis: top mode + contrastive strategy
-│   │   │       │   ├── config.json         # {mode: "top", strategy: "contrastive", date_filter: "last_90_days", run_date: "2025-01-28", video_count: 300}
+│   │   │       │   ├── config.json         # Stage 0 output: {mode: "top", strategy: "contrastive", date_filter: "last_90_days", run_date: "2025-01-28", video_count: 300}
+│   │   │       │   ├── winner_analysis.json  # Stage 1.3 output: Bucket distribution analysis (top_100_distribution, top_3_buckets)
 │   │   │       │   ├── buckets/            # Duration-based ML buckets (8 total)
 │   │   │       │   │   ├── bucket_0-3s/
 │   │   │       │   │   │   ├── videos/     # Raw MP4s: N files (configurable via --video-count)
@@ -123,11 +152,22 @@ Each processing stage includes:
 │   │   │       │   │   │   │       ├── service_debug/
 │   │   │       │   │   │   │       └── validation_report.json
 │   │   │       │   │   │   ├── ml_analysis/    # ML pipeline outputs
-│   │   │       │   │   │   │   ├── aggregated_features.csv          # Aggregated temporal windows (N videos)
-│   │   │       │   │   │   │   ├── rf_transformed.csv               # RF-ready features
-│   │   │       │   │   │   │   ├── km_transformed.csv               # KMeans-ready features
-│   │   │       │   │   │   │   ├── random_forest_analysis.json      # ~30KB - Input to LLM Call 1
-│   │   │       │   │   │   │   └── kmeans_analysis.json             # ~30KB - Input to LLM Call 1
+│   │   │       │   │   │   │   ├── aggregated_features.csv              # Stage 3: Aggregated temporal windows (N videos)
+│   │   │       │   │   │   │   ├── rf_transformed.csv                   # Stage 4: Video-level RF (~190 features)
+│   │   │       │   │   │   │   ├── hook_rf_transformed.csv              # Stage 4: Window-level RF (22 features)
+│   │   │       │   │   │   │   ├── middle_1_rf_transformed.csv          # Stage 4: Window-level RF (22 features)
+│   │   │       │   │   │   │   ├── middle_2_rf_transformed.csv          # Stage 4: Window-level RF (22 features)
+│   │   │       │   │   │   │   ├── middle_3_rf_transformed.csv          # Stage 4: Window-level RF (22 features)
+│   │   │       │   │   │   │   ├── middle_4_rf_transformed.csv          # Stage 4: Window-level RF (22 features)
+│   │   │       │   │   │   │   ├── closing_rf_transformed.csv           # Stage 4: Window-level RF (22 features)
+│   │   │       │   │   │   │   ├── hook_km_transformed.csv              # Stage 4: Window-level K-Means (~39 features)
+│   │   │       │   │   │   │   ├── middle_1_km_transformed.csv          # Stage 4: Window-level K-Means (~39 features)
+│   │   │       │   │   │   │   ├── middle_2_km_transformed.csv          # Stage 4: Window-level K-Means (~39 features)
+│   │   │       │   │   │   │   ├── middle_3_km_transformed.csv          # Stage 4: Window-level K-Means (~39 features)
+│   │   │       │   │   │   │   ├── middle_4_km_transformed.csv          # Stage 4: Window-level K-Means (~39 features)
+│   │   │       │   │   │   │   ├── closing_km_transformed.csv           # Stage 4: Window-level K-Means (~39 features)
+│   │   │       │   │   │   │   ├── random_forest_analysis.json          # Stage 6: ~30KB - Input to LLM Call 1
+│   │   │       │   │   │   │   └── kmeans_analysis.json                 # Stage 6: ~30KB - Input to LLM Call 1
 │   │   │       │   │   │   ├── models/     # Trained models for THIS bucket
 │   │   │       │   │   │   │   ├── random_forest_v1.pkl  # Classification model
 │   │   │       │   │   │   │   ├── kmeans_v1.pkl         # Clustering model
@@ -278,24 +318,46 @@ python rumiai_ml_batch.py \
 
 **Available Types**:
 
-| Type | CLI Flag | Target Format | Data Source | Primary Use Case |
-|------|----------|---------------|-------------|------------------|
-| `hashtag` | `--analysis-type hashtag` | `#nutrition` | TikTok hashtag search | Market research - identify viral patterns |
-| `competitor` | `--analysis-type competitor` | `@rival_brand` | TikTok profile | Competitive intelligence - understand rivals |
-| `creator` | `--analysis-type creator` | `@potential_affiliate` | TikTok profile | Creator vetting - assess fit for hiring |
+| Type | CLI Flag | Target Format | Data Source | Primary Use Case | Scraping Mode |
+|------|----------|---------------|-------------|------------------|---------------|
+| `hashtag` | `--analysis-type hashtag` | `nutrition` (cluster ID) | TikTok hashtag search (multi-hashtag cluster) | Market research - identify viral patterns | **Cluster mode** (4 hashtags × 2 runs) |
+| `competitor` | `--analysis-type competitor` | `@rival_brand` | TikTok profile | Competitive intelligence - understand rivals | Single mode (1 profile, 800 videos) |
+| `creator` | `--analysis-type creator` | `@potential_affiliate` | TikTok profile | Creator vetting - assess fit for hiring | Single mode (1 profile, 800 videos) |
 
 **CLI Usage**:
 ```bash
---analysis-type hashtag     # Analyze hashtag content
---analysis-type competitor  # Analyze competitor profile
---analysis-type creator     # Analyze creator profile
+--analysis-type hashtag     # Analyze hashtag content (cluster mode)
+--analysis-type competitor  # Analyze competitor profile (single mode)
+--analysis-type creator     # Analyze creator profile (single mode)
 ```
+
+**Cluster Mode (Hashtag Analysis Only)**:
+
+**What it is**: Multi-hashtag scraping strategy that combines semantically related hashtags to maximize unique video discovery.
+
+**Why it matters**: Single hashtag scraping with US geographic filtering reduces video volume by 57%. Cluster mode provides 2-3x more unique videos while maintaining semantic relevance.
+
+**Architecture**:
+- **Cluster config**: `/config/hashtag_clusters/{cluster_id}.json`
+- **Example**: `nutrition` cluster = `#nutrition` + `#nutritionist` + `#nutritiontips` + `#nutritioncoach`
+- **Scraping**: 4 hashtags × 2 runs = 8 scrapes with provenance tracking
+- **Result**: ~1,900 videos scraped → ~1,400 unique videos after deduplication
+
+**Key Concepts**:
+- **Narrow semantic clustering**: Related hashtags with 20-30% overlap (not too broad, not too narrow)
+- **Provenance tracking**: System tracks which hashtags/runs found each video (`source_hashtags`, `source_runs`)
+- **Cluster analytics**: Per-hashtag contribution, pairwise overlaps, run effectiveness metrics
+- **Single hashtag deprecated**: As of 2025-10-10, single hashtag scraping (e.g., `--target "#nutrition"`) is deprecated. Use cluster mode instead.
+
+**When to use**:
+- **Hashtag analysis**: Use cluster mode (default, recommended)
+- **Competitor/Creator analysis**: Use single profile mode (no clusters needed)
 
 **Key Differences**:
 
 | Aspect | Hashtag | Competitor | Creator |
 |--------|---------|------------|---------|
-| **Apify Scraper** | clockworks/tiktok-hashtag-scraper | clockworks/tiktok-scraper | clockworks/tiktok-scraper |
+| **Apify Scraper** | clockworks/tiktok-scraper (GdWCkxBtKWOsKjdch) | clockworks/tiktok-scraper (GdWCkxBtKWOsKjdch) | clockworks/tiktok-scraper (GdWCkxBtKWOsKjdch) |
 | **Video Source** | All TikTok users posting with hashtag | Single profile's content | Single profile's content |
 | **ML Training** | Yes (classification models) | Optional (descriptive only) | No (uses existing models) |
 | **Default Mode** | `top` | `top` | `recent` |
@@ -304,7 +366,7 @@ python rumiai_ml_batch.py \
 | **Default Video Count** | 100 | 40 | 40 |
 
 **Why Target Type Matters**:
-- Different scrapers (hashtag scraper vs profile scraper)
+- Same unified scraper (supports both hashtags and profiles)
 - Different business questions (market trends vs competitor benchmarking vs hiring decisions)
 - Different default configurations (optimized per use case)
 - Same underlying processing pipeline (RumiAI → Buckets → ML → Reports)
@@ -443,9 +505,9 @@ These are orthogonal dimensions:
 3. Filtered videos proceed to bucketing and selection
 
 **Why Client-Side?**
-- Apify's hashtag scraper doesn't support server-side date filtering
-- Profile scraper has date support, but client-side used for consistency across all target types
-- Ensures uniform behavior regardless of scraper type
+- Apify's unified Profile Scraper doesn't support server-side date filtering for hashtags
+- Client-side filtering used for consistency across all target types (hashtag, competitor, creator)
+- Ensures uniform behavior regardless of analysis type
 
 **Business Value**:
 - **Recency control**: Focus on recent trends vs historical patterns
@@ -641,19 +703,59 @@ Stage 7: LLM Report Generation
 
 **Process**:
 
-### 1.1: Apify Scraping
-```json
-{
-  "hashtagsUrls": ["#nutrition"],
-  "resultsPerPage": 800,
-  "shouldDownloadVideos": true,
-  "sortBy": "engagement",
-  "sortOrder": "desc"
-}
+### 1.1: Cluster Orchestration (Hashtag Mode)
+
+**For hashtag analysis**, the system uses **cluster mode** to maximize unique video discovery:
+
+**Step 1: Load Cluster Configuration**
+```python
+# Load cluster config from /config/hashtag_clusters/{cluster_id}.json
+cluster_config = load_json(f"/config/hashtag_clusters/{target}.json")
+
+# Example cluster config:
+# {
+#   "cluster_id": "nutrition",
+#   "primary_hashtag": "#nutrition",
+#   "variant_hashtags": ["#nutritionist", "#nutritiontips", "#nutritioncoach"],
+#   "scrape_config": {
+#     "runs_per_hashtag": 2,
+#     "delay_between_runs_ms": 120000,  # 2 minutes
+#     "results_per_page": 800
+#   }
+# }
 ```
-- Scrapes 800 videos from target
-- Engagement sorted DESC (top performers first)
-- No server-side date filtering available
+
+**Step 2: Multi-Hashtag Scraping Loop**
+```python
+all_hashtags = [cluster_config['primary_hashtag']] + cluster_config['variant_hashtags']
+# Result: ["#nutrition", "#nutritionist", "#nutritiontips", "#nutritioncoach"]
+
+all_videos = []
+failed_scrapes = []
+
+for hashtag in all_hashtags:
+    for run in range(1, runs_per_hashtag + 1):
+        # Scrape with retry logic (3 attempts, exponential backoff [5s, 15s, 45s])
+        videos = scrape_with_retry(hashtag, run, max_retries=3)
+
+        if videos:
+            # Tag videos with provenance (which hashtags/runs found them)
+            for video in videos:
+                video['source_hashtags'] = [hashtag]
+                video['source_runs'] = [run]
+
+            all_videos.extend(videos)
+        else:
+            failed_scrapes.append({"hashtag": hashtag, "run": run, "error": "..."})
+
+        # Delay between scrapes to avoid rate limiting
+        time.sleep(delay_between_runs_ms / 1000)
+
+# Result: 4 hashtags × 2 runs = 8 scrapes with provenance tracking
+# Example: ~1,900 videos scraped (before deduplication)
+```
+
+**For competitor/creator analysis**, the system uses **single mode** (one profile, 800 videos, no clusters).
 
 ### 1.2: Date Filtering (Client-Side)
 ```python
@@ -667,7 +769,110 @@ filtered_videos = [
 - Filters by `create_time` field
 - Typical result: 800 → 600 videos (last 90 days)
 
-### 1.3: Winner Analysis (Success-Based Distribution)
+### 1.3: Cluster Deduplication with Provenance (Hashtag Mode Only)
+
+**For hashtag cluster mode**, videos may appear in multiple hashtag scrapes. The system deduplicates while preserving provenance:
+
+```python
+def deduplicate_with_provenance(all_videos):
+    """
+    Deduplicate videos while merging source_hashtags and source_runs.
+
+    Input: ~1,900 videos (4 hashtags × 2 runs × ~240 videos each)
+    Output: ~1,400 unique videos with merged provenance
+    """
+    unique_map = {}
+
+    for video in all_videos:
+        video_id = video['id']
+
+        if video_id in unique_map:
+            # Duplicate found - merge provenance
+            existing = unique_map[video_id]
+            existing['source_hashtags'].extend(video['source_hashtags'])
+            existing['source_runs'].extend(video['source_runs'])
+        else:
+            # New video - add to map
+            unique_map[video_id] = video
+
+    unique_videos = list(unique_map.values())
+
+    # Example result:
+    # Video 123 found by: ["#nutrition", "#nutritiontips"] in runs [1, 2]
+    # Video 456 found by: ["#nutrition"] in run [1] (exclusive to one hashtag)
+
+    return unique_videos
+
+unique_videos = deduplicate_with_provenance(all_videos)
+# Result: ~1,400 unique videos (27.8% deduplication rate)
+```
+
+**For competitor/creator analysis**, no deduplication needed (single profile, no duplicates).
+
+### 1.4: Cluster Analytics Generation (Hashtag Mode Only)
+
+**For hashtag cluster mode**, the system generates health metrics for cluster optimization:
+
+```python
+def generate_cluster_analytics(all_videos, unique_videos, cluster_config, failed_scrapes):
+    """
+    Generate cluster health analytics.
+
+    5 Analytics Sections:
+    1. Scrape summary: Total attempts, successes, duplication rate
+    2. Per-hashtag contribution: Which hashtags contribute most unique videos
+    3. Pairwise overlaps: Overlap percentage between hashtag pairs
+    4. Run effectiveness: Does run 2 add significant new videos?
+    5. Bucket distribution by source: Which hashtags populate which buckets
+    """
+    analytics = {
+        "cluster_id": cluster_config['cluster_id'],
+        "execution_date": datetime.now(timezone.utc).isoformat(),
+        "scrape_summary": {
+            "total_scrapes_attempted": 8,
+            "total_scrapes_succeeded": 8,
+            "total_scraped_videos": len(all_videos),      # 1,900
+            "total_unique_videos": len(unique_videos),    # 1,400
+            "overall_duplication_rate": 27.8,             # %
+            "failed_scrapes": failed_scrapes
+        },
+        "per_hashtag_contribution": {
+            "#nutrition": {
+                "total_found": 782,
+                "exclusive_videos": 450,
+                "contribution_percentage": 55.9
+            },
+            # ... other hashtags
+        },
+        "pairwise_overlaps": {
+            "nutrition_nutritionist": 18.2,  # % overlap
+            # ... other pairs
+        },
+        "run_effectiveness": {
+            "#nutrition": {
+                "run_1_videos": 690,
+                "run_2_videos": 720,
+                "run_2_new_videos": 92,
+                "run_2_new_percentage": 12.8
+            },
+            # ... other hashtags
+        },
+        "bucket_distribution_by_source": {}  # Empty for now (populated in Stage 1.6)
+    }
+
+    # Save to: /data/clients/{client_id}/hashtag/{cluster_id}/cluster_analytics.json
+    save_cluster_analytics(analytics, client_id, cluster_id)
+
+    return analytics
+
+analytics = generate_cluster_analytics(all_videos, unique_videos, cluster_config, failed_scrapes)
+```
+
+**Output**: `cluster_analytics.json` (used for cluster optimization and cost savings)
+
+**For competitor/creator analysis**, no cluster analytics needed.
+
+### 1.5: Winner Analysis (Success-Based Distribution)
 ```python
 # Analyze top 100 performers
 top_100 = filtered_videos[:100]
@@ -689,7 +894,7 @@ top_3_buckets = rank_by_concentration(winner_distribution)[:3]
 - **Success-based**: Focuses on where winners cluster
 - Example: Skip 9-13s (400 videos, 5 winners), Process 18-60s (150 videos, 75 winners)
 
-### 1.4: Video Selection Per Bucket (Strategy-Specific)
+### 1.6: Video Selection Per Bucket (Strategy-Specific)
 
 **Contrastive Strategy** (N=100):
 ```python
@@ -727,7 +932,7 @@ else:
 - Typical: ~300 videos total (3 buckets × ~100 videos each)
 - Format: List of video URLs/IDs for Stage 2 processing
 
-### 1.5: Interactive Confirmation
+### 1.7: Interactive Confirmation
 
 After bucket selection completes, CLI displays summary and prompts user to confirm before proceeding to Stage 2:
 
@@ -751,7 +956,7 @@ Proceed to Stage 2 (Download & Analysis)? [Y/n/details]
 
 **Bypass**: Use `--auto-confirm` flag to skip prompt for CI/CD pipelines.
 
-**Child Document**: VideoDiscoveryCHILD.md Section 2.3.5 (full implementation details)
+**Child Document**: VideoDiscoveryCHILD.md Step 2.4 (Interactive Confirmation - full implementation details)
 
 **Example Workflow**:
 ```
@@ -1294,8 +1499,10 @@ for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'clo
 
     df_km_window = window_features.copy()
 
-    # ===== 1. Log + Scale for Right-Skewed Features (Counts) =====
-    count_features = ['scene_count', 'word_count', 'gesture_count', 'object_count', 'person_count']
+    # ===== 1. Log + Scale for Right-Skewed Features (Counts + Variances) =====
+    count_features = ['scene_count', 'word_count', 'gesture_count', 'object_count', 'person_count',
+                      'overlay_unique_count', 'shortest_scene', 'longest_scene', 'scene_duration_variance',
+                      'energy_variance', 'gaze_variance']  # 11 features total
 
     for feature in count_features:
         if feature in df_km_window.columns:
@@ -1306,13 +1513,12 @@ for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'clo
                 (df_km_window[f'{feature}_log'] - df_km_window[f'{feature}_log'].min()) /
                 (df_km_window[f'{feature}_log'].max() - df_km_window[f'{feature}_log'].min())
             )
-            # Drop original raw feature
-            df_km_window.drop(columns=[feature], inplace=True)
+            # Drop original raw feature and intermediate log feature
+            df_km_window.drop(columns=[feature, f'{feature}_log'], inplace=True)
 
     # ===== 2. MinMax Scale for Already-Normalized Features (Rates, Ratios) =====
-    rate_features = ['eye_contact_rate', 'speech_coverage', 'emotional_valence',
-                     'emotion_consistency', 'energy_level', 'energy_variance',
-                     'pitch_scatter_ratio', 'gaze_variance']
+    rate_features = ['average_face_size', 'speech_coverage', 'energy_level', 'energy_max',
+                     'pitch_scatter_ratio', 'eye_contact_rate', 'emotion_consistency']  # 7 features total
 
     for feature in rate_features:
         if feature in df_km_window.columns:
@@ -1324,22 +1530,42 @@ for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'clo
             # Drop original feature
             df_km_window.drop(columns=[feature], inplace=True)
 
-    # ===== 3. Save per-window K-Means transformed data =====
+    # ===== 3. Shift + Scale for emotional_valence =====
+    # emotional_valence is in [-1, 1] range, shift to [0, 1]
+    if 'emotional_valence' in df_km_window.columns:
+        df_km_window['emotional_valence_scaled'] = (df_km_window['emotional_valence'] + 1) / 2
+        df_km_window.drop(columns=['emotional_valence'], inplace=True)
+
+    # ===== 4. Label Encode for has_captions =====
+    if 'has_captions' in df_km_window.columns:
+        df_km_window['has_captions_encoded'] = df_km_window['has_captions'].astype(int)  # True→1, False→0
+        df_km_window.drop(columns=['has_captions'], inplace=True)
+
+    # ===== 5. One-hot for dominant_emotion_id =====
+    if 'dominant_emotion_id' in df_km_window.columns:
+        for emotion_id, emotion_name in enumerate(['joy', 'sadness', 'anger', 'fear', 'disgust', 'surprise', 'neutral'], start=1):
+            df_km_window[emotion_name] = (df_km_window['dominant_emotion_id'] == emotion_id).astype(int)
+        df_km_window.drop(columns=['dominant_emotion_id'], inplace=True)
+
+    # ===== 6. Save per-window K-Means transformed data =====
     df_km_window.to_csv(f'ml_analysis/{window_type}_km_transformed.csv', index=False)
 
-# Output shape per window: (N videos, ~21-40 transformed features)
-# - 5 count features × 2 (log + scaled) = 10 features
-# - 8 rate features × 1 (scaled) = 8 features
-# - ~13 other features (binary, categorical, etc.)
+# Output shape per window: (N videos, 39 transformed features)
+# - 11 count features × 2 (log + scaled) = 22 features
+# - 7 rate features × 1 (scaled) = 7 features
+# - 1 emotional_valence (shift + scaled) = 1 feature
+# - 1 has_captions (label encoded) = 1 feature
+# - 1 dominant_emotion_id (one-hot to 7 binary features) = 7 features
+# - Total: 22 + 7 + 1 + 1 + 7 = 38 features (+ metadata if included)
 ```
 
 **Outputs** (for bucket 18-33s):
-- `ml_analysis/hook_km_transformed.csv` (100 videos, ~30 features)
-- `ml_analysis/middle_1_km_transformed.csv` (100 videos, ~30 features)
-- `ml_analysis/middle_2_km_transformed.csv` (100 videos, ~30 features)
-- `ml_analysis/middle_3_km_transformed.csv` (100 videos, ~30 features)
-- `ml_analysis/middle_4_km_transformed.csv` (100 videos, ~30 features)
-- `ml_analysis/closing_km_transformed.csv` (100 videos, ~30 features)
+- `ml_analysis/hook_km_transformed.csv` (100 videos, 39 features)
+- `ml_analysis/middle_1_km_transformed.csv` (100 videos, 39 features)
+- `ml_analysis/middle_2_km_transformed.csv` (100 videos, 39 features)
+- `ml_analysis/middle_3_km_transformed.csv` (100 videos, 39 features)
+- `ml_analysis/middle_4_km_transformed.csv` (100 videos, 39 features)
+- `ml_analysis/closing_km_transformed.csv` (100 videos, 39 features)
 
 **What It Captures**: Creative patterns per window - "3 distinct hook strategies that all lead to viral success"
 
@@ -1352,8 +1578,8 @@ for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'clo
 | Transformation Type | Files Generated | Features per File | Purpose |
 |-------------------|-----------------|-------------------|---------|
 | **Video-Level RF** | 1 file | ~190 features | Cross-window pattern detection |
-| **Window-Level RF** | 6 files | 21-22 features each | Within-window feature validation |
-| **Window-Level K-Means** | 6 files | ~30 features each | Per-window creative strategies |
+| **Window-Level RF** | 6 files | 22 features each | Within-window feature validation |
+| **Window-Level K-Means** | 6 files | 39 features each | Per-window creative strategies |
 | **Total** | **13 files** | — | Complete ML architecture |
 
 **File Structure**:
@@ -1367,12 +1593,12 @@ bucket_18-33s/ml_analysis/
 ├── middle_3_rf_transformed.csv          # Window-level RF (22 features)
 ├── middle_4_rf_transformed.csv          # Window-level RF (22 features)
 ├── closing_rf_transformed.csv           # Window-level RF (22 features)
-├── hook_km_transformed.csv              # Window-level K-Means (~30 features)
-├── middle_1_km_transformed.csv          # Window-level K-Means (~30 features)
-├── middle_2_km_transformed.csv          # Window-level K-Means (~30 features)
-├── middle_3_km_transformed.csv          # Window-level K-Means (~30 features)
-├── middle_4_km_transformed.csv          # Window-level K-Means (~30 features)
-└── closing_km_transformed.csv           # Window-level K-Means (~30 features)
+├── hook_km_transformed.csv              # Window-level K-Means (39 features)
+├── middle_1_km_transformed.csv          # Window-level K-Means (39 features)
+├── middle_2_km_transformed.csv          # Window-level K-Means (39 features)
+├── middle_3_km_transformed.csv          # Window-level K-Means (39 features)
+├── middle_4_km_transformed.csv          # Window-level K-Means (39 features)
+└── closing_km_transformed.csv           # Window-level K-Means (39 features)
 ```
 
 **Why Three Transformation Pipelines**:
@@ -1398,6 +1624,17 @@ bucket_18-33s/ml_analysis/
 ## Stage 5: ML Model Training
 
 **Purpose**: Train dual Random Forest models (video-level + window-level) and window-level K-Means models per bucket
+
+> ⚠️ **CRITICAL IMPLEMENTATION WARNINGS**: This stage has HIGH-RISK bug hotspots identified during Phase 1 Business Critique (2025-10-14):
+> - **Feature name mismatch** (K-Means vs RF) → guaranteed bug if not handled
+> - **K-Means feature ranking logic** → conceptually complex, easy to implement wrong
+>
+> **BEFORE implementing**, read:
+> - **Stage5_MLModelTraining_STUB.md** (ChildDocs/ - Section 3: Critical Implementation Warnings - PRE-FILLED)
+> - **Stage5Tests.md** (comprehensive testing spec with bug prevention tests)
+> - **Critique_MLModelTraining.md** (Phase 1 Q&A decisions, especially Q3 validation protocol)
+>
+> Do NOT start from scratch. Expand the STUB HLD which has critical warnings pre-written.
 
 **Architectural Decision**: This stage trains **90 models total** across 8 buckets:
 1. **8 Video-Level RF models** (1 per bucket) - Cross-window patterns

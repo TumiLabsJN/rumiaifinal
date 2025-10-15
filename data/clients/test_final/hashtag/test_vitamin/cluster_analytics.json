@@ -1,0 +1,77 @@
+{
+  "cluster_id": "test_vitamin",
+  "execution_date": "2025-10-14T16:52:54.600174+00:00",
+  "scrape_summary": {
+    "total_scrapes_attempted": 8,
+    "total_scrapes_succeeded": 8,
+    "total_scraped_videos": 1826,
+    "total_unique_videos": 697,
+    "overall_duplication_rate": 61.829134720700985,
+    "failed_scrapes": []
+  },
+  "per_hashtag_contribution": {
+    "#vitamin": {
+      "total_found": 272,
+      "unique_videos": 272,
+      "overlap_videos": 173,
+      "exclusive_videos": 99,
+      "contribution_percentage": 39.02439024390244
+    },
+    "#vitamins": {
+      "total_found": 237,
+      "unique_videos": 237,
+      "overlap_videos": 183,
+      "exclusive_videos": 54,
+      "contribution_percentage": 34.00286944045911
+    },
+    "#dailyvitamins": {
+      "total_found": 256,
+      "unique_videos": 256,
+      "overlap_videos": 76,
+      "exclusive_videos": 180,
+      "contribution_percentage": 36.728837876614065
+    },
+    "#vitamintok": {
+      "total_found": 250,
+      "unique_videos": 250,
+      "overlap_videos": 105,
+      "exclusive_videos": 145,
+      "contribution_percentage": 35.86800573888092
+    }
+  },
+  "pairwise_overlaps": {
+    "vitamin_vitamins": 65.0,
+    "vitamin_dailyvitamins": 15.6,
+    "vitamin_vitamintok": 29.2,
+    "vitamins_dailyvitamins": 21.9,
+    "vitamins_vitamintok": 30.8,
+    "dailyvitamins_vitamintok": 18.8
+  },
+  "run_effectiveness": {
+    "#vitamin": {
+      "run_1_videos": 256,
+      "run_2_videos": 234,
+      "run_2_new_videos": 16,
+      "run_2_new_percentage": 6.837606837606838
+    },
+    "#vitamins": {
+      "run_1_videos": 230,
+      "run_2_videos": 233,
+      "run_2_new_videos": 7,
+      "run_2_new_percentage": 3.004291845493562
+    },
+    "#dailyvitamins": {
+      "run_1_videos": 245,
+      "run_2_videos": 218,
+      "run_2_new_videos": 11,
+      "run_2_new_percentage": 5.045871559633028
+    },
+    "#vitamintok": {
+      "run_1_videos": 239,
+      "run_2_videos": 228,
+      "run_2_new_videos": 11,
+      "run_2_new_percentage": 4.824561403508771
+    }
+  },
+  "bucket_distribution_by_source": {}
+}

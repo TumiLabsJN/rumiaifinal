@@ -1,0 +1,91 @@
+{
+  "stage": "video_processing",
+  "bucket": "18-33s",
+  "total_videos": 8,
+  "completed": 1,
+  "failed": 10,
+  "remaining": -3,
+  "last_checkpoint": "2025-10-14T16:06:38.376998",
+  "completed_video_ids": [
+    "7544734155570105656"
+  ],
+  "failed_video_ids": [
+    {
+      "video_id": "7544734155570105656",
+      "error": "RumiAI processing failed for 7544734155570105656 at stage rumiai_pipeline: RumiAI pipeline failed (exit code 1). Stderr: 2025-10-14 11:52:46 - rumiai_v2.core.ml_dependency_validator - INFO - ✅ All ML dependencies validated successfully\n2025-10-14 11:52:46 - rumiai_v2 - INFO - ✅ ML dependencies validated\n2025-10-14 11:52",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T14:52:47.251637"
+    },
+    {
+      "video_id": "7554856008615529783",
+      "error": "RumiAI processing failed for 7554856008615529783 at stage rumiai_pipeline: RumiAI pipeline failed (exit code 1). Stderr: 2025-10-14 11:52:51 - rumiai_v2.core.ml_dependency_validator - INFO - ✅ All ML dependencies validated successfully\n2025-10-14 11:52:51 - rumiai_v2 - INFO - ✅ ML dependencies validated\n2025-10-14 11:52",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T14:52:52.346951"
+    },
+    {
+      "video_id": "7542516751473364229",
+      "error": "RumiAI processing failed for 7542516751473364229 at stage rumiai_pipeline: RumiAI pipeline failed (exit code 1). Stderr: 2025-10-14 11:52:56 - rumiai_v2.core.ml_dependency_validator - INFO - ✅ All ML dependencies validated successfully\n2025-10-14 11:52:56 - rumiai_v2 - INFO - ✅ ML dependencies validated\n2025-10-14 11:52",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T14:53:00.430353"
+    },
+    {
+      "video_id": "7555000203145678136",
+      "error": "RumiAI processing failed for 7555000203145678136 at stage rumiai_pipeline: RumiAI pipeline failed (exit code 1). Stderr: 2025-10-14 11:53:04 - rumiai_v2.core.ml_dependency_validator - INFO - ✅ All ML dependencies validated successfully\n2025-10-14 11:53:04 - rumiai_v2 - INFO - ✅ ML dependencies validated\n2025-10-14 11:53",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T14:53:05.502632"
+    },
+    {
+      "video_id": "7556315815352470796",
+      "error": "RumiAI processing failed for 7556315815352470796 at stage rumiai_pipeline: RumiAI pipeline failed (exit code 1). Stderr: 2025-10-14 11:53:09 - rumiai_v2.core.ml_dependency_validator - INFO - ✅ All ML dependencies validated successfully\n2025-10-14 11:53:09 - rumiai_v2 - INFO - ✅ ML dependencies validated\n2025-10-14 11:53",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T14:53:10.694974"
+    },
+    {
+      "video_id": "7552578332051705106",
+      "error": "RumiAI processing failed for 7552578332051705106 at stage rumiai_pipeline: RumiAI pipeline failed (exit code 1). Stderr: 2025-10-14 11:53:14 - rumiai_v2.core.ml_dependency_validator - INFO - ✅ All ML dependencies validated successfully\n2025-10-14 11:53:14 - rumiai_v2 - INFO - ✅ ML dependencies validated\n2025-10-14 11:53",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T14:53:15.801193"
+    },
+    {
+      "video_id": "7543221987955477782",
+      "error": "RumiAI processing failed for 7543221987955477782 at stage rumiai_pipeline: RumiAI pipeline failed (exit code 1). Stderr: 2025-10-14 11:53:20 - rumiai_v2.core.ml_dependency_validator - INFO - ✅ All ML dependencies validated successfully\n2025-10-14 11:53:20 - rumiai_v2 - INFO - ✅ ML dependencies validated\n2025-10-14 11:53",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T14:53:21.122211"
+    },
+    {
+      "video_id": "7557359167858642199",
+      "error": "RumiAI processing failed for 7557359167858642199 at stage rumiai_pipeline: RumiAI pipeline failed (exit code 1). Stderr: 2025-10-14 11:53:25 - rumiai_v2.core.ml_dependency_validator - INFO - ✅ All ML dependencies validated successfully\n2025-10-14 11:53:25 - rumiai_v2 - INFO - ✅ ML dependencies validated\n2025-10-14 11:53",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T14:53:26.299524"
+    },
+    {
+      "video_id": "7559472722129030422",
+      "error": "RumiAI processing failed for 7559472722129030422 at stage rumiai_pipeline: RumiAI pipeline failed (exit code 1). Stderr: 2025-10-14 11:53:30 - rumiai_v2.core.ml_dependency_validator - INFO - ✅ All ML dependencies validated successfully\n2025-10-14 11:53:30 - rumiai_v2 - INFO - ✅ ML dependencies validated\n2025-10-14 11:53",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T14:53:31.636410"
+    },
+    {
+      "video_id": "7559473627578567958",
+      "error": "RumiAI processing failed for 7559473627578567958 at stage rumiai_pipeline: RumiAI pipeline failed (exit code 1). Stderr: 2025-10-14 11:53:38 - rumiai_v2.core.ml_dependency_validator - INFO - ✅ All ML dependencies validated successfully\n2025-10-14 11:53:38 - rumiai_v2 - INFO - ✅ ML dependencies validated\n2025-10-14 11:53",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T14:53:39.763052"
+    }
+  ],
+  "config": {
+    "client_id": "testy_client",
+    "analysis_type": "hashtag",
+    "target": "test_vitamin",
+    "analysis_mode": "top",
+    "selection_strategy": "contrastive",
+    "video_count": 10,
+    "date_filter": "last_90_days",
+    "report_type": "single",
+    "report_audience": "client",
+    "auto_confirm": true,
+    "run_date": "2025-10-14T14:38:32.407083Z"
+  },
+  "status": "completed",
+  "pause_reason": null,
+  "pause_timestamp": null,
+  "completion_time": "2025-10-14T14:53:39.763549"
+}

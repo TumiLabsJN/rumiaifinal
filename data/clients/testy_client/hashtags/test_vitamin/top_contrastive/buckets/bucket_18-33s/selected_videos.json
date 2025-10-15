@@ -1,0 +1,1036 @@
+{
+  "bucket": "18-33s",
+  "strategy": "contrastive",
+  "video_count": 10,
+  "selected_count": 10,
+  "top_count": 8,
+  "bottom_count": 2,
+  "videos": [
+    {
+      "id": "7544734155570105656",
+      "text": "VITAMINA TREND || ib; my page\n-\n#trendanimation #animationemem #vitaminatrend #animation #foryoupagee ",
+      "textLanguage": "en",
+      "createTime": 1756645316,
+      "createTimeISO": "2025-08-31T13:01:56.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "6876394800951804930",
+        "name": "_safiraxo2",
+        "profileUrl": "https://www.tiktok.com/@_safiraxo2",
+        "nickName": "S\u034fa\u034ff\u034fi\u034fr\u034fa\u208d\u1422.  \u032b.\u1422\u208e\u02da.\ud83c\udf80",
+        "verified": false,
+        "signature": "Indonesia \ud83c\uddf2\ud83c\udde8\nshe/her\n29-02\nINTP :D\nlink supports me\ud83d\udc47\ud83c\udffc",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-alisg-avt-0068/3e743fb6eb5dd78e75dfaca3f25ff6b6~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=555e9185&x-expires=1760619600&x-signature=SrvzrO5ECfyXYh%2FQW6Jy4Oap%2FIc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-alisg-avt-0068/3e743fb6eb5dd78e75dfaca3f25ff6b6~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=555e9185&x-expires=1760619600&x-signature=SrvzrO5ECfyXYh%2FQW6Jy4Oap%2FIc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "privateAccount": false,
+        "following": 291,
+        "friends": 0,
+        "fans": 258800,
+        "heart": 9100000,
+        "video": 59,
+        "digg": 56900
+      },
+      "musicMeta": {
+        "musicName": "VITAMINA",
+        "musicAuthor": "Jombriel & DFZM & J\u00f8tta",
+        "musicOriginal": false,
+        "musicAlbum": "VITAMINA",
+        "playUrl": "https://sf16.tiktokcdn-us.com/obj/tos-alisg-ve-2774/oUiDmdFi1A7yMJZrIUEYB7Py8YMBO0A9OzWzA",
+        "coverMediumUrl": "https://p19-common.tiktokcdn-us.com/tos-alisg-v-2774/oESLEQNTmDCuE7AZARF8BZnACtmgRByvEffq9E~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast5",
+        "originalCoverMediumUrl": "https://p19-common.tiktokcdn-us.com/tos-alisg-v-2774/oESLEQNTmDCuE7AZARF8BZnACtmgRByvEffq9E~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=81f88b70&idc=useast5",
+        "musicId": "7475144082798528529"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@_safiraxo2/video/7544734155570105656",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 720,
+        "width": 576,
+        "duration": 24,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-i-e1os8tt47a-us/d60b9fcf089e46bf9300617ff4481331~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=TPX4sMO6eIaK5v86gfwKMP1tU5s%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-i-e1os8tt47a-us/d60b9fcf089e46bf9300617ff4481331~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=TPX4sMO6eIaK5v86gfwKMP1tU5s%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 1100000,
+      "shareCount": 36700,
+      "playCount": 7900000,
+      "collectCount": 219500,
+      "commentCount": 16500,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "trendanimation"
+        },
+        {
+          "name": "animationemem"
+        },
+        {
+          "name": "vitaminatrend"
+        },
+        {
+          "name": "animation"
+        },
+        {
+          "name": "foryoupagee"
+        }
+      ],
+      "effectStickers": [],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#vitamin",
+      "searchHashtag": {
+        "views": 14000000000,
+        "name": "vitamin"
+      },
+      "duration": 24,
+      "source_hashtags": [
+        "#vitamin"
+      ],
+      "source_runs": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "7554856008615529783",
+      "text": "VITAMINA TREND | Comment if yall want the male verson too\u2764\ufe0f \n\n#CapCut #vitaminatrend #roblox #robloxtiktok #fyp ",
+      "textLanguage": "en",
+      "createTime": 1759002016,
+      "createTimeISO": "2025-09-27T19:40:16.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7519319454225368119",
+        "name": "chiisana_koneko",
+        "profileUrl": "https://www.tiktok.com/@chiisana_koneko",
+        "nickName": "Chii",
+        "verified": false,
+        "signature": "I have an obsession with catalogs avatar",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/34112b561b7fa303446dcf2648dd5e19~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=2857bc2b&x-expires=1760619600&x-signature=phhRRMkvLmwDCdJpNh82GnjxTIk%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/34112b561b7fa303446dcf2648dd5e19~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=2857bc2b&x-expires=1760619600&x-signature=phhRRMkvLmwDCdJpNh82GnjxTIk%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "privateAccount": false,
+        "following": 21,
+        "friends": 0,
+        "fans": 18100,
+        "heart": 2300000,
+        "video": 15,
+        "digg": 429
+      },
+      "musicMeta": {
+        "musicName": "original sound",
+        "musicAuthor": "Chii",
+        "musicOriginal": true,
+        "playUrl": "https://v16m.tiktokcdn-us.com/bed4e66f7ccc6e879d573cb1b191e016/68eea5bc/video/tos/useast5/tos-useast5-v-27dcd7-tx/o4kR70AkEiL4MjABBP0KYBaAbEi5p3AfwBEiDE/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=GSDrKInz7Thj985KXq8Zmo&mime_type=audio_mpeg&qs=13&rc=M2U2aG45cjs2NjMzZzU8NEBpM2U2aG45cjs2NjMzZzU8NEBmYmMvMmRzb2BhLS1kMS9zYSNmYmMvMmRzb2BhLS1kMS9zcw%3D%3D&vvpl=1&l=2025101413335550DF8D18872DB10290B4&btag=e00078000",
+        "coverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/34112b561b7fa303446dcf2648dd5e19~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=2857bc2b&x-expires=1760619600&x-signature=phhRRMkvLmwDCdJpNh82GnjxTIk%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "originalCoverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/34112b561b7fa303446dcf2648dd5e19~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=2857bc2b&x-expires=1760619600&x-signature=phhRRMkvLmwDCdJpNh82GnjxTIk%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "musicId": "7554856071563725582"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@chiisana_koneko/video/7554856008615529783",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 576,
+        "width": 768,
+        "duration": 24,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-p-0068-tx/oECoAPHsGLffkIHCQRIGpZeggk8dAqvUHkYVLj~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=tP9rUwzutEnuZvhOS5b8S1aeTUM%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-p-0068-tx/oECoAPHsGLffkIHCQRIGpZeggk8dAqvUHkYVLj~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=tP9rUwzutEnuZvhOS5b8S1aeTUM%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 1400000,
+      "shareCount": 103400,
+      "playCount": 7500000,
+      "collectCount": 153700,
+      "commentCount": 4872,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "capcut"
+        },
+        {
+          "name": "vitaminatrend"
+        },
+        {
+          "name": "roblox"
+        },
+        {
+          "name": "robloxtiktok"
+        },
+        {
+          "name": "fyp"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "263840",
+          "name": "Green Screen",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "244201114",
+          "name": "Skin Retouch by Sophie",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "2039482",
+          "name": "Natural",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "4011160",
+          "name": "PRETTY BABE",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#vitamin",
+      "searchHashtag": {
+        "views": 14000000000,
+        "name": "vitamin"
+      },
+      "duration": 24,
+      "source_hashtags": [
+        "#vitamin"
+      ],
+      "source_runs": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "7542516751473364229",
+      "text": "vitamina trend..\n#oc #animation #meme #recommendations #oc ",
+      "textLanguage": "hr",
+      "createTime": 1756129037,
+      "createTimeISO": "2025-08-25T13:37:17.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "6802147662915142661",
+        "name": "nova_lem_",
+        "profileUrl": "https://www.tiktok.com/@nova_lem_",
+        "nickName": "\u15e2",
+        "verified": false,
+        "signature": "",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p19-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f1b4193b1186509fe614ae7bd3abbeba~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=74f237c5&x-expires=1760619600&x-signature=lLpCe4%2BrZP6glOedEt6oQu6PE%2B4%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p19-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f1b4193b1186509fe614ae7bd3abbeba~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=74f237c5&x-expires=1760619600&x-signature=lLpCe4%2BrZP6glOedEt6oQu6PE%2B4%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "privateAccount": false,
+        "following": 8,
+        "friends": 0,
+        "fans": 410100,
+        "heart": 10700000,
+        "video": 20,
+        "digg": 347500
+      },
+      "musicMeta": {
+        "musicName": "\u043e\u0440\u0438\u0433\u0438\u043d\u0430\u043b\u044c\u043d\u044b\u0439 \u0437\u0432\u0443\u043a",
+        "musicAuthor": "\u15e2",
+        "musicOriginal": true,
+        "playUrl": "https://v16m.tiktokcdn-us.com/8a45d1170f4ef3e4d3686a8de36aef00/68eea5bc/video/tos/useast5/tos-useast5-v-27dcd7c799-tx/oYJBrMrCFG2De5zIAAAJiQfcUzBFYzEoQIUI8C/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=GSDrKInz7Thj985KXq8Zmo&mime_type=audio_mpeg&qs=13&rc=M3NnZ3M5cjc5NTMzNzU8M0BpM3NnZ3M5cjc5NTMzNzU8M0BpcGNyMmQ0YmphLS1kMTZzYSNpcGNyMmQ0YmphLS1kMTZzcw%3D%3D&vvpl=1&l=20251014133355858DEAB4E67782028F94&btag=e00078000",
+        "coverMediumUrl": "https://p19-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f1b4193b1186509fe614ae7bd3abbeba~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=74f237c5&x-expires=1760619600&x-signature=lLpCe4%2BrZP6glOedEt6oQu6PE%2B4%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "originalCoverMediumUrl": "https://p19-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f1b4193b1186509fe614ae7bd3abbeba~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=74f237c5&x-expires=1760619600&x-signature=lLpCe4%2BrZP6glOedEt6oQu6PE%2B4%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "musicId": "7542516777666775864"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@nova_lem_/video/7542516751473364229",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 720,
+        "width": 576,
+        "duration": 24,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-i-e1os8tt47a-us/894408ecba60458ab0a6ca875ee7ad5e~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=SnUiwV2AU49skk09MS5R1JqJ8KM%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-i-e1os8tt47a-us/894408ecba60458ab0a6ca875ee7ad5e~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=SnUiwV2AU49skk09MS5R1JqJ8KM%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 1300000,
+      "shareCount": 43500,
+      "playCount": 7100000,
+      "collectCount": 197800,
+      "commentCount": 5109,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "oc"
+        },
+        {
+          "name": "animation"
+        },
+        {
+          "name": "meme"
+        },
+        {
+          "name": "recommendations"
+        },
+        {
+          "name": "oc"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "263840",
+          "name": "Green Screen",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "244201114",
+          "name": "Skin Retouch by Sophie",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "4011160",
+          "name": "PRETTY BABE",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#vitamin",
+      "searchHashtag": {
+        "views": 14000000000,
+        "name": "vitamin"
+      },
+      "duration": 24,
+      "source_hashtags": [
+        "#vitamin"
+      ],
+      "source_runs": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "7555000203145678136",
+      "text": "Vitamina \u2764\ufe0f\u200d\ud83d\udd25\nib: @Ozzy. \n#fyp #xyzbca #vitamina #roblox #robloxfyp ",
+      "textLanguage": "es",
+      "createTime": 1759070715,
+      "createTimeISO": "2025-09-28T14:45:15.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7295094005133427718",
+        "name": "dino_zinha",
+        "profileUrl": "https://www.tiktok.com/@dino_zinha",
+        "nickName": "Dino_zinha",
+        "verified": false,
+        "signature": "Bem-vindo ao Dinoverso! \ud83e\udd96\nV\u00eddeos de roblox",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/ffef98d0ffcb7f2e05e8f4fb85dff28f~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=90cb891b&x-expires=1760619600&x-signature=8zQpIZPut5gxPZ8NAS3P2wvszEI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/ffef98d0ffcb7f2e05e8f4fb85dff28f~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=90cb891b&x-expires=1760619600&x-signature=8zQpIZPut5gxPZ8NAS3P2wvszEI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "privateAccount": false,
+        "following": 55,
+        "friends": 0,
+        "fans": 19500,
+        "heart": 1300000,
+        "video": 11,
+        "digg": 115
+      },
+      "musicMeta": {
+        "musicName": "som original",
+        "musicAuthor": "Dino_zinha",
+        "musicOriginal": true,
+        "playUrl": "https://v16m.tiktokcdn-us.com/f721529f0f613127e7c93228694d5abb/68eea5bc/video/tos/useast5/tos-useast5-v-27dcd7c799-tx/osLvCAVWAB1QRAAwOFAYPGEAilNiaEwtSUjD2/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=GSDrKInz7Thj985KXq8Zmo&mime_type=audio_mpeg&qs=13&rc=anBud2o5cmdmNjMzNzU8M0BpanBud2o5cmdmNjMzNzU8M0BuLWRrMmQ0LmBhLS1kMTZzYSNuLWRrMmQ0LmBhLS1kMTZzcw%3D%3D&vvpl=1&l=20251014133355858DEAB4E67782028F94&btag=e00078000",
+        "coverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/ffef98d0ffcb7f2e05e8f4fb85dff28f~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=90cb891b&x-expires=1760619600&x-signature=8zQpIZPut5gxPZ8NAS3P2wvszEI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "originalCoverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/ffef98d0ffcb7f2e05e8f4fb85dff28f~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=90cb891b&x-expires=1760619600&x-signature=8zQpIZPut5gxPZ8NAS3P2wvszEI%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "musicId": "7555000226118159160"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@dino_zinha/video/7555000203145678136",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 712,
+        "width": 576,
+        "duration": 24,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-p-0068/oMCy9Af5J2IAfwRDEvQ5EWFEl8APAoYKDWBMCV~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=U%2Bt4SiTPHgtbY9XB0lWcRdttgkw%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-p-0068/oMCy9Af5J2IAfwRDEvQ5EWFEl8APAoYKDWBMCV~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=U%2Bt4SiTPHgtbY9XB0lWcRdttgkw%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 1100000,
+      "shareCount": 74600,
+      "playCount": 6800000,
+      "collectCount": 127300,
+      "commentCount": 6084,
+      "mentions": [
+        "@Ozzy."
+      ],
+      "detailedMentions": [
+        {
+          "id": "7538866345879421958",
+          "name": "boobaclown",
+          "nickName": "Ozzy.",
+          "profileUrl": "https://www.tiktok.com/@7538866345879421958"
+        }
+      ],
+      "hashtags": [
+        {
+          "name": ""
+        },
+        {
+          "name": "fyp"
+        },
+        {
+          "name": "xyzbca"
+        },
+        {
+          "name": "vitamina"
+        },
+        {
+          "name": "roblox"
+        },
+        {
+          "name": "robloxfyp"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "4011160",
+          "name": "PRETTY BABE",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "263840",
+          "name": "Green Screen",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "244201114",
+          "name": "Skin Retouch by Sophie",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#vitamin",
+      "searchHashtag": {
+        "views": 14000000000,
+        "name": "vitamin"
+      },
+      "duration": 24,
+      "source_hashtags": [
+        "#vitamin",
+        "#vitamins"
+      ],
+      "source_runs": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "7556315815352470796",
+      "text": "2\u00aa vers\u00e3o #roblox #viral #vaiprofycaramba #trendingvideo #vitaminatrend ",
+      "textLanguage": "pt",
+      "createTime": 1759341883,
+      "createTimeISO": "2025-10-01T18:04:43.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7553355818348741688",
+        "name": "rnika_",
+        "profileUrl": "https://www.tiktok.com/@rnika_",
+        "nickName": "Nicka \u500b\u6027\u7684 \ud83c\udf11",
+        "verified": false,
+        "signature": "roblox player \ud83d\udc40\nnickname: Mochi1341\n\ud83d\udc8b\ud83c\udf11",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/ec4034e0238f55b06ad760436e0eaf8c~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=bac8a9a7&x-expires=1760619600&x-signature=7BupPESmqpognkrzGk6pgLDE8nQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/ec4034e0238f55b06ad760436e0eaf8c~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=bac8a9a7&x-expires=1760619600&x-signature=7BupPESmqpognkrzGk6pgLDE8nQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "privateAccount": false,
+        "following": 4,
+        "friends": 0,
+        "fans": 14500,
+        "heart": 547800,
+        "video": 4,
+        "digg": 8
+      },
+      "musicMeta": {
+        "musicName": "\u043e\u0440\u0438\u0433\u0438\u043d\u0430\u043b\u044c\u043d\u044b\u0439 \u0437\u0432\u0443\u043a",
+        "musicAuthor": "\u15e2",
+        "musicOriginal": true,
+        "playUrl": "https://v19.tiktokcdn-us.com/7c587fa1eaa52dc44e30aec5c7052ce9/68eea5ac/video/tos/useast5/tos-useast5-v-27dcd7c799-tx/oYJBrMrCFG2De5zIAAAJiQfcUzBFYzEoQIUI8C/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=GSDrKInz7ThbV85KXq8Zmo&mime_type=audio_mpeg&qs=13&rc=M3NnZ3M5cjc5NTMzNzU8M0BpM3NnZ3M5cjc5NTMzNzU8M0BpcGNyMmQ0YmphLS1kMTZzYSNpcGNyMmQ0YmphLS1kMTZzcw%3D%3D&vvpl=1&l=20251014133339F1EBC188D700A9028F57&btag=e00078000",
+        "coverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f1b4193b1186509fe614ae7bd3abbeba~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=2e5e4441&x-expires=1760619600&x-signature=qu3yJRLm6UCn6UVt4ek%2FS1bJ8%2F0%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "originalCoverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f1b4193b1186509fe614ae7bd3abbeba~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=2e5e4441&x-expires=1760619600&x-signature=qu3yJRLm6UCn6UVt4ek%2FS1bJ8%2F0%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "musicId": "7542516777666775864"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@rnika_/video/7556315815352470796",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 576,
+        "width": 768,
+        "duration": 24,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-p-0068/okTdjRhfuf4IIbokCAQiwTnezyrgNLIGB2SCst~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=xws82u1%2FoU5YZwbZuZl%2FJQGbjZU%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-p-0068/okTdjRhfuf4IIbokCAQiwTnezyrgNLIGB2SCst~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=xws82u1%2FoU5YZwbZuZl%2FJQGbjZU%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 377400,
+      "shareCount": 19800,
+      "playCount": 4400000,
+      "collectCount": 67300,
+      "commentCount": 6146,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "roblox"
+        },
+        {
+          "name": "viral"
+        },
+        {
+          "name": "vaiprofycaramba"
+        },
+        {
+          "name": "trendingvideo"
+        },
+        {
+          "name": "vitaminatrend"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "5258779430662",
+          "name": "Light Makeup",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#vitamin",
+      "searchHashtag": {
+        "views": 14000000000,
+        "name": "vitamin"
+      },
+      "duration": 24,
+      "source_hashtags": [
+        "#vitamin"
+      ],
+      "source_runs": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "7552578332051705106",
+      "text": "#roblox \u2014 vitamina trend :p \n\n#fyp #foryoupage #robloxfyp #robloxtrend ",
+      "textLanguage": "hr",
+      "createTime": 1758471681,
+      "createTimeISO": "2025-09-21T16:21:21.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7447770295626597392",
+        "name": "f0olishe",
+        "profileUrl": "https://www.tiktok.com/@f0olishe",
+        "nickName": "\u1dbb \ud835\uddd3 \ud803\udc01",
+        "verified": false,
+        "signature": "hi !\ndm me 4paid edit or anyt :D\neng  |  id  |  my",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-alisg-avt-0068/713f8b75abf7f7b3551f98fbb477bdfd~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=07f63211&x-expires=1760619600&x-signature=DCcazhQeCXQNTkP8o5VGs5XHJvY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-alisg-avt-0068/713f8b75abf7f7b3551f98fbb477bdfd~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=07f63211&x-expires=1760619600&x-signature=DCcazhQeCXQNTkP8o5VGs5XHJvY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "privateAccount": false,
+        "following": 12,
+        "friends": 0,
+        "fans": 19100,
+        "heart": 1100000,
+        "video": 10,
+        "digg": 450
+      },
+      "musicMeta": {
+        "musicName": "\u043e\u0440\u0438\u0433\u0438\u043d\u0430\u043b\u044c\u043d\u044b\u0439 \u0437\u0432\u0443\u043a",
+        "musicAuthor": "\u15e2",
+        "musicOriginal": true,
+        "playUrl": "https://v16m.tiktokcdn-us.com/a7144a5e841ea7acc0ebaa0611083b14/68eea5be/video/tos/useast5/tos-useast5-v-27dcd7c799-tx/oYJBrMrCFG2De5zIAAAJiQfcUzBFYzEoQIUI8C/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=GSDrKInz7ThP985KXq8Zmo&mime_type=audio_mpeg&qs=13&rc=M3NnZ3M5cjc5NTMzNzU8M0BpM3NnZ3M5cjc5NTMzNzU8M0BpcGNyMmQ0YmphLS1kMTZzYSNpcGNyMmQ0YmphLS1kMTZzcw%3D%3D&vvpl=1&l=2025101413335721859223005FEA030B57&btag=e00078000",
+        "coverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f1b4193b1186509fe614ae7bd3abbeba~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=2e5e4441&x-expires=1760619600&x-signature=qu3yJRLm6UCn6UVt4ek%2FS1bJ8%2F0%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "originalCoverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f1b4193b1186509fe614ae7bd3abbeba~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=2e5e4441&x-expires=1760619600&x-signature=qu3yJRLm6UCn6UVt4ek%2FS1bJ8%2F0%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "musicId": "7542516777666775864"
+      },
+      "locationMeta": {
+        "address": "Shibuya, Tokyo, Japan",
+        "city": "Shibuya",
+        "cityCode": "1852582",
+        "countryCode": "1861060",
+        "locationName": "\u6e0b\u8c37 \u9580",
+        "locationId": "20319181088910055"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@f0olishe/video/7552578332051705106",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 576,
+        "width": 768,
+        "duration": 24,
+        "coverUrl": "https://p19-common-sign.tiktokcdn-us.com/tos-alisg-p-0037/o0fG9uf4AAAiAN7hAIL2gSgGfezJDfSIMiSGgQ~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=S7WVNV4RcY4uQOMFzfk4EBHwl2U%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+        "originalCoverUrl": "https://p19-common-sign.tiktokcdn-us.com/tos-alisg-p-0037/o0fG9uf4AAAiAN7hAIL2gSgGfezJDfSIMiSGgQ~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=S7WVNV4RcY4uQOMFzfk4EBHwl2U%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 472300,
+      "shareCount": 29300,
+      "playCount": 4400000,
+      "collectCount": 71200,
+      "commentCount": 3472,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "roblox"
+        },
+        {
+          "name": "fyp"
+        },
+        {
+          "name": "foryoupage"
+        },
+        {
+          "name": "robloxfyp"
+        },
+        {
+          "name": "robloxtrend"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "244201114",
+          "name": "Skin Retouch by Sophie",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "263840",
+          "name": "Green Screen",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#vitamin",
+      "searchHashtag": {
+        "views": 14000000000,
+        "name": "vitamin"
+      },
+      "duration": 24,
+      "source_hashtags": [
+        "#vitamin"
+      ],
+      "source_runs": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "7543221987955477782",
+      "text": "\ud83d\udc8a]| VITAMINA TREND // FT: @1kkieran // y does alight motion gotta make the art chopped.\n#0_zen_0 #gachacommunity #gachalife #gachavid #gachafyp ",
+      "textLanguage": "en",
+      "createTime": 1756293235,
+      "createTimeISO": "2025-08-27T11:13:55.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7400482217116664865",
+        "name": "0.zen.0",
+        "profileUrl": "https://www.tiktok.com/@0.zen.0",
+        "nickName": "\u2020  \u2128\ud835\udd22\ud835\udd2b",
+        "verified": false,
+        "signature": "\" Driving with my darling \"\n<< @1kkieran \n@Kari \u2b50\ufe0f mw\nWeekly uploads | Only acc.\n DC Serv",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/e7071f8ae6af08e8e5c74e5ed438cf7d~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=19085ae0&x-expires=1760619600&x-signature=43tdwuYKwO4rBP%2BWcq3VkyeOYac%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/e7071f8ae6af08e8e5c74e5ed438cf7d~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=19085ae0&x-expires=1760619600&x-signature=43tdwuYKwO4rBP%2BWcq3VkyeOYac%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "privateAccount": false,
+        "following": 110,
+        "friends": 0,
+        "fans": 83700,
+        "heart": 2400000,
+        "video": 43,
+        "digg": 3689
+      },
+      "musicMeta": {
+        "musicName": "original sound",
+        "musicAuthor": "\u2020  \u2128\ud835\udd22\ud835\udd2b",
+        "musicOriginal": true,
+        "playUrl": "https://v19.tiktokcdn-us.com/be46f3d208762921236c80e8669c6d87/68eea5ac/video/tos/no1a/tos-no1a-v-2370-no/oYEJfTEuqCVZA3DXBgfgFTCkAhEjHAW1Furo6U/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=GSDrKInz7ThbV85KXq8Zmo&mime_type=audio_mpeg&qs=13&rc=MzZ3dW85cndoNTMzbzU8NUBpMzZ3dW85cndoNTMzbzU8NUBkYzQxMmRjZGthLS1kMTFzYSNkYzQxMmRjZGthLS1kMTFzcw%3D%3D&vvpl=1&l=20251014133339F1EBC188D700A9028F57&btag=e00078000",
+        "coverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/e7071f8ae6af08e8e5c74e5ed438cf7d~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=19085ae0&x-expires=1760619600&x-signature=43tdwuYKwO4rBP%2BWcq3VkyeOYac%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "originalCoverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/e7071f8ae6af08e8e5c74e5ed438cf7d~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=19085ae0&x-expires=1760619600&x-signature=43tdwuYKwO4rBP%2BWcq3VkyeOYac%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast8",
+        "musicId": "7543221972201802498"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@0.zen.0/video/7543221987955477782",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 576,
+        "width": 576,
+        "duration": 24,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-no1a-p-0037-no/oYBp3CBEdHo7KcAEmAiiyAua2kI9vRKAwBYO6~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=G8CLM%2BvBeoNBkwnVrgXkgJbutMQ%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-no1a-p-0037-no/oYBp3CBEdHo7KcAEmAiiyAua2kI9vRKAwBYO6~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=G8CLM%2BvBeoNBkwnVrgXkgJbutMQ%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 333300,
+      "shareCount": 13700,
+      "playCount": 2000000,
+      "collectCount": 55100,
+      "commentCount": 2523,
+      "mentions": [
+        "@1kkieran"
+      ],
+      "detailedMentions": [
+        {
+          "id": "7526458064939074573",
+          "name": "1kkieran",
+          "nickName": "1kkieran",
+          "profileUrl": "https://www.tiktok.com/@7526458064939074573"
+        }
+      ],
+      "hashtags": [
+        {
+          "name": ""
+        },
+        {
+          "name": "0_zen_0"
+        },
+        {
+          "name": "gachacommunity"
+        },
+        {
+          "name": "gachalife"
+        },
+        {
+          "name": "gachavid"
+        },
+        {
+          "name": "gachafyp"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "5258779430662",
+          "name": "Light Makeup",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#vitamin",
+      "searchHashtag": {
+        "views": 14000000000,
+        "name": "vitamin"
+      },
+      "duration": 24,
+      "source_hashtags": [
+        "#vitamin",
+        "#vitamins"
+      ],
+      "source_runs": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "7557359167858642199",
+      "text": "vitamina #fyp #foryoupage #vitamina #roblox #trend #robloxtrend",
+      "textLanguage": "hr",
+      "createTime": 1759584804,
+      "createTimeISO": "2025-10-04T13:33:24.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "7248944768742655003",
+        "name": "_r1nex_",
+        "profileUrl": "https://www.tiktok.com/@_r1nex_",
+        "nickName": "\ud835\udc5f\ud835\udc56\ud835\udc5b\ud835\udc65",
+        "verified": false,
+        "signature": "Acc ran by two idiots <3\n- @Akami and @\u25cd\u02c3\u1d55\u02c2\u25cd \n SOON CELEBRATING!!\nTYSM FOR 1K MIKULINGSSSSSS",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/b5828e129baa932610d76cb8db4c6579~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=f0b5c405&x-expires=1760619600&x-signature=iIWI3cWsahSLWQBusOGgz0%2BUuwY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/b5828e129baa932610d76cb8db4c6579~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=f0b5c405&x-expires=1760619600&x-signature=iIWI3cWsahSLWQBusOGgz0%2BUuwY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "privateAccount": false,
+        "following": 13,
+        "friends": 0,
+        "fans": 1832,
+        "heart": 143100,
+        "video": 17,
+        "digg": 2311
+      },
+      "musicMeta": {
+        "musicName": "original sound - _r1nex_",
+        "musicAuthor": "\ud835\udc5f\ud835\udc56\ud835\udc5b\ud835\udc65",
+        "musicOriginal": true,
+        "playUrl": "https://v16m.tiktokcdn-us.com/6b6f3205d19c836cd0a5b2062f333149/68eea5aa/video/tos/no1a/tos-no1a-v-2370-no/o8o4XtoIM4S3B3AUIlHhXFCuGJFimkfIXgfDIE/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ft=GSDrKInz7Th3V85KXq8Zmo&mime_type=audio_mpeg&qs=6&rc=aGlnNTlpMzgzaTUzaGg0N0Bpajt5NHA5cjxsNjMzbzU8NUAzYjMwYy82XmAxYi1jYGFgYSNvYzBkMmRjMWRhLS1kMTFzcw%3D%3D&vvpl=1&l=202510141333376081EB9BA90DA9029634&btag=e000b8000",
+        "coverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/b5828e129baa932610d76cb8db4c6579~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=f0b5c405&x-expires=1760619600&x-signature=iIWI3cWsahSLWQBusOGgz0%2BUuwY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "originalCoverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/b5828e129baa932610d76cb8db4c6579~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=f0b5c405&x-expires=1760619600&x-signature=iIWI3cWsahSLWQBusOGgz0%2BUuwY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "musicId": "7557359182098287382"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@_r1nex_/video/7557359167858642199",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 576,
+        "width": 1024,
+        "duration": 25,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-no1a-p-0037-no/ookE9wAHVLf4AFIApRAjr8AAPIImeLtGQCQfHT~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=6p2PstKEBQiXRgmt5TUJodiaKV8%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-no1a-p-0037-no/ookE9wAHVLf4AFIApRAjr8AAPIImeLtGQCQfHT~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=6p2PstKEBQiXRgmt5TUJodiaKV8%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 142200,
+      "shareCount": 5991,
+      "playCount": 1300000,
+      "collectCount": 14400,
+      "commentCount": 1176,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "fyp"
+        },
+        {
+          "name": "foryoupage"
+        },
+        {
+          "name": "vitamina"
+        },
+        {
+          "name": "roblox"
+        },
+        {
+          "name": "trend"
+        },
+        {
+          "name": "robloxtrend"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "298447639053",
+          "name": "\ud83d\udc95\u2764\ufe0f",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#vitamin",
+      "searchHashtag": {
+        "views": 14000000000,
+        "name": "vitamin"
+      },
+      "duration": 25,
+      "source_hashtags": [
+        "#vitamin",
+        "#vitamins"
+      ],
+      "source_runs": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "7559472722129030422",
+      "text": "#\u0412\u044d\u0442\u043e\u0442\u0414\u0435\u043d\u044c ",
+      "textLanguage": "un",
+      "createTime": 1760076911,
+      "createTimeISO": "2025-10-10T06:15:11.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "6843312872858174469",
+        "name": "viktors1976",
+        "profileUrl": "https://www.tiktok.com/@viktors1976",
+        "nickName": "VitaminS",
+        "verified": false,
+        "signature": "\ud83d\udc4b \ud83c\uddf5\ud83c\uddfc \ud83c\uddf7\ud83c\uddfa  \ud83c\udde9\ud83c\uddea\ud83d\ude0e\n\u0411\u0443\u0434\u043d\u0438\u0435 \u0434\u043d\u0438 \u044d\u043b\u0435\u043a\u0442\u0440\u0438\u043a\u0430.\n\u0411\u0443\u0434\u0443 \u0440\u0430\u0434 \u0437\u0430 \u043f\u043e\u0434\u043f\u0438\u0441\u043a\u0443 \ud83d\ude4f\ud83c\udffc\u0437\u0430\u0440\u0430\u043d\u0435\u0435.",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f0b12fb51938c1d5a9c65796e7324d10~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=f631023e&x-expires=1760619600&x-signature=ifQlom63BqmSNalJfIVqupsx4iQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f0b12fb51938c1d5a9c65796e7324d10~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=f631023e&x-expires=1760619600&x-signature=ifQlom63BqmSNalJfIVqupsx4iQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "privateAccount": false,
+        "following": 4893,
+        "friends": 0,
+        "fans": 12400,
+        "heart": 722300,
+        "video": 4120,
+        "digg": 102100
+      },
+      "musicMeta": {
+        "musicName": "\u043e\u0440\u0438\u0433\u0438\u043d\u0430\u043b\u044c\u043d\u044b\u0439 \u0437\u0432\u0443\u043a",
+        "musicAuthor": "VitaminS",
+        "musicOriginal": true,
+        "playUrl": "https://v16m.tiktokcdn-us.com/0a9289c6d1527bc24b07f4fc8db36330/68eea7a7/video/tos/no1a/tos-no1a-v-2370-no/o0oDpAEKEEOBHyGf4DEAzrB0Al3iiC4FAwAIpd/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=GSDrKInz7Th3A85KXq8Zmo&mime_type=audio_mpeg&qs=13&rc=ajxmZnI5cnZkNjMzbzU8NUBpajxmZnI5cnZkNjMzbzU8NUBvNHE0MmRjNWhhLS1kMTFzYSNvNHE0MmRjNWhhLS1kMTFzcw%3D%3D&vvpl=1&l=20251014134208B480BC3C8A17D8032605&btag=e00078000",
+        "coverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f0b12fb51938c1d5a9c65796e7324d10~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=f631023e&x-expires=1760619600&x-signature=ifQlom63BqmSNalJfIVqupsx4iQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "originalCoverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f0b12fb51938c1d5a9c65796e7324d10~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=f631023e&x-expires=1760619600&x-signature=ifQlom63BqmSNalJfIVqupsx4iQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "musicId": "7559472719666924291"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@viktors1976/video/7559472722129030422",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1048,
+        "width": 576,
+        "duration": 23,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-no1a-p-0037-no/oofrK5EQIFgor56fspFkozv22GR4tEA7DBKRAx~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=jBypzO237jbPlakI1nXbrjrCiPw%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-no1a-p-0037-no/oofrK5EQIFgor56fspFkozv22GR4tEA7DBKRAx~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=jBypzO237jbPlakI1nXbrjrCiPw%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 24,
+      "shareCount": 1,
+      "playCount": 276,
+      "collectCount": 1,
+      "commentCount": 3,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "\u0432\u044d\u0442\u043e\u0442\u0434\u0435\u043d\u044c"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "4011160",
+          "name": "PRETTY BABE",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#vitamins",
+      "searchHashtag": {
+        "views": 6600000000,
+        "name": "vitamins"
+      },
+      "duration": 23,
+      "source_hashtags": [
+        "#vitamins"
+      ],
+      "source_runs": [
+        1
+      ]
+    },
+    {
+      "id": "7559473627578567958",
+      "text": "#\u0412\u044d\u0442\u043e\u0442\u0414\u0435\u043d\u044c ",
+      "textLanguage": "un",
+      "createTime": 1760077120,
+      "createTimeISO": "2025-10-10T06:18:40.000Z",
+      "isAd": false,
+      "authorMeta": {
+        "id": "6843312872858174469",
+        "name": "viktors1976",
+        "profileUrl": "https://www.tiktok.com/@viktors1976",
+        "nickName": "VitaminS",
+        "verified": false,
+        "signature": "\ud83d\udc4b \ud83c\uddf5\ud83c\uddfc \ud83c\uddf7\ud83c\uddfa  \ud83c\udde9\ud83c\uddea\ud83d\ude0e\n\u0411\u0443\u0434\u043d\u0438\u0435 \u0434\u043d\u0438 \u044d\u043b\u0435\u043a\u0442\u0440\u0438\u043a\u0430.\n\u0411\u0443\u0434\u0443 \u0440\u0430\u0434 \u0437\u0430 \u043f\u043e\u0434\u043f\u0438\u0441\u043a\u0443 \ud83d\ude4f\ud83c\udffc\u0437\u0430\u0440\u0430\u043d\u0435\u0435.",
+        "bioLink": null,
+        "originalAvatarUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f0b12fb51938c1d5a9c65796e7324d10~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=f631023e&x-expires=1760619600&x-signature=ifQlom63BqmSNalJfIVqupsx4iQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "avatar": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f0b12fb51938c1d5a9c65796e7324d10~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=f631023e&x-expires=1760619600&x-signature=ifQlom63BqmSNalJfIVqupsx4iQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "privateAccount": false,
+        "following": 4893,
+        "friends": 0,
+        "fans": 12400,
+        "heart": 722300,
+        "video": 4120,
+        "digg": 102100
+      },
+      "musicMeta": {
+        "musicName": "\u043e\u0440\u0438\u0433\u0438\u043d\u0430\u043b\u044c\u043d\u044b\u0439 \u0437\u0432\u0443\u043a",
+        "musicAuthor": "VitaminS",
+        "musicOriginal": true,
+        "playUrl": "https://v16m.tiktokcdn-us.com/bc73d48394af8cd2c521863f70fca6aa/68eea7a6/video/tos/no1a/tos-no1a-v-2370-no/o0UoA0AD4LWhEDIAfRaLToAAqIEOeLfGEopUVm/?a=1233&bti=ODszNWYuMDE6&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=250&bt=125&ds=5&ft=GSDrKInz7ThnA85KXq8Zmo&mime_type=audio_mpeg&qs=13&rc=anl4M3A5cmtkNjMzbzU8NUBpanl4M3A5cmtkNjMzbzU8NUBkai5rMmRjXmhhLS1kMTFzYSNkai5rMmRjXmhhLS1kMTFzcw%3D%3D&vvpl=1&l=202510141342061E9313FE41CD2303243A&btag=e00078000",
+        "coverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f0b12fb51938c1d5a9c65796e7324d10~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=f631023e&x-expires=1760619600&x-signature=ifQlom63BqmSNalJfIVqupsx4iQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "originalCoverMediumUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/f0b12fb51938c1d5a9c65796e7324d10~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=f631023e&x-expires=1760619600&x-signature=ifQlom63BqmSNalJfIVqupsx4iQ%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+        "musicId": "7559473604661775126"
+      },
+      "webVideoUrl": "https://www.tiktok.com/@viktors1976/video/7559473627578567958",
+      "mediaUrls": [],
+      "videoMeta": {
+        "height": 1002,
+        "width": 576,
+        "duration": 24,
+        "coverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-no1a-p-0037-no/ooiKU3o0dA4xCYdAi3mF3IpAyBofIJIFCGTwEB~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=RJfbTuk7Xcy7bwxr1E3urGlCUN4%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+        "originalCoverUrl": "https://p16-common-sign.tiktokcdn-us.com/tos-no1a-p-0037-no/ooiKU3o0dA4xCYdAi3mF3IpAyBofIJIFCGTwEB~tplv-tiktokx-origin.image?dr=9636&x-expires=1760619600&x-signature=RJfbTuk7Xcy7bwxr1E3urGlCUN4%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+        "definition": "540p",
+        "format": "mp4"
+      },
+      "diggCount": 17,
+      "shareCount": 2,
+      "playCount": 251,
+      "collectCount": 1,
+      "commentCount": 3,
+      "mentions": [],
+      "detailedMentions": [],
+      "hashtags": [
+        {
+          "name": "\u0432\u044d\u0442\u043e\u0442\u0434\u0435\u043d\u044c"
+        }
+      ],
+      "effectStickers": [
+        {
+          "ID": "4011160",
+          "name": "PRETTY BABE",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "312341",
+          "name": "Green Screen",
+          "stickerStats": {
+            "useCount": 0
+          }
+        },
+        {
+          "ID": "1669749182",
+          "name": "Soft Shine",
+          "stickerStats": {
+            "useCount": 0
+          }
+        }
+      ],
+      "isSlideshow": false,
+      "isPinned": false,
+      "isSponsored": false,
+      "input": "#vitamins",
+      "searchHashtag": {
+        "views": 6600000000,
+        "name": "vitamins"
+      },
+      "duration": 24,
+      "source_hashtags": [
+        "#vitamins"
+      ],
+      "source_runs": [
+        1
+      ]
+    }
+  ],
+  "selection_date": "2025-10-14T13:55:12.320300+00:00"
+}

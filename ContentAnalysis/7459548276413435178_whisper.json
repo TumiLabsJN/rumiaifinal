@@ -1,0 +1,1611 @@
+{
+  "text": "It's gluten-free day today, so I'm sharing a full day of eating completely gluten-free while I explain how this diet transformed my life. I was diagnosed with hypothyroidism at 10 years old, but unfortunately didn't realize it was Hashimoto's until 15 years later. And despite being on medication for 15 years, my condition worsened. I was always tired and flamed and overweight despite following a healthy diet. As a dietitian, I knew food had to be playing a role in my thyroid function, and after a ton of research, I went completely gluten-free. And the results were immediate. My TSH dropped from 18 to 2 in 6 weeks, my antibody dropped from over 1000 to just 2, and I dropped 15 pounds in 2 months. Lutin can have a negative impact on the GI tract, even in those without celiac disease. And the symptoms of sensitivity are more subtle, like waking, inflammation, mood swings, autoimmunity, so if this sounds like you, it might be time to go gluten-free. But if this sounds overwhelming, I get it. That's why I've created gluten-free plans using evidence-based strategies to decrease inflammation, support your metabolism, and get right to seeing results. Owen Gloomfree has been life-changing for me and it could be for you too. [Music]",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 3.44,
+      "text": "It's gluten-free day today, so I'm sharing a full day of eating completely gluten-free",
+      "words": [
+        {
+          "word": "It",
+          "start": 0.07,
+          "end": 0.07,
+          "confidence": 0.797386
+        },
+        {
+          "word": "'s",
+          "start": 0.14,
+          "end": 0.14,
+          "confidence": 0.98638
+        },
+        {
+          "word": "gluten",
+          "start": 0.16,
+          "end": 0.35,
+          "confidence": 0.878818
+        },
+        {
+          "word": "free",
+          "start": 0.46,
+          "end": 0.63,
+          "confidence": 0.995648
+        },
+        {
+          "word": "day",
+          "start": 0.63,
+          "end": 0.72,
+          "confidence": 0.907791
+        },
+        {
+          "word": "today",
+          "start": 0.77,
+          "end": 1.0,
+          "confidence": 0.974115
+        },
+        {
+          "word": "so",
+          "start": 1.12,
+          "end": 1.2,
+          "confidence": 0.943482
+        },
+        {
+          "word": "I",
+          "start": 1.2,
+          "end": 1.24,
+          "confidence": 0.983667
+        },
+        {
+          "word": "'m",
+          "start": 1.3,
+          "end": 1.35,
+          "confidence": 0.989553
+        },
+        {
+          "word": "sharing",
+          "start": 1.35,
+          "end": 1.71,
+          "confidence": 0.977083
+        },
+        {
+          "word": "a",
+          "start": 1.71,
+          "end": 1.75,
+          "confidence": 0.985139
+        },
+        {
+          "word": "full",
+          "start": 1.85,
+          "end": 1.97,
+          "confidence": 0.938768
+        },
+        {
+          "word": "day",
+          "start": 1.97,
+          "end": 2.15,
+          "confidence": 0.938283
+        },
+        {
+          "word": "of",
+          "start": 2.19,
+          "end": 2.2,
+          "confidence": 0.696429
+        },
+        {
+          "word": "eating",
+          "start": 2.26,
+          "end": 2.48,
+          "confidence": 0.961461
+        },
+        {
+          "word": "completely",
+          "start": 2.48,
+          "end": 2.93,
+          "confidence": 0.894182
+        },
+        {
+          "word": "gluten",
+          "start": 2.93,
+          "end": 3.2,
+          "confidence": 0.981205
+        },
+        {
+          "word": "free",
+          "start": 3.24,
+          "end": 3.44,
+          "confidence": 0.996003
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "start": 3.44,
+      "end": 5.68,
+      "text": "while I explain how this diet transformed my life.",
+      "words": [
+        {
+          "word": "while",
+          "start": 3.44,
+          "end": 3.7,
+          "confidence": 0.992309
+        },
+        {
+          "word": "I",
+          "start": 3.7,
+          "end": 3.72,
+          "confidence": 0.995725
+        },
+        {
+          "word": "explain",
+          "start": 3.79,
+          "end": 4.02,
+          "confidence": 0.934007
+        },
+        {
+          "word": "how",
+          "start": 4.12,
+          "end": 4.28,
+          "confidence": 0.997208
+        },
+        {
+          "word": "this",
+          "start": 4.28,
+          "end": 4.47,
+          "confidence": 0.995642
+        },
+        {
+          "word": "diet",
+          "start": 4.52,
+          "end": 4.7,
+          "confidence": 0.999153
+        },
+        {
+          "word": "transformed",
+          "start": 4.7,
+          "end": 5.28,
+          "confidence": 0.971602
+        },
+        {
+          "word": "my",
+          "start": 5.28,
+          "end": 5.38,
+          "confidence": 0.997828
+        },
+        {
+          "word": "life",
+          "start": 5.38,
+          "end": 5.63,
+          "confidence": 0.983858
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "start": 5.68,
+      "end": 9.6,
+      "text": "I was diagnosed with hypothyroidism at 10 years old, but unfortunately didn't realize it was",
+      "words": [
+        {
+          "word": "I",
+          "start": 5.69,
+          "end": 5.73,
+          "confidence": 0.998662
+        },
+        {
+          "word": "was",
+          "start": 5.73,
+          "end": 5.88,
+          "confidence": 0.994806
+        },
+        {
+          "word": "diagnosed",
+          "start": 5.88,
+          "end": 6.29,
+          "confidence": 0.999781
+        },
+        {
+          "word": "with",
+          "start": 6.33,
+          "end": 6.53,
+          "confidence": 0.999615
+        },
+        {
+          "word": "hyp",
+          "start": 6.53,
+          "end": 6.67,
+          "confidence": 0.742596
+        },
+        {
+          "word": "othy",
+          "start": 6.72,
+          "end": 6.88,
+          "confidence": 0.990236
+        },
+        {
+          "word": "roid",
+          "start": 6.88,
+          "end": 7.05,
+          "confidence": 0.987088
+        },
+        {
+          "word": "ism",
+          "start": 7.11,
+          "end": 7.23,
+          "confidence": 0.9998
+        },
+        {
+          "word": "at",
+          "start": 7.23,
+          "end": 7.33,
+          "confidence": 0.986775
+        },
+        {
+          "word": "10",
+          "start": 7.33,
+          "end": 7.63,
+          "confidence": 0.86664
+        },
+        {
+          "word": "years",
+          "start": 7.63,
+          "end": 7.87,
+          "confidence": 0.979234
+        },
+        {
+          "word": "old",
+          "start": 7.89,
+          "end": 8.07,
+          "confidence": 0.985988
+        },
+        {
+          "word": "but",
+          "start": 8.16,
+          "end": 8.29,
+          "confidence": 0.921317
+        },
+        {
+          "word": "unfortunately",
+          "start": 8.29,
+          "end": 8.88,
+          "confidence": 0.952312
+        },
+        {
+          "word": "didn",
+          "start": 8.88,
+          "end": 9.02,
+          "confidence": 0.49013
+        },
+        {
+          "word": "'t",
+          "start": 9.02,
+          "end": 9.09,
+          "confidence": 0.999634
+        },
+        {
+          "word": "realize",
+          "start": 9.09,
+          "end": 9.36,
+          "confidence": 0.885441
+        },
+        {
+          "word": "it",
+          "start": 9.36,
+          "end": 9.44,
+          "confidence": 0.678663
+        },
+        {
+          "word": "was",
+          "start": 9.44,
+          "end": 9.58,
+          "confidence": 0.644551
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "start": 9.6,
+      "end": 11.88,
+      "text": "Hashimoto's until 15 years later.",
+      "words": [
+        {
+          "word": "Hash",
+          "start": 9.63,
+          "end": 9.85,
+          "confidence": 0.656081
+        },
+        {
+          "word": "imoto",
+          "start": 9.88,
+          "end": 10.18,
+          "confidence": 0.99193
+        },
+        {
+          "word": "'s",
+          "start": 10.18,
+          "end": 10.28,
+          "confidence": 0.997973
+        },
+        {
+          "word": "until",
+          "start": 10.3,
+          "end": 10.59,
+          "confidence": 0.98621
+        },
+        {
+          "word": "15",
+          "start": 10.69,
+          "end": 11.02,
+          "confidence": 0.971969
+        },
+        {
+          "word": "years",
+          "start": 11.02,
+          "end": 11.34,
+          "confidence": 0.995957
+        },
+        {
+          "word": "later",
+          "start": 11.34,
+          "end": 11.59,
+          "confidence": 0.996265
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "start": 11.88,
+      "end": 15.0,
+      "text": "And despite being on medication for 15 years, my condition worsened.",
+      "words": [
+        {
+          "word": "And",
+          "start": 11.88,
+          "end": 11.99,
+          "confidence": 0.988188
+        },
+        {
+          "word": "despite",
+          "start": 12.13,
+          "end": 12.35,
+          "confidence": 0.982939
+        },
+        {
+          "word": "being",
+          "start": 12.35,
+          "end": 12.59,
+          "confidence": 0.998422
+        },
+        {
+          "word": "on",
+          "start": 12.59,
+          "end": 12.68,
+          "confidence": 0.992998
+        },
+        {
+          "word": "medication",
+          "start": 12.68,
+          "end": 13.09,
+          "confidence": 0.992949
+        },
+        {
+          "word": "for",
+          "start": 13.16,
+          "end": 13.23,
+          "confidence": 0.995402
+        },
+        {
+          "word": "15",
+          "start": 13.31,
+          "end": 13.57,
+          "confidence": 0.987136
+        },
+        {
+          "word": "years",
+          "start": 13.57,
+          "end": 13.81,
+          "confidence": 0.990478
+        },
+        {
+          "word": "my",
+          "start": 13.9,
+          "end": 13.99,
+          "confidence": 0.993593
+        },
+        {
+          "word": "condition",
+          "start": 13.99,
+          "end": 14.42,
+          "confidence": 0.9964
+        },
+        {
+          "word": "wors",
+          "start": 14.42,
+          "end": 14.61,
+          "confidence": 0.986756
+        },
+        {
+          "word": "ened",
+          "start": 14.61,
+          "end": 14.79,
+          "confidence": 0.998127
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "start": 15.0,
+      "end": 18.6,
+      "text": "I was always tired and flamed and overweight despite following a healthy diet.",
+      "words": [
+        {
+          "word": "I",
+          "start": 15.05,
+          "end": 15.05,
+          "confidence": 0.99891
+        },
+        {
+          "word": "was",
+          "start": 15.06,
+          "end": 15.2,
+          "confidence": 0.998597
+        },
+        {
+          "word": "always",
+          "start": 15.2,
+          "end": 15.5,
+          "confidence": 0.99464
+        },
+        {
+          "word": "tired",
+          "start": 15.58,
+          "end": 15.77,
+          "confidence": 0.996079
+        },
+        {
+          "word": "and",
+          "start": 15.77,
+          "end": 15.92,
+          "confidence": 0.937058
+        },
+        {
+          "word": "fl",
+          "start": 15.92,
+          "end": 16.02,
+          "confidence": 0.485267
+        },
+        {
+          "word": "amed",
+          "start": 16.02,
+          "end": 16.23,
+          "confidence": 0.98532
+        },
+        {
+          "word": "and",
+          "start": 16.23,
+          "end": 16.38,
+          "confidence": 0.937952
+        },
+        {
+          "word": "overweight",
+          "start": 16.38,
+          "end": 16.9,
+          "confidence": 0.995296
+        },
+        {
+          "word": "despite",
+          "start": 16.9,
+          "end": 17.27,
+          "confidence": 0.562425
+        },
+        {
+          "word": "following",
+          "start": 17.27,
+          "end": 17.74,
+          "confidence": 0.989953
+        },
+        {
+          "word": "a",
+          "start": 17.74,
+          "end": 17.79,
+          "confidence": 0.996158
+        },
+        {
+          "word": "healthy",
+          "start": 17.79,
+          "end": 18.13,
+          "confidence": 0.998262
+        },
+        {
+          "word": "diet",
+          "start": 18.2,
+          "end": 18.37,
+          "confidence": 0.999847
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "start": 18.6,
+      "end": 22.14,
+      "text": "As a dietitian, I knew food had to be playing a role in my thyroid function, and after a",
+      "words": [
+        {
+          "word": "As",
+          "start": 18.6,
+          "end": 18.69,
+          "confidence": 0.99775
+        },
+        {
+          "word": "a",
+          "start": 18.69,
+          "end": 18.73,
+          "confidence": 0.936122
+        },
+        {
+          "word": "diet",
+          "start": 18.73,
+          "end": 18.91,
+          "confidence": 0.873901
+        },
+        {
+          "word": "it",
+          "start": 18.91,
+          "end": 19.0,
+          "confidence": 0.931822
+        },
+        {
+          "word": "ian",
+          "start": 19.0,
+          "end": 19.14,
+          "confidence": 0.998007
+        },
+        {
+          "word": "I",
+          "start": 19.23,
+          "end": 19.27,
+          "confidence": 0.997543
+        },
+        {
+          "word": "knew",
+          "start": 19.27,
+          "end": 19.45,
+          "confidence": 0.995919
+        },
+        {
+          "word": "food",
+          "start": 19.45,
+          "end": 19.63,
+          "confidence": 0.966844
+        },
+        {
+          "word": "had",
+          "start": 19.63,
+          "end": 19.77,
+          "confidence": 0.986888
+        },
+        {
+          "word": "to",
+          "start": 19.77,
+          "end": 19.86,
+          "confidence": 0.964093
+        },
+        {
+          "word": "be",
+          "start": 19.86,
+          "end": 19.91,
+          "confidence": 0.995987
+        },
+        {
+          "word": "playing",
+          "start": 19.95,
+          "end": 20.27,
+          "confidence": 0.99445
+        },
+        {
+          "word": "a",
+          "start": 20.27,
+          "end": 20.31,
+          "confidence": 0.995547
+        },
+        {
+          "word": "role",
+          "start": 20.31,
+          "end": 20.49,
+          "confidence": 0.991444
+        },
+        {
+          "word": "in",
+          "start": 20.49,
+          "end": 20.58,
+          "confidence": 0.991219
+        },
+        {
+          "word": "my",
+          "start": 20.58,
+          "end": 20.67,
+          "confidence": 0.998022
+        },
+        {
+          "word": "thyroid",
+          "start": 20.67,
+          "end": 20.99,
+          "confidence": 0.998801
+        },
+        {
+          "word": "function",
+          "start": 20.99,
+          "end": 21.36,
+          "confidence": 0.997809
+        },
+        {
+          "word": "and",
+          "start": 21.56,
+          "end": 21.75,
+          "confidence": 0.984204
+        },
+        {
+          "word": "after",
+          "start": 21.75,
+          "end": 22.08,
+          "confidence": 0.96248
+        },
+        {
+          "word": "a",
+          "start": 22.08,
+          "end": 22.14,
+          "confidence": 0.65886
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "start": 22.14,
+      "end": 24.56,
+      "text": "ton of research, I went completely gluten-free.",
+      "words": [
+        {
+          "word": "ton",
+          "start": 22.14,
+          "end": 22.3,
+          "confidence": 0.900201
+        },
+        {
+          "word": "of",
+          "start": 22.3,
+          "end": 22.41,
+          "confidence": 0.983543
+        },
+        {
+          "word": "research",
+          "start": 22.41,
+          "end": 22.84,
+          "confidence": 0.999802
+        },
+        {
+          "word": "I",
+          "start": 22.99,
+          "end": 22.99,
+          "confidence": 0.999451
+        },
+        {
+          "word": "went",
+          "start": 23.01,
+          "end": 23.21,
+          "confidence": 0.992188
+        },
+        {
+          "word": "completely",
+          "start": 23.21,
+          "end": 23.73,
+          "confidence": 0.998228
+        },
+        {
+          "word": "gluten",
+          "start": 23.75,
+          "end": 24.07,
+          "confidence": 0.99906
+        },
+        {
+          "word": "free",
+          "start": 24.13,
+          "end": 24.33,
+          "confidence": 0.997622
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "start": 24.56,
+      "end": 25.56,
+      "text": "And the results were immediate.",
+      "words": [
+        {
+          "word": "And",
+          "start": 24.56,
+          "end": 24.66,
+          "confidence": 0.971869
+        },
+        {
+          "word": "the",
+          "start": 24.66,
+          "end": 24.73,
+          "confidence": 0.964626
+        },
+        {
+          "word": "results",
+          "start": 24.77,
+          "end": 24.89,
+          "confidence": 0.996383
+        },
+        {
+          "word": "were",
+          "start": 25.02,
+          "end": 25.13,
+          "confidence": 0.986737
+        },
+        {
+          "word": "immediate",
+          "start": 25.13,
+          "end": 25.44,
+          "confidence": 0.989312
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "start": 25.56,
+      "end": 31.2,
+      "text": "My TSH dropped from 18 to 2 in 6 weeks, my antibody dropped from over 1000 to just 2, and I dropped",
+      "words": [
+        {
+          "word": "My",
+          "start": 25.56,
+          "end": 25.68,
+          "confidence": 0.868772
+        },
+        {
+          "word": "T",
+          "start": 25.73,
+          "end": 25.73,
+          "confidence": 0.737814
+        },
+        {
+          "word": "SH",
+          "start": 25.73,
+          "end": 25.86,
+          "confidence": 0.966649
+        },
+        {
+          "word": "dropped",
+          "start": 25.86,
+          "end": 26.28,
+          "confidence": 0.990408
+        },
+        {
+          "word": "from",
+          "start": 26.28,
+          "end": 26.52,
+          "confidence": 0.994784
+        },
+        {
+          "word": "18",
+          "start": 26.52,
+          "end": 26.85,
+          "confidence": 0.989344
+        },
+        {
+          "word": "to",
+          "start": 26.88,
+          "end": 27.0,
+          "confidence": 0.723249
+        },
+        {
+          "word": "2",
+          "start": 27.0,
+          "end": 27.18,
+          "confidence": 0.828647
+        },
+        {
+          "word": "in",
+          "start": 27.18,
+          "end": 27.3,
+          "confidence": 0.807397
+        },
+        {
+          "word": "6",
+          "start": 27.3,
+          "end": 27.48,
+          "confidence": 0.830704
+        },
+        {
+          "word": "weeks",
+          "start": 27.48,
+          "end": 27.78,
+          "confidence": 0.981044
+        },
+        {
+          "word": "my",
+          "start": 27.9,
+          "end": 28.02,
+          "confidence": 0.666492
+        },
+        {
+          "word": "antibody",
+          "start": 28.02,
+          "end": 28.49,
+          "confidence": 0.915035
+        },
+        {
+          "word": "dropped",
+          "start": 28.52,
+          "end": 28.91,
+          "confidence": 0.948328
+        },
+        {
+          "word": "from",
+          "start": 28.91,
+          "end": 29.03,
+          "confidence": 0.986801
+        },
+        {
+          "word": "over",
+          "start": 29.16,
+          "end": 29.4,
+          "confidence": 0.974327
+        },
+        {
+          "word": "1000",
+          "start": 29.4,
+          "end": 30.12,
+          "confidence": 0.508192
+        },
+        {
+          "word": "to",
+          "start": 30.12,
+          "end": 30.24,
+          "confidence": 0.951604
+        },
+        {
+          "word": "just",
+          "start": 30.24,
+          "end": 30.52,
+          "confidence": 0.930291
+        },
+        {
+          "word": "2",
+          "start": 30.59,
+          "end": 30.76,
+          "confidence": 0.9328
+        },
+        {
+          "word": "and",
+          "start": 30.8,
+          "end": 30.92,
+          "confidence": 0.798761
+        },
+        {
+          "word": "I",
+          "start": 30.92,
+          "end": 30.95,
+          "confidence": 0.526832
+        },
+        {
+          "word": "dropped",
+          "start": 30.95,
+          "end": 31.15,
+          "confidence": 0.51305
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "start": 31.2,
+      "end": 32.84,
+      "text": "15 pounds in 2 months.",
+      "words": [
+        {
+          "word": "15",
+          "start": 31.31,
+          "end": 31.57,
+          "confidence": 0.993396
+        },
+        {
+          "word": "pounds",
+          "start": 31.57,
+          "end": 31.93,
+          "confidence": 0.884188
+        },
+        {
+          "word": "in",
+          "start": 31.94,
+          "end": 32.06,
+          "confidence": 0.988885
+        },
+        {
+          "word": "2",
+          "start": 32.06,
+          "end": 32.22,
+          "confidence": 0.882514
+        },
+        {
+          "word": "months",
+          "start": 32.26,
+          "end": 32.54,
+          "confidence": 0.997543
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "start": 32.84,
+      "end": 36.48,
+      "text": "Lutin can have a negative impact on the GI tract, even in those without celiac disease.",
+      "words": [
+        {
+          "word": "L",
+          "start": 32.84,
+          "end": 32.88,
+          "confidence": 0.275484
+        },
+        {
+          "word": "ut",
+          "start": 32.88,
+          "end": 32.97,
+          "confidence": 0.391147
+        },
+        {
+          "word": "in",
+          "start": 32.97,
+          "end": 33.01,
+          "confidence": 0.86422
+        },
+        {
+          "word": "can",
+          "start": 33.06,
+          "end": 33.2,
+          "confidence": 0.996508
+        },
+        {
+          "word": "have",
+          "start": 33.2,
+          "end": 33.39,
+          "confidence": 0.997234
+        },
+        {
+          "word": "a",
+          "start": 33.39,
+          "end": 33.43,
+          "confidence": 0.994279
+        },
+        {
+          "word": "negative",
+          "start": 33.43,
+          "end": 33.78,
+          "confidence": 0.995368
+        },
+        {
+          "word": "impact",
+          "start": 33.82,
+          "end": 34.1,
+          "confidence": 0.997406
+        },
+        {
+          "word": "on",
+          "start": 34.1,
+          "end": 34.19,
+          "confidence": 0.997242
+        },
+        {
+          "word": "the",
+          "start": 34.19,
+          "end": 34.33,
+          "confidence": 0.995049
+        },
+        {
+          "word": "GI",
+          "start": 34.33,
+          "end": 34.42,
+          "confidence": 0.975088
+        },
+        {
+          "word": "tract",
+          "start": 34.42,
+          "end": 34.66,
+          "confidence": 0.627419
+        },
+        {
+          "word": "even",
+          "start": 34.84,
+          "end": 34.94,
+          "confidence": 0.993847
+        },
+        {
+          "word": "in",
+          "start": 34.94,
+          "end": 35.03,
+          "confidence": 0.985011
+        },
+        {
+          "word": "those",
+          "start": 35.03,
+          "end": 35.27,
+          "confidence": 0.998163
+        },
+        {
+          "word": "without",
+          "start": 35.27,
+          "end": 35.6,
+          "confidence": 0.964453
+        },
+        {
+          "word": "cel",
+          "start": 35.6,
+          "end": 35.71,
+          "confidence": 0.761288
+        },
+        {
+          "word": "iac",
+          "start": 35.74,
+          "end": 35.88,
+          "confidence": 0.997786
+        },
+        {
+          "word": "disease",
+          "start": 35.88,
+          "end": 36.21,
+          "confidence": 0.851567
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "start": 36.48,
+      "end": 41.0,
+      "text": "And the symptoms of sensitivity are more subtle, like waking, inflammation, mood swings,",
+      "words": [
+        {
+          "word": "And",
+          "start": 36.48,
+          "end": 36.64,
+          "confidence": 0.836769
+        },
+        {
+          "word": "the",
+          "start": 36.64,
+          "end": 36.78,
+          "confidence": 0.989021
+        },
+        {
+          "word": "symptoms",
+          "start": 36.83,
+          "end": 37.24,
+          "confidence": 0.999664
+        },
+        {
+          "word": "of",
+          "start": 37.24,
+          "end": 37.32,
+          "confidence": 0.998586
+        },
+        {
+          "word": "sensitivity",
+          "start": 37.36,
+          "end": 37.95,
+          "confidence": 0.982343
+        },
+        {
+          "word": "are",
+          "start": 37.95,
+          "end": 38.11,
+          "confidence": 0.997798
+        },
+        {
+          "word": "more",
+          "start": 38.11,
+          "end": 38.33,
+          "confidence": 0.994814
+        },
+        {
+          "word": "subtle",
+          "start": 38.33,
+          "end": 38.66,
+          "confidence": 0.999195
+        },
+        {
+          "word": "like",
+          "start": 38.83,
+          "end": 38.99,
+          "confidence": 0.991662
+        },
+        {
+          "word": "waking",
+          "start": 38.99,
+          "end": 39.32,
+          "confidence": 0.741025
+        },
+        {
+          "word": "inflammation",
+          "start": 39.43,
+          "end": 40.09,
+          "confidence": 0.997638
+        },
+        {
+          "word": "mood",
+          "start": 40.2,
+          "end": 40.41,
+          "confidence": 0.959413
+        },
+        {
+          "word": "swings",
+          "start": 40.42,
+          "end": 40.79,
+          "confidence": 0.993919
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "start": 41.0,
+      "end": 44.68,
+      "text": "autoimmunity, so if this sounds like you, it might be time to go gluten-free.",
+      "words": [
+        {
+          "word": "auto",
+          "start": 41.0,
+          "end": 41.21,
+          "confidence": 0.992301
+        },
+        {
+          "word": "imm",
+          "start": 41.21,
+          "end": 41.37,
+          "confidence": 0.732819
+        },
+        {
+          "word": "unity",
+          "start": 41.37,
+          "end": 41.59,
+          "confidence": 0.930365
+        },
+        {
+          "word": "so",
+          "start": 41.74,
+          "end": 41.84,
+          "confidence": 0.995934
+        },
+        {
+          "word": "if",
+          "start": 41.84,
+          "end": 41.94,
+          "confidence": 0.977334
+        },
+        {
+          "word": "this",
+          "start": 41.94,
+          "end": 42.15,
+          "confidence": 0.995349
+        },
+        {
+          "word": "sounds",
+          "start": 42.15,
+          "end": 42.47,
+          "confidence": 0.995771
+        },
+        {
+          "word": "like",
+          "start": 42.47,
+          "end": 42.68,
+          "confidence": 0.995702
+        },
+        {
+          "word": "you",
+          "start": 42.68,
+          "end": 42.8,
+          "confidence": 0.995072
+        },
+        {
+          "word": "it",
+          "start": 42.94,
+          "end": 43.04,
+          "confidence": 0.99579
+        },
+        {
+          "word": "might",
+          "start": 43.04,
+          "end": 43.31,
+          "confidence": 0.981639
+        },
+        {
+          "word": "be",
+          "start": 43.31,
+          "end": 43.39,
+          "confidence": 0.997326
+        },
+        {
+          "word": "time",
+          "start": 43.44,
+          "end": 43.62,
+          "confidence": 0.995247
+        },
+        {
+          "word": "to",
+          "start": 43.62,
+          "end": 43.7,
+          "confidence": 0.998673
+        },
+        {
+          "word": "go",
+          "start": 43.72,
+          "end": 43.82,
+          "confidence": 0.996827
+        },
+        {
+          "word": "gluten",
+          "start": 43.82,
+          "end": 44.13,
+          "confidence": 0.996974
+        },
+        {
+          "word": "free",
+          "start": 44.2,
+          "end": 44.4,
+          "confidence": 0.998068
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "start": 44.68,
+      "end": 46.4,
+      "text": "But if this sounds overwhelming, I get it.",
+      "words": [
+        {
+          "word": "But",
+          "start": 44.68,
+          "end": 44.72,
+          "confidence": 0.998555
+        },
+        {
+          "word": "if",
+          "start": 44.83,
+          "end": 44.9,
+          "confidence": 0.996512
+        },
+        {
+          "word": "this",
+          "start": 44.9,
+          "end": 45.08,
+          "confidence": 0.992241
+        },
+        {
+          "word": "sounds",
+          "start": 45.08,
+          "end": 45.35,
+          "confidence": 0.994454
+        },
+        {
+          "word": "overwhelming",
+          "start": 45.35,
+          "end": 45.89,
+          "confidence": 0.989814
+        },
+        {
+          "word": "I",
+          "start": 46.02,
+          "end": 46.02,
+          "confidence": 0.995949
+        },
+        {
+          "word": "get",
+          "start": 46.03,
+          "end": 46.15,
+          "confidence": 0.983674
+        },
+        {
+          "word": "it",
+          "start": 46.15,
+          "end": 46.24,
+          "confidence": 0.998795
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "start": 46.4,
+      "end": 50.0,
+      "text": "That's why I've created gluten-free plans using evidence-based strategies to decrease",
+      "words": [
+        {
+          "word": "That",
+          "start": 46.44,
+          "end": 46.59,
+          "confidence": 0.995972
+        },
+        {
+          "word": "'s",
+          "start": 46.59,
+          "end": 46.67,
+          "confidence": 0.996048
+        },
+        {
+          "word": "why",
+          "start": 46.82,
+          "end": 46.82,
+          "confidence": 0.996337
+        },
+        {
+          "word": "I",
+          "start": 46.83,
+          "end": 46.86,
+          "confidence": 0.998034
+        },
+        {
+          "word": "'ve",
+          "start": 46.86,
+          "end": 47.0,
+          "confidence": 0.921004
+        },
+        {
+          "word": "created",
+          "start": 47.0,
+          "end": 47.33,
+          "confidence": 0.998361
+        },
+        {
+          "word": "gluten",
+          "start": 47.33,
+          "end": 47.55,
+          "confidence": 0.985716
+        },
+        {
+          "word": "free",
+          "start": 47.68,
+          "end": 47.84,
+          "confidence": 0.996881
+        },
+        {
+          "word": "plans",
+          "start": 47.84,
+          "end": 48.07,
+          "confidence": 0.991711
+        },
+        {
+          "word": "using",
+          "start": 48.07,
+          "end": 48.32,
+          "confidence": 0.888974
+        },
+        {
+          "word": "evidence",
+          "start": 48.32,
+          "end": 48.7,
+          "confidence": 0.968646
+        },
+        {
+          "word": "based",
+          "start": 48.74,
+          "end": 48.97,
+          "confidence": 0.989595
+        },
+        {
+          "word": "strategies",
+          "start": 48.97,
+          "end": 49.44,
+          "confidence": 0.999367
+        },
+        {
+          "word": "to",
+          "start": 49.44,
+          "end": 49.48,
+          "confidence": 0.969707
+        },
+        {
+          "word": "decrease",
+          "start": 49.53,
+          "end": 49.98,
+          "confidence": 0.874966
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "start": 50.0,
+      "end": 52.84,
+      "text": "inflammation, support your metabolism, and get right to seeing results.",
+      "words": [
+        {
+          "word": "inflammation",
+          "start": 50.03,
+          "end": 50.51,
+          "confidence": 0.970823
+        },
+        {
+          "word": "support",
+          "start": 50.59,
+          "end": 50.89,
+          "confidence": 0.478324
+        },
+        {
+          "word": "your",
+          "start": 50.89,
+          "end": 51.06,
+          "confidence": 0.986991
+        },
+        {
+          "word": "metabolism",
+          "start": 51.06,
+          "end": 51.49,
+          "confidence": 0.999512
+        },
+        {
+          "word": "and",
+          "start": 51.57,
+          "end": 51.69,
+          "confidence": 0.996155
+        },
+        {
+          "word": "get",
+          "start": 51.69,
+          "end": 51.81,
+          "confidence": 0.997828
+        },
+        {
+          "word": "right",
+          "start": 51.81,
+          "end": 52.01,
+          "confidence": 0.866612
+        },
+        {
+          "word": "to",
+          "start": 52.01,
+          "end": 52.08,
+          "confidence": 0.999062
+        },
+        {
+          "word": "seeing",
+          "start": 52.11,
+          "end": 52.35,
+          "confidence": 0.979344
+        },
+        {
+          "word": "results",
+          "start": 52.35,
+          "end": 52.65,
+          "confidence": 0.997504
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "start": 52.84,
+      "end": 55.88,
+      "text": "Owen Gloomfree has been life-changing for me and it could be for you too.",
+      "words": [
+        {
+          "word": "Owen",
+          "start": 52.86,
+          "end": 53.02,
+          "confidence": 0.619397
+        },
+        {
+          "word": "Glo",
+          "start": 53.02,
+          "end": 53.16,
+          "confidence": 0.277299
+        },
+        {
+          "word": "om",
+          "start": 53.16,
+          "end": 53.23,
+          "confidence": 0.281877
+        },
+        {
+          "word": "free",
+          "start": 53.32,
+          "end": 53.43,
+          "confidence": 0.465216
+        },
+        {
+          "word": "has",
+          "start": 53.43,
+          "end": 53.57,
+          "confidence": 0.989044
+        },
+        {
+          "word": "been",
+          "start": 53.57,
+          "end": 53.75,
+          "confidence": 0.998403
+        },
+        {
+          "word": "life",
+          "start": 53.75,
+          "end": 53.91,
+          "confidence": 0.92185
+        },
+        {
+          "word": "changing",
+          "start": 53.98,
+          "end": 54.26,
+          "confidence": 0.995944
+        },
+        {
+          "word": "for",
+          "start": 54.36,
+          "end": 54.48,
+          "confidence": 0.992199
+        },
+        {
+          "word": "me",
+          "start": 54.48,
+          "end": 54.63,
+          "confidence": 0.998026
+        },
+        {
+          "word": "and",
+          "start": 54.64,
+          "end": 54.79,
+          "confidence": 0.535699
+        },
+        {
+          "word": "it",
+          "start": 54.87,
+          "end": 54.9,
+          "confidence": 0.906912
+        },
+        {
+          "word": "could",
+          "start": 54.94,
+          "end": 55.18,
+          "confidence": 0.98878
+        },
+        {
+          "word": "be",
+          "start": 55.28,
+          "end": 55.31,
+          "confidence": 0.986914
+        },
+        {
+          "word": "for",
+          "start": 55.31,
+          "end": 55.48,
+          "confidence": 0.994234
+        },
+        {
+          "word": "you",
+          "start": 55.48,
+          "end": 55.61,
+          "confidence": 0.991957
+        },
+        {
+          "word": "too",
+          "start": 55.64,
+          "end": 55.83,
+          "confidence": 0.744754
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "start": 55.88,
+      "end": 57.88,
+      "text": "[Music]",
+      "words": [
+        {
+          "word": "Music",
+          "start": 56.16,
+          "end": 57.51,
+          "confidence": 0.834036
+        }
+      ]
+    }
+  ],
+  "language": "en",
+  "duration": 57.88,
+  "metadata": {
+    "model": "whisper.cpp-base",
+    "processed": true,
+    "success": true,
+    "backend": "whisper.cpp"
+  }
+}

@@ -1,0 +1,247 @@
+{
+  "stage": "video_processing",
+  "bucket": "13-18s",
+  "total_videos": 8,
+  "completed": 25,
+  "failed": 32,
+  "remaining": -49,
+  "last_checkpoint": "2025-10-14T21:13:58.679964",
+  "completed_video_ids": [
+    "7559349571042757906",
+    "7558703458434452748",
+    "7550349543510904086",
+    "7543543150158122247",
+    "7558884835939372296",
+    "7545969809784147206",
+    "7559395311899184391",
+    "7545618454397668613",
+    "7559272505802755346",
+    "7550600508977794322",
+    "7549787084500864274",
+    "7560371659669130551",
+    "7554027348580912440",
+    "7561051157213252878",
+    "7560492860504542495",
+    "7529728671326719287",
+    "7556109799247711543",
+    "7527778449218424094",
+    "7546651178247916813",
+    "7560986657982336270",
+    "7554850198338555167",
+    "7560953019978861838",
+    "7560964241084271903",
+    "7561091261822799117",
+    "7560902097986768141"
+  ],
+  "failed_video_ids": [
+    {
+      "video_id": "7559349571042757906",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.610916"
+    },
+    {
+      "video_id": "7558703458434452748",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.611211"
+    },
+    {
+      "video_id": "7550349543510904086",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.611476"
+    },
+    {
+      "video_id": "7543543150158122247",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.611885"
+    },
+    {
+      "video_id": "7558884835939372296",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.612157"
+    },
+    {
+      "video_id": "7545969809784147206",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.612416"
+    },
+    {
+      "video_id": "7559395311899184391",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.612670"
+    },
+    {
+      "video_id": "7545618454397668613",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.612919"
+    },
+    {
+      "video_id": "7559272505802755346",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.613265"
+    },
+    {
+      "video_id": "7550600508977794322",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.613572"
+    },
+    {
+      "video_id": "7549787084500864274",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.613838"
+    },
+    {
+      "video_id": "7560371659669130551",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.614108"
+    },
+    {
+      "video_id": "7554027348580912440",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.614368"
+    },
+    {
+      "video_id": "7561051157213252878",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.614858"
+    },
+    {
+      "video_id": "7560492860504542495",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.615207"
+    },
+    {
+      "video_id": "7529728671326719287",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.615482"
+    },
+    {
+      "video_id": "7556109799247711543",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.615748"
+    },
+    {
+      "video_id": "7527778449218424094",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.616010"
+    },
+    {
+      "video_id": "7529376976470101304",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.616271"
+    },
+    {
+      "video_id": "7546651178247916813",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.616532"
+    },
+    {
+      "video_id": "7553533122717961490",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.616830"
+    },
+    {
+      "video_id": "7560992348897840396",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.617110"
+    },
+    {
+      "video_id": "7560986657982336270",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.617383"
+    },
+    {
+      "video_id": "7554850198338555167",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.617844"
+    },
+    {
+      "video_id": "7560953019978861838",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.618777"
+    },
+    {
+      "video_id": "7560964241084271903",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.619101"
+    },
+    {
+      "video_id": "7561091261822799117",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.619409"
+    },
+    {
+      "video_id": "7560902097986768141",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.619718"
+    },
+    {
+      "video_id": "7560904188645985567",
+      "error": "'downloadAddr'",
+      "error_type": "KeyError",
+      "timestamp": "2025-10-14T18:21:07.620017"
+    },
+    {
+      "video_id": "7529376976470101304",
+      "error": "RumiAI processing failed for 7529376976470101304 at stage output_validation: RumiAI exited successfully (code 0) but no insights file at /home/jorge/rumiaifinal/insights/7529376976470101304_temporal_windows_updated.json",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T20:57:08.810863"
+    },
+    {
+      "video_id": "7553533122717961490",
+      "error": "RumiAI processing failed for 7553533122717961490 at stage output_validation: RumiAI exited successfully (code 0) but no insights file at /home/jorge/rumiaifinal/insights/7553533122717961490_temporal_windows_updated.json",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T20:59:19.876805"
+    },
+    {
+      "video_id": "7560992348897840396",
+      "error": "RumiAI processing failed for 7560992348897840396 at stage output_validation: RumiAI exited successfully (code 0) but no insights file at /home/jorge/rumiaifinal/insights/7560992348897840396_temporal_windows_updated.json",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T21:01:05.271630"
+    }
+  ],
+  "config": {
+    "client_id": "test_final",
+    "analysis_type": "hashtag",
+    "target": "test_vitamin",
+    "analysis_mode": "top",
+    "selection_strategy": "contrastive",
+    "video_count": 50,
+    "date_filter": "last_90_days",
+    "report_type": "single",
+    "report_audience": "client",
+    "auto_confirm": true,
+    "run_date": "2025-10-14T16:22:00.260658Z"
+  },
+  "status": "completed",
+  "pause_reason": null,
+  "pause_timestamp": null,
+  "completion_time": "2025-10-14T18:21:07.620293"
+}

@@ -1,0 +1,18 @@
+{
+  "cluster_id": "test_nutrition",
+  "description": "Test cluster for live validation - nutrition niche with 2 hashtags",
+  "primary_hashtag": "#nutrition",
+  "variant_hashtags": [
+    "#nutritionist"
+  ],
+  "scrape_config": {
+    "runs_per_hashtag": 1,
+    "delay_between_runs_ms": 60000,
+    "results_per_page": 200
+  },
+  "metadata": {
+    "created_date": "2025-10-13T09:30:00Z",
+    "created_by": "live_test",
+    "notes": "Minimal cluster for live testing - 2 hashtags × 1 run × 200 results = 2 scrapes"
+  }
+}

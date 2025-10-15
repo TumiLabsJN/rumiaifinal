@@ -1,0 +1,20 @@
+{
+  "cluster_id": "nutrition_example",
+  "description": "Example nutrition niche cluster - narrow semantic clustering for maximum unique video discovery",
+  "primary_hashtag": "#nutrition",
+  "variant_hashtags": [
+    "#nutritionist",
+    "#nutritiontips",
+    "#nutritioncoach"
+  ],
+  "scrape_config": {
+    "runs_per_hashtag": 2,
+    "delay_between_runs_ms": 120000,
+    "results_per_page": 800
+  },
+  "metadata": {
+    "created_date": "2025-10-13T09:00:00Z",
+    "created_by": "system",
+    "notes": "Example cluster configuration - created during implementation. Use 'python generate_cluster.py' to create your own clusters."
+  }
+}

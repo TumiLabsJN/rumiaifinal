@@ -17,6 +17,10 @@ from .date_filter import DateFilter
 from .winner_analyzer import WinnerAnalyzer
 from .video_selector import VideoSelector
 from .confirmation import InteractiveConfirmation
+from .cluster_config import detect_target_type, load_cluster_config
+from .cluster_scraper import run_cluster_scraping
+from .cluster_deduplication import deduplicate_with_provenance
+from .cluster_analytics import save_cluster_analytics
 from .constants import (
     EXIT_CODE_SUCCESS,
     EXIT_CODE_USER_ABORT,
@@ -94,17 +98,66 @@ class VideoDiscovery:
             logger.info(f"Date filter: {self.config['date_filter']}")
             logger.info("")
 
-            # Stage 1.1: Apify Scraping
-            logger.info("Stage 1.1: Scraping videos from Apify...")
-            videos = self.scraper.scrape_videos(
-                analysis_type=self.config['analysis_type'],
-                target=self.config['target'],
-                analysis_mode=self.config['analysis_mode'],
-                date_filter=self.config['date_filter'],
-                country_code=self.config.get('country_code', 'US')  # Default to US if not provided
+            # Stage 1.1: Detect cluster mode and scrape accordingly
+            logger.info("Stage 1.1: Detecting target type...")
+            target_type, cluster_config = detect_target_type(
+                self.config['target'],
+                self.config['analysis_type']
             )
-            logger.info(f"✓ Scraped {len(videos)} unique videos")
-            logger.info("")
+
+            if target_type == "cluster":
+                logger.info(f"✓ Cluster mode detected: {cluster_config['cluster_id']}")
+                logger.info(f"  Primary: {cluster_config['primary_hashtag']}")
+                logger.info(f"  Variants: {len(cluster_config['variant_hashtags'])} hashtags")
+                logger.info("")
+
+                # Stage 1.1a: Cluster Scraping
+                logger.info("Stage 1.1a: Running cluster scraping...")
+                all_videos, failed_scrapes = run_cluster_scraping(
+                    cluster_config=cluster_config,
+                    analysis_mode=self.config['analysis_mode'],
+                    country_code=self.config.get('country_code', 'US'),
+                    date_filter=self.config['date_filter'],
+                    apify_scraper=self.scraper
+                )
+                logger.info(f"✓ Cluster scraping complete: {len(all_videos)} videos")
+                logger.info("")
+
+                # Stage 1.1b: Deduplication with Provenance
+                logger.info("Stage 1.1b: Deduplicating with provenance tracking...")
+                videos, analytics = deduplicate_with_provenance(
+                    all_videos=all_videos,
+                    cluster_config=cluster_config,
+                    failed_scrapes=failed_scrapes
+                )
+                logger.info(f"✓ Deduplicated to {len(videos)} unique videos")
+                logger.info("")
+
+                # Stage 1.1c: Save Cluster Analytics
+                logger.info("Stage 1.1c: Saving cluster analytics...")
+                analytics_path = save_cluster_analytics(
+                    analytics=analytics,
+                    client_id=self.config['client_id'],
+                    cluster_id=cluster_config['cluster_id']
+                )
+                logger.info(f"✓ Cluster analytics saved: {analytics_path}")
+                logger.info("")
+
+            else:
+                logger.info(f"✓ Single target mode: {self.config['target']}")
+                logger.info("")
+
+                # Stage 1.1: Apify Scraping (Single Mode)
+                logger.info("Stage 1.1: Scraping videos from Apify...")
+                videos = self.scraper.scrape_videos(
+                    analysis_type=self.config['analysis_type'],
+                    target=self.config['target'],
+                    analysis_mode=self.config['analysis_mode'],
+                    date_filter=self.config['date_filter'],
+                    country_code=self.config.get('country_code', 'US')  # Default to US if not provided
+                )
+                logger.info(f"✓ Scraped {len(videos)} unique videos")
+                logger.info("")
 
             # Stage 1.2: Date Filtering
             logger.info("Stage 1.2: Filtering by publication date...")

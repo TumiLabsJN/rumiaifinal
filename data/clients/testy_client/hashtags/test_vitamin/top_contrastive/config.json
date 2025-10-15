@@ -1,0 +1,13 @@
+{
+  "client_id": "testy_client",
+  "analysis_type": "hashtag",
+  "target": "test_vitamin",
+  "analysis_mode": "top",
+  "selection_strategy": "contrastive",
+  "video_count": 10,
+  "date_filter": "last_90_days",
+  "report_type": "single",
+  "report_audience": "client",
+  "auto_confirm": true,
+  "run_date": "2025-10-14T14:38:32.407083Z"
+}

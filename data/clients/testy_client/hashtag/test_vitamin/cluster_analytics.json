@@ -1,0 +1,91 @@
+{
+  "cluster_id": "test_vitamin",
+  "execution_date": "2025-10-14T13:55:12.317939+00:00",
+  "scrape_summary": {
+    "total_scrapes_attempted": 8,
+    "total_scrapes_succeeded": 3,
+    "total_scraped_videos": 648,
+    "total_unique_videos": 309,
+    "overall_duplication_rate": 52.31481481481482,
+    "failed_scrapes": [
+      {
+        "hashtag": "#vitamins",
+        "run": 2,
+        "error": "Failed after retries"
+      },
+      {
+        "hashtag": "#dailyvitamins",
+        "run": 1,
+        "error": "Failed after retries"
+      },
+      {
+        "hashtag": "#dailyvitamins",
+        "run": 2,
+        "error": "Failed after retries"
+      },
+      {
+        "hashtag": "#vitamintok",
+        "run": 1,
+        "error": "Failed after retries"
+      },
+      {
+        "hashtag": "#vitamintok",
+        "run": 2,
+        "error": "Failed after retries"
+      }
+    ]
+  },
+  "per_hashtag_contribution": {
+    "#vitamin": {
+      "total_found": 233,
+      "unique_videos": 233,
+      "overlap_videos": 137,
+      "exclusive_videos": 96,
+      "contribution_percentage": 75.40453074433657
+    },
+    "#vitamins": {
+      "total_found": 213,
+      "unique_videos": 213,
+      "overlap_videos": 137,
+      "exclusive_videos": 76,
+      "contribution_percentage": 68.93203883495146
+    },
+    "#dailyvitamins": {
+      "total_found": 0,
+      "unique_videos": 0,
+      "overlap_videos": 0,
+      "exclusive_videos": 0,
+      "contribution_percentage": 0.0
+    },
+    "#vitamintok": {
+      "total_found": 0,
+      "unique_videos": 0,
+      "overlap_videos": 0,
+      "exclusive_videos": 0,
+      "contribution_percentage": 0.0
+    }
+  },
+  "pairwise_overlaps": {
+    "vitamin_vitamins": 64.3,
+    "vitamin_dailyvitamins": 0,
+    "vitamin_vitamintok": 0,
+    "vitamins_dailyvitamins": 0,
+    "vitamins_vitamintok": 0,
+    "dailyvitamins_vitamintok": 0
+  },
+  "run_effectiveness": {
+    "#vitamin": {
+      "run_1_videos": 222,
+      "run_2_videos": 221,
+      "run_2_new_videos": 11,
+      "run_2_new_percentage": 4.97737556561086
+    },
+    "#vitamins": {
+      "run_1_videos": 213,
+      "run_2_videos": 133,
+      "run_2_new_videos": 0,
+      "run_2_new_percentage": 0.0
+    }
+  },
+  "bucket_distribution_by_source": {}
+}

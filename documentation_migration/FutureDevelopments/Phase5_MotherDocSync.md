@@ -207,6 +207,24 @@ Component Child HLDs (Individual Components)
 - Read Component Decision Log for notes like "Mother contradicts itself on X"
 - Compare Mother Part 1 with Mother Part 2 sections - do they align?
 
+**Systematic Detection Method**:
+
+STEP 1: Extract numeric specifications from Mother Part 1
+- Create checklist: Model counts, file counts, feature counts, bucket counts, duration ranges
+- Example: Line 105 "16 models total (2 algorithms × 8 buckets)"
+
+STEP 2: Scan ALL Mother Stage sections (Stages 1-7) for same specifications
+- Search for keywords: "models", "files", "features", "buckets"
+- Example: Stage 5 Line 1624 "90 models total"
+
+STEP 3: Compare values - flag if different
+- If Part 1 says "16 models" and Stage 5 says "90 models" → CONTRADICTION
+- If Part 1 says "8 buckets" and Stage 2 says "3 buckets processed" → CONTRADICTION
+
+STEP 4: Check Component Child for confirmation
+- Does Component Child use the Part 1 value or Stage value?
+- If Component uses Stage value → Part 1 is outdated
+
 **Fix Location**: Mother HLD (resolve internal contradictions)
 
 ---
@@ -224,6 +242,24 @@ Component Child HLDs (Individual Components)
 - Compare level of detail: Is Component HLD much more detailed than Mother section?
 - Check if Component has complete schemas/specs that Mother only mentions vaguely
 - If Component Section 5 (schemas) has extensive content Mother doesn't show, Mother is incomplete
+
+**Undefined Technical Terms Detection**:
+
+STEP 1: Scan for technical terms lacking implementation details
+- Flag terms like: "validation", "optimization", "processing", "analysis"
+- If term appears multiple times BUT no section defines HOW it works → INCOMPLETE
+
+STEP 2: Check for missing implementation details
+- Term: "validation" appears in Stage 4 Line 51, Stage 5 Lines 1663, 1708, 1925
+- Question: Does ANY section define:
+  - How validation works (manual vs automated)?
+  - What metrics are used?
+  - What happens if validation fails?
+- If NO section answers these → INCOMPLETE SPECIFICATION
+
+STEP 3: Cross-check Component Child for details
+- Does Component Child define implementation that Mother lacks?
+- If Component has detailed validation logic Mother doesn't mention → Mother is incomplete
 
 **Fix Location**: Mother HLD (add missing details)
 
@@ -772,7 +808,63 @@ Before marking Status: APPLIED:
 
 ---
 
-**Version**: 2.0 (Three-Tier Architecture)
-**Last Updated**: 2025-01-29
+### Example 4: Numeric Specification Contradiction (Category 9)
+
+**Trigger**: FeatureTransformationCHILD.md Line 1170 says "90 models total" but Mother Part 1 Line 105 says "16 models total"
+
+**Analysis**:
+- STEP 1: Extract numeric specs from Mother Part 1
+  - Line 105: "16 models total (2 algorithms × 8 buckets)"
+- STEP 2: Scan Mother Stage sections
+  - Stage 5 Line 1624: "90 models total (8 Video-Level RF + 41 Window-Level RF + 41 Window-Level K-Means)"
+- STEP 3: Compare → CONTRADICTION (16 vs 90 = 562% increase)
+- STEP 4: Check Component Child
+  - FeatureTransformationCHILD.md Line 1170 confirms "90 models total"
+  - Component uses Stage 5 value, not Part 1 value
+- Decision: Update Mother Part 1 Line 105 to reflect 90 models
+
+**Output**: `MotherSync_FeatureTransformation.md` (Change 4: Fix model count)
+
+**Cascade**:
+1. Update Mother Part 1 Line 105
+2. Part 1 update affects all capacity planning, compute resource estimates
+3. No Foundation changes needed (Foundation doesn't specify model counts)
+4. Re-audit Component Children to verify they use correct model count
+
+---
+
+### Example 5: Undefined Technical Term (Category 10)
+
+**Trigger**: FeatureTransformationCHILD.md Line 51 mentions "validation" but no implementation specification exists
+
+**Analysis**:
+- STEP 1: Scan for "validation" term
+  - Stage 4 (Component) Line 51: "Window-Level RF providing validation"
+  - Stage 5 Line 1663, 1708, 1925: References "validation"
+- STEP 2: Check for implementation details
+  - No section defines: How validation works, metrics used, failure handling
+  - Missing: Manual vs automated? Threshold values? Decision logic?
+- STEP 3: Cross-check Component Child
+  - Component mentions validation but doesn't implement it
+  - This is a "claimed feature without specification"
+- Decision: Add validation mechanism definition OR clarify it's manual review only
+
+**Output**: `MotherSync_FeatureTransformation.md` (Change 5: Clarify validation mechanism)
+
+**Cascade**:
+1. Update Mother Stage 5 to define validation mechanism
+2. Update Component Child to align with clarified validation definition
+3. Stage 5 implementation expectations affected
+
+---
+
+**Version**: 2.1 (Three-Tier Architecture + Systematic Detection)
+**Last Updated**: 2025-10-14
 **Applies To**: All projects using three-tier documentation system (Mother ← Foundation ← Component Children)
 **Related**: Phase3_ChildHLDGeneration.md, Phase4_ReviewRefinement.md, Phase1B_ExistingChildCritique.md
+
+**Changelog v2.1**:
+- Added systematic detection method for numeric specification contradictions (Category 9)
+- Added undefined technical terms detection protocol (Category 10)
+- Added Example 4: Numeric Specification Contradiction (16 vs 90 models)
+- Added Example 5: Undefined Technical Term (validation mechanism)

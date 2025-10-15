@@ -1,0 +1,83 @@
+{
+  "text": "Want to get bigger? Take two a day. Want to get even bigger? Take four a day. Don't go overboard for shooting. I recognize you. All you need to do is drink one cup of this tea every day. It's a blend of nine natural herbs, gin sang, wolfberries, raspberries, macapowder, red dates, mulberries. These herbs are all well known for being beneficial to kidney health. They can quickly help you flush out toxins from your kidneys and give your kidneys a brand new lease on life. Just prepare a cup of hot water, drop in the tea bag, and steep it for five minutes. Trust me, you'll be amazed by your performance.",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 4.16,
+      "text": "Want to get bigger? Take two a day. Want to get even bigger? Take four a day.",
+      "words": []
+    },
+    {
+      "id": 1,
+      "start": 4.16,
+      "end": 6.64,
+      "text": "Don't go overboard for shooting. I recognize you.",
+      "words": []
+    },
+    {
+      "id": 2,
+      "start": 6.64,
+      "end": 9.2,
+      "text": "All you need to do is drink one cup of this tea every day.",
+      "words": []
+    },
+    {
+      "id": 3,
+      "start": 9.2,
+      "end": 11.28,
+      "text": "It's a blend of nine natural herbs,",
+      "words": []
+    },
+    {
+      "id": 4,
+      "start": 11.28,
+      "end": 13.6,
+      "text": "gin sang, wolfberries, raspberries,",
+      "words": []
+    },
+    {
+      "id": 5,
+      "start": 13.6,
+      "end": 15.2,
+      "text": "macapowder, red dates,",
+      "words": []
+    },
+    {
+      "id": 6,
+      "start": 15.2,
+      "end": 18.88,
+      "text": "mulberries. These herbs are all well known for being beneficial to kidney health.",
+      "words": []
+    },
+    {
+      "id": 7,
+      "start": 18.88,
+      "end": 23.52,
+      "text": "They can quickly help you flush out toxins from your kidneys and give your kidneys a brand new lease on life.",
+      "words": []
+    },
+    {
+      "id": 8,
+      "start": 23.52,
+      "end": 27.92,
+      "text": "Just prepare a cup of hot water, drop in the tea bag, and steep it for five minutes.",
+      "words": []
+    },
+    {
+      "id": 9,
+      "start": 27.92,
+      "end": 29.92,
+      "text": "Trust me, you'll be amazed by your performance.",
+      "words": []
+    }
+  ],
+  "language": "en",
+  "duration": 29.92,
+  "metadata": {
+    "model": "whisper.cpp-base",
+    "processed": true,
+    "success": true,
+    "backend": "whisper.cpp"
+  }
+}

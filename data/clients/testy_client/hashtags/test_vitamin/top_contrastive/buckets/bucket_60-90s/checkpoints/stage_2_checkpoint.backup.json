@@ -1,0 +1,52 @@
+{
+  "stage": "video_processing",
+  "bucket": "60-90s",
+  "total_videos": 8,
+  "completed": 0,
+  "failed": 4,
+  "remaining": 4,
+  "last_checkpoint": "2025-10-14T14:51:58.640838",
+  "completed_video_ids": [],
+  "failed_video_ids": [
+    {
+      "video_id": "7557713386427911455",
+      "error": "RumiAI processing failed for 7557713386427911455 at stage rumiai_pipeline: RumiAI pipeline failed (exit code 1). Stderr: 2025-10-14 11:53:43 - rumiai_v2.core.ml_dependency_validator - INFO - ✅ All ML dependencies validated successfully\n2025-10-14 11:53:43 - rumiai_v2 - INFO - ✅ ML dependencies validated\n2025-10-14 11:53",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T14:53:44.976026"
+    },
+    {
+      "video_id": "7556932957580184887",
+      "error": "RumiAI processing failed for 7556932957580184887 at stage rumiai_pipeline: RumiAI pipeline failed (exit code 1). Stderr: 2025-10-14 11:53:49 - rumiai_v2.core.ml_dependency_validator - INFO - ✅ All ML dependencies validated successfully\n2025-10-14 11:53:49 - rumiai_v2 - INFO - ✅ ML dependencies validated\n2025-10-14 11:53",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T14:53:50.212077"
+    },
+    {
+      "video_id": "7534352746665757974",
+      "error": "RumiAI processing failed for 7534352746665757974 at stage rumiai_pipeline: RumiAI pipeline failed (exit code 1). Stderr: 2025-10-14 11:53:54 - rumiai_v2.core.ml_dependency_validator - INFO - ✅ All ML dependencies validated successfully\n2025-10-14 11:53:54 - rumiai_v2 - INFO - ✅ ML dependencies validated\n2025-10-14 11:53",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T14:53:55.498804"
+    },
+    {
+      "video_id": "7558760923008158989",
+      "error": "RumiAI processing failed for 7558760923008158989 at stage rumiai_pipeline: RumiAI pipeline failed (exit code 1). Stderr: 2025-10-14 11:53:59 - rumiai_v2.core.ml_dependency_validator - INFO - ✅ All ML dependencies validated successfully\n2025-10-14 11:53:59 - rumiai_v2 - INFO - ✅ ML dependencies validated\n2025-10-14 11:53",
+      "error_type": "ProcessingError",
+      "timestamp": "2025-10-14T14:54:00.763032"
+    }
+  ],
+  "config": {
+    "client_id": "testy_client",
+    "analysis_type": "hashtag",
+    "target": "test_vitamin",
+    "analysis_mode": "top",
+    "selection_strategy": "contrastive",
+    "video_count": 10,
+    "date_filter": "last_90_days",
+    "report_type": "single",
+    "report_audience": "client",
+    "auto_confirm": true,
+    "run_date": "2025-10-14T14:38:32.407083Z"
+  },
+  "status": "in_progress",
+  "pause_reason": null,
+  "pause_timestamp": null
+}

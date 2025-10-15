@@ -1,0 +1,181 @@
+{
+  "text": "Here's what I eat a day to fill my very best as a 24-year-old, trying to prioritize protein as much as I can. Starting off with my morning subs, you guys have seen me take this time and time again, my CMOS and coconut cult. And I'm a broken record at this point because my daily staple breakfast, eggs, turkey bacon, sourdough, and my ice coffee, it is literally my favorite. Then I decided to get some sun. So after that, I was craving some fruits so I cut up some organic canola. Then I had some of my daily greens. Then for lunch, I had some brown beef and cottage cheese. I was really craving this combo and it was delicious and very high protein. Then we got ready and went to our LaGree class. It was 45 minutes and it was killer. Then for dinner, I had some leftovers from lunch so I made a beef bowl with white rice, ground beef, cottage cheese, lettuce, and pickles. And I always have to end the night with something sweet so we cut up some organic watermelon and it really hit the spot.",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 2.66,
+      "text": "Here's what I eat a day to fill my very best as a 24-year-old,",
+      "words": []
+    },
+    {
+      "id": 1,
+      "start": 2.66,
+      "end": 4.68,
+      "text": "trying to prioritize protein as much as I can.",
+      "words": []
+    },
+    {
+      "id": 2,
+      "start": 4.68,
+      "end": 5.92,
+      "text": "Starting off with my morning subs,",
+      "words": []
+    },
+    {
+      "id": 3,
+      "start": 5.92,
+      "end": 8.14,
+      "text": "you guys have seen me take this time and time again,",
+      "words": []
+    },
+    {
+      "id": 4,
+      "start": 8.14,
+      "end": 9.82,
+      "text": "my CMOS and coconut cult.",
+      "words": []
+    },
+    {
+      "id": 5,
+      "start": 9.82,
+      "end": 11.32,
+      "text": "And I'm a broken record at this point",
+      "words": []
+    },
+    {
+      "id": 6,
+      "start": 11.32,
+      "end": 13.2,
+      "text": "because my daily staple breakfast, eggs,",
+      "words": []
+    },
+    {
+      "id": 7,
+      "start": 13.2,
+      "end": 15.68,
+      "text": "turkey bacon, sourdough, and my ice coffee,",
+      "words": []
+    },
+    {
+      "id": 8,
+      "start": 15.68,
+      "end": 17.4,
+      "text": "it is literally my favorite.",
+      "words": []
+    },
+    {
+      "id": 9,
+      "start": 17.4,
+      "end": 18.8,
+      "text": "Then I decided to get some sun.",
+      "words": []
+    },
+    {
+      "id": 10,
+      "start": 18.8,
+      "end": 20.68,
+      "text": "So after that, I was craving some fruits",
+      "words": []
+    },
+    {
+      "id": 11,
+      "start": 20.68,
+      "end": 22.0,
+      "text": "so I cut up some organic canola.",
+      "words": []
+    },
+    {
+      "id": 12,
+      "start": 22.0,
+      "end": 24.4,
+      "text": "Then I had some of my daily greens.",
+      "words": []
+    },
+    {
+      "id": 13,
+      "start": 24.4,
+      "end": 27.24,
+      "text": "Then for lunch, I had some brown beef and cottage cheese.",
+      "words": []
+    },
+    {
+      "id": 14,
+      "start": 27.24,
+      "end": 28.8,
+      "text": "I was really craving this combo",
+      "words": []
+    },
+    {
+      "id": 15,
+      "start": 28.8,
+      "end": 31.04,
+      "text": "and it was delicious and very high protein.",
+      "words": []
+    },
+    {
+      "id": 16,
+      "start": 31.04,
+      "end": 33.68,
+      "text": "Then we got ready and went to our LaGree class.",
+      "words": []
+    },
+    {
+      "id": 17,
+      "start": 33.68,
+      "end": 35.48,
+      "text": "It was 45 minutes and it was killer.",
+      "words": []
+    },
+    {
+      "id": 18,
+      "start": 35.48,
+      "end": 37.32,
+      "text": "Then for dinner, I had some leftovers from lunch",
+      "words": []
+    },
+    {
+      "id": 19,
+      "start": 37.32,
+      "end": 39.48,
+      "text": "so I made a beef bowl with white rice,",
+      "words": []
+    },
+    {
+      "id": 20,
+      "start": 39.48,
+      "end": 41.6,
+      "text": "ground beef, cottage cheese, lettuce, and pickles.",
+      "words": []
+    },
+    {
+      "id": 21,
+      "start": 41.6,
+      "end": 43.6,
+      "text": "And I always have to end the night with something sweet",
+      "words": []
+    },
+    {
+      "id": 22,
+      "start": 43.6,
+      "end": 45.52,
+      "text": "so we cut up some organic watermelon",
+      "words": []
+    },
+    {
+      "id": 23,
+      "start": 45.52,
+      "end": 46.88,
+      "text": "and it really hit the spot.",
+      "words": []
+    }
+  ],
+  "language": "en",
+  "duration": 46.88,
+  "metadata": {
+    "model": "whisper.cpp-base",
+    "processed": true,
+    "success": true,
+    "backend": "whisper.cpp"
+  }
+}

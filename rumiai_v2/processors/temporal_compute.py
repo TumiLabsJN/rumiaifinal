@@ -6,6 +6,15 @@ from typing import Dict, Any, List, Optional, Tuple
 import time
 from collections import defaultdict
 from difflib import SequenceMatcher
+import sys
+from pathlib import Path
+
+# Add project root to path to import foundation.buckets
+project_root = str(Path(__file__).parent.parent.parent)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from foundation.buckets import assign_bucket
 
 logger = logging.getLogger(__name__)
 

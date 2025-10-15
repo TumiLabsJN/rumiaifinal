@@ -30,7 +30,8 @@ Creative reports must match analysis flows from MLPlanning.md:
 ---
 ### Content Creators
 
-**Deliverable**: 20 Creative Strategy Reports per hashtag
+**Deliverable**: 
+Each winning bucket (3 Top) will output 3 Reports
 
 **Report Allocation by Duration**:
 - Reports prioritized for buckets with most videos
