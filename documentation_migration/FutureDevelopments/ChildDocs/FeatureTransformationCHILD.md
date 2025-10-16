@@ -1,8 +1,8 @@
 # Feature Transformation - High-Level Design
 
 > **Parent**: MLPlanningv2.md - Stage 4: Feature Transformation (Lines 1360-1586)
-> **Version**: 1.0
-> **Last Updated**: 2025-10-13
+> **Version**: 1.1
+> **Last Updated**: 2025-01-28
 > **Status**: Draft
 
 ---
@@ -15,10 +15,10 @@ Stage 3 (Feature Aggregation) produces a single CSV with raw temporal window fea
 
 ### 1.2 Where This Fits in Pipeline
 
-**Foundation Dependencies**: This stage depends on MLPlanningv2.md Part 1 for:
-- Client directory structure (Part 1, Lines 113-274 - path templates and architecture)
-- Configuration patterns (Part 1, Lines 278-289 - CLI parameters)
-- Checkpoint-based orchestration (Part 1, Line 107 - sequential bucket processing)
+**Foundation Dependencies**: This stage depends on FoundationCHILD.md for:
+- Client directory structure (Section 2: Client Architecture & Storage - path templates and architecture)
+- Configuration patterns (Section 4: CLI Command Structure - CLI parameters)
+- Checkpoint-based orchestration (Section 1: System Goals & Success Criteria - sequential bucket processing)
 
 ```
 Stage 3: Feature Aggregation
@@ -218,7 +218,38 @@ def transform_video_level_rf(df, strategy, video_count):
         top_count = int(video_count * 0.8)
         df_rf['is_top_performer'] = (df_rf.index < top_count).astype(int)
 
-    # 6. Keep all other features as-is (Direct transform for 17 features)
+    # 6.5. Compute Cross-Window Delta Features (NEW)
+    # Purpose: Create explicit temporal progression features for Video-Level RF
+    # Source: Crosswindowupgrade.md Section 2.2
+
+    # Energy progression deltas
+    middle_energy_cols = [f'middle_{i}_energy_level' for i in range(1, len(BUCKET_WINDOWS[bucket])-1)]
+    if middle_energy_cols:  # Only if middle segments exist
+        df_rf['hook_to_middle_energy_delta'] = (
+            df_rf[middle_energy_cols].mean(axis=1) - df_rf['hook_energy_level']
+        )
+        df_rf['middle_to_closing_contrast'] = (
+            df_rf['closing_energy_level'] - df_rf[middle_energy_cols].mean(axis=1)
+        )
+    else:
+        # For buckets 0-3s, 3-9s (no middle segments) - set to neutral value
+        df_rf['hook_to_middle_energy_delta'] = 0.0
+        df_rf['middle_to_closing_contrast'] = 0.0
+
+    # Consistency metrics (std deviation across all windows)
+    eye_contact_cols = [f'{w}_eye_contact_rate' for w in BUCKET_WINDOWS[bucket]]
+    df_rf['eye_contact_consistency'] = df_rf[eye_contact_cols].std(axis=1)
+
+    word_count_cols = [f'{w}_word_count' for w in BUCKET_WINDOWS[bucket]]
+    df_rf['word_density_std'] = df_rf[word_count_cols].std(axis=1)
+
+    # Progression slopes (linear regression across windows)
+    energy_cols = [f'{w}_energy_level' for w in BUCKET_WINDOWS[bucket]]
+    df_rf['energy_progression_slope'] = df_rf[energy_cols].apply(
+        lambda row: calculate_linear_slope(row.values), axis=1
+    )
+
+    # 7. Keep all other features as-is (Direct transform for 17 features)
     # emotional_valence, emotion_consistency, and all temporal window features unchanged
 
     logger.info(f"Video-Level RF transformation complete: {len(df_rf)} rows, {len(df_rf.columns)} columns")
@@ -395,10 +426,13 @@ def validate_outputs_and_checkpoint(output_files, bucket, video_count):
 
     # 2. Validate Video-Level RF schema
     df_rf = output_files['rf_transformed.csv']
-    expected_rf_cols = get_expected_rf_column_count(bucket)  # ~178 for 18-33s
-    assert 175 <= len(df_rf.columns) <= 185, f"Video-Level RF has {len(df_rf.columns)} columns, expected ~178"
+    expected_rf_cols = get_expected_rf_column_count(bucket)  # ~183 for 18-33s
+    assert 180 <= len(df_rf.columns) <= 190, f"Video-Level RF has {len(df_rf.columns)} columns, expected ~183"
     assert len(df_rf) == video_count, f"Video-Level RF has {len(df_rf)} rows, expected {video_count}"
     assert not df_rf.isnull().any().any(), "Video-Level RF contains NaN values"
+
+    # Validate cross-window features (range checks)
+    validate_cross_window_features(df_rf, bucket)
 
     # 3. Validate Window-Level RF schemas (6 files)
     for window in get_window_types(bucket):
@@ -448,7 +482,7 @@ def validate_outputs_and_checkpoint(output_files, bucket, video_count):
 
 | Dependency | Source | Format | Required Fields | Failure Mode |
 |------------|--------|--------|-----------------|--------------|
-| **Foundation setup** | MLPlanningv2.md Part 1 (Lines 113-274) | Directory structure + paths | `/data/clients/{client_id}/hashtags/{cluster_id}/{mode}_{strategy}/buckets/bucket_{duration}/ml_analysis/` | Fail-fast if directory doesn't exist (exit code 2) |
+| **Foundation setup** | FoundationCHILD.md (Section 2: Client Architecture) | Directory structure + paths | `/data/clients/{client_id}/hashtags/{cluster_id}/{mode}_{strategy}/buckets/bucket_{duration}/ml_analysis/` | Fail-fast if directory doesn't exist (exit code 2) |
 | **aggregated_features.csv** | Stage 3 (Feature Aggregation) | CSV (N rows, 66-216 cols depending on bucket) | All 21 base features × window count + 3 metadata (video_id, create_time, gender) | Fail-fast if file missing or invalid schema (exit code 1) |
 | **Bucket context** | Orchestrator (rumiai_ml_batch.py) | Function parameter | bucket_path string (e.g., "/data/clients/nike/hashtags/fitness/top_contrastive/buckets/bucket_18-33s") | Fail-fast if invalid path |
 | **Config parameters** | Stage 1 (config.json) | JSON | video_count (int), strategy (str: contrastive/top), client_id, cluster_id, mode, selection_strategy | Read from config.json, fail-fast if missing |
@@ -575,6 +609,15 @@ CATEGORICAL_FEATURES = {
     'dominant_emotion_id': 'ordinal_1_7'  # One-hot for both
 }
 
+# ===== Cross-Window Features (NEW) =====
+CROSS_WINDOW_FEATURES = [
+    'hook_to_middle_energy_delta',
+    'middle_to_closing_contrast',
+    'eye_contact_consistency',
+    'word_density_std',
+    'energy_progression_slope'
+]  # 5 features added to Video-Level RF (Crosswindowupgrade.md)
+
 # ===== Performance Thresholds (from Q5) =====
 TARGET_TIME_SECONDS = 30  # Target processing time for N=100 videos
 WARNING_TIME_SECONDS = 60  # Warn if exceeds 1 minute
@@ -586,17 +629,13 @@ FAIL_MEMORY_MB = 2048  # Fail if exceeds 2 GB
 
 MINIMUM_VIDEO_COUNT = 50  # Minimum videos for reliable ML training
 
-# ===== Bucket-Specific Window Counts (from MLPlanningv2.md Part 1) =====
-BUCKET_WINDOWS = {
-    '0-3s': ['hook'],  # 1 window
-    '3-9s': ['hook', 'closing'],  # 2 windows
-    '9-13s': ['hook', 'middle_aggregate', 'closing'],  # 3 windows (aggregated middle)
-    '13-18s': ['hook', 'middle_aggregate', 'closing'],  # 3 windows (aggregated middle)
-    '18-33s': ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing'],  # 6 windows
-    '33-60s': ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'middle_5', 'closing'],  # 7 windows
-    '60-90s': ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'middle_5', 'closing'],  # 7 windows
-    '90-120s': ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'middle_5', 'closing'],  # 7 windows
-}
+# ===== Bucket-Specific Window Counts =====
+# IMPLEMENTATION: Import from shared config (single source of truth)
+from config.bucket_definitions import BUCKET_WINDOWS
+
+# BUCKET_WINDOWS contains bucket-specific window configurations
+# See config/bucket_definitions.py for complete definition
+# See FoundationCHILD.md Section 6: Bucket Definitions for documentation
 
 # ===== Expected Column Counts (from Q1, Q2a) =====
 EXPECTED_INPUT_COLUMNS = {
@@ -698,10 +737,16 @@ LOG_MEMORY_USAGE = True  # Log peak memory
 | `gender_female` | int | 0, 1 | No | 1 if gender=="female" | One-hot from gender |
 | `gender_nan` | int | 0, 1 | No | 1 if gender is null | One-hot from gender (dummy_na=True) |
 | `is_top_performer` | int | 0, 1 | No | Target variable (contrastive only): 1 if top 80%, 0 if bottom 20% | Computed from video rank |
+| `hook_to_middle_energy_delta` | float | [-1, 1] | No | Energy change from hook to middle average | Computed cross-window delta |
+| `middle_to_closing_contrast` | float | [-1, 1] | No | Energy gap between middle avg and closing peak | Computed cross-window delta |
+| `eye_contact_consistency` | float | [0, 1] | No | Std deviation of eye contact across all windows | Computed consistency metric |
+| `word_density_std` | float | [0, ∞] | No | Std deviation of word count across windows | Computed consistency metric |
+| `energy_progression_slope` | float | [-∞, ∞] | No | Linear regression slope of energy across windows | Computed progression metric |
 
 **Removed Columns**: `create_time` (replaced with 5 temporal features), `gender` (replaced with 2-3 one-hot features), `dominant_emotion_id` (replaced with 7 one-hot features)
 
-**Total Columns**: ~178 for bucket 18-33s (129 input - 3 removed + 18 derived + 1 target)
+**Total Columns**: ~183 for bucket 18-33s (129 input - 3 removed + 23 derived + 1 target)
+                                                         ^^^^ 18 original + 5 cross-window
 
 #### File 2-7: `ml_analysis/{window}_rf_transformed.csv` (Window-Level RF, 6 files)
 
@@ -900,7 +945,7 @@ def validate_output(output_files, bucket, video_count):
 
     # 2. Validate Video-Level RF
     df_rf = output_files['rf_transformed.csv']
-    assert 175 <= len(df_rf.columns) <= 185, f"Video-Level RF has {len(df_rf.columns)} columns, expected ~178"
+    assert 180 <= len(df_rf.columns) <= 190, f"Video-Level RF has {len(df_rf.columns)} columns, expected ~183"
     assert len(df_rf) == video_count, f"Video-Level RF has {len(df_rf)} rows, expected {video_count}"
     assert not df_rf.isnull().any().any(), "Video-Level RF contains NaN values"
 
@@ -925,6 +970,46 @@ def validate_output(output_files, bucket, video_count):
                 f"{window} K-Means column {col} has values outside [0,1]: {df_w_km[col].min()}-{df_w_km[col].max()}"
 
     logger.info(f"Output validation passed: {len(output_files)} files, all schemas correct")
+
+
+def validate_cross_window_features(df_rf, bucket):
+    """
+    Validate cross-window feature ranges in Video-Level RF output.
+
+    Args:
+        df_rf: DataFrame with Video-Level RF transformed features
+        bucket: Bucket name (e.g., "18-33s")
+
+    Raises:
+        AssertionError: if cross-window features have invalid values
+
+    Source: Crosswindowupgrade.md Section 7.3
+    """
+    # Validate delta features (energy deltas bounded by [-1, 1])
+    if 'hook_to_middle_energy_delta' in df_rf.columns:
+        assert df_rf['hook_to_middle_energy_delta'].between(-1, 1).all(), \
+            f"hook_to_middle_energy_delta out of range [-1, 1]: min={df_rf['hook_to_middle_energy_delta'].min():.3f}, max={df_rf['hook_to_middle_energy_delta'].max():.3f}"
+
+    if 'middle_to_closing_contrast' in df_rf.columns:
+        assert df_rf['middle_to_closing_contrast'].between(-1, 1).all(), \
+            f"middle_to_closing_contrast out of range [-1, 1]: min={df_rf['middle_to_closing_contrast'].min():.3f}, max={df_rf['middle_to_closing_contrast'].max():.3f}"
+
+    # Validate consistency features (std must be non-negative)
+    if 'eye_contact_consistency' in df_rf.columns:
+        assert (df_rf['eye_contact_consistency'] >= 0).all() and (df_rf['eye_contact_consistency'] <= 1).all(), \
+            f"eye_contact_consistency out of range [0, 1]: min={df_rf['eye_contact_consistency'].min():.3f}, max={df_rf['eye_contact_consistency'].max():.3f}"
+
+    if 'word_density_std' in df_rf.columns:
+        assert (df_rf['word_density_std'] >= 0).all(), \
+            f"word_density_std has negative values: min={df_rf['word_density_std'].min():.3f}"
+
+    # Validate slope feature (sanity check: shouldn't be extreme)
+    if 'energy_progression_slope' in df_rf.columns:
+        # Slope > 2 means feature increases by 200%+ per window (suspiciously large)
+        assert df_rf['energy_progression_slope'].between(-2, 2).all(), \
+            f"energy_progression_slope suspiciously large: min={df_rf['energy_progression_slope'].min():.3f}, max={df_rf['energy_progression_slope'].max():.3f}"
+
+    logger.info("✓ Cross-window feature validation passed")
 ```
 
 ---
@@ -1029,6 +1114,21 @@ logger.info(f"Video-Level RF: {video_rf_time:.1f}s, Window-Level RF: {window_rf_
   - All K-Means _scaled columns in [0,1] range
   - No NaN values introduced during transformation
   - Row count preserved (input N = output N for all files)
+
+- [ ] **Test cross-window feature computation**
+  - Hook energy=0.5, middle_1=0.6, middle_2=0.7, middle_3=0.65, middle_4=0.70
+    → hook_to_middle_energy_delta ≈ 0.1625 (middle avg 0.6625 - hook 0.5)
+    → middle_to_closing_contrast (if closing=0.8) ≈ 0.1375 (closing 0.8 - middle avg 0.6625)
+  - Eye contact across 6 windows: [0.85, 0.80, 0.82, 0.83, 0.81, 0.84]
+    → eye_contact_consistency ≈ 0.018 (low std = consistent)
+  - Word count across 6 windows: [10, 15, 20, 25, 30, 12]
+    → word_density_std ≈ 7.76 (high std = uneven pacing)
+  - Energy progression across 6 windows: [0.5, 0.55, 0.6, 0.65, 0.7, 0.8]
+    → energy_progression_slope ≈ 0.057 (positive = rising energy)
+  - Bucket 0-3s (no middle segments)
+    → hook_to_middle_energy_delta = 0.0, middle_to_closing_contrast = 0.0 (neutral)
+  - Bucket 9-13s (middle_aggregate)
+    → Deltas computed correctly using middle_aggregate as single middle value
 
 **Expected runtime**: <1 second total for all unit tests
 
@@ -1149,14 +1249,14 @@ pytest tests/performance/test_stage4_timing.py -v --benchmark-only
   - Triple pipeline architecture (Video-Level RF + Window-Level RF + Window-Level K-Means)
   - Stage position in pipeline
 
-### 10.2 Mother Document Foundation
+### 10.2 Foundation Dependencies
 
-- **MLPlanningv2.md Part 1: Foundation** (shared across all stages)
-  - Section: Client Architecture & Storage (Lines 116-236) - Directory paths used in this stage
-  - Section: CLI Command Structure (Lines 278-289) - Configuration parameters
-  - Section: Sequential Processing (Line 107) - Pipeline orchestration model
-
-**Note**: After first components complete, extract Part 1 → FoundationCHILD.md for reusability
+- **FoundationCHILD.md**
+  - Section 2 "Client Architecture & Storage": Directory paths used in this stage (bucket structure, ml_analysis/)
+  - Section 4 "CLI Command Structure": Configuration parameters and defaults
+  - Section 6 "Bucket Definitions": Bucket-specific window counts used in transformations
+  - Section 1 "System Goals & Success Criteria": Sequential bucket processing model
+  - Section 5.3 "Checkpoint Schema": Checkpoint format for pipeline resumption
 
 ### 10.3 Related Child Docs
 
@@ -1211,6 +1311,16 @@ pytest tests/performance/test_stage4_timing.py -v --benchmark-only
 - **Trade-offs**: Less fault-tolerant (pipeline stops on bad data), but prioritizes data integrity over partial processing. Aligns with RumiAI fail-fast philosophy from SystemArchitecturev2.md.
 - **Date**: 2025-10-13 (Phase 2 Q4 user decision)
 
+**Decision 4**: Add Cross-Window Features to Video-Level RF Only
+- **Context**: Critique_Stage7_LLMAnalysis.md (Stage 7 LLM Analysis critique) identified critical gap - cross-window delta features (hook_to_middle_energy_delta, middle_to_closing_contrast, eye_contact_consistency, word_density_std, energy_progression_slope) are NOT computed anywhere in current pipeline
+- **Alternatives Considered**:
+  - **Option A** (chosen): Add to Video-Level RF transformation (Stage 4, Step 6.5)
+  - **Option B**: Add to Window-Level RF transformation (rejected - architectural mismatch)
+  - **Option C**: Add to Stage 3 aggregation (rejected - aggregation layer should stay simple)
+- **Rationale**: Cross-window features require multiple windows (hook, middle segments, closing) to compute deltas, consistency metrics, and progression slopes. Video-Level RF sees all windows simultaneously (178 features across 6 windows), making it the correct location. Window-Level RF operates on isolated windows (21 features per window), incompatible with cross-window computations.
+- **Trade-offs**: +5 features to Video-Level RF (178→183), +80 lines code/docs, +1.5 hours development time, but provides explicit temporal patterns to ML model (vs implicit learning from raw window features)
+- **Date**: 2025-10-15 (Crosswindowupgrade.md planning)
+
 ---
 
 ## Appendix B: Example Data
@@ -1226,15 +1336,15 @@ hook_scene_count,hook_eye_contact_rate,hook_word_count,hook_energy_level,hook_do
 2,0.91,22,0.80,1,0.80,5,4,0.68,2025-01-17T18:45:00,female
 ```
 
-### B.2 Sample Video-Level RF Output (3 rows, 15 columns shown out of ~178 total)
+### B.2 Sample Video-Level RF Output (3 rows, 20 columns shown out of ~183 total)
 
 **File**: `ml_analysis/rf_transformed.csv`
 
 ```csv
-hook_scene_count,hook_eye_contact_rate,hook_word_count,middle_1_scene_count,closing_energy_level,joy,neutral,hour,day_of_week,is_weekend,is_business_hours,gender_male,gender_female,is_top_performer
-3,0.85,15,4,0.75,1,0,14,2,0,1,0,1,1
-5,0.62,8,3,0.82,0,1,9,3,0,1,1,0,1
-2,0.91,22,5,0.68,1,0,18,4,0,0,0,1,1
+hook_scene_count,hook_eye_contact_rate,hook_word_count,middle_1_scene_count,closing_energy_level,joy,neutral,hour,day_of_week,is_weekend,is_business_hours,gender_male,gender_female,hook_to_middle_energy_delta,middle_to_closing_contrast,eye_contact_consistency,word_density_std,energy_progression_slope,is_top_performer
+3,0.85,15,4,0.75,1,0,14,2,0,1,0,1,0.16,0.27,0.018,7.2,0.057,1
+5,0.62,8,3,0.82,0,1,9,3,0,1,1,0,-0.05,0.15,0.032,5.8,0.042,1
+2,0.91,22,5,0.68,1,0,18,4,0,0,0,1,0.12,0.20,0.024,8.1,0.031,1
 ```
 
 ### B.3 Sample Window-Level RF Output (3 rows, hook window)
@@ -1442,4 +1552,5 @@ def validate_outputs_and_checkpoint(output_files, bucket, video_count):
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.1 | 2025-01-28 | RumiAI Team | Fixed broken references: Updated all Mother HLD references to point to FoundationCHILD.md (4 locations: Lines 18-21, 451, 589, 1154-1159). Enforces three-tier architecture: Mother → Foundation → Components. |
 | 1.0 | 2025-10-13 | Claude (Phase 3 Generation) | Initial complete draft from Phase 1 Critique + Phase 2 Q&A |

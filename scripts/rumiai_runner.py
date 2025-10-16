@@ -509,10 +509,19 @@ def main():
     try:
         # Create runner
         runner = RumiAIRunner()
-        
+
         # Run processing
         logger.info(f"Processing video URL: {video_url}")
         result = asyncio.run(runner.process_video_url(video_url))
+
+        # FIX: Check if processing actually succeeded
+        # process_video_url returns {'success': False} on failure instead of raising
+        if not result.get('success', False):
+            error_msg = result.get('error', 'Unknown error')
+            error_type = result.get('error_type', 'UnknownError')
+            logger.error(f"Processing failed: {error_type}: {error_msg}")
+            sys.exit(1)
+
     except Exception as e:
         logger.error(f"Processing failed: {e}")
         sys.exit(1)

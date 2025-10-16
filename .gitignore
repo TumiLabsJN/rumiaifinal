@@ -89,3 +89,6 @@ instrumentation_metrics/*.json
 
 # Gender 
 gender_detection_outputs/
+
+# ContentAnalysis 
+ContentAnalysis/

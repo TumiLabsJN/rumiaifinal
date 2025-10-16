@@ -1,8 +1,8 @@
 # Feature Aggregation - High-Level Design
 
 > **Parent**: MLPlanningv2.md - Stage 3
-> **Version**: 1.0
-> **Last Updated**: 2025-01-09
+> **Version**: 1.1
+> **Last Updated**: 2025-01-28
 > **Status**: Production-Ready
 
 ---
@@ -17,10 +17,10 @@ Machine learning algorithms require fixed-size feature vectors, but raw temporal
 
 ### 1.2 Where This Fits in Pipeline
 
-**Foundation Dependencies**: This component depends on MLPlanningv2.md Part 1 for:
-- Client directory structure (Part 1, Section 2: Client Architecture & Storage)
-- Configuration patterns (Part 1: Configuration dimensions for bucket organization)
-- Temporal window definitions (Part 1: Bucket-specific window counts)
+**Foundation Dependencies**: This component depends on FoundationCHILD.md for:
+- Client directory structure (Section 2: Client Architecture & Storage)
+- Configuration patterns (Section 4: CLI Command Structure & Configuration Dimensions)
+- Temporal window definitions (Section 3: Data Schemas - temporal_windows_updated.json)
 
 ```
 Stage 1: Video Discovery & Selection
@@ -438,7 +438,7 @@ def save_aggregated_csv(df: pd.DataFrame, output_path: Path):
 
 | Dependency | Source | Format | Required Fields | Failure Mode |
 |------------|--------|--------|-----------------|--------------|
-| **System setup** | MLPlanningv2.md Part 1 (Section 2: Client Architecture) | Directory structure + bucket paths | bucket_{duration}/analysis/insights/, ml_analysis/ writable | Fail-fast if directories don't exist or not writable |
+| **System setup** | FoundationCHILD.md (Section 2: Client Architecture) | Directory structure + bucket paths | bucket_{duration}/analysis/insights/, ml_analysis/ writable | Fail-fast if directories don't exist or not writable |
 | **Stage 2.5 Completion** | File Organization stage | temporal_windows_updated.json files organized into bucket directories | Files must exist in bucket_{duration}/analysis/insights/ | Fail-fast with error: "No JSON files found. Did Stage 2.5 complete?" |
 | temporal_windows_updated.json | Stage 2 (RumiAI Pipeline) via Stage 2.5 | JSON with temporal_windows.hook, .middle_segments[], .closing | 21 base features per window, metadata.duration, .create_time | Skip invalid files, log error, continue processing |
 | Bucket parameter | CLI invocation | --bucket-path flag | Valid bucket directory path | Fail-fast if path invalid or doesn't exist |
@@ -552,7 +552,7 @@ BASE_FEATURES = [
 # Metadata fields (2 video-level fields)
 METADATA_FIELDS = ['create_time', 'gender']
 
-# Bucket configurations (window counts) - Source: MLPlanningv2.md Stage 3
+# Bucket configurations (window counts) - Source: FoundationCHILD.md Section 6 (Bucket Definitions)
 BUCKET_MIDDLE_SEGMENTS = {
     '0-3s': 0,
     '3-9s': 0,
@@ -1044,15 +1044,16 @@ python3 scripts/stage3_aggregation.py \
   - Stage position in pipeline
   - Bucket-specific feature counts
 
-### 10.2 Mother Document Foundation
+### 10.2 Foundation Dependencies
 
-- **MLPlanningv2.md Part 1: Foundation**
-  - Section 2 "Client Architecture": Directory paths used in this stage (bucket structure, ml_analysis/)
-  - Appendix A "Glossary": Temporal windows, buckets, middle segments definitions
+- **FoundationCHILD.md**
+  - Section 2 "Client Architecture & Storage": Directory paths used in this stage (bucket structure, ml_analysis/)
+  - Section 3 "Data Schemas": temporal_windows_updated.json schema with window definitions
+  - Section 6 "Bucket Definitions": Bucket-specific window counts and middle segment configurations
 
 **Key Sections Referenced in This Stage**:
 - Section 2 "Client Architecture": Provides bucket directory structure (bucket_{duration}/analysis/insights/, ml_analysis/)
-- Stage 2.5 "File Organization": Critical dependency - organizes temporal_windows_updated.json into bucket directories
+- Section 6 "Bucket Definitions": Defines middle segment counts per bucket (used in BUCKET_MIDDLE_SEGMENTS configuration)
 
 ### 10.3 Related Child Docs
 
@@ -1550,4 +1551,5 @@ if __name__ == "__main__":
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.1 | 2025-01-28 | RumiAI Team | Fixed broken references: Updated all Mother HLD references to point to FoundationCHILD.md (4 locations: Lines 20-23, 441, 555, 1047-1056). Enforces three-tier architecture: Mother → Foundation → Components. |
 | 1.0 | 2025-01-09 | Technical Architect | Initial production-ready HLD generated from Phase 1 Critique + Phase 2 Q&A |

@@ -88,6 +88,8 @@ cat insights/[video_id]_temporal_windows_updated.json | jq '.temporal_windows.ho
 ├── BusinessContext.md                  # Business context
 ├── SystemArchitecturev2.md            # Technical architecture
 ├── MLROADMAP.md                        # Future ML pipeline
+├── config/
+│   └── bucket_definitions.py          # Shared bucket window configurations
 ├── documentation_migration/
 │   └── services/
 │       └── TotalFeatures.md           # All 60+ features explained

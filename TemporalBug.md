@@ -509,6 +509,100 @@ This bug will be considered **resolved** when:
 
 ---
 
-**Last Updated**: 2025-10-14
-**Status**: Investigation Required
-**Priority**: High (affects 2.6% of videos)
+## 🎯 RESOLUTION (2025-10-15)
+
+### Root Cause Identified
+
+**The bug was NOT in temporal computation** - my initial investigation was flawed.
+
+After testing all 3 failed videos individually, the actual root cause is:
+
+#### Primary Issue: Apify Scraping Failure
+All 3 videos failed at **Step 1: Metadata Scraping** with identical error:
+```
+APIError: [Video {url}] Apify API error (0): No video data returned
+```
+
+**Why this happened:**
+- Apify scraper completed successfully (status: SUCCEEDED)
+- But returned **empty datasets** (no video data)
+- Videos are likely deleted/private/region-blocked by creators
+- This is **expected behavior** for old or low-engagement content (~3% failure rate)
+
+#### Secondary Issue: Exit Code Bug (THE ACTUAL BUG)
+**Location**: `scripts/rumiai_runner.py` lines 509-527 (main() function)
+
+**Problem**:
+- `process_video_url()` catches exceptions and returns `{'success': False}` dict
+- `main()` never checked the `success` field
+- Script always exited with code 0 (success) even when processing failed
+- Stage 2 validator confused: "Why exit code 0 but no output file?"
+
+**Test Confirmation:**
+```bash
+# All 3 videos tested individually - same failure:
+Video 7529376976470101304: APIError: No video data returned (exit code 0 before fix)
+Video 7553533122717961490: APIError: No video data returned (exit code 0 before fix)
+Video 7560992348897840396: APIError: No video data returned (exit code 0 before fix)
+```
+
+### Fix Implemented
+
+**File**: `scripts/rumiai_runner.py:517-523`
+
+**Changes**:
+```python
+# Added after line 515 (result = asyncio.run(...)):
+# FIX: Check if processing actually succeeded
+if not result.get('success', False):
+    error_msg = result.get('error', 'Unknown error')
+    error_type = result.get('error_type', 'UnknownError')
+    logger.error(f"Processing failed: {error_type}: {error_msg}")
+    sys.exit(1)
+```
+
+**Fix Validation:**
+```bash
+# After fix:
+$ python3 scripts/rumiai_runner.py "https://www.tiktok.com/@seputaralatkesehatan/video/7529376976470101304"
+# Output: Processing failed: APIError: ... No video data returned
+# Exit code: 1 ✅ (proper failure)
+```
+
+### Impact Assessment
+
+#### Before Fix:
+- 3/114 videos (2.6%) failed silently with exit code 0
+- Stage 2 validator had to rely on file existence checks
+- Error messages buried in logs
+- Confusing debugging experience
+
+#### After Fix:
+- Failed videos properly exit with code 1
+- Clear error messages: "APIError: No video data returned" = External issue (expected)
+- Stage 2 can trust exit codes
+- Easy to distinguish: external failures vs internal bugs
+
+### Classification
+
+**These 3 videos are NOT fixable** - they are unavailable via TikTok API:
+- Video deleted by creator
+- Video made private
+- Region-restricted content
+- TikTok anti-scraping blocks
+
+**This is expected behavior** for processing old/low-engagement videos from Stage 1 scraping.
+
+### Success Criteria Met
+
+1. ✅ Actual root cause identified (Apify scraping, not temporal computation)
+2. ✅ Exit code bug fixed (now properly exits with code 1)
+3. ✅ All 3 videos tested - same failure confirmed
+4. ✅ Fix validated - exit code 1 confirmed
+5. ✅ Known limitation documented (videos unavailable via API)
+
+---
+
+**Last Updated**: 2025-10-15
+**Status**: ✅ RESOLVED
+**Priority**: High (affects 2.6% of videos) - NOW FIXED

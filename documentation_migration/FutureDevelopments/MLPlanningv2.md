@@ -1189,6 +1189,199 @@ python3 scripts/stage2_5_organize.py \
 
 ---
 
+## Stage 2.6 & 2.7: Content Analysis (Discovery & Classification)
+
+**Purpose**: Extract qualitative content insights (hook strategies, pain points, engagement drivers) from video transcripts/captions using LLM-powered taxonomy classification
+
+**Why Separate from Stage 2?**:
+- Stage 2 (RumiAI) extracts quantitative ML features (eye_contact, energy_level, scene_count)
+- Stage 2.6/2.7 analyzes semantic content patterns that can't be captured by ML features alone
+- Enables Stage 7 reports to combine quantitative insights ("eye_contact importance: 0.23") with qualitative insights ("60% of top videos use problem_solution hook")
+- Two-step process requires human curation between discovery and classification
+- Uses different AI models (Sonnet for discovery, Haiku for classification)
+
+**Input**:
+- **Stage 2.6 Discovery**:
+  - `selection_manifest.json` (from Stage 2.5 - top 3 buckets, video lists)
+  - `speech_transcriptions/{video_id}_whisper.json` (50 sampled transcripts)
+- **Stage 2.7 Classification**:
+  - `content_taxonomies/{hashtag}_taxonomy.json` (manually curated after 2.6)
+  - `speech_transcriptions/{video_id}_whisper.json` (120 videos: 20 top + 20 bottom per bucket)
+  - `unified_analysis/{video_id}.json` (captions and hashtags)
+
+**Process**:
+
+### 2.6.1: Discovery Sampling (One-Time per Hashtag)
+```python
+# Sample 50 transcripts stratified across top 3 buckets
+def sample_transcripts_for_discovery(manifest_path, sample_size=50):
+    manifest = load_json(manifest_path)
+    top_3_buckets = manifest['selected_buckets']  # ["33_60s", "60_90s", "90_120s"]
+
+    samples_per_bucket = sample_size // 3  # ~17 per bucket
+    sampled_transcripts = []
+
+    for bucket in top_3_buckets:
+        top_performers = manifest['videos_by_bucket'][bucket]['top_performers']
+        sampled_ids = random.sample(top_performers, min(samples_per_bucket, len(top_performers)))
+
+        for video_id in sampled_ids:
+            transcript_data = load_json(f"speech_transcriptions/{video_id}_whisper.json")
+            sampled_transcripts.append({
+                "video_id": video_id,
+                "text": transcript_data['text'],
+                "bucket": bucket
+            })
+
+    return sampled_transcripts
+```
+
+### 2.6.2: LLM Pattern Discovery
+```python
+# Discover content patterns using Claude 3.5 Sonnet
+def discover_patterns_llm(transcripts, hashtag):
+    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+    # Build discovery prompt with 50 transcripts
+    prompt = f"""Analyze these {len(transcripts)} transcripts from #{hashtag}.
+
+    Identify recurring patterns across 6 categories:
+    1. Content Categories (format types: recipe_tutorial, supplement_review, etc.)
+    2. Hook Strategies (opening patterns: problem_solution, direct_statement, etc.)
+    3. Audience Pain Points (problems mentioned: bloating, low_energy, etc.)
+    4. Trending Keywords (topics: protein, gut_health, holistic, etc.)
+    5. Engagement Drivers (shareability tactics: before_after, specific_metrics, etc.)
+    6. Content Tactics (presentation styles: personal_story, direct_to_camera, etc.)
+
+    Only include patterns appearing in 10%+ of videos (minimum 3 videos).
+    Return JSON with name, frequency, examples per pattern.
+    """
+
+    response = client.messages.create(
+        model="claude-3-5-sonnet-20241022",
+        max_tokens=4096,
+        timeout=120,
+        system="You are an expert content analyst...",
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return json.loads(response.content[0].text)
+```
+
+### 2.6.3: Manual Curation (HUMAN STEP)
+**MANUAL INTERVENTION REQUIRED** (~2 hours per hashtag):
+1. Review `{hashtag}_raw_discovery.json`
+2. Filter patterns: remove <10% frequency, brand-specific, hyper-granular
+3. Add definitions for semantic categories (content_categories, hook_strategies)
+4. Save curated taxonomy to `{hashtag}_taxonomy.json`
+5. Resume pipeline with `--resume-from classification`
+
+### 2.7.1: Video Classification
+```python
+# Classify 120 videos (20 top + 20 bottom per bucket × 3 buckets)
+def classify_videos(manifest_path, taxonomy_path, hashtag, client_id):
+    taxonomy = load_json(taxonomy_path)
+    manifest = load_json(manifest_path)
+    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+    for bucket in manifest['selected_buckets']:
+        # Select 20 top + 20 bottom per bucket
+        videos = (
+            manifest['videos_by_bucket'][bucket]['top_performers'][:20] +
+            manifest['videos_by_bucket'][bucket]['bottom_performers'][:20]
+        )
+
+        for video_id in videos:
+            # Load inputs
+            transcript = load_transcript(video_id)
+            caption, hashtags = load_caption_and_hashtags(video_id)
+
+            # Classify with Haiku using 3-zone prompt structure
+            classification = classify_video_llm(
+                video_id, transcript, caption, hashtags, taxonomy, client
+            )
+
+            # Save classification
+            output_path = f"bucket_{bucket}/content_analysis/{video_id}_content.json"
+            save_json(output_path, classification)
+```
+
+**Output**:
+- **Stage 2.6**: `content_taxonomies/{hashtag}_raw_discovery.json` (LLM output, needs curation)
+- **Manual Step**: `content_taxonomies/{hashtag}_taxonomy.json` (curated, production-ready)
+- **Stage 2.7**: `bucket_{bucket}/content_analysis/{video_id}_content.json` × 120 files
+
+Example classification output:
+```json
+{
+  "video_id": "7526250443832331550",
+  "taxonomy_version": "stage2.6_output",
+  "content_category": "wellness_practice",
+  "hook_strategy": "direct_statement",
+  "pain_points": ["menstrual_discomfort"],
+  "keywords": ["holistic", "wellness"],
+  "engagement_drivers": ["personal_testimony", "product_link"],
+  "content_tactics": ["direct_to_camera", "product_demonstration"],
+  "caption_analysis": {
+    "hook_type": "statement",
+    "cta_type": "link_in_bio",
+    "brand_mention_present": true,
+    "emoji_usage": "some",
+    "caption_length": "long",
+    "hashtag_count": 9,
+    "hashtag_placement": "end"
+  },
+  "confidence": "high",
+  "transcript_available": true,
+  "note": null
+}
+```
+
+**Error Handling**:
+- **Missing transcript**: Classify using caption/hashtags only, set `transcript_available=false`
+- **LLM API timeout (>120s discovery, >30s per video)**: Retry 3x with exponential backoff, then fail
+- **Invalid JSON from LLM**: Retry 3x, then fail with error
+- **Missing taxonomy file**: Fail-fast with message "Run Stage 2.6 discovery and complete manual curation first"
+- **Empty transcript**: Graceful degradation (caption/hashtag-only classification)
+
+**When This Runs**:
+- **Stage 2.6 Discovery**: AFTER Stage 2.5 (needs selection_manifest.json), ONCE per hashtag (initial setup)
+- **Manual Curation**: Human completes before Stage 2.7 can run (~2 hours)
+- **Stage 2.7 Classification**: Every run after taxonomy exists, BEFORE Stage 3
+- **FREQUENCY**: Discovery once per hashtag, Classification every run
+
+**Invocation**:
+```bash
+# Stage 2.6: Discovery (one-time)
+python3 scripts/content_analysis.py \
+  --client="test_run" \
+  --hashtag="nutrition" \
+  --stop-after=discovery
+
+# [MANUAL CURATION STEP - Human reviews and curates taxonomy]
+
+# Stage 2.7: Classification (every run)
+python3 scripts/content_analysis.py \
+  --client="test_run" \
+  --hashtag="nutrition" \
+  --resume-from=classification
+```
+
+**Child Documents**:
+- ContentAnalysisCHILD.md (complete HLD with refined prompts, 3-zone structure, grounding rules)
+- 2.6HashtagCritique.md (Discovery prompt refinement decisions)
+- 2.7ClassificationCritique.md (Classification prompt refinement decisions)
+
+**Future TI Document**:
+- ContentAnalysisCHILDTI.md (implementation with API calls, validation, error handling)
+
+**Related Future Features**:
+- Phase 2: Semi-automated taxonomy curation (reduce 2h to 30min using learned heuristics)
+- Phase 3: Universal taxonomy with hashtag extensions (if 70%+ overlap across hashtags)
+- Phase 4: Upgrade Haiku→Sonnet for classification if misclassification rate >20%
+
+---
+
 ## Stage 3: Feature Aggregation
 
 **Purpose**: Extract fixed-size feature vectors from temporal windows (bucket-specific structure)
@@ -2020,6 +2213,7 @@ rf_analysis = {
     "bucket": bucket,
     "hashtag": hashtag,
     "video_count": N,
+    "input_features": 178,  # Video-Level RF: 129 temporal + 18 derived + 1 target (from Stage 4)
 
     "feature_importance": [
         {
@@ -2127,11 +2321,35 @@ for feature_data in feature_importance_list[:10]:
 
 **Purpose**: Generate per-window feature importance for direct validation of K-Means clusters
 
+**⚠️ CRITICAL: Bucket-Specific Window Configuration**
+
+Different buckets have different window structures. Implementation MUST use bucket-aware iteration:
+
+```python
+# IMPLEMENTATION: Import from shared config (single source of truth)
+from config.bucket_definitions import BUCKET_WINDOWS
+
+# BUCKET_WINDOWS contains bucket-specific window configurations:
+# {
+#     '0-3s': ['hook'],  # Only hook (no closing - video too short)
+#     '3-9s': ['hook', 'closing'],
+#     '9-13s': ['hook', 'middle_aggregate', 'closing'],  # Aggregated middle (not middle_1/2/3)
+#     '13-18s': ['hook', 'middle_aggregate', 'closing'],  # Aggregated middle (not middle_1/2/3)
+#     '18-33s': ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing'],
+#     '33-60s': ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'middle_5', 'closing'],
+#     '60-90s': ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'middle_5', 'closing'],
+#     '90-120s': ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'middle_5', 'closing'],
+# }
+```
+
+**Note**: Stage 4 (FeatureTransformationCHILD.md Section 4.2) also imports from this shared config.
+
 **Bucket 18-33s Example** (6 window types):
 
 ```python
-# For each window type in bucket
-for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']:
+# CORRECT: Bucket-aware iteration (works for ALL 8 bucket types)
+bucket = "18-33s"  # Example bucket
+for window_type in BUCKET_WINDOWS[bucket]:
     # Load trained window-level RF model
     rf_window = joblib.load(f'models/rf_{window_type}_18-33s.pkl')
 
@@ -2199,8 +2417,9 @@ for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'clo
 **Bucket 18-33s Example** (6 window types):
 
 ```python
-# For each window type in bucket
-for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']:
+# CORRECT: Bucket-aware iteration (uses BUCKET_WINDOWS config from Section 6.2)
+bucket = "18-33s"  # Example bucket
+for window_type in BUCKET_WINDOWS[bucket]:
     # Load trained K-Means model and scalers
     kmeans = joblib.load(f'models/{window_type}_kmeans_18-33s.pkl')
     scalers = joblib.load(f'models/{window_type}_scalers_18-33s.pkl')
@@ -2270,6 +2489,40 @@ for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'clo
 - LLM receives: 3 clusters × 21 features = **63 numbers per window** (manageable!)
 - No complex pre-processing - LLM can identify defining features directly
 - Example: "Cluster 0: high eye_contact_rate (0.87), low word_count (14.2)"
+
+---
+
+### 6.3.1: Special Case - middle_aggregate Window (Buckets 9-13s, 13-18s)
+
+For short-duration buckets (9-13s, 13-18s), middle segments are aggregated into a single `middle_aggregate` window. This window receives the same JSON structure as other windows:
+
+**Example Output**: `ml_analysis/middle_aggregate_rf_analysis.json`
+
+```json
+{
+  "model_type": "window_level_rf",
+  "window_type": "middle_aggregate",
+  "bucket": "9-13s",
+  "total_videos": 100,
+  "input_features": 21,
+  "feature_importance": [
+    {
+      "feature": "scene_count",
+      "importance": 0.22,
+      "top_performer_avg": 5.2,
+      "bottom_performer_avg": 3.1,
+      "gap": 2.1,
+      "rank": 1
+    },
+    ...
+  ],
+  "note": "Aggregated from 3 short middle segments (1-4s each) to ensure reliable feature measurements"
+}
+```
+
+**Rationale**: Individual 1-4s middle segments produce unreliable measurements for scene_count, speech_coverage, and word_count. Aggregation creates 4.5-9.3s windows where all 21 features are reliable. See FeatureAggregationCHILD.md Decision 7 (lines 1137-1165) for full justification.
+
+**Implementation Note**: The `middle_aggregate` window is treated identically to other windows in Stage 6 - same RF/K-Means analysis, same JSON schema, same LLM processing in Stage 7.
 
 ---
 
@@ -2387,19 +2640,31 @@ Random Forest Feature Importance ({window_type}-specific predictive power):
 
 The features that BEST PREDICT viral success within {window_type} segments:
 
-1. {rf_data['feature_importance'][0]['feature']} (importance: {rf_data['feature_importance'][0]['importance']}, top avg: {rf_data['feature_importance'][0]['top_performer_avg']}, bottom avg: {rf_data['feature_importance'][0]['bottom_performer_avg']}, gap: {rf_data['feature_importance'][0]['gap']})
-2. {rf_data['feature_importance'][1]['feature']} (importance: ..., top avg: ..., bottom avg: ..., gap: ...)
-... (top 10 features)
+1. {rf_data['feature_importance'][0]['feature']}
+   - RF Importance: {rf_data['feature_importance'][0]['importance']} (rank #{rf_data['feature_importance'][0]['rank']})
+   - Top performers: avg {rf_data['feature_importance'][0]['top_performer_avg']} ({rf_data['feature_importance'][0]['distribution']['top_performers']['high_percentage']*100:.0f}% have ≥{rf_data['feature_importance'][0]['distribution']['thresholds']['high']})
+   - Bottom performers: avg {rf_data['feature_importance'][0]['bottom_performer_avg']} (only {rf_data['feature_importance'][0]['distribution']['bottom_performers']['high_percentage']*100:.0f}% reach {rf_data['feature_importance'][0]['distribution']['thresholds']['high']})
+   - Gap: {rf_data['feature_importance'][0]['gap']}
+
+2. {rf_data['feature_importance'][1]['feature']}
+   - RF Importance: {rf_data['feature_importance'][1]['importance']} (rank #{rf_data['feature_importance'][1]['rank']})
+   - Top performers: avg {rf_data['feature_importance'][1]['top_performer_avg']} ({rf_data['feature_importance'][1]['distribution']['top_performers']['high_percentage']*100:.0f}% have ≥{rf_data['feature_importance'][1]['distribution']['thresholds']['high']})
+   - Bottom performers: avg {rf_data['feature_importance'][1]['bottom_performer_avg']} (only {rf_data['feature_importance'][1]['distribution']['bottom_performers']['high_percentage']*100:.0f}% reach {rf_data['feature_importance'][1]['distribution']['thresholds']['high']})
+   - Gap: {rf_data['feature_importance'][1]['gap']}
+
+... (top 10 features, each formatted with distribution data)
 
 Your task:
 1. **Name each cluster** with a memorable, creator-friendly label (e.g., "The Direct Eye Contact Hook")
 2. **Identify 3-5 defining features** per cluster that differentiate it from the others
    - PRIORITIZE features with high RF importance scores (these are most predictive of viral success)
    - Emphasize features with large top/bottom gaps (biggest performance differentiators)
+   - **NOTICE distribution patterns**: If top performers show bimodal patterns (e.g., "40% high, 60% low"), this indicates MULTIPLE successful strategies for this feature
 3. **Describe the strategy** each cluster represents (what creative approach does it use?)
 4. **Generate actionable recommendations** - what should creators DO to replicate this pattern?
    - Focus on high-importance RF features first
    - Include target values based on top_performer_avg from RF data
+   - **For bimodal features**: Present both strategies as viable options (e.g., "Use either brief hooks (10-15 words) OR dense hooks (80-90 words) - both work")
 
 Output format: JSON
 {{

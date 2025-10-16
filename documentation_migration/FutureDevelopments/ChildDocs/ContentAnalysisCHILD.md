@@ -44,7 +44,8 @@ Stage 7: LLM Report Generation (consumes both ML + content insights)
 - [ ] Stage 2.6 completes discovery in < 120 seconds for 50 transcripts (Sonnet API)
 - [ ] Stage 2.7 classifies 120 videos in < 15 minutes (Haiku API, 40 per bucket × 3 buckets)
 - [ ] Taxonomy schema validates: all 6 fields present (content_categories, hook_strategies, audience_pain_points, trending_keywords, engagement_drivers, content_tactics)
-- [ ] Classification output includes complete schema: 10 core fields + 12 caption_analysis subfields
+- [ ] Classification output includes complete schema: 12 fields total (6 core + 1 caption_analysis object with 8 subfields + 5 metadata fields)
+- [ ] Classification uses refined prompt with 3-zone structure and grounding rules
 - [ ] Enables contrastive analysis: Stage 7 can query "60% of top use X vs 20% of bottom"
 - [ ] Zero data loss on API failures: 3 retries with exponential backoff, fail-fast with clear error
 - [ ] File paths follow ML pipeline architecture: `/data/clients/{client_id}/hashtags/{cluster_id}/top_contrastive/`
@@ -101,8 +102,8 @@ Input: content_taxonomies/{hashtag}_taxonomy.json (from Stage 2.6)
 Process: LLM Classification (Haiku, 5 min for 120 videos)
    → For each video (40 per bucket × 3 buckets):
       → Load transcript + caption + hashtags
-      → Classify using taxonomy
-      → Structure output: 10 core fields + 12 caption subfields
+      → Classify using taxonomy with 3-zone prompt structure
+      → Structure output: 12 fields (6 core + 1 caption_analysis object with 8 subfields + 5 metadata)
    ↓
 Output: bucket_{duration}/content_analysis/{video_id}_content.json × 120
         → Per-bucket classification files (~2KB each)
@@ -182,51 +183,47 @@ def discover_patterns_llm(transcripts, hashtag):
     Returns:
         dict: Raw discovery JSON with patterns, frequencies, examples
     """
-    # Prepare prompt (Source: QA Q10 - discovery output schema)
-    prompt = f"""
-    Analyze {len(transcripts)} TikTok transcripts from #{hashtag}.
+    # Prepare prompt (Source: 2.6HashtagCritique.md - Final Prompt)
+    # Note: System message configured separately in API call
+    system_message = """You are an expert content analyst specializing in short-form video patterns. Identify recurring patterns in the transcripts based on frequency and evidence. Be objective and data-driven: report patterns that actually appear in the data, not prescriptive advice. Patterns should be actionable for content creators but grounded in observed behavior."""
 
-    Identify natural patterns in:
-    1. Content Categories: What types of videos exist? (e.g., recipe_tutorial, supplement_review)
-    2. Hook Strategies: How do videos open? (e.g., problem_solution, direct_statement)
-    3. Audience Pain Points: What problems are mentioned? (e.g., bloating, low_energy)
-    4. Trending Keywords: What terms appear frequently? (e.g., protein, gut_health)
-    5. Engagement Drivers: What tactics make content shareable? (e.g., before_after_reveal, specific_metrics_mentioned)
-    6. Content Tactics: What presentation styles are used? (e.g., personal_story, direct_to_camera, vulnerability_shown)
+    prompt = f"""Analyze the following {len(transcripts)} video transcripts from the #{hashtag} hashtag.
 
-    For each pattern:
-    - name: short snake_case identifier
-    - frequency: count of videos exhibiting this pattern
-    - percentage: frequency / total videos * 100
-    - examples: 2-3 example phrases from transcripts
-    - representative_video_ids: video IDs showing this pattern
+Your task is to identify recurring content patterns across 6 categories. Focus on patterns that appear in AT LEAST 10% of videos (minimum 3 videos). Do not create patterns for isolated or single-video elements.
 
-    Return JSON with structure:
-    {{
-      "hashtag": "{hashtag}",
-      "analysis_date": "2025-10-14",
-      "sample_size": {len(transcripts)},
-      "discovered_patterns": {{
-        "content_categories": [{{"name": "...", "frequency": N, "percentage": P, "examples": [...], "representative_video_ids": [...]}}],
-        "hook_strategies": [...],
-        "audience_pain_points": [...],
-        "trending_keywords": [...],
-        "engagement_drivers": [...],
-        "content_tactics": [...]
-      }}
-    }}
+Patterns should be specific and actionable so content creators can replicate them.
 
-    Transcripts:
-    {json.dumps([t['text'] for t in transcripts])}
-    """
+[Complete prompt details - see 2.6HashtagCritique.md Final Prompt section or TI Section 4.2 for full prompt text]
 
-    # Call Anthropic API (Source: QA Q7 - Sonnet for discovery)
+Return JSON with structure:
+{{
+  "hashtag": "{hashtag}",
+  "analysis_date": "{datetime.utcnow().isoformat()}Z",
+  "sample_size": {len(transcripts)},
+  "discovered_patterns": {{
+    "content_categories": [{{"name": "...", "frequency": N, "examples": [...], "representative_video_ids": [...]}}],
+    "hook_strategies": [...],
+    "audience_pain_points": [...],
+    "trending_keywords": [...],
+    "engagement_drivers": [...],
+    "content_tactics": [...]
+  }}
+}}
+
+Note: Do NOT include percentage field - calculated by Python post-processing (see TI Section 4.2.5)
+
+Transcripts:
+{json.dumps([{{'video_id': t['video_id'], 'text': t['text']} for t in transcripts])}
+"""
+
+    # Call Anthropic API (Source: 2.6HashtagCritique.md - Final Prompt)
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
     response = client.messages.create(
         model="claude-3-5-sonnet-20241022",
         max_tokens=4096,
         timeout=120,  # Source: QA Q11 - 120s timeout
+        system=system_message,
         messages=[{"role": "user", "content": prompt}]
     )
 
@@ -242,6 +239,11 @@ def discover_patterns_llm(transcripts, hashtag):
 
     return raw_taxonomy
 ```
+
+**Note on Percentage Field**: The LLM returns discovery JSON without the `percentage` field. Python post-processing calculates percentages using the `calculate_percentages()` function (see TI Section 4.2.5) before saving to disk. This ensures:
+- No LLM math errors (deterministic calculation)
+- Validation that frequency ≤ sample_size (detects hallucination)
+- Consistent rounding to 1 decimal place
 
 **Edge Cases**:
 | Scenario | Handling | Rationale |
@@ -392,63 +394,215 @@ def load_caption_and_hashtags(video_id):
 def classify_video_llm(video_id, transcript, caption, hashtags, taxonomy, client):
     """
     Classify single video using LLM + taxonomy.
-    Source: QA Q6 (complete output schema), QA Q7 (Haiku for classification)
+    Source: 2.7ClassificationCritique.md (Final Refined Prompt)
     """
-    # Build prompt
-    prompt = f"""
-    Classify this TikTok video using the predefined taxonomy.
+    # System message (Source: 2.7ClassificationCritique.md Section 1)
+    system_message = """You are an expert content classifier specializing in short-form video analysis. Your task is to accurately classify videos using a predefined taxonomy that was empirically discovered from real video data in this hashtag (Stage 2.6).
 
-    TAXONOMY:
-    Content Categories: {json.dumps(taxonomy['content_categories'])}
-    Hook Strategies: {json.dumps(taxonomy['hook_strategies'])}
-    Audience Pain Points: {json.dumps(taxonomy['audience_pain_points'])}
-    Trending Keywords: {json.dumps(taxonomy['trending_keywords'])}
-    Engagement Drivers: {json.dumps(taxonomy['engagement_drivers'])}
-    Content Tactics: {json.dumps(taxonomy['content_tactics'])}
+Be objective and evidence-based: select classifications that best match the video content based on transcript, caption, and hashtags. Use taxonomy categories EXACTLY as defined - do not reinterpret or expand their meaning. When evidence is ambiguous, note lower confidence rather than forcing a classification."""
 
-    VIDEO DATA:
-    Transcript: "{transcript['text']}"
-    Caption: "{caption}"
-    Hashtags: {json.dumps(hashtags)}
+    # Build user prompt with 3-zone structure
+    prompt = f"""## ZONE 1: TAXONOMY & CORE CLASSIFICATION
 
-    Return JSON with this EXACT structure:
-    {{
-      "video_id": "{video_id}",
-      "content_category": "<string from content_categories>",
-      "hook_strategy": "<string from hook_strategies>",
-      "audience_pain_points": ["<strings from audience_pain_points>"],
-      "trending_keywords": ["<strings from trending_keywords>"],
-      "engagement_drivers": ["<strings from engagement_drivers>"],
-      "content_tactics": ["<strings from content_tactics>"],
-      "caption_analysis": {{
-        "caption_hook_type": "<statement|question|command|teaser|statistic|contradiction>",
-        "caption_cta_type": "<link_in_bio|save_post|comment|follow|share|tag_friend|none>",
-        "caption_cta_present": <true|false>,
-        "brand_mention_present": <true|false>,
-        "influencer_tag_present": <true|false>,
-        "emoji_usage": "<none|light|moderate|heavy>",
-        "caption_length": "<short|medium|long>",
-        "hashtag_count": <int>,
-        "hashtag_placement": "<end|mixed|none>",
-        "hashtag_strategy": {{
-          "broad_count": <int>,
-          "niche_count": <int>,
-          "branded_count": <int>
-        }}
-      }},
-      "confidence": "<high|medium|low>",
-      "transcript_available": {str(transcript['available']).lower()},
-      "note": {'"Classified using caption and hashtags only"' if not transcript['available'] else 'null'}
-    }}
+### Provided Taxonomy
 
-    Instructions:
-    - If transcript is empty, classify using caption + hashtags only (Source: QA Q4 - Option B)
-    - Select ONE content_category (primary classification)
-    - Select ONE hook_strategy
-    - Select multiple (0-N) for arrays (pain_points, keywords, drivers, tactics)
-    - Analyze caption structure for caption_analysis fields
-    - Categorize hashtags as broad (50M+ views), niche (<5M views), or branded (brand-specific)
-    - Set confidence based on classification certainty (high = clear match, medium = ambiguous, low = forced fit)
+**Category 1: Content Categories** (Single Selection)
+{json.dumps(taxonomy['content_categories'], indent=2)}
+
+**Category 2: Hook Strategies** (Single Selection)
+{json.dumps(taxonomy['hook_strategies'], indent=2)}
+
+**Category 3: Audience Pain Points** (Multiple Selection)
+{json.dumps(taxonomy['audience_pain_points'])}
+
+**Category 4: Trending Keywords** (Multiple Selection)
+{json.dumps(taxonomy['trending_keywords'])}
+
+**Category 5: Engagement Drivers** (Multiple Selection)
+{json.dumps(taxonomy['engagement_drivers'])}
+
+**Category 6: Content Tactics** (Multiple Selection)
+{json.dumps(taxonomy['content_tactics'])}
+
+---
+
+### Video Data
+
+**Video ID**: {video_id}
+
+**Transcript**:
+{transcript['text'] if transcript['available'] else "(No transcript available - classify using caption and hashtags)"}
+
+**Caption**:
+{caption}
+
+**Hashtags**:
+{json.dumps(hashtags)}
+
+---
+
+### Classification Task
+
+Select the best-matching categories from the taxonomy above:
+
+**Categories 1-2: Single Selection (REQUIRED)**
+
+**Content Category**: Select exactly ONE category that best describes the primary content format.
+
+**Hook Strategy**: Select exactly ONE strategy that best describes how the video opens.
+
+**IMPORTANT**: You MUST copy the category name EXACTLY as written in the taxonomy. Do not paraphrase, abbreviate, or modify the string. Mismatched spelling or underscores will cause system errors.
+
+**If no perfect match exists**: Select the closest matching category from the taxonomy. Set confidence=low and document the mismatch in the note field (e.g., "Video is comedy skit, closest match is wellness_practice").
+
+**String Matching**: Copy category names character-for-character from taxonomy above.
+
+**Categories 3-6: Multiple Selection (0-N)**
+
+Select ALL applicable items from the taxonomy that are clearly present in the video:
+
+- **Audience Pain Points**: Problems explicitly stated OR strongly implied from solutions discussed
+- **Trending Keywords**: Topics/methods explicitly mentioned OR clearly central to the content
+- **Engagement Drivers**: Tactics described OR evident from how creator speaks
+- **Content Tactics**: Presentation styles explicitly mentioned OR observable from transcript patterns
+
+**GROUNDING RULE**: Only select items that are:
+1. **Explicitly mentioned**: Can quote a direct phrase (e.g., "I had bloating")
+2. **Strongly implied**: Clear evidence from context (e.g., "I started X and it went away" → X addresses implied problem)
+
+If uncertain whether implication is strong enough, do NOT select. Empty arrays `[]` are acceptable.
+
+**Evidence requirement**: For each selection, you should be able to explain WHY it's selected with specific evidence from transcript or caption.
+
+---
+
+## ZONE 2: CAPTION & HASHTAG ANALYSIS
+
+Analyze caption structure and hashtag strategy as a secondary task after completing Zone 1.
+
+**Caption Hook Type**: How does the caption open? (first 5-10 words)
+- statement: Declarative ("This changed my life", "Best product ever")
+- question: Interrogative ("Did you know?", "Have you tried?")
+- command: Imperative ("Try this now", "Follow for more")
+- teaser: Creates curiosity ("You won't believe…", "Wait till the end")
+
+**Call-to-Action**:
+- cta_type: link_in_bio, save_post, comment, follow, share, tag_friend, none
+- brand_mention_present: Does caption mention a brand/product? (true/false)
+- influencer_tag_present: Does caption tag another creator? (true/false)
+
+**Caption Metrics** (simplified levels):
+- emoji_usage: none (0), some (1-4), many (5+)
+- caption_length: short (<100 chars), long (100+ chars)
+
+**Hashtag Analysis**:
+- hashtag_count: Total number of hashtags (integer)
+- hashtag_placement: end (all at end), mixed (throughout caption), none
+
+---
+
+## ZONE 3: OUTPUT & CONFIDENCE
+
+### Evidence Handling & Fallback Logic
+
+**Hook Strategy** (required single selection):
+- **Primary**: Use transcript opening (first 5-10 words spoken)
+- **Fallback**: If transcript empty, use caption opening (first 5-10 words written)
+- **Caveat**: Caption opening may not reflect actual video opening - this is acceptable as "best available evidence"
+
+**Content Category** (required single selection):
+- **Primary**: Classify from full transcript + caption alignment
+- **Fallback**: If transcript empty, classify from caption + hashtags only
+
+**Note Field** (dynamic context for low-confidence scenarios):
+- Empty transcript → "Classified from caption/hashtags only - no transcript available"
+- Conflicting evidence → "Transcript suggests X, caption suggests Y - selected X (transcript priority)"
+- Forced match → "No perfect taxonomy match, selected closest: [category_name]"
+- Multiple issues → Combine messages: "No transcript + forced match to [category]"
+
+**Evidence Priority** (transparent but enforced):
+When evidence conflicts: transcript > caption > hashtags. Document conflicts in note field.
+When evidence is weak: still make best-effort classification, but set confidence=low and explain in note.
+
+---
+
+### Confidence Assessment
+
+Assign confidence based on two factors: (1) How well video matches taxonomy, (2) Quality of evidence
+
+**high**:
+- Video clearly matches selected categories (no ambiguity in taxonomy fit)
+- Strong evidence from transcript and/or caption
+- All selections can be justified with explicit phrases or strong implications
+
+**medium**:
+- Video partially matches taxonomy OR selection required inference
+- Evidence from transcript OR caption, but not both aligning
+- Some selections based on reasonable but not explicit evidence
+
+**low**:
+- Forced match for required categories (no perfect taxonomy fit)
+- Limited evidence (empty transcript, minimal caption)
+- Selections based on weak inference or hashtags alone
+
+**Tie-breakers**:
+- If transcript unavailable but caption is rich → can be medium (not automatically low)
+- If perfect taxonomy match but only hashtags available → medium (good match, weak evidence)
+
+---
+
+### Output Format
+
+Return a single JSON object with ALL 12 fields present. Do not add fields beyond this schema.
+
+**Required fields** (must be non-null):
+- video_id: String (provided in input)
+- taxonomy_version: Always use "stage2.6_output"
+- content_category: String (exactly one from taxonomy)
+- hook_strategy: String (exactly one from taxonomy)
+- confidence: "high"|"medium"|"low"
+- transcript_available: true|false
+- note: String with explanation OR null if high confidence
+
+**Multi-select fields** (empty arrays [] allowed):
+- pain_points: Array of strings from taxonomy ([] if none apply)
+- keywords: Array of strings from taxonomy ([] if none apply)
+- engagement_drivers: Array of strings from taxonomy ([] if none apply)
+- content_tactics: Array of strings from taxonomy ([] if none apply)
+
+**Caption analysis object** (all 8 subfields required):
+- caption_analysis: {{
+    hook_type, cta_type, brand_mention_present, influencer_tag_present,
+    emoji_usage, caption_length, hashtag_count, hashtag_placement
+  }}
+
+**JSON FORMATTING RULES**:
+- Use lowercase true/false for booleans (not True/False)
+- Always include note field (use null if not needed, don't omit)
+- Empty arrays should be [] (not null)
+- Copy string values exactly (including underscores and capitalization)
+- No additional fields beyond this schema
+
+---
+
+### FINAL INSTRUCTIONS
+
+Before submitting, verify all requirements are met:
+
+**Critical Requirements (System Errors)**
+✓ **Exact Strings**: Copy category names character-for-character from taxonomy (e.g., "wellness_practice" NOT "wellness")
+   - Mismatched spelling or underscores will cause system error
+✓ **Complete Schema**: All 12 fields present (see Output Format section)
+✓ **JSON Only**: No text outside JSON structure
+
+**Classification Quality**
+✓ **Evidence-Based**: All selections traceable to transcript/caption/hashtags - do not invent patterns
+   - Quality over quantity: empty arrays [] better than wrong selections
+✓ **Closest Match**: If perfect taxonomy match unclear, select closest category and set confidence=low
+✓ **Note Field**: Explain when confidence=low (forced match, missing transcript, conflicts)
+✓ **Evidence Priority**: transcript > caption > hashtags (see Zone 3)
+
+Your classifications feed Stage 7 contrastive analysis - accuracy is critical.
     """
 
     # Call API with retry logic (Source: QA Q7 - 3 retries with backoff)
@@ -458,6 +612,7 @@ def classify_video_llm(video_id, transcript, caption, hashtags, taxonomy, client
                 model="claude-3-haiku-20240307",  # Source: QA Q7 - Haiku for classification
                 max_tokens=1024,
                 timeout=30,  # Source: QA Q11 - 30s per-video timeout
+                system=system_message,  # Source: 2.7ClassificationCritique.md Section 1
                 messages=[{"role": "user", "content": prompt}]
             )
 
@@ -505,7 +660,7 @@ def classify_video_llm(video_id, transcript, caption, hashtags, taxonomy, client
 |--------|--------|--------|-----------|------------|
 | **Raw discovery** | JSON (~10KB) | `discovered_patterns` with 6 categories, each with name/frequency/examples/video_ids | Human curator (manual review) | Check all 6 pattern categories present |
 | **Curated taxonomy** | JSON (~5KB) | 6 required fields: `content_categories` (array of objects with name/definition), `hook_strategies` (array of objects), `audience_pain_points` (array of strings), `trending_keywords` (array of strings), `engagement_drivers` (array of strings), `content_tactics` (array of strings) | Stage 2.7 (classification input) | Validate: all 6 fields non-empty, definitions >10 chars for semantic categories |
-| **Video classifications** | JSON (~2KB each, 120 total) | 10 core fields + 12 caption_analysis subfields (see Section 5.2) | Stage 7 (LLM Report Generation) | Check: all required fields present, confidence in [high, medium, low], arrays are valid |
+| **Video classifications** | JSON (~2KB each, 120 total) | 12 fields total (6 core + 1 caption_analysis object with 8 subfields + 5 metadata) using refined 3-zone prompt (see Section 5.2) | Stage 7 (LLM Report Generation) | Check: all required fields present, confidence in [high, medium, low], arrays are valid |
 
 ### 3.3 Cross-Stage Dependencies
 
@@ -699,14 +854,14 @@ hashtag_names = [h['name'] for h in hashtags_array if h.get('name')]  # Extract 
 | `discovered_patterns.content_categories` | array[object] | Discovered content types |
 | `discovered_patterns.content_categories[].name` | string | Category identifier |
 | `discovered_patterns.content_categories[].frequency` | int | Count of videos with this pattern |
-| `discovered_patterns.content_categories[].percentage` | float | Frequency / sample_size * 100 |
+| `discovered_patterns.content_categories[].percentage` | float | Calculated by Python post-processing (frequency / sample_size * 100) |
 | `discovered_patterns.content_categories[].examples` | array[string] | 2-3 example phrases |
 | `discovered_patterns.content_categories[].representative_video_ids` | array[string] | Video IDs showing this pattern |
 | `discovered_patterns.hook_strategies` | array[object] | Same structure as content_categories |
-| `discovered_patterns.audience_pain_points` | array[object] | Same structure |
-| `discovered_patterns.trending_keywords` | array[object] | Same structure |
-| `discovered_patterns.engagement_drivers` | array[object] | Same structure |
-| `discovered_patterns.content_tactics` | array[object] | Same structure |
+| `discovered_patterns.audience_pain_points` | array[string] | Simple string list (e.g., ["bloating", "low energy"]) |
+| `discovered_patterns.trending_keywords` | array[string] | Simple string list (e.g., ["protein", "gut health"]) |
+| `discovered_patterns.engagement_drivers` | array[string] | Simple string list (e.g., ["before after reveal"]) |
+| `discovered_patterns.content_tactics` | array[string] | Simple string list (e.g., ["direct to camera"]) |
 
 #### 5.2.2 Video Classification (Stage 2.7 Output)
 
@@ -717,26 +872,22 @@ hashtag_names = [h['name'] for h in hashtags_array if h.get('name')]  # Extract 
 | Field | Type | Range | Nulls? | Description |
 |-------|------|-------|--------|-------------|
 | `video_id` | string | - | No | Video identifier |
-| `performance_group` | string | "top", "bottom" | No | Performance classification (from selection_manifest) |
+| `taxonomy_version` | string | "stage2.6_output" | No | Links classification to taxonomy source (always "stage2.6_output") |
 | `content_category` | string | From taxonomy | No | Primary content type (e.g., "recipe_tutorial") |
 | `hook_strategy` | string | From taxonomy | No | Opening pattern (e.g., "problem_solution") |
-| `audience_pain_points` | array[string] | From taxonomy | No | Detected pain points (can be empty array) |
-| `trending_keywords` | array[string] | From taxonomy | No | Detected keywords (can be empty array) |
+| `pain_points` | array[string] | From taxonomy | No | Detected pain points (can be empty array) - renamed from audience_pain_points |
+| `keywords` | array[string] | From taxonomy | No | Detected keywords (can be empty array) - renamed from trending_keywords |
 | `engagement_drivers` | array[string] | From taxonomy | No | Shareability tactics (can be empty array) |
 | `content_tactics` | array[string] | From taxonomy | No | Presentation styles (can be empty array) |
-| `caption_analysis` | object | - | No | Caption-specific analysis (12 subfields) |
-| `caption_analysis.caption_hook_type` | string | statement, question, command, teaser, statistic, contradiction | No | How caption opens |
-| `caption_analysis.caption_cta_type` | string | link_in_bio, save_post, comment, follow, share, tag_friend, none | No | Call-to-action type |
-| `caption_analysis.caption_cta_present` | boolean | - | No | Whether CTA exists |
-| `caption_analysis.brand_mention_present` | boolean | - | No | Whether brand/influencer mentioned |
+| `caption_analysis` | object | - | No | Caption-specific analysis (8 subfields) - simplified from 13 subfields |
+| `caption_analysis.hook_type` | string | statement, question, command, teaser | No | How caption opens (simplified from 6 to 4 types) |
+| `caption_analysis.cta_type` | string | link_in_bio, save_post, comment, follow, share, tag_friend, none | No | Call-to-action type |
+| `caption_analysis.brand_mention_present` | boolean | - | No | Whether brand/product mentioned |
 | `caption_analysis.influencer_tag_present` | boolean | - | No | Whether influencer tagged |
-| `caption_analysis.emoji_usage` | string | none, light, moderate, heavy | No | Emoji density |
-| `caption_analysis.caption_length` | string | short, medium, long | No | Caption length category |
+| `caption_analysis.emoji_usage` | string | none, some, many | No | Emoji density (simplified from 4 to 3 levels) |
+| `caption_analysis.caption_length` | string | short, long | No | Caption length category (simplified from 3 to 2 levels) |
 | `caption_analysis.hashtag_count` | int | 0-30 | No | Number of hashtags |
 | `caption_analysis.hashtag_placement` | string | end, mixed, none | No | Where hashtags appear |
-| `caption_analysis.hashtag_strategy.broad_count` | int | 0-30 | No | Broad hashtags (50M+ views) |
-| `caption_analysis.hashtag_strategy.niche_count` | int | 0-30 | No | Niche hashtags (<5M views) |
-| `caption_analysis.hashtag_strategy.branded_count` | int | 0-30 | No | Branded hashtags |
 | `confidence` | string | high, medium, low | No | Classification confidence |
 | `transcript_available` | boolean | - | No | Whether transcript was used (false = caption/hashtag only) |
 | `note` | string | - | Yes | Optional note (e.g., "Classified using caption and hashtags only") |
@@ -745,28 +896,22 @@ hashtag_names = [h['name'] for h in hashtags_array if h.get('name')]  # Extract 
 ```json
 {
   "video_id": "7526250443832331550",
-  "performance_group": "top",
+  "taxonomy_version": "stage2.6_output",
   "content_category": "wellness_practice",
   "hook_strategy": "direct_statement",
-  "audience_pain_points": ["menstrual_discomfort", "feminine_wellness"],
-  "trending_keywords": ["yoni", "steaming", "holistic", "tcm"],
+  "pain_points": ["menstrual_discomfort", "feminine_wellness"],
+  "keywords": ["yoni", "steaming", "holistic", "tcm"],
   "engagement_drivers": ["personal_testimony", "product_recommendation"],
   "content_tactics": ["direct_to_camera", "product_demonstration"],
   "caption_analysis": {
-    "caption_hook_type": "statement",
-    "caption_cta_type": "link_in_bio",
-    "caption_cta_present": true,
+    "hook_type": "statement",
+    "cta_type": "link_in_bio",
     "brand_mention_present": true,
     "influencer_tag_present": true,
-    "emoji_usage": "light",
-    "caption_length": "medium",
+    "emoji_usage": "some",
+    "caption_length": "long",
     "hashtag_count": 9,
-    "hashtag_placement": "end",
-    "hashtag_strategy": {
-      "broad_count": 2,
-      "niche_count": 5,
-      "branded_count": 2
-    }
+    "hashtag_placement": "end"
   },
   "confidence": "high",
   "transcript_available": true,
@@ -944,9 +1089,10 @@ def validate_discovery_output(raw_taxonomy):
             logger.warning(f"Discovery found 0 patterns for {category}. This is unusual.")
 
     # Check pattern objects have required fields
+    # Note: percentage added by Python post-processing (see TI Section 4.2.5)
     for category in ['content_categories', 'hook_strategies']:
         for pattern in patterns[category]:
-            required_fields = ['name', 'frequency', 'percentage', 'examples']
+            required_fields = ['name', 'frequency', 'examples']
             missing = [f for f in required_fields if f not in pattern]
             if missing:
                 raise ValueError(
@@ -961,10 +1107,10 @@ def validate_classification_output(classification):
     Validate classification JSON before saving.
     Source: QA Q6 (complete output schema)
     """
-    # Check all 10 core fields present
+    # Check all 12 core fields present
     core_fields = [
-        'video_id', 'content_category', 'hook_strategy', 'audience_pain_points',
-        'trending_keywords', 'engagement_drivers', 'content_tactics',
+        'video_id', 'taxonomy_version', 'content_category', 'hook_strategy',
+        'pain_points', 'keywords', 'engagement_drivers', 'content_tactics',
         'caption_analysis', 'confidence', 'transcript_available', 'note'
     ]
     missing = [f for f in core_fields if f not in classification]
@@ -978,26 +1124,19 @@ def validate_classification_output(classification):
             f"Must be high, medium, or low."
         )
 
-    # Check caption_analysis has all 12 subfields
+    # Check caption_analysis has all 8 subfields
     caption_fields = [
-        'caption_hook_type', 'caption_cta_type', 'caption_cta_present',
-        'brand_mention_present', 'influencer_tag_present', 'emoji_usage',
-        'caption_length', 'hashtag_count', 'hashtag_placement', 'hashtag_strategy'
+        'hook_type', 'cta_type', 'brand_mention_present',
+        'influencer_tag_present', 'emoji_usage', 'caption_length',
+        'hashtag_count', 'hashtag_placement'
     ]
     caption_analysis = classification['caption_analysis']
     missing = [f for f in caption_fields if f not in caption_analysis]
     if missing:
         raise ValueError(f"caption_analysis missing fields: {missing}")
 
-    # Check hashtag_strategy has 3 subfields
-    hashtag_strategy = caption_analysis['hashtag_strategy']
-    required_hashtag_fields = ['broad_count', 'niche_count', 'branded_count']
-    missing = [f for f in required_hashtag_fields if f not in hashtag_strategy]
-    if missing:
-        raise ValueError(f"hashtag_strategy missing fields: {missing}")
-
     # Check arrays are actually arrays
-    array_fields = ['audience_pain_points', 'trending_keywords', 'engagement_drivers', 'content_tactics']
+    array_fields = ['pain_points', 'keywords', 'engagement_drivers', 'content_tactics']
     for field in array_fields:
         if not isinstance(classification[field], list):
             raise ValueError(f"Field {field} must be array, got {type(classification[field])}")
@@ -1174,27 +1313,22 @@ Not yet measured (component not implemented). Expected to meet targets based on:
 ```json
 {
   "video_id": "7526250443832331550",
+  "taxonomy_version": "stage2.6_output",
   "content_category": "wellness_practice",
   "hook_strategy": "direct_statement",
-  "audience_pain_points": ["menstrual_discomfort"],
-  "trending_keywords": ["holistic"],
+  "pain_points": ["menstrual_discomfort"],
+  "keywords": ["holistic"],
   "engagement_drivers": ["personal_testimony", "product_link"],
   "content_tactics": ["direct_to_camera", "product_demonstration"],
   "caption_analysis": {
-    "caption_hook_type": "statement",
-    "caption_cta_type": "link_in_bio",
-    "caption_cta_present": true,
+    "hook_type": "statement",
+    "cta_type": "link_in_bio",
     "brand_mention_present": true,
     "influencer_tag_present": true,
-    "emoji_usage": "light",
-    "caption_length": "medium",
+    "emoji_usage": "some",
+    "caption_length": "long",
     "hashtag_count": 9,
-    "hashtag_placement": "end",
-    "hashtag_strategy": {
-      "broad_count": 2,
-      "niche_count": 5,
-      "branded_count": 2
-    }
+    "hashtag_placement": "end"
   },
   "confidence": "high",
   "transcript_available": true,
@@ -1414,7 +1548,7 @@ pytest --cov=content_analysis --cov-report=html
       {
         "name": "recipe_tutorial",
         "frequency": 32,
-        "percentage": 64.0,
+        "percentage": 64.0,  // Added by Python post-processing
         "examples": [
           "protein smoothie recipe for breakfast",
           "easy meal prep for busy professionals",
@@ -1425,7 +1559,7 @@ pytest --cov=content_analysis --cov-report=html
       {
         "name": "supplement_review",
         "frequency": 18,
-        "percentage": 36.0,
+        "percentage": 36.0,  // Added by Python post-processing
         "examples": [
           "best magnesium supplement for sleep",
           "protein powder taste test",
@@ -1438,7 +1572,7 @@ pytest --cov=content_analysis --cov-report=html
       {
         "name": "problem_solution",
         "frequency": 27,
-        "percentage": 54.0,
+        "percentage": 54.0,  // Added by Python post-processing
         "examples": [
           "struggling with bloating? try this",
           "low energy all day? here's why",
@@ -1527,27 +1661,22 @@ pytest --cov=content_analysis --cov-report=html
 ```json
 {
   "video_id": "7526250443832331550",
+  "taxonomy_version": "stage2.6_output",
   "content_category": "wellness_practice",
   "hook_strategy": "direct_statement",
-  "audience_pain_points": ["menstrual_discomfort"],
-  "trending_keywords": ["holistic", "wellness"],
+  "pain_points": ["menstrual_discomfort"],
+  "keywords": ["holistic", "wellness"],
   "engagement_drivers": ["personal_testimony", "product_recommendation"],
   "content_tactics": ["direct_to_camera", "product_demonstration", "personal_story"],
   "caption_analysis": {
-    "caption_hook_type": "statement",
-    "caption_cta_type": "link_in_bio",
-    "caption_cta_present": true,
+    "hook_type": "statement",
+    "cta_type": "link_in_bio",
     "brand_mention_present": true,
     "influencer_tag_present": true,
-    "emoji_usage": "light",
-    "caption_length": "medium",
+    "emoji_usage": "some",
+    "caption_length": "long",
     "hashtag_count": 9,
-    "hashtag_placement": "end",
-    "hashtag_strategy": {
-      "broad_count": 2,
-      "niche_count": 5,
-      "branded_count": 2
-    }
+    "hashtag_placement": "end"
   },
   "confidence": "high",
   "transcript_available": true,
@@ -1562,27 +1691,22 @@ pytest --cov=content_analysis --cov-report=html
 ```json
 {
   "video_id": "video_no_speech_example",
+  "taxonomy_version": "stage2.6_output",
   "content_category": "recipe_tutorial",
   "hook_strategy": "direct_statement",
-  "audience_pain_points": [],
-  "trending_keywords": ["protein", "meal_prep"],
+  "pain_points": [],
+  "keywords": ["protein", "meal_prep"],
   "engagement_drivers": ["specific_actionable_steps"],
   "content_tactics": ["visual_demonstration"],
   "caption_analysis": {
-    "caption_hook_type": "command",
-    "caption_cta_type": "save_post",
-    "caption_cta_present": true,
+    "hook_type": "command",
+    "cta_type": "save_post",
     "brand_mention_present": false,
     "influencer_tag_present": false,
-    "emoji_usage": "heavy",
+    "emoji_usage": "many",
     "caption_length": "short",
     "hashtag_count": 5,
-    "hashtag_placement": "end",
-    "hashtag_strategy": {
-      "broad_count": 3,
-      "niche_count": 2,
-      "branded_count": 0
-    }
+    "hashtag_placement": "end"
   },
   "confidence": "medium",
   "transcript_available": false,

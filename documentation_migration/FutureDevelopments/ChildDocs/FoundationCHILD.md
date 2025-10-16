@@ -2,7 +2,7 @@
 
 > **Parent**: MLPlanningv2.md - Parts 1 & 2
 > **Purpose**: Shared foundation document providing cross-cutting system architecture, configuration, and schemas for all pipeline stages
-> **Version**: 1.0
+> **Version**: 1.1
 > **Last Updated**: 2025-01-28
 > **Status**: Draft
 
@@ -1081,6 +1081,11 @@ ClusterAnalyticsSchema = {
 - Success-based selection (not volume-based)
 - Example: Skip 9-13s (400 videos, 5 winners), Process 18-60s (150 videos, 75 winners)
 
+**Window Configuration**:
+- Bucket-specific window configurations are defined in `config/bucket_definitions.py`
+- This shared configuration is imported by Stage 4 (Feature Transformation) and Stage 6 (ML Analysis Generation)
+- See `config/bucket_definitions.py` for the BUCKET_WINDOWS dictionary
+
 ### 6.1 Bucket Assignment Logic
 
 **Assignment Algorithm**:
@@ -1294,6 +1299,14 @@ All stage-specific Child HLDs reference this document:
 - Output: Ranked list of temporal window features
 - Used in: Stage 6 (RF reports), Stage 7 (LLM synthesis)
 
+**BUCKET_WINDOWS**
+- Centralized configuration dictionary mapping bucket names to their window structures
+- Location: `config/bucket_definitions.py`
+- Format: `{'0-3s': ['hook'], '3-9s': ['hook', 'closing'], ...}`
+- Purpose: Single source of truth for bucket-specific window configurations across all stages
+- Used by: Stage 4 (Feature Transformation), Stage 6 (ML Analysis Generation), Stage 7 (LLM Analysis)
+- Prevents configuration desync between stages
+
 ### System Architecture Terms
 
 **Stage**
@@ -1352,4 +1365,5 @@ All stage-specific Child HLDs reference this document:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.1 | 2025-01-28 | RumiAI Team | Updated Section 1.3: Corrected ML model count from 16 to 90 models (detailed architecture breakdown added) |
 | 1.0 | 2025-01-28 | RumiAI Team | Initial creation from MLPlanningv2.md Parts 1 & 2 |

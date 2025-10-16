@@ -758,7 +758,7 @@ RumiAI defines **8 potential buckets** (0-3s through 90-120s) but only processes
 - **3 active buckets**: Selected based on where winners cluster (success-based, not volume-based)
 - **Typical result**: 3 active buckets cover 90-95% of winners (e.g., 18-33s, 33-60s, 13-18s)
 - **Infrastructure**: Directories created for all 8 buckets, but only 3 populated with selected videos
-- **ML capacity**: Up to 16 models possible (8 × 2), typically 6 models trained (3 × 2)
+- **ML capacity**: 90 models total across all buckets (8 Video-Level RF + 41 Window-Level RF + 41 Window-Level K-Means per 8 buckets), with 3 active buckets trained per analysis
 
 This approach balances flexibility (can adapt to any winner distribution) with efficiency (focus resources on winning formats).
 
@@ -1989,7 +1989,7 @@ Performance characteristics from production testing (not aspirational targets):
 - **Bucket processing**: 3 active buckets per analysis (success-based selection from 8 potential buckets)
   - **Potential buckets**: 8 defined (0-3s through 90-120s)
   - **Active buckets**: Top 3 selected where winners cluster
-  - **ML model capacity**: Up to 16 models possible (8 buckets × 2 algorithms), typically 6 models trained (3 active buckets × 2 algorithms)
+  - **ML model capacity**: 90 models total across all 8 buckets (8 Video-Level RF + 41 Window-Level RF + 41 Window-Level K-Means), with 3 active buckets trained per analysis run
 - **Max video_count per bucket**: 500 (memory constraint: 500 videos × ~1KB = 500KB)
 
 ---

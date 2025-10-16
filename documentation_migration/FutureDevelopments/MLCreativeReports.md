@@ -13,7 +13,7 @@ Due to your success-based bucket selection approach _(analyzing where winners cl
 
 **Purpose**: Define creative report structure, content, and generation strategy for RumiAI ML outputs
 
-**Audience**: Content creators (affiliate/internal), Tumi Labs clients (brands)
+**Audience**: Content creators (affiliates), Tumi Labs clients (brands), Internal use (strategy and planning)
 
 **Status**: Design phase - decisions being finalized
 
@@ -24,20 +24,13 @@ Creative reports must match analysis flows from MLPlanning.md:
 
 ---
 
-
 ## Hashtag Analysis
 
 ---
 ### Content Creators
 
 **Deliverable**: 
-Each winning bucket (3 Top) will output 3 Reports
-
-**Report Allocation by Duration**:
-- Reports prioritized for buckets with most videos
-- High-volume buckets (18-33s, 33-60s) receive most reports (5 and 4 respectively)
-- Low-volume buckets (0-3s, 90-120s) receive fewer reports (1 each)
-- Ensures statistical validity (only create reports where sufficient data exists)
+Each winning bucket (3 Top) will output 3 Reports - so we will have 9 reports total per Hashtag Analysis > Content Creator 
 
 **Report Characteristics**:
 - **Catchy**: Grab attention with proof and numbers immediately
@@ -134,14 +127,6 @@ Bottom performers do THIS:
 □ Clear CTA at end?
 ```
 
-**Example Videos**:
-```
-📱 EXAMPLES USING THIS PATTERN
-• @creator1 - 12.3% engagement [QR code or link]
-• @creator2 - 9.8% engagement [QR code or link]
-• @creator3 - 8.9% engagement [QR code or link]
-```
-
 ---
 
 **Total Report Length**: 2 pages (digital PDF, mobile-optimized)
@@ -156,8 +141,8 @@ Bottom performers do THIS:
 **Purpose**:
 - Prove sophistication of the ML system to business owner
 - Reduce anxiety about the mechanism (show it works)
-- Provide hiring strategy based on market intelligence
-- Connect insights to the 20 creator reports being delivered
+- Provide creator sourcing strategy based on market intelligence
+- Connect insights to the creator reports being delivered
 
 **Report Characteristics**:
 - **Authoritative**: "This is what works" (not "we think maybe")
