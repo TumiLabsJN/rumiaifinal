@@ -17,22 +17,30 @@ import anthropic
 from .utils import load_json, save_json, construct_path
 from .validation import validate_discovery_inputs, validate_business_rules_sampling, validate_discovery_output
 from .error_handlers import handle_graceful_skip
+from .cost_tracking import log_estimated_cost, log_actual_cost
+from .transcript_validation import load_validation_cache
 
 logger = logging.getLogger(__name__)
 
 
 def sample_transcripts_for_discovery(
     manifest_path: str,
-    sample_size: int = 50
+    sample_size: int = 50,
+    validation_cache: Dict[str, Any] = None
 ) -> List[Dict[str, Any]]:
     """
     Sample transcripts stratified evenly across top 3 buckets.
 
     Source: ContentAnalysisCHILDTI.md Section 4.1
+    Updated: 2.6FilterImprovement.md Section "Implementation Part 4"
 
     Args:
         manifest_path: Path to selection_manifest.json from Stage 2.5
-        sample_size: Total transcripts to sample (default: 50, configurable)
+        sample_size: Total transcripts to sample (default: 50, max: 100)
+                    If fewer videos available, uses all available (does not fail)
+        validation_cache: Optional validation cache dict from Stage 2.5.5
+                         If provided, only samples valid transcripts
+                         If None, samples all transcripts (legacy behavior)
 
     Returns:
         list[dict]: Sampled video IDs with transcript text and bucket assignment
@@ -60,38 +68,76 @@ def sample_transcripts_for_discovery(
     # Source: ContentAnalysisCHILD.md Section 2.3.1 line 133
     top_3_buckets = manifest['selected_buckets']  # e.g., ["33-60s", "60-90s", "90-120s"]
 
-    logger.info(f"Sampling {sample_size} transcripts from top 3 buckets: {top_3_buckets}")
+    # Step 4: Cap sample_size at 100 (configurable maximum)
+    sample_size = min(sample_size, 100)
 
-    # Step 4: Calculate samples per bucket (stratified even sampling)
+    # Step 5: Calculate total available top performers across all buckets
+    total_available = 0
+    for bucket in top_3_buckets:
+        if bucket in manifest['videos_by_bucket']:
+            total_available += len(manifest['videos_by_bucket'][bucket]['top_performers'])
+
+    # Step 6: Adjust sample_size if fewer videos available (don't fail)
+    actual_sample_size = min(sample_size, total_available)
+
+    if actual_sample_size < sample_size:
+        logger.warning(
+            f"Requested {sample_size} samples but only {total_available} top performers available. "
+            f"Using all {actual_sample_size} available videos."
+        )
+
+    logger.info(f"Sampling {actual_sample_size} transcripts from top 3 buckets: {top_3_buckets}")
+
+    # Step 7: Calculate samples per bucket (stratified even sampling)
     # Source: ContentAnalysisCHILD.md Section 2.3.1 line 136
-    samples_per_bucket = sample_size // 3  # ~17 per bucket
+    samples_per_bucket = actual_sample_size // 3  # ~17 per bucket for sample_size=50
 
-    # Step 5: Initialize results container
+    # Step 8: Initialize results container
     sampled_transcripts = []
 
-    # Step 6: Sample from each bucket
+    # Step 9: Sample from each bucket
     for bucket in top_3_buckets:
-        # Step 6.1: Validate bucket exists in manifest
+        # Step 9.1: Validate bucket exists in manifest
         if bucket not in manifest['videos_by_bucket']:
             logger.warning(f"Bucket {bucket} not in videos_by_bucket, skipping")
             continue
 
-        # Step 6.2: Extract top performers only
+        # Step 9.2: Extract top performers only
         # Source: ContentAnalysisCHILD.md Section 2.3.1 line 141
         top_performers = manifest['videos_by_bucket'][bucket]['top_performers']
 
-        # Step 6.3: Random sample (handle case where bucket has < samples_per_bucket videos)
-        # Source: ContentAnalysisCHILD.md Section 2.3.1 lines 144
-        sample_count = min(samples_per_bucket, len(top_performers))
-        sampled_ids = random.sample(top_performers, sample_count)
+        # Step 9.2a: FILTER to valid video IDs if validation cache provided
+        # Source: 2.6FilterImprovement.md Section "Implementation Part 4"
+        if validation_cache is not None:
+            valid_video_ids = [
+                vid for vid in top_performers
+                if vid in validation_cache and validation_cache[vid]['is_valid']
+            ]
 
-        logger.info(f"Bucket {bucket}: Sampling {sample_count} videos from {len(top_performers)} top performers")
+            invalid_rate = (len(top_performers) - len(valid_video_ids)) / len(top_performers) if len(top_performers) > 0 else 0
+            logger.info(
+                f"Bucket {bucket}: {len(valid_video_ids)}/{len(top_performers)} valid transcripts "
+                f"({invalid_rate:.1%} invalid rate)"
+            )
+
+            # Use filtered valid IDs for sampling
+            top_performers = valid_video_ids
+
+        # Step 9.3: Random sample (handle case where bucket has < samples_per_bucket videos)
+        # Source: ContentAnalysisCHILD.md Section 2.3.1 lines 144
+        # Use all available if bucket has fewer than target
+        sample_count = min(samples_per_bucket, len(top_performers))
+        sampled_ids = random.sample(top_performers, sample_count) if len(top_performers) > 0 else []
+
+        logger.info(f"Bucket {bucket}: Sampling {sample_count} videos from {len(top_performers)} available")
 
         # Step 6.4: Load transcripts for sampled videos
         for video_id in sampled_ids:
             # Step 6.4.1: Construct transcript path
             # Source: ContentAnalysisCHILD.md Section 2.3.1 line 148
-            transcript_path = f"/home/jorge/rumiaifinal/speech_transcriptions/{video_id}_whisper.json"
+            # Updated: M1 Enhancement - Use RUMIAI_ROOT environment variable
+            RUMIAI_ROOT = os.environ.get('RUMIAI_ROOT', '/home/jorge/rumiaifinal')
+            transcript_path = f"{RUMIAI_ROOT}/speech_transcriptions/{video_id}_whisper.json"
 
             # Step 6.4.2: Load transcript (handle missing files gracefully)
             # Source: ContentAnalysisCHILD.md Section 2.3.1 Edge Cases table
@@ -157,7 +203,7 @@ def discover_patterns_llm(
 
     prompt = f"""Analyze the following {len(transcripts)} video transcripts from the #{hashtag} hashtag.
 
-Your task is to identify recurring content patterns across 6 categories. Focus on patterns that appear in AT LEAST 10% of videos (minimum 3 videos). Do not create patterns for isolated or single-video elements.
+Your task is to identify recurring content patterns across 6 categories. Focus on patterns that appear in AT LEAST 5% of videos (minimum 2 videos). Do not create patterns for isolated or single-video elements.
 
 Patterns should be specific and actionable so content creators can replicate them.
 
@@ -286,6 +332,10 @@ TRANSCRIPTS:
     # Source: ContentAnalysisCHILD.md Section 2.3.2 line 224
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
+    # Step 2a: Log estimated cost
+    # Source: ContentAnalysisCHILDTI.md Section 4.6.3
+    log_estimated_cost("discovery", sample_size=len(transcripts))
+
     # Step 3: Call API with retry logic (3 attempts with exponential backoff)
     # Source: ContentAnalysisCHILD.md Section 2.3.2 Edge Cases table
     for attempt in range(3):
@@ -294,13 +344,20 @@ TRANSCRIPTS:
 
             # Step 3.1: Make API call with Sonnet model
             # Source: 2.6HashtagCritique.md - Final Prompt (System + User messages)
+            # Updated: M8 Enhancement - Add latency tracking
+            # Updated: 2025-01-17 - Upgraded to Sonnet 4.5 for better pattern discovery
+            start_time = time.time()
             response = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-sonnet-4-5-20250929",
                 max_tokens=4096,
                 timeout=120,  # 2 minutes
                 system=system_message,
                 messages=[{"role": "user", "content": prompt}]
             )
+
+            # Step 3.1a: Log actual cost with latency
+            # Source: ContentAnalysisCHILDTI.md Section 4.6.3
+            log_actual_cost(response, "sonnet", start_time)
 
             # Step 3.2: Extract response text
             response_text = response.content[0].text
@@ -404,7 +461,7 @@ def run_discovery_stage(
     hashtag: str,
     analysis_mode: str = "top",
     selection_strategy: str = "contrastive",
-    sample_size: int = 50
+    sample_size: int = 100
 ) -> Dict[str, Any]:
     """
     Run complete Stage 2.6 discovery pipeline with error handling.
@@ -441,17 +498,34 @@ def run_discovery_stage(
     )
 
     # Step 2: Validate inputs
-    logger.info("Step 1/3: Validating inputs...")
+    logger.info("Step 1/4: Validating inputs...")
     validate_discovery_inputs(manifest_path, sample_size)
     logger.info("✓ Input validation passed")
 
+    # Step 2a: Load validation cache if available (Stage 2.5.5)
+    # Source: 2.6FilterImprovement.md Section "Implementation Part 4"
+    logger.info("Step 2/4: Loading transcript validation cache...")
+    try:
+        validation_cache = load_validation_cache(
+            client_id, hashtag, analysis_mode, selection_strategy
+        )
+        logger.info("✓ Validation cache loaded - will filter invalid transcripts")
+    except FileNotFoundError:
+        logger.warning(
+            "⚠️  No validation cache found. Sampling without filtering.\n"
+            "   Run Stage 2.5.5 (validate_all_transcripts) first for better results."
+        )
+        validation_cache = None
+
     # Step 3: Sample transcripts
-    logger.info("Step 2/3: Sampling transcripts from top 3 buckets...")
-    sampled_transcripts = sample_transcripts_for_discovery(manifest_path, sample_size)
+    logger.info("Step 3/4: Sampling transcripts from top 3 buckets...")
+    sampled_transcripts = sample_transcripts_for_discovery(
+        manifest_path, sample_size, validation_cache
+    )
     logger.info(f"✓ Sampled {len(sampled_transcripts)} transcripts")
 
     # Step 4: Run LLM discovery
-    logger.info("Step 3/3: Running LLM pattern discovery (Claude Sonnet)...")
+    logger.info("Step 4/4: Running LLM pattern discovery (Claude Sonnet)...")
     raw_taxonomy = discover_patterns_llm(sampled_transcripts, hashtag, client_id)
     logger.info("✓ Discovery complete")
 

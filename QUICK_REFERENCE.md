@@ -1,103 +1,130 @@
-# RumiAI Quick Reference Guide
+# Stage 2 Fix - Quick Reference Card
 
-## 🎯 What is RumiAI?
+**Test Started**: 2025-10-21 10:49:02
+**Log File**: test_supplement_20251021_104901.log
+**Status Check**: Automatic check running (10 min timer)
 
-**Current System**: TikTok video analyzer that extracts 60+ ML features through temporal window analysis.
-- **Core**: Processes videos through 9 ML services sequentially
-- **Output**: JSON with ~20 features per temporal window for pattern detection
-- **Purpose**: Internal tool for Tumi Labs' RippleOS consultancy to identify viral creative patterns
+---
 
-## 📚 START HERE - Documentation Reading Order
-
-### For Fresh CLI Instance:
-1. **[BusinessContext.md](./BusinessContext.md)** (1-2 min) - Why RumiAI exists, business problem, stakeholders
-2. **[SystemArchitecturev2.md](./SystemArchitecturev2.md)** (10-15 min) - Technical architecture, data flow, services
-3. **[MLROADMAP.md](./MLROADMAP.md)** (5 min) - Future ML pipeline development plans
-
-### For Deep Technical Dives:
-- **TotalFeatures.md**: `/documentation_migration/services/TotalFeatures.md` - All 20+ features explained
-- **Service docs**: See `/documentation_migration/services/*.md` for individual service details
-
-## 🚀 Key System Facts
-
-### Current Capabilities
-- **Processing Time**: ~60-80 seconds for a 60-second video
-- **Output**: `temporal_windows_updated.json` with 60+ features per temporal window
-- **Window Structure CODE**:
-  | Duration | Middle Segments | Total Windows (Hook + Middle + Closing) |
-  |----------|-----------------|-----------------------------------------|
-  | 0-9s     | None (null)     | 2 (Hook + Closing only)                 |
-  | 9-18s    | 3               | 5 (Hook + 3 Middle + Closing)           |
-  | 18-33s   | 4               | 6 (Hook + 4 Middle + Closing)           |
-  | 33-75s   | 5               | 7 (Hook + 5 Middle + Closing)           |
-  | >75s     | 5 (capped)      | 7 (Hook + 5 Middle + Closing)           |
-
-  **Window Structure ML Buckets** 
-  ML Buckets - Total 8 - (Downstream - Training)
-  | Bucket  | Duration | Window Structure Used |
-  |---------|----------|-----------------------|
-  | 0-3s    | 0-3s     | 1-window (Hook)       |
-  | 3-9s    | 3-9s     | 2-window              |
-  | 9-13s   | 9-13s    | 5-window              |
-  | 13-18s  | 13-18s   | 5-window              |
-  | 18-33s  | 18-33s   | 6-window              |
-  | 33-60s  | 33-60s   | 7-window              |
-  | 60-90s  | 60-90s   | 7-window              |
-  | 90-120s | 90-120s  | 7-window              |
-
-  - **Critical**: Videos ≤9s return middle_segments as null (not empty array)
-  - **ML Note**: ML training will split 9-18s into two buckets (9-13s, 13-18s) for variance handling
-  - **Segment Duration Calculation**: (Total Duration-(Hook+Closing))/Duration Segments
-- **ML Services**: 9 services - YOLO, Whisper, MediaPipe, OCR, Scene Detection, FEAT, DeepFace, Audio Energy, Hashtag Analysis
-- **Processing Modes**: Sequential (default) or Parallel
-- **Architecture**: Self-contained services with fail-fast validation and checkpoint/resume
-
-
-## 🔧 Common Commands
+## One-Line Status Checks
 
 ```bash
-# Process a single video
-python rumiai_runner.py "https://tiktok.com/@user/video/123"
+# Overall progress
+/tmp/monitor_test.sh
 
-# Set parallel processing mode (faster for short videos)
-export PARALLEL_MODE=true
+# Is test still running?
+ps aux | grep rumiai_ml_batch.py | grep -v grep
 
-# Set sequential mode (default, better for long videos)
-export PARALLEL_MODE=false
+# What stage are we on?
+grep -E "Stage [0-9]|Step [0-9]" test_supplement_20251021_104901.log | tail -5
 
-# View output structure
-cat insights/[video_id]_temporal_windows_updated.json | jq '.temporal_windows | keys'
+# Has Stage 2 started? (The critical fix test)
+grep -q "Step 3-4: Processing" test_supplement_20251021_104901.log && echo "✅ Stage 2 STARTED" || echo "⏳ Not yet (still in Stage 1)"
 
-# Check what features are in each window
-cat insights/[video_id]_temporal_windows_updated.json | jq '.temporal_windows.hook | keys'
+# Are videos using webVideoUrl? (Success indicator)
+grep -c "TikTok URL" test_supplement_20251021_104901.log
+
+# Any "file too small" errors? (Failure indicator)
+grep -c "Downloaded file too small" test_supplement_20251021_104901.log
 ```
 
-## 🔧 Environment Variables
-- `PARALLEL_MODE`: true/false (processing mode)
-- `WHISPER_THREADS`: 1-16 (optimal: 4)
-- `CV2_THREADS`: 1-8 (optimal: 2)
-- `OMP_NUM_THREADS`: 1-8 (optimal: 2)
+---
 
-## 📁 Key File Locations
+## Critical Success Checks (Run When Stage 2 Completes)
 
-```
-/home/jorge/rumiaifinal/
-├── rumiai_runner.py                    # Main entry point
-├── video_analyzer.py                   # Core orchestrator
-├── timeline_builder.py                 # Temporal aggregation
-├── BusinessContext.md                  # Business context
-├── SystemArchitecturev2.md            # Technical architecture
-├── MLROADMAP.md                        # Future ML pipeline
-├── config/
-│   └── bucket_definitions.py          # Shared bucket window configurations
-├── documentation_migration/
-│   └── services/
-│       └── TotalFeatures.md           # All 60+ features explained
-└── services/                           # Individual ML service modules
+```bash
+# 1. How many videos succeeded?
+grep -c "Successfully processed video" test_supplement_20251021_104901.log
+
+# 2. How many temporal_windows files created?
+find data/clients/test_production/hashtags/test_supplement -name "*_temporal_windows_updated.json" 2>/dev/null | wc -l
+
+# 3. Check final checkpoint status
+find data/clients/test_production/hashtags/test_supplement -name "stage_2_checkpoint.json" -exec cat {} \; | grep -E "completed|failed" | head -5
+
+# 4. Were there ANY failures?
+find data/clients/test_production/hashtags/test_supplement -name "stage_2_checkpoint.json" -exec cat {} \; | grep '"failed": 0' && echo "✅ ZERO FAILURES" || echo "⚠️ Some failures detected"
 ```
 
-## 📊 For ML Development
-See [MLROADMAP.md](./MLROADMAP.md) for upcoming ML training pipeline that will:
-- Process 300 videos per hashtag
-- Train Random Forest + K-means models per duration bucket
-- Generate creative strategy reports for content creators
+---
+
+## Expected Timeline
+
+| Time | Stage | Activity |
+|------|-------|----------|
+| 10:49 | Start | Test launched |
+| 10:50-10:58 | Stage 1 | Scraping 4 hashtag runs |
+| ~11:00 | Stage 2 Start | **Fix gets tested here!** |
+| 11:00-12:30 | Stage 2 | Processing 30 videos via webVideoUrl |
+| 12:30-12:45 | Stages 3-5 | ML analysis & reports |
+| ~12:45 | Complete | Final validation |
+
+**Check back around 11:00 to see Stage 2 start!**
+
+---
+
+## What the Fix Changes
+
+**BEFORE (Buggy)**:
+```
+→ Tries to download from subtitleLinks
+→ Gets 555-byte caption file
+→ Error: "Downloaded file too small"
+→ Video marked as FAILED
+```
+
+**AFTER (Fixed)**:
+```
+→ No local file found
+→ Uses webVideoUrl fallback
+→ Passes TikTok URL to RumiAI
+→ RumiAI scrapes via Apify
+→ Video processed successfully ✅
+```
+
+---
+
+## If Test Fails
+
+```bash
+# 1. Stop the running test
+pkill -f rumiai_ml_batch.py
+
+# 2. Check what went wrong
+grep -i "error\|failed" test_supplement_20251021_104901.log | tail -20
+
+# 3. Restore backups
+cp ml_pipeline/stage2_processing/video_download.py.backup ml_pipeline/stage2_processing/video_download.py
+cp ml_pipeline/stage2_processing/main.py.backup ml_pipeline/stage2_processing/main.py
+cp ml_pipeline/stage2_processing/pause_handler.py.backup ml_pipeline/stage2_processing/pause_handler.py
+
+# 4. Clean test data
+rm -rf data/clients/test_production/hashtags/test_supplement/
+```
+
+---
+
+## Files to Review
+
+- **Stage2Fix.md** - Complete analysis and findings
+- **CHANGES_APPLIED.md** - What was changed
+- **TEST_IN_PROGRESS.md** - Monitoring guide
+- **/tmp/stage2_fix_test_report.md** - Non-production test results
+
+---
+
+## Key Log Patterns to Search For
+
+```bash
+# Fix working (should see these)
+grep "TikTok URL" test_supplement_20251021_104901.log
+grep "Successfully processed video" test_supplement_20251021_104901.log
+
+# Fix NOT working (should NOT see these)  
+grep "Downloaded file too small" test_supplement_20251021_104901.log
+grep "Checked: downloadAddr, subtitleLinks" test_supplement_20251021_104901.log
+```
+
+---
+
+**Next automatic check in 10 minutes at ~11:00!**

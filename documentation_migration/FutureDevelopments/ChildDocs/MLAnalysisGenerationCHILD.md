@@ -110,9 +110,10 @@ Process Step 6: ATOMIC COMMIT (RENAME ALL 13 FILES AT ONCE)
    - Delete temp directory
    - Success: exit code 0
    ↓
-Output: 13 JSON files per bucket (~95KB total)
+Output: 13-15 JSON files per bucket (varies by bucket window count, ~95KB total)
         Location: bucket_{bucket}/ml_analysis/
-        Files: rf_video_analysis.json, {window}_rf_analysis.json (×6-7), {window}_kmeans_analysis.json (×6-7)
+        Files: rf_video_analysis.json (1), {window}_rf_analysis.json (N files), {window}_kmeans_analysis.json (N files)
+        Where N = window count per bucket (6 for 18-33s, 7 for 90-120s - see Section 5.2 for full table)
 ```
 
 ### 2.3 Detailed Process
@@ -236,6 +237,10 @@ def generate_video_rf_json(bucket_path: str, bucket: str) -> dict:
     ]
 
     # ===== 3. Load aggregated_features.csv for Distribution Analysis =====
+    # DESIGN DECISION: Video-level uses aggregated_features.csv (Stage 3) not rf_transformed.csv (Stage 4)
+    # Rationale: Video-level RF includes cross-window features (e.g., hook_to_middle_energy_delta)
+    # computed from raw aggregated values. Distribution percentiles must match raw data source.
+    # See CrossHLDalignment2do.md Issue #5 for full rationale.
     agg_csv_path = os.path.join(bucket_path, 'ml_analysis/aggregated_features.csv')
     df = pd.read_csv(agg_csv_path)
 
@@ -367,6 +372,10 @@ def generate_window_rf_json(bucket_path: str, bucket: str, window: str) -> dict:
     window_metrics = all_metrics.get(f'rf_{window}', {})
 
     # ===== 4. Compute Distribution Stats (Same as Video-Level, but per window) =====
+    # DESIGN DECISION: Window-level uses {window}_rf_transformed.csv (Stage 4) not aggregated_features.csv
+    # Rationale: Window-level RF was trained on Stage 4 transformed data (scaled, encoded).
+    # Distribution percentiles must match training data distribution exactly for consistency.
+    # See CrossHLDalignment2do.md Issue #5 for full rationale.
     # Load window-specific transformed CSV
     rf_csv_path = os.path.join(bucket_path, f'ml_analysis/{window}_rf_transformed.csv')
     df = pd.read_csv(rf_csv_path)
@@ -855,6 +864,27 @@ WINDOW_KMEANS_JSON_TEMPLATE = "{window}_kmeans_analysis.json"
 
 ### 5.2 Output Schema
 
+**Output Files**: 13-15 JSON files per bucket (varies by bucket window count)
+
+**File Breakdown**:
+- **1 video-level RF JSON**: `rf_video_analysis.json` (~30KB)
+- **N window-level RF JSONs**: `{window}_rf_analysis.json` (~5KB each)
+- **N window-level K-Means JSONs**: `{window}_kmeans_analysis.json` (~5KB each)
+
+**Total**: `1 + (N × 2)` files
+
+**Window Count by Bucket** (from `config/bucket_definitions.py`):
+| Bucket | Windows | Total Files | Window Names |
+|--------|---------|-------------|--------------|
+| 0-3s | 1 | 3 | hook |
+| 3-9s | 2 | 5 | hook, closing |
+| 9-13s | 3 | 7 | hook, middle_aggregate, closing |
+| 13-18s | 3 | 7 | hook, middle_aggregate, closing |
+| 18-33s | 6 | 13 | hook, middle_1-4, closing |
+| 33-60s | 7 | 15 | hook, middle_1-5, closing |
+| 60-90s | 7 | 15 | hook, middle_1-5, closing |
+| 90-120s | 7 | 15 | hook, middle_1-5, closing |
+
 **File 1**: `ml_analysis/rf_video_analysis.json` (Video-Level RF)
 
 **Complete Structure**:
@@ -901,8 +931,45 @@ WINDOW_KMEANS_JSON_TEMPLATE = "{window}_kmeans_analysis.json"
 | `bucket` | str | `"18-33s"`, etc. | Yes | Duration bucket |
 | `hashtag` | str/null | Any | No | Hashtag analyzed (set by caller) |
 | `video_count` | int | 50-300 | Yes | Total videos in bucket |
-| `input_features` | int | 24-220 | Yes | Feature count (varies by bucket, includes 5 cross-window features) |
+| `input_features` | int | 24-220 | Yes | Feature count (varies by bucket, includes 5 cross-window features from Stage 4) |
 | `feature_importance` | array | Length 10 | Yes | Top 10 features with stats |
+
+**Cross-Window Features** (computed in Stage 4, extracted by Stage 6):
+
+Stage 6 extracts video-level RF feature importance which includes 5 cross-window features computed by Stage 4 (FeatureTransformationCHILD.md Section 6.5, Step 2.3.2):
+
+| Feature Name | Type | Range | Description | Source |
+|--------------|------|-------|-------------|--------|
+| `hook_to_middle_energy_delta` | Delta | [-1, 1] | Energy change from hook to middle average | Stage 4 Step 6.5 |
+| `middle_to_closing_contrast` | Delta | [-1, 1] | Energy gap between middle avg and closing peak | Stage 4 Step 6.5 |
+| `eye_contact_consistency` | Variance | [0, 1] | Std deviation of eye contact across all windows | Stage 4 Step 6.5 |
+| `word_density_std` | Variance | [0, ∞] | Std deviation of word count across windows | Stage 4 Step 6.5 |
+| `energy_progression_slope` | Rate | [-∞, ∞] | Linear regression slope of energy across windows | Stage 4 Step 6.5 |
+
+**For Stage 7 Phase 2 (Cross-Window Synthesis)**:
+
+These cross-window features enable Stage 7's `generate_cross_window_patterns()` function to provide temporal progression insights in the `supplementary_insights.cross_window_patterns` array, such as:
+- "78% of high-performing videos use 'bookend' eye contact pattern (high in hook/closing, lower in middle)"
+- "Energy progression: 65% build energy, 12% maintain consistent energy, 23% variable"
+- "Closing energy should match or exceed middle average (85% of top performers follow this)"
+
+**How Stage 6 Processes These Features**:
+1. Stage 6 loads the trained video-level RF model from `models/rf_video_{bucket}.pkl`
+2. Extracts `feature_importances_` and `feature_names_in_` attributes
+3. Cross-window features appear alongside single-window features in the importance ranking
+4. Top 10 features (which may include 0-5 cross-window features depending on importance) are included in `rf_video_analysis.json`
+5. Stage 7 identifies cross-window features by name pattern and uses them to generate temporal progression insights
+
+**Note**: Cross-window features are only present in **video-level RF**, not window-level RF or K-Means outputs, because they require multiple windows to compute deltas and consistency metrics.
+
+**Reference**:
+- FeatureTransformationCHILD.md Section 6.5 (lines 221-250) for complete computation logic
+- FeatureTransformationCHILD.md lines 612-619 for feature list definition
+- FeatureTransformationCHILD.md lines 740-744 for output schema details
+
+---
+
+**Field Details** (continued):
 | `feature_importance[].feature` | str | Feature name | Yes | e.g., `"hook_eye_contact_rate"` |
 | `feature_importance[].importance` | float | 0.0-1.0 | Yes | RF importance score |
 | `feature_importance[].top_performer_avg` | float | Varies | Yes | Mean value in top 80% |

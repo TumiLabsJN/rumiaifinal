@@ -692,6 +692,9 @@ closing_scene_count, closing_word_count, closing_energy_level, ...     # For buc
 - 18-33s: 129 columns (6 windows × 21 features + 3 metadata)
 - 33-60s, 60-90s, 90-120s: 150 columns (7 windows × 21 features + 3 metadata)
 
+**Note on Cross-Window Features**:
+This stage outputs window-specific features only (21 per window). Cross-window features (e.g., `hook_to_middle_energy_delta`, `middle_to_closing_contrast`, `eye_contact_consistency`, `energy_trend_slope`, `window_consistency_score`) are computed in **Stage 4 (Feature Transformation)**, not Stage 3. These 5 additional features are added to the video-level RF training dataset by comparing values across temporal windows. See FeatureTransformationCHILD.md Section 2.3.2 for cross-window feature engineering logic.
+
 **Row Count**: N = number of successfully processed videos (may be less than total files if some skipped)
 
 **File 2**: `{bucket_path}/ml_analysis/aggregation_summary.json`

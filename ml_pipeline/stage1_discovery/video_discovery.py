@@ -20,6 +20,7 @@ from .confirmation import InteractiveConfirmation
 from .cluster_config import detect_target_type, load_cluster_config
 from .cluster_scraper import run_cluster_scraping
 from .cluster_deduplication import deduplicate_with_provenance
+from .hashtag_validator import validate_target_hashtags
 from .cluster_analytics import save_cluster_analytics
 from .constants import (
     EXIT_CODE_SUCCESS,
@@ -125,7 +126,7 @@ class VideoDiscovery:
 
                 # Stage 1.1b: Deduplication with Provenance
                 logger.info("Stage 1.1b: Deduplicating with provenance tracking...")
-                videos, analytics = deduplicate_with_provenance(
+                videos, dedup_analytics = deduplicate_with_provenance(
                     all_videos=all_videos,
                     cluster_config=cluster_config,
                     failed_scrapes=failed_scrapes
@@ -133,8 +134,25 @@ class VideoDiscovery:
                 logger.info(f"✓ Deduplicated to {len(videos)} unique videos")
                 logger.info("")
 
-                # Stage 1.1c: Save Cluster Analytics
-                logger.info("Stage 1.1c: Saving cluster analytics...")
+                # Stage 1.1c: Hashtag Validation (NEW - PostScrapingValidation.md)
+                logger.info("Stage 1.1c: Validating hashtags (filtering false positives)...")
+                all_cluster_hashtags = [cluster_config['primary_hashtag']] + cluster_config['variant_hashtags']
+                videos, validation_report = validate_target_hashtags(
+                    videos=videos,
+                    target_hashtags=all_cluster_hashtags,
+                    cluster_id=cluster_config['cluster_id']
+                )
+                logger.info(f"✓ Validation complete: {validation_report['passed']}/{validation_report['total_input']} videos passed")
+                logger.info(f"  False positives removed: {validation_report['removed']} ({validation_report['removal_rate_pct']}%)")
+                if validation_report['description_fallback_count'] > 0:
+                    logger.info(f"  Description fallback used: {validation_report['description_fallback_count']} ({validation_report['description_fallback_rate_pct']}%)")
+                logger.info("")
+
+                # Merge analytics
+                analytics = {**dedup_analytics, "hashtag_validation": validation_report}
+
+                # Stage 1.1d: Save Cluster Analytics
+                logger.info("Stage 1.1d: Saving cluster analytics...")
                 analytics_path = save_cluster_analytics(
                     analytics=analytics,
                     client_id=self.config['client_id'],

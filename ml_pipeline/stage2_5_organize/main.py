@@ -13,7 +13,8 @@ from ml_pipeline.stage2_5_organize.file_organizer import (
     load_winning_buckets,
     build_file_list,
     detect_duplicates_across_buckets,
-    organize_files_with_detection
+    organize_files_with_detection,
+    create_selection_manifest
 )
 from ml_pipeline.stage2_5_organize.validation import validate_inputs, validate_output
 
@@ -29,6 +30,7 @@ def stage_2_5_file_organization_main(analysis_base: str) -> Dict[str, any]:
     2. Build file list from Stage 2 checkpoints
     3. Detect duplicate video IDs across buckets
     4. Organize files with detection-based resume
+    5. Create selection_manifest.json for Stage 2.6
 
     Args:
         analysis_base: str, path to analysis directory
@@ -43,6 +45,9 @@ def stage_2_5_file_organization_main(analysis_base: str) -> Dict[str, any]:
                 "total_processed": int,
                 "winning_buckets": list[str]
             }
+
+    Outputs:
+        Creates {analysis_base}/selection_manifest.json for Stage 2.6 content analysis
 
     Raises:
         FileNotFoundError: if winner_analysis.json or checkpoints missing
@@ -87,7 +92,11 @@ def stage_2_5_file_organization_main(analysis_base: str) -> Dict[str, any]:
     logger.info("Step 6: Validating stage outputs")
     validate_output(analysis_base, winning_buckets, summary['moved_count'])
 
-    # Step 7: Return summary with winning buckets
+    # Step 7: Create selection manifest for Stage 2.6
+    logger.info("Step 7: Creating selection_manifest.json for Stage 2.6")
+    create_selection_manifest(analysis_base, winning_buckets)
+
+    # Step 8: Return summary with winning buckets
     logger.info("File Organization (Stage 2.5) complete")
     summary['winning_buckets'] = winning_buckets
 

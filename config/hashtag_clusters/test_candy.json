@@ -1,0 +1,18 @@
+{
+  "cluster_id": "test_candy",
+  "description": "E2E test with candy and sweets hashtags - 2 hashtags, 1 run each, 10 videos total",
+  "primary_hashtag": "#candy",
+  "variant_hashtags": [
+    "#sweets"
+  ],
+  "scrape_config": {
+    "runs_per_hashtag": 1,
+    "delay_between_runs_ms": 120000,
+    "results_per_page": 200
+  },
+  "metadata": {
+    "created_date": "2025-10-21T00:00:00Z",
+    "created_by": "e2e_test",
+    "notes": "E2E test - 2 hashtags × 1 run × 200 results = 2 scrapes, ~300-400 unique videos expected"
+  }
+}

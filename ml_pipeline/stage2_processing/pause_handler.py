@@ -6,6 +6,7 @@ Implements SIGINT (Ctrl+C) handling for graceful pause between videos.
 Source: VideoProcessingTI.md Section 4 (Function 5)
 """
 
+import os
 import sys
 import signal
 import platform
@@ -80,10 +81,6 @@ def process_videos_with_pause_support(
     bucket_path = get_bucket_path(config, bucket_name)
     checkpoint_path = f"{bucket_path}checkpoints/stage_2_checkpoint.json"
 
-    # Import video processing function
-    from ml_pipeline.stage2_processing.video_processor import process_videos_sequential
-    from ml_pipeline.stage2_processing.video_download import download_video
-
     # Process each video
     for i, video in enumerate(remaining_videos, start=1):
         # Check pause flag BEFORE starting next video
@@ -98,19 +95,65 @@ def process_videos_with_pause_support(
             logger.info(f"   Checkpoint: {checkpoint_path}")
             return
 
-        # Download video first
+        # FIXED: Use hybrid approach (same as video_processor.py)
         video_id = video['id']
-        videos_dir = f"{bucket_path}videos/"
+        local_video_path = f"{bucket_path}videos/{video_id}.mp4"
 
-        logger.info(f"Processing video {i}/{len(remaining_videos)}: {video_id}")
-
-        try:
-            # Download video
-            video_path = download_video(video, videos_dir)
-        except Exception as e:
-            logger.error(f"Failed to download video {video_id}: {e}")
-            # Handle download error using the error handler
+        # Hybrid approach: Use local file if exists, otherwise use TikTok URL
+        if os.path.exists(local_video_path):
+            video_path = local_video_path
+            logger.info(f"Processing video {i}/{len(remaining_videos)}: {video_id} (local file)")
+        elif 'webVideoUrl' in video:
+            video_path = video['webVideoUrl']
+            logger.info(f"Processing video {i}/{len(remaining_videos)}: {video_id} (TikTok URL)")
+        else:
+            logger.error(f"Video {video_id} not found locally and no webVideoUrl available")
             from ml_pipeline.stage2_processing.video_processor import handle_video_processing_error
+            handle_video_processing_error(
+                ValueError(f"Video {video_id} missing: no local file and no webVideoUrl"),
+                video_id, checkpoint, checkpoint_path
+            )
+            continue
+
+        # Process video through RumiAI pipeline (delegate to video_processor logic)
+        try:
+            from ml_pipeline.stage2_processing.video_processor import (
+                run_rumiai_pipeline, validate_temporal_windows_schema, load_json,
+                handle_video_processing_error, RUMIAI_OUTPUT_DIR, ProcessingError
+            )
+
+            # Run RumiAI pipeline with timeout
+            result = run_rumiai_pipeline(
+                video_path=video_path,
+                video_id=video_id,
+                output_dir=f"{bucket_path}analysis/",
+                timeout=300
+            )
+
+            # Validate output exists at hardcoded RumiAI output directory
+            insights_path = f"{RUMIAI_OUTPUT_DIR}{video_id}_temporal_windows_updated.json"
+            if not os.path.exists(insights_path):
+                raise ProcessingError(
+                    video_id=video_id,
+                    stage="output_validation",
+                    message=f"RumiAI did not generate insights file at {insights_path}"
+                )
+
+            # Validate output schema
+            insights = load_json(insights_path)
+            validate_temporal_windows_schema(insights)
+
+            # Mark as completed
+            checkpoint['completed'] += 1
+            checkpoint['remaining'] -= 1
+            checkpoint['completed_video_ids'].append(video_id)
+            checkpoint['last_checkpoint'] = datetime.utcnow().isoformat()
+
+            save_checkpoint_with_backup(checkpoint_path, checkpoint)
+            logger.info(f"Successfully processed video {video_id} ({checkpoint['completed']}/{checkpoint['total_videos']})")
+
+        except Exception as e:
+            # Handle any processing error
             handle_video_processing_error(e, video_id, checkpoint, checkpoint_path)
             continue
 

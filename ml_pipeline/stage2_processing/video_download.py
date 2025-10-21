@@ -37,7 +37,32 @@ def download_video(video_metadata: Dict[str, Any], output_dir: str, max_attempts
     """
 
     video_id = video_metadata['id']
-    download_url = video_metadata['videoMeta']['downloadAddr']
+
+    # Get download URL - try multiple API formats (API changed Oct 2025)
+    download_url = None
+
+    # Option 1: Old API format (videoMeta.downloadAddr) - backwards compatibility
+    if 'videoMeta' in video_metadata and 'downloadAddr' in video_metadata.get('videoMeta', {}):
+        download_url = video_metadata['videoMeta']['downloadAddr']
+        logger.debug(f"Video {video_id}: Using downloadAddr (old API format)")
+
+    # Option 2: mediaUrls array (if populated)
+    if not download_url and 'mediaUrls' in video_metadata and video_metadata.get('mediaUrls'):
+        download_url = video_metadata['mediaUrls'][0]
+        logger.debug(f"Video {video_id}: Using mediaUrls")
+
+    if not download_url:
+        available_fields = list(video_metadata.get('videoMeta', {}).keys()) if 'videoMeta' in video_metadata else []
+        raise DownloadError(
+            video_id=video_id,
+            attempts=0,
+            original_error=KeyError(
+                f"No download URL found for video {video_id}. "
+                f"Checked: downloadAddr, mediaUrls. "
+                f"Available videoMeta fields: {available_fields}"
+            )
+        )
+
     output_path = f"{output_dir}/{video_id}.mp4"
 
     # Check if video already downloaded (resume optimization)

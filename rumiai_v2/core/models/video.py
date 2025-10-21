@@ -41,12 +41,12 @@ class VideoMetadata:
         except:
             create_time = datetime.now()
         
-        # Get download URL - try multiple possible field names
+        # Get download URL - try multiple possible field names (API changed Oct 2025)
         download_url = ''
         # First try videoUrl (as shown in JS implementation)
         if data.get('videoUrl'):
             download_url = data.get('videoUrl')
-        # Then try downloadAddr
+        # Then try downloadAddr (old API)
         elif data.get('downloadAddr'):
             download_url = data.get('downloadAddr')
         # Then try mediaUrls array

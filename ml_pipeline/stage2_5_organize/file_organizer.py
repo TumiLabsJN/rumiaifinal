@@ -15,7 +15,13 @@ from typing import List, Dict, Any
 logger = logging.getLogger(__name__)
 
 # Constants from FileOrganizationCHILDTI.md Section 9
-SOURCE_DIR = "/home/jorge/rumiaifinal/insights/"
+# Source directories for Stage 2 outputs (GLOBAL locations)
+SOURCE_DIRS = {
+    'temporal_windows': '/home/jorge/rumiaifinal/insights/',
+    'videos': '/home/jorge/rumiaifinal/temp/',
+    'unified_analysis': '/home/jorge/rumiaifinal/unified_analysis/'
+}
+
 ALL_BUCKETS = ["0-3s", "3-9s", "9-13s", "13-18s", "18-33s", "33-60s", "60-90s", "90-120s"]
 
 
@@ -160,20 +166,33 @@ def build_file_list(analysis_base: str, winning_buckets: List[str]) -> List[Dict
             logger.info(f"Bucket {bucket} has 0 completed videos. Skipping.")
             continue
 
-        # Step 7: Build file info for each video
+        # Step 7: Build file info for each video (3 file types per video)
         for video_id in video_ids:
-            # Construct source path (flat directory)
-            source_path = f"{SOURCE_DIR}{video_id}_temporal_windows_updated.json"
-
-            # Construct target path (bucket-specific directory)
-            target_path = f"{analysis_base}/buckets/bucket_{bucket}/analysis/insights/{video_id}_temporal_windows_updated.json"
-
-            # Add to file list
+            # 7a. Temporal windows JSON (Stage 2 output)
             files_to_process.append({
                 'video_id': video_id,
                 'bucket': bucket,
-                'source_path': source_path,
-                'target_path': target_path
+                'file_type': 'temporal_windows',
+                'source_path': f"{SOURCE_DIRS['temporal_windows']}{video_id}_temporal_windows_updated.json",
+                'target_path': f"{analysis_base}/buckets/bucket_{bucket}/analysis/insights/{video_id}_temporal_windows_updated.json"
+            })
+
+            # 7b. Video file (MP4 from temp/)
+            files_to_process.append({
+                'video_id': video_id,
+                'bucket': bucket,
+                'file_type': 'video',
+                'source_path': f"{SOURCE_DIRS['videos']}{video_id}.mp4",
+                'target_path': f"{analysis_base}/buckets/bucket_{bucket}/videos/{video_id}.mp4"
+            })
+
+            # 7c. Unified analysis JSON (intermediate ML data)
+            files_to_process.append({
+                'video_id': video_id,
+                'bucket': bucket,
+                'file_type': 'unified_analysis',
+                'source_path': f"{SOURCE_DIRS['unified_analysis']}{video_id}.json",
+                'target_path': f"{analysis_base}/buckets/bucket_{bucket}/analysis/unified/{video_id}.json"
             })
 
     # Step 8: Log summary
@@ -186,28 +205,33 @@ def detect_duplicates_across_buckets(files_to_process: List[Dict[str, str]]) -> 
     Detect if same video_id appears in multiple buckets.
 
     Args:
-        files_to_process: list of dict with keys: video_id, bucket, source_path
+        files_to_process: list of dict with keys: video_id, bucket, file_type, source_path
 
     Raises:
-        ValueError: if duplicate video_id detected
+        ValueError: if duplicate video_id detected across different buckets
 
     Source: FileOrganizationCHILDTI.md Section 4 (Function 3)
+    Note: Modified to handle multiple file types per video (temporal_windows, video, unified_analysis)
     """
-    # Step 1: Initialize tracking dictionary
-    video_id_to_buckets = {}
+    # Step 1: Initialize tracking dictionary - track (video_id, file_type) → bucket
+    video_file_to_bucket = {}
 
     # Step 2: Iterate through all files to process
     for file_info in files_to_process:
         video_id = file_info['video_id']
         bucket = file_info['bucket']
+        file_type = file_info.get('file_type', 'unknown')
 
-        # Step 3: Check if video_id already seen
-        if video_id in video_id_to_buckets:
-            previous_bucket = video_id_to_buckets[video_id]
+        # Create composite key (video_id, file_type)
+        composite_key = (video_id, file_type)
+
+        # Step 3: Check if this specific (video_id, file_type) already seen
+        if composite_key in video_file_to_bucket:
+            previous_bucket = video_file_to_bucket[composite_key]
 
             # Step 4: Duplicate detected - raise error with detailed message
             raise ValueError(
-                f"Video ID '{video_id}' appears in multiple buckets:\n"
+                f"Video ID '{video_id}' (file_type: {file_type}) appears in multiple buckets:\n"
                 f"  - Bucket: {previous_bucket}\n"
                 f"  - Bucket: {bucket}\n\n"
                 f"This indicates checkpoint corruption or Stage 2 bug.\n"
@@ -217,11 +241,12 @@ def detect_duplicates_across_buckets(files_to_process: List[Dict[str, str]]) -> 
                 f"  2. Manually inspect checkpoints and remove duplicate entries"
             )
 
-        # Step 5: Record video_id → bucket mapping
-        video_id_to_buckets[video_id] = bucket
+        # Step 5: Record (video_id, file_type) → bucket mapping
+        video_file_to_bucket[composite_key] = bucket
 
     # Step 6: Log validation success
-    logger.info(f"Validation passed: {len(video_id_to_buckets)} unique videos")
+    unique_videos = len(set(vid for vid, _ in video_file_to_bucket.keys()))
+    logger.info(f"Validation passed: {unique_videos} unique videos × 3 file types = {len(video_file_to_bucket)} files")
 
 
 def organize_files_with_detection(files_to_process: List[Dict[str, str]]) -> Dict[str, int]:
@@ -247,6 +272,7 @@ def organize_files_with_detection(files_to_process: List[Dict[str, str]]) -> Dic
         target = file_info['target_path']
         video_id = file_info['video_id']
         bucket = file_info['bucket']
+        file_type = file_info.get('file_type', 'unknown')
 
         # Step 3: Check file existence states
         source_exists = os.path.exists(source)
@@ -254,14 +280,14 @@ def organize_files_with_detection(files_to_process: List[Dict[str, str]]) -> Dic
 
         # Step 4: Case 1 - Already moved in previous run
         if target_exists and not source_exists:
-            logger.debug(f"Already organized: {video_id} → {bucket}")
+            logger.debug(f"Already organized: {video_id} ({file_type}) → {bucket}")
             skipped_already_organized += 1
             continue
 
         # Step 5: Case 2 - Missing entirely
         if not source_exists and not target_exists:
             logger.warning(
-                f"Missing source and target for video {video_id}. "
+                f"Missing source and target for video {video_id} ({file_type}). "
                 f"Stage 2 checkpoint indicated completion, but file doesn't exist."
             )
             missing_count += 1
@@ -278,11 +304,11 @@ def organize_files_with_detection(files_to_process: List[Dict[str, str]]) -> Dic
             moved_count += 1
 
             # Step 6c: Log success
-            logger.info(f"Moved: {video_id} → {bucket} ({moved_count}/{len(files_to_process)})")
+            logger.info(f"Moved: {video_id} ({file_type}) → {bucket} ({moved_count}/{len(files_to_process)})")
 
         except Exception as e:
             # Step 6d: Log error but continue processing other files
-            logger.error(f"Failed to move {video_id}: {e}")
+            logger.error(f"Failed to move {video_id} ({file_type}): {e}")
             # Non-fatal error - continue with other files
             continue
 
@@ -310,3 +336,117 @@ def organize_files_with_detection(files_to_process: List[Dict[str, str]]) -> Dic
         'missing_count': missing_count,
         'total_processed': total_processed
     }
+
+
+def create_selection_manifest(analysis_base: str, winning_buckets: List[str]) -> None:
+    """
+    Create selection_manifest.json for Stage 2.6 content analysis.
+
+    Builds a manifest containing selected buckets and video IDs split by top/bottom performers.
+    Only includes videos that successfully completed Stage 2 processing.
+
+    Args:
+        analysis_base: str, path to analysis directory
+        winning_buckets: list, bucket names from winner_analysis.json
+
+    Outputs:
+        Creates {analysis_base}/selection_manifest.json with structure:
+        {
+            "hashtag": str,
+            "selected_buckets": list[str],
+            "videos_by_bucket": {
+                "bucket_name": {
+                    "top_performers": list[str],
+                    "bottom_performers": list[str]
+                }
+            }
+        }
+
+    Raises:
+        FileNotFoundError: if config.json, selected_videos.json, or checkpoints missing
+
+    Source: Stage 2.6 integration requirement for content analysis
+    """
+    logger.info("Creating selection_manifest.json for Stage 2.6")
+
+    # Step 1: Load hashtag from config.json
+    config_path = f"{analysis_base}/config.json"
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(
+            f"config.json not found at {config_path}. "
+            f"Stage 0 must complete before Stage 2.5."
+        )
+
+    with open(config_path) as f:
+        config = json.load(f)
+
+    hashtag = config['target'].lstrip('#').lstrip('@')  # Handle both hashtag and handle
+
+    # Step 2: Build videos_by_bucket structure
+    videos_by_bucket = {}
+
+    for bucket_name in winning_buckets:
+        # Step 2a: Load selected_videos.json (intended selection from Stage 1)
+        selected_videos_path = f"{analysis_base}/buckets/bucket_{bucket_name}/selected_videos.json"
+        if not os.path.exists(selected_videos_path):
+            logger.warning(f"selected_videos.json not found for bucket {bucket_name}, skipping")
+            continue
+
+        with open(selected_videos_path) as f:
+            selected = json.load(f)
+
+        # Step 2b: Load checkpoint (actual completions from Stage 2)
+        checkpoint_path = f"{analysis_base}/buckets/bucket_{bucket_name}/checkpoints/stage_2_checkpoint.json"
+        if not os.path.exists(checkpoint_path):
+            logger.warning(f"Checkpoint not found for bucket {bucket_name}, skipping")
+            continue
+
+        with open(checkpoint_path) as f:
+            checkpoint = json.load(f)
+
+        completed_ids = set(checkpoint['completed_video_ids'])
+
+        # Step 2c: Extract video IDs and split by top/bottom
+        all_video_ids = [v['id'] for v in selected['videos']]
+        top_count = selected['top_count']
+
+        # Preserve top/bottom distinction based on original selection order
+        top_intended = all_video_ids[:top_count]
+        bottom_intended = all_video_ids[top_count:]
+
+        # Filter by completion status
+        top_completed = [vid for vid in top_intended if vid in completed_ids]
+        bottom_completed = [vid for vid in bottom_intended if vid in completed_ids]
+
+        videos_by_bucket[bucket_name] = {
+            'top_performers': top_completed,
+            'bottom_performers': bottom_completed
+        }
+
+        logger.info(
+            f"Bucket {bucket_name}: "
+            f"top {len(top_completed)}/{len(top_intended)}, "
+            f"bottom {len(bottom_completed)}/{len(bottom_intended)} completed"
+        )
+
+    # Step 3: Create selection manifest
+    selection_manifest = {
+        'hashtag': hashtag,
+        'selected_buckets': winning_buckets,
+        'videos_by_bucket': videos_by_bucket
+    }
+
+    # Step 4: Save manifest
+    manifest_path = f"{analysis_base}/selection_manifest.json"
+    with open(manifest_path, 'w') as f:
+        json.dump(selection_manifest, f, indent=2)
+
+    logger.info(f"✓ Created selection_manifest.json: {manifest_path}")
+
+    # Step 5: Log summary statistics
+    total_top = sum(len(v['top_performers']) for v in videos_by_bucket.values())
+    total_bottom = sum(len(v['bottom_performers']) for v in videos_by_bucket.values())
+    logger.info(
+        f"Selection manifest contains {total_top} top performers + "
+        f"{total_bottom} bottom performers across {len(videos_by_bucket)} buckets"
+    )

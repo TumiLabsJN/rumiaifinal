@@ -9,7 +9,7 @@ Source: VideoProcessingTI.md Section 4 (Main Orchestration Function)
 import logging
 from typing import Dict, List
 
-from ml_pipeline.stage2_processing.bucket_init import initialize_bucket_directories
+from ml_pipeline.stage2_processing.bucket_init import ensure_bucket_exists
 from ml_pipeline.stage2_processing.checkpoint import (
     initialize_checkpoint,
     finalize_checkpoint
@@ -53,10 +53,12 @@ def stage_2_video_processing_main(
     Source: VideoProcessingTI.md Section 4 (Main Orchestration Function)
     """
 
-    # Step 0: Initialize bucket directories (runs once for all 8 buckets)
-    logger.info("Step 0: Initializing bucket directories")
-    created_buckets = initialize_bucket_directories(config)
-    logger.info(f"Created {len(created_buckets)} bucket directories")
+    # Step 0: Ensure this bucket's directory structure exists
+    # Defensive: Creates if missing (e.g., reprocessing after manual deletion)
+    # Idempotent: No-op if Stage 1 already created it (exist_ok=True)
+    logger.info(f"Step 0: Ensuring bucket directory exists for {bucket_name}")
+    bucket_path = ensure_bucket_exists(config, bucket_name)
+    logger.debug(f"Bucket directory ready: {bucket_path}")
 
     # Step 1: Load or create checkpoint
     logger.info(f"Step 1: Initializing checkpoint for bucket {bucket_name}")
@@ -81,8 +83,18 @@ def stage_2_video_processing_main(
     for i, video in enumerate(remaining_videos, start=1):
         video_id = video['id']
 
-        # Check if video has downloadAddr (Apify may not include it)
-        if 'videoMeta' in video and video.get('videoMeta') and 'downloadAddr' in video['videoMeta']:
+        # Check if video has download URL (try multiple API formats - API changed Oct 2025)
+        has_download_url = False
+        video_meta = video.get('videoMeta', {})
+
+        # Check old API format (downloadAddr)
+        if video_meta and 'downloadAddr' in video_meta:
+            has_download_url = True
+        # Check mediaUrls
+        elif 'mediaUrls' in video and video.get('mediaUrls'):
+            has_download_url = True
+
+        if has_download_url:
             logger.info(f"Pre-downloading video {i}/{len(remaining_videos)}: {video_id}")
             try:
                 download_video(video, videos_dir)
@@ -91,8 +103,8 @@ def stage_2_video_processing_main(
                 logger.warning(f"Pre-download failed for {video_id}: {e}")
                 logger.info(f"Will use webVideoUrl during processing instead")
         else:
-            # No downloadAddr, will use webVideoUrl during processing
-            logger.debug(f"Video {video_id} has no downloadAddr, will use webVideoUrl during processing")
+            # No download URL available, will use webVideoUrl during processing
+            logger.debug(f"Video {video_id} has no direct download URL, will use webVideoUrl during processing")
 
     logger.info(f"Pre-downloaded {downloadable_count}/{len(remaining_videos)} videos")
     if downloadable_count == 0:

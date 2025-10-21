@@ -34,3 +34,6 @@ tf-keras>=2.16.0  # Keras backend for TF 2.16+
 
 # Optional: For better performance
 # tensorflow[and-cuda]>=2.16.1  # Uncomment for GPU support
+
+# Stage 2.6/2.7: Content Analysis (LLM API)
+anthropic>=0.39.0  # Claude API for pattern discovery and classification

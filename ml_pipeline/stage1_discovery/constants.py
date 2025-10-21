@@ -19,8 +19,9 @@ APIFY_HASHTAG_SCRAPER_ID = "GdWCkxBtKWOsKjdch"
 # Use case: Hashtag analysis + Competitor/Creator analysis
 # Features: Native date filtering, geography filtering (proxyCountryCode)
 
-APIFY_ACTOR_LAST_VALIDATED = "2025-10-08"
+APIFY_ACTOR_LAST_VALIDATED = "2025-10-20"
 # Date actors were last tested (quarterly validation recommended)
+# Oct 20, 2025: Validated new API format - downloadAddr removed, video URL now in subtitleLinks[0].downloadLink
 
 
 # ===== APIFY SCRAPING CONFIGURATION =====

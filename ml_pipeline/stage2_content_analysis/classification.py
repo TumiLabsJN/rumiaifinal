@@ -9,7 +9,9 @@ import os
 import json
 import logging
 import time
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 import anthropic
 
 from .utils import load_json, save_json, construct_path
@@ -19,6 +21,8 @@ from .validation import (
     validate_classification_output
 )
 from .error_handlers import handle_graceful_skip
+from .checkpoint import load_checkpoint, save_checkpoint, update_checkpoint
+from .cost_tracking import log_estimated_cost, log_actual_cost
 
 logger = logging.getLogger(__name__)
 
@@ -271,6 +275,8 @@ Your classifications feed Stage 7 contrastive analysis - accuracy is critical.
     for attempt in range(3):
         try:
             # Step 2.1: Make API call with Haiku model
+            # Updated: M8 Enhancement - Add latency tracking
+            start_time = time.time()
             response = client.messages.create(
                 model="claude-3-haiku-20240307",
                 max_tokens=1024,
@@ -278,6 +284,10 @@ Your classifications feed Stage 7 contrastive analysis - accuracy is critical.
                 system=system_message,
                 messages=[{"role": "user", "content": prompt}]
             )
+
+            # Step 2.1a: Log actual cost with latency
+            # Source: ContentAnalysisCHILDTI.md Section 4.6.4
+            log_actual_cost(response, "haiku", start_time)
 
             # Step 2.2: Parse response
             classification = json.loads(response.content[0].text)
@@ -312,6 +322,249 @@ Your classifications feed Stage 7 contrastive analysis - accuracy is critical.
     raise RuntimeError("Unexpected retry loop exit")
 
 
+def load_video_data(video_id: str) -> tuple:
+    """
+    Load transcript, caption, and hashtags for a video.
+
+    Returns:
+        tuple: (transcript_dict, caption_str, hashtags_list)
+    """
+    RUMIAI_ROOT = os.environ.get('RUMIAI_ROOT', '/home/jorge/rumiaifinal')
+    transcript_path = f"{RUMIAI_ROOT}/speech_transcriptions/{video_id}_whisper.json"
+    caption_path = f"{RUMIAI_ROOT}/video_captions/{video_id}_caption.json"
+    hashtags_path = f"{RUMIAI_ROOT}/video_hashtags/{video_id}_hashtags.json"
+
+    # Load transcript
+    try:
+        transcript_data = load_json(transcript_path)
+        transcript = {
+            'text': transcript_data.get('text', ''),
+            'available': True
+        }
+    except FileNotFoundError:
+        transcript = {'text': '', 'available': False}
+        logger.warning(f"No transcript for {video_id}")
+
+    # Load caption
+    try:
+        caption_data = load_json(caption_path)
+        caption = caption_data.get('text', '')
+    except FileNotFoundError:
+        caption = ''
+
+    # Load hashtags
+    try:
+        hashtags_data = load_json(hashtags_path)
+        hashtags = hashtags_data.get('hashtags', [])
+    except FileNotFoundError:
+        hashtags = []
+
+    return transcript, caption, hashtags
+
+
+def classify_single_video_with_save(
+    video_id: str,
+    taxonomy: Dict[str, Any],
+    client: anthropic.Anthropic,
+    output_dir: str
+) -> Dict[str, Any]:
+    """
+    Helper function: Load video data, classify, and save result.
+
+    Source: ContentAnalysisCHILDTI.md Section 4.4.2
+
+    Args:
+        video_id: Video identifier
+        taxonomy: Curated taxonomy
+        client: Anthropic API client
+        output_dir: Directory to save classification result
+
+    Returns:
+        dict: Classification result
+
+    Raises:
+        Exception: Any error during classification
+    """
+    # Load video data
+    transcript, caption, hashtags = load_video_data(video_id)
+
+    # Validate business rules
+    validate_business_rules_classification(video_id, transcript, caption, hashtags)
+
+    # Classify video
+    classification = classify_video_llm(
+        video_id=video_id,
+        transcript=transcript,
+        caption=caption,
+        hashtags=hashtags,
+        taxonomy=taxonomy,
+        client=client
+    )
+
+    # Save classification
+    output_path = f"{output_dir}/{video_id}_content.json"
+    save_json(output_path, classification)
+
+    return classification
+
+
+def classify_all_videos_sequential(
+    videos: List[str],
+    taxonomy: Dict[str, Any],
+    client: anthropic.Anthropic,
+    output_dir: str,
+    checkpoint_path: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Classify videos sequentially with checkpoint/resume support.
+
+    Source: ContentAnalysisCHILDTI.md Section 4.4.1, 4.5.4
+
+    Args:
+        videos: List of video IDs to classify
+        taxonomy: Curated taxonomy
+        client: Anthropic API client
+        output_dir: Directory to save results
+        checkpoint_path: Optional path to checkpoint file
+
+    Returns:
+        dict: {"completed": int, "failed": int, "failed_ids": list[str]}
+    """
+    # Step 1: Load checkpoint (if enabled)
+    if checkpoint_path:
+        checkpoint = load_checkpoint(checkpoint_path)
+        remaining_videos = [v for v in videos if v not in checkpoint["completed"]]
+        logger.info(
+            f"📋 Sequential mode with checkpoints: "
+            f"{len(checkpoint['completed'])} already completed, "
+            f"{len(remaining_videos)} remaining"
+        )
+    else:
+        remaining_videos = videos
+        checkpoint = None
+
+    completed = 0
+    failed = 0
+    failed_ids = []
+
+    # Step 2: Process remaining videos
+    for i, video_id in enumerate(remaining_videos):
+        try:
+            # Classify and save
+            classify_single_video_with_save(video_id, taxonomy, client, output_dir)
+
+            # Update checkpoint (if enabled)
+            if checkpoint_path:
+                update_checkpoint(checkpoint, video_id, "completed", checkpoint_path)
+
+            completed += 1
+            logger.debug(f"✅ Classified {i+1}/{len(remaining_videos)}: {video_id}")
+
+        except Exception as e:
+            # Update checkpoint for failure (if enabled)
+            if checkpoint_path:
+                update_checkpoint(checkpoint, video_id, "failed", checkpoint_path)
+
+            failed += 1
+            failed_ids.append(video_id)
+            logger.error(f"❌ Failed {i+1}/{len(remaining_videos)}: {video_id} - {str(e)}")
+
+    # Step 3: Return results
+    total_completed = completed + (len(checkpoint["completed"]) if checkpoint else 0)
+    return {
+        "completed": total_completed,
+        "failed": failed,
+        "failed_ids": failed_ids
+    }
+
+
+def classify_all_videos_parallel(
+    videos: List[str],
+    taxonomy: Dict[str, Any],
+    client: anthropic.Anthropic,
+    output_dir: str,
+    max_workers: int = 5,
+    checkpoint_path: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Classify videos in parallel with checkpoint/resume support.
+
+    Source: ContentAnalysisCHILDTI.md Section 4.4.2, 4.5.5
+
+    Args:
+        videos: List of video IDs
+        taxonomy: Curated taxonomy
+        client: Anthropic API client
+        output_dir: Directory to save results
+        max_workers: Concurrent workers (default: 5)
+        checkpoint_path: Optional checkpoint file path
+
+    Returns:
+        dict: {"completed": int, "failed": int, "failed_ids": list[str]}
+    """
+    # Step 1: Load checkpoint and filter completed videos
+    if checkpoint_path:
+        checkpoint = load_checkpoint(checkpoint_path)
+        remaining_videos = [v for v in videos if v not in checkpoint["completed"]]
+        checkpoint_lock = threading.Lock()  # Thread-safe checkpoint updates
+        logger.info(
+            f"🚀 Parallel mode with checkpoints: "
+            f"{len(checkpoint['completed'])} already completed, "
+            f"{len(remaining_videos)} remaining"
+        )
+    else:
+        remaining_videos = videos
+        checkpoint = None
+        checkpoint_lock = None
+
+    completed = 0
+    failed = 0
+    failed_ids = []
+
+    # Step 2: Submit all tasks to thread pool
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all classification tasks
+        future_to_video = {
+            executor.submit(
+                classify_single_video_with_save,
+                video_id, taxonomy, client, output_dir
+            ): video_id
+            for video_id in remaining_videos
+        }
+
+        # Step 3: Process results as they complete
+        for future in as_completed(future_to_video):
+            video_id = future_to_video[future]
+            try:
+                result = future.result()  # Blocks until this video completes
+
+                # Update checkpoint (thread-safe)
+                if checkpoint_path:
+                    with checkpoint_lock:
+                        update_checkpoint(checkpoint, video_id, "completed", checkpoint_path)
+
+                completed += 1
+                logger.debug(f"✅ Classified ({completed}/{len(remaining_videos)}): {video_id}")
+
+            except Exception as e:
+                # Update checkpoint for failure (thread-safe)
+                if checkpoint_path:
+                    with checkpoint_lock:
+                        update_checkpoint(checkpoint, video_id, "failed", checkpoint_path)
+
+                failed += 1
+                failed_ids.append(video_id)
+                logger.error(f"❌ Failed classification: {video_id} - {str(e)}")
+
+    # Step 4: Return results
+    total_completed = completed + (len(checkpoint["completed"]) if checkpoint else 0)
+    return {
+        "completed": total_completed,
+        "failed": failed,
+        "failed_ids": failed_ids
+    }
+
+
 def classify_all_videos(
     client_id: str,
     hashtag: str,
@@ -319,12 +572,15 @@ def classify_all_videos(
     manifest: Dict[str, Any],
     anthropic_client: anthropic.Anthropic,
     analysis_mode: str = "top",
-    selection_strategy: str = "contrastive"
-) -> Dict[str, int]:
+    selection_strategy: str = "contrastive",
+    parallel: bool = False,
+    max_workers: int = 5,
+    checkpoint_enabled: bool = True
+) -> Dict[str, Any]:
     """
-    Classify all videos in top 3 buckets using taxonomy.
+    Classify all videos with configurable parallel/sequential execution and checkpoints.
 
-    Source: ContentAnalysisCHILDTI.md Section 4.3 (orchestration function)
+    Source: ContentAnalysisCHILDTI.md Section 4.4
 
     Args:
         client_id: Client identifier
@@ -334,100 +590,83 @@ def classify_all_videos(
         anthropic_client: Initialized Anthropic API client
         analysis_mode: "top" or "recent"
         selection_strategy: "contrastive" or "top"
+        parallel: Enable parallel mode (default: False)
+        max_workers: Workers for parallel mode (default: 5)
+        checkpoint_enabled: Enable checkpoint/resume (default: True)
 
     Returns:
-        dict: Statistics {
-            'total_videos': int,
-            'successful': int,
-            'skipped': int,
-            'failed': int
-        }
+        dict: Summary statistics with mode, duration, completed/failed counts
     """
-    stats = {'total_videos': 0, 'successful': 0, 'skipped': 0, 'failed': 0}
-
-    # Process each bucket
+    # Collect all videos from all buckets
+    all_videos = []
     for bucket in manifest['selected_buckets']:
-        logger.info(f"Processing bucket {bucket}...")
-
         bucket_videos = manifest['videos_by_bucket'][bucket]
-        all_videos = bucket_videos['top_performers'] + bucket_videos.get('bottom_performers', [])
+        all_videos.extend(bucket_videos['top_performers'])
+        all_videos.extend(bucket_videos.get('bottom_performers', []))
 
-        stats['total_videos'] += len(all_videos)
+    # Log estimated cost
+    log_estimated_cost("classification", video_count=len(all_videos))
 
-        # Classify each video
-        for video_id in all_videos:
-            try:
-                # Load video data
-                transcript_path = f"/home/jorge/rumiaifinal/speech_transcriptions/{video_id}_whisper.json"
-                caption_path = f"/home/jorge/rumiaifinal/video_captions/{video_id}_caption.json"
-                hashtags_path = f"/home/jorge/rumiaifinal/video_hashtags/{video_id}_hashtags.json"
+    # Determine output directory
+    base_path = construct_path(
+        client_id=client_id,
+        hashtag=hashtag,
+        analysis_mode=analysis_mode,
+        selection_strategy=selection_strategy,
+        file_type="base"
+    )
+    output_dir = f"{base_path}/content_analysis"
+    os.makedirs(output_dir, exist_ok=True)
 
-                # Load transcript
-                try:
-                    transcript_data = load_json(transcript_path)
-                    transcript = {
-                        'text': transcript_data.get('text', ''),
-                        'available': True
-                    }
-                except FileNotFoundError:
-                    transcript = {'text': '', 'available': False}
-                    logger.warning(f"No transcript for {video_id}")
+    # Set up checkpoint path
+    checkpoint_path = None
+    if checkpoint_enabled:
+        checkpoint_dir = f"{base_path}/.checkpoints"
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        checkpoint_path = f"{checkpoint_dir}/classification_checkpoint.json"
 
-                # Load caption
-                try:
-                    caption_data = load_json(caption_path)
-                    caption = caption_data.get('text', '')
-                except FileNotFoundError:
-                    caption = ''
+    # Execute classification
+    start_time = time.time()
 
-                # Load hashtags
-                try:
-                    hashtags_data = load_json(hashtags_path)
-                    hashtags = hashtags_data.get('hashtags', [])
-                except FileNotFoundError:
-                    hashtags = []
+    if parallel:
+        logger.info(f"🚀 Starting parallel classification: {len(all_videos)} videos, {max_workers} workers")
+        results = classify_all_videos_parallel(
+            all_videos, taxonomy, anthropic_client, output_dir, max_workers, checkpoint_path
+        )
+    else:
+        logger.info(f"📋 Starting sequential classification: {len(all_videos)} videos")
+        results = classify_all_videos_sequential(
+            all_videos, taxonomy, anthropic_client, output_dir, checkpoint_path
+        )
 
-                # Validate business rules
-                validate_business_rules_classification(video_id, transcript, caption, hashtags)
+    # Calculate summary statistics
+    duration = time.time() - start_time
+    summary = {
+        "total": len(all_videos),
+        "completed": results["completed"],
+        "failed": results["failed"],
+        "failed_ids": results["failed_ids"],
+        "mode": "parallel" if parallel else "sequential",
+        "duration_seconds": round(duration, 2)
+    }
 
-                # Classify video
-                classification = classify_video_llm(
-                    video_id=video_id,
-                    transcript=transcript,
-                    caption=caption,
-                    hashtags=hashtags,
-                    taxonomy=taxonomy,
-                    client=anthropic_client
-                )
+    logger.info(
+        f"✅ Classification complete: {summary['completed']}/{summary['total']} videos "
+        f"({summary['mode']} mode, {summary['duration_seconds']}s)"
+    )
 
-                # Save classification
-                output_dir = construct_path(
-                    client_id=client_id,
-                    hashtag=hashtag,
-                    analysis_mode=analysis_mode,
-                    selection_strategy=selection_strategy,
-                    bucket=bucket,
-                    file_type="bucket_content_analysis"
-                )
-                output_path = f"{output_dir}/{video_id}_content.json"
-                save_json(output_path, classification)
-
-                stats['successful'] += 1
-                logger.debug(f"✓ Classified {video_id}")
-
-            except Exception as e:
-                logger.error(f"✗ Failed to classify {video_id}: {e}")
-                stats['failed'] += 1
-
-    return stats
+    return summary
 
 
 def run_classification_stage(
     client_id: str,
     hashtag: str,
     analysis_mode: str = "top",
-    selection_strategy: str = "contrastive"
-) -> Dict[str, int]:
+    selection_strategy: str = "contrastive",
+    parallel: bool = None,
+    max_workers: int = 5,
+    checkpoint_enabled: bool = True
+) -> Dict[str, Any]:
     """
     Run complete Stage 2.7 classification pipeline with error handling.
 
@@ -438,9 +677,12 @@ def run_classification_stage(
         hashtag: Hashtag name (e.g., "nutrition")
         analysis_mode: "top" or "recent" (default: "top")
         selection_strategy: "contrastive" or "top" (default: "contrastive")
+        parallel: Enable parallel mode (default: reads ENABLE_PARALLEL_CLASSIFICATION env var)
+        max_workers: Workers for parallel mode (default: reads MAX_CLASSIFICATION_WORKERS env var or 5)
+        checkpoint_enabled: Enable checkpoint/resume (default: True)
 
     Returns:
-        dict: Statistics from classification
+        dict: Summary statistics from classification
 
     Raises:
         FileNotFoundError: If taxonomy or manifest missing
@@ -451,7 +693,14 @@ def run_classification_stage(
     logger.info(f"Client: {client_id}, Hashtag: #{hashtag}")
     logger.info(f"=" * 80)
 
-    # Step 1: Construct paths
+    # Step 1: Read environment variables for configuration
+    # Source: ContentAnalysisCHILDTI.md Section 9.1
+    if parallel is None:
+        parallel = os.environ.get('ENABLE_PARALLEL_CLASSIFICATION', 'false').lower() == 'true'
+
+    max_workers = int(os.environ.get('MAX_CLASSIFICATION_WORKERS', str(max_workers)))
+
+    # Step 2: Construct paths
     taxonomy_path = construct_path(
         client_id=client_id,
         hashtag=hashtag,
@@ -467,38 +716,42 @@ def run_classification_stage(
         file_type="selection_manifest"
     )
 
-    # Step 2: Validate inputs
+    # Step 3: Validate inputs
     logger.info("Step 1/3: Validating inputs...")
     validate_classification_inputs(taxonomy_path, manifest_path)
     logger.info("✓ Input validation passed")
 
-    # Step 3: Load taxonomy and manifest
+    # Step 4: Load taxonomy and manifest
     logger.info("Step 2/3: Loading taxonomy and manifest...")
     taxonomy = load_json(taxonomy_path)
     manifest = load_json(manifest_path)
     logger.info("✓ Files loaded")
 
-    # Step 4: Initialize Anthropic client
+    # Step 5: Initialize Anthropic client
     anthropic_client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
-    # Step 5: Classify all videos
+    # Step 6: Classify all videos
     logger.info("Step 3/3: Classifying all videos (Claude Haiku)...")
-    stats = classify_all_videos(
+    summary = classify_all_videos(
         client_id=client_id,
         hashtag=hashtag,
         taxonomy=taxonomy,
         manifest=manifest,
         anthropic_client=anthropic_client,
         analysis_mode=analysis_mode,
-        selection_strategy=selection_strategy
+        selection_strategy=selection_strategy,
+        parallel=parallel,
+        max_workers=max_workers,
+        checkpoint_enabled=checkpoint_enabled
     )
 
     logger.info(f"=" * 80)
     logger.info(f"STAGE 2.7 COMPLETE")
-    logger.info(f"Total videos: {stats['total_videos']}")
-    logger.info(f"Successful: {stats['successful']}")
-    logger.info(f"Skipped: {stats['skipped']}")
-    logger.info(f"Failed: {stats['failed']}")
+    logger.info(f"Mode: {summary['mode']}")
+    logger.info(f"Total videos: {summary['total']}")
+    logger.info(f"Completed: {summary['completed']}")
+    logger.info(f"Failed: {summary['failed']}")
+    logger.info(f"Duration: {summary['duration_seconds']}s")
     logger.info(f"=" * 80)
 
-    return stats
+    return summary

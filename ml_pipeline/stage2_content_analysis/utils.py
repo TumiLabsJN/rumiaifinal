@@ -116,6 +116,7 @@ def construct_path(
             - "content_taxonomies": content_taxonomies/ directory
             - "raw_discovery": {hashtag}_raw_discovery.json path
             - "taxonomy": {hashtag}_taxonomy.json path
+            - "validation_cache": transcript_validation_cache.json path
             - "bucket_content_analysis": bucket/{bucket}/content_analysis/ directory
 
     Returns:
@@ -142,7 +143,9 @@ def construct_path(
 
     # Construct base path
     # Source: FoundationCHILD.md Section 2.2 BASE_PATHS
-    base_path = f"/data/clients/{client_id}/hashtags/{hashtag_clean}/{analysis_mode}_{selection_strategy}"
+    # Use DATA_ROOT environment variable (defaults to /data if not set)
+    data_root = os.environ.get('DATA_ROOT', '/data')
+    base_path = f"{data_root}/clients/{client_id}/hashtags/{hashtag_clean}/{analysis_mode}_{selection_strategy}"
 
     # Return path based on type
     if file_type == "base":
@@ -159,6 +162,9 @@ def construct_path(
 
     elif file_type == "taxonomy":
         return f"{base_path}/content_taxonomies/{hashtag_clean}_taxonomy.json"
+
+    elif file_type == "validation_cache":
+        return f"{base_path}/content_taxonomies/transcript_validation_cache.json"
 
     elif file_type == "bucket_content_analysis":
         if not bucket:

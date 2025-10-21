@@ -1,0 +1,18 @@
+{
+  "cluster_id": "test_supplement",
+  "description": "Production test cluster for supplement niche - validates Stages 1-4 with 180-day window",
+  "primary_hashtag": "#supplement",
+  "variant_hashtags": [
+    "#supplements"
+  ],
+  "scrape_config": {
+    "runs_per_hashtag": 2,
+    "delay_between_runs_ms": 120000,
+    "results_per_page": 800
+  },
+  "metadata": {
+    "created_date": "2025-01-20T00:00:00Z",
+    "created_by": "production_test",
+    "notes": "Production test - 2 hashtags × 2 runs × 800 results = 4 scrapes, ~2,000-2,500 unique videos expected after deduplication. 180-day window, 15 videos per bucket."
+  }
+}

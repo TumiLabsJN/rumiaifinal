@@ -1024,7 +1024,7 @@ def calculate_temporal_windows(video_duration: float) -> Dict[str, Optional[Tupl
             'middle': None,
             'closing': None
         }
-    elif video_duration <= 9:  # Changed from 6s to 9s per BucketsPlan.md
+    elif video_duration < 9:  # Use < for consistent boundary handling (9 <= x goes to next bucket)
         return {
             'hook': (0, HOOK_WINDOW_DURATION),
             'middle': None,
@@ -1045,7 +1045,7 @@ def calculate_middle_segments(video_duration: float) -> Dict[str, Dict[str, floa
 
     Uses SEGMENT_THRESHOLDS constants defined at module level.
     """
-    if video_duration <= 9:  # Changed from 6s to 9s per BucketsPlan.md
+    if video_duration < 9:  # Use < for consistent boundary handling (9 <= x has middle segments)
         return None  # Return None instead of {} for consistency
     
     middle_start = HOOK_WINDOW_DURATION
@@ -1057,14 +1057,16 @@ def calculate_middle_segments(video_duration: float) -> Dict[str, Dict[str, floa
         return None
 
     # Determine number of segments based on TOTAL video duration (BucketsPlan.md)
-    if video_duration <= BUCKET_THRESHOLDS['three_segments_max']:
-        num_segments = 3  # 9-18s videos
-    elif video_duration <= BUCKET_THRESHOLDS['four_segments_max']:
-        num_segments = 4  # 18-33s videos
-    elif video_duration <= BUCKET_THRESHOLDS['five_segments_max']:
-        num_segments = 5  # 33-75s videos
+    # Use < for consistent boundary handling (upper bound exclusive)
+    # This ensures videos at exact boundaries (18s, 33s, 75s) go into the higher bucket
+    if video_duration < BUCKET_THRESHOLDS['three_segments_max']:
+        num_segments = 3  # 9-17.999s videos (9 <= x < 18)
+    elif video_duration < BUCKET_THRESHOLDS['four_segments_max']:
+        num_segments = 4  # 18-32.999s videos (18 <= x < 33)
+    elif video_duration < BUCKET_THRESHOLDS['five_segments_max']:
+        num_segments = 5  # 33-74.999s videos (33 <= x < 75)
     else:
-        num_segments = 5  # >75s videos (capped at 5)
+        num_segments = 5  # >=75s videos (capped at 5)
     
     segment_duration = middle_duration / num_segments
     segments = {}
@@ -2652,6 +2654,7 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     calculated_metadata = {
         'video_id': video_id,
         'duration': video_duration,
+        'url': metadata.get('url', ''),  # TikTok video URL
         'digg_count': metadata.get('likes', 0),  # Field name changed
         'play_count': metadata.get('views', 0),  # Field name changed
         'collect_count': metadata.get('saves', 0),  # Field name changed
@@ -2659,7 +2662,8 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
         'comment_count': metadata.get('comments', 0),
         'create_time': metadata.get('createTime', metadata.get('createTimeISO', '')),
         'author': metadata.get('author', {}).get('uniqueId', metadata.get('author', {}).get('name', '')),
-        'description': metadata.get('description', '')
+        'description': metadata.get('description', ''),
+        'hashtags': metadata.get('hashtags', [])  # Preserve raw hashtags array for downstream analysis
     }
 
     # Add gender detection data if available

@@ -92,3 +92,15 @@ gender_detection_outputs/
 
 # ContentAnalysis 
 ContentAnalysis/
+
+# ContentTests 
+ContentTests/
+
+# Data
+data/
+
+# ml_pipeline
+ml_pipeline/
+
+# ContentAnalysis-Captions
+ContentAnalysis-Captions/

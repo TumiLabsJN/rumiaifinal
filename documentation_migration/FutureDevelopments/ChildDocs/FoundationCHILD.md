@@ -1125,21 +1125,132 @@ def assign_bucket(duration: float) -> str:
 
 ---
 
-## 7. References
+## 7. Standardized Exit Codes (All Stages)
 
-### 7.1 Parent Document
+**Purpose**: Provide consistent exit code semantics across all ML pipeline stages for orchestration and debugging.
+
+**Source**: CrossHLDalignment2do.md Issue #20
+
+### 7.1 Exit Code Reference Table
+
+| Code | Category | Meaning | Example Scenarios | Recovery Action |
+|------|----------|---------|-------------------|-----------------|
+| **0** | Success | All operations completed successfully | Stage completed without errors | None (proceed to next stage) |
+| **1** | Pre-flight Validation | Dependencies missing or invalid | Stage N-1 outputs don't exist, malformed JSONs, missing API keys | Re-run previous stage, check environment |
+| **2** | Execution Failure | Core stage logic failed | ML training failed, JSON generation failed, API call failed | Check logs, debug stage logic, retry |
+| **3** | Output Validation | Generated output failed validation | Cluster sizes don't sum, JSON schema invalid, model metrics below threshold | Review stage logic, check input data quality |
+| **4** | I/O Failure | File system or external service error | Disk full, permission denied, network timeout, API unauthorized | Fix infrastructure, check credentials |
+| **5** | Partial Completion | Some operations succeeded, some failed | Phase 1: 4/6 windows completed (Stage 7), 3/8 buckets trained (Stage 5) | Review partial output, retry failed components |
+| **6** | Data Integrity Error | Input data inconsistent or corrupted | Video missing from cluster, feature count mismatch, CSV row count mismatch | Re-run upstream stages, validate data pipeline |
+| **99** | Unexpected Error | Uncaught exception or unknown failure | Python exception not handled by stage-specific logic | Debug stack trace, file bug report |
+
+### 7.2 Usage Guidelines
+
+**For Stage Implementers**:
+- Use exit codes consistently within each stage
+- Document exit codes in stage HLD Section "Error Handling"
+- Raise exceptions with clear error messages (logged before exit)
+
+**For Orchestration Layer**:
+- Check exit code to determine recovery strategy
+- Exit codes 1, 4, 6 → Re-run previous stage
+- Exit code 2, 3 → Debug current stage
+- Exit code 5 → Resume from checkpoint (partial completion)
+- Exit code 99 → Escalate to engineering
+
+**Example (Python)**:
+```python
+import sys
+
+try:
+    run_stage_N(...)
+    sys.exit(0)  # Success
+except PreFlightValidationError as e:
+    logger.error(f"Pre-flight failed: {e}")
+    sys.exit(1)
+except ExecutionError as e:
+    logger.error(f"Execution failed: {e}")
+    sys.exit(2)
+except ValidationError as e:
+    logger.error(f"Output validation failed: {e}")
+    sys.exit(3)
+except IOError as e:
+    logger.error(f"I/O error: {e}")
+    sys.exit(4)
+except Exception as e:
+    logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+    sys.exit(99)
+```
+
+### 7.3 Stage-Specific Exit Code Mapping
+
+**Stage 1 (Video Discovery)**:
+- 0 = Success (videos discovered and downloaded)
+- 1 = Pre-flight fail (Apify API key invalid, cluster config missing)
+- 2 = Discovery fail (Apify scraping failed, download failed)
+- 3 = Output validation fail (insufficient videos found, bucket distribution invalid)
+- 4 = I/O fail (disk full during video download, network timeout)
+
+**Stage 2 (Video Processing)**:
+- 0 = Success (all videos processed through RumiAI pipeline)
+- 1 = Pre-flight fail (video files missing from Stage 1)
+- 2 = Processing fail (FEAT timeout, Whisper failed, MediaPipe crashed)
+- 4 = I/O fail (insufficient disk space for temp files, permission denied)
+- 5 = Partial completion (45/100 videos processed, 55 remaining)
+
+**Stage 3 (Feature Aggregation)**:
+- 0 = Success (aggregated CSV generated)
+- 1 = Pre-flight fail (Stage 2 temporal windows missing)
+- 2 = Aggregation fail (merge/join failed, feature extraction error)
+- 3 = Output validation fail (column count mismatch, expected 129 got 127)
+
+**Stage 4 (Feature Transformation)**:
+- 0 = Success (transformed CSVs generated)
+- 1 = Pre-flight fail (Stage 3 aggregated CSV missing)
+- 2 = Transformation fail (scaling/encoding failed, cross-window feature computation error)
+- 3 = Output validation fail (feature naming convention violated, expected suffixes missing)
+
+**Stage 5 (ML Model Training)**:
+- 0 = Success (all models trained and validated)
+- 1 = Pre-flight fail (Stage 4 CSVs missing, insufficient videos)
+- 2 = Training fail (RandomForest/K-Means training failed)
+- 3 = Validation fail (model metrics below threshold, feature overlap <15)
+- 5 = Partial completion (3/8 buckets trained)
+
+**Stage 6 (ML Analysis Generation)**:
+- 0 = Success (13-15 JSONs generated per bucket)
+- 1 = Pre-flight fail (Stage 4 CSVs or Stage 5 models missing)
+- 2 = Generation fail (JSON creation failed, feature extraction error)
+- 3 = Validation fail (cluster size integrity check failed, feature name mismatch)
+- 4 = I/O fail (disk full, permission denied during atomic commit)
+
+**Stage 7 (LLM Analysis)**:
+- 0 = Success (8 JSONs generated per bucket)
+- 1 = Pre-flight fail (Stage 6 JSONs missing, API key invalid)
+- 2 = Phase 1 fail (window analysis failed, LLM API error)
+- 3 = Phase 2 fail (synthesis failed, cluster path extraction error)
+- 4 = API auth fail (Anthropic API 401/403)
+- 5 = Partial completion (4/6 windows completed in Phase 1)
+- 6 = Data integrity (cluster path extraction failed, video count mismatch)
+- 99 = Unexpected error (unhandled exception)
+
+---
+
+## 8. References
+
+### 8.1 Parent Document
 
 - **MLPlanningv2.md** (lines 1-498)
   - Part 1: Foundation (lines 39-233)
   - Part 2: Configuration (lines 236-498)
 
-### 7.2 Related Documents
+### 8.2 Related Documents
 
 - **MLROADMAP.md**: Business context and ML roadmap
 - **SystemArchitecturev2.md**: RumiAI processing pipeline architecture
 - **ChildTemplate.md**: Template for stage-specific Child HLDs
 
-### 7.3 Usage by Stage-Specific Child Docs
+### 8.3 Usage by Stage-Specific Child Docs
 
 All stage-specific Child HLDs reference this document:
 - VideoDiscoveryCHILD.md (Stage 1)

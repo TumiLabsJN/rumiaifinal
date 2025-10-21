@@ -12,10 +12,11 @@
 
 ## Document Overview
 
-This High-Level Design (HLD) documents Stage 5: ML Model Training, which trains 90 machine learning models across 8 duration buckets to detect viral video patterns.
+This High-Level Design (HLD) documents Stage 5: ML Model Training, which trains ~33-45 machine learning models per analysis (from top 3 winning buckets selected by Stage 1) to detect viral video patterns.
 
 **Key Features**:
-- **90 models total**: 8 Video-Level RF + 41 Window-Level RF + 41 Window-Level K-Means
+- **Model capacity**: 80 models theoretical max (8 Video-Level RF + 36 Window-Level RF + 36 Window-Level K-Means across all 8 buckets)
+- **Actual training**: ~33-45 models per analysis (Stage 1 selects top 3 winning buckets only)
 - **Dual RF + K-Means architecture**: Prevents blind spots in pattern detection
 - **Multi-dimensional validation**: GOLD/SILVER/BRONZE/EXPLORATORY confidence tiers
 - **Critical bug prevention**: Section 3 contains MANDATORY implementation warnings
@@ -47,7 +48,10 @@ This High-Level Design (HLD) documents Stage 5: ML Model Training, which trains 
 **Business Problem**: RumiAI needs to identify which video features and creative strategies predict TikTok virality for specific duration ranges.
 
 **Current Pipeline Context** (Stage 1-4 complete):
-- **Stage 1**: Video discovery (300 videos selected across 3 active buckets)
+- **Stage 1**: Video discovery (300 videos selected across 3 active buckets from 8 possible duration buckets)
+  - Adaptive bucket processing: Only top 3 buckets with highest winner concentration are selected
+  - Example: If 18-33s (45%), 33-60s (30%), 13-18s (20%) contain 95% of winners → only these 3 are processed
+  - This reduces model training from theoretical 80 models → actual 33-45 models per analysis
 - **Stage 2**: Video processing (RumiAI analysis, temporal_windows_updated.json per video)
 - **Stage 3**: Feature aggregation (flatten temporal windows into aggregated_features.csv)
 - **Stage 4**: Feature transformation (3 pipelines: video-level RF, window-level RF, window-level K-Means)
@@ -59,7 +63,7 @@ This High-Level Design (HLD) documents Stage 5: ML Model Training, which trains 
 
 ### 1.2 Success Criteria
 
-**Output**: 90 trained models per hashtag (distributed across 8 duration buckets)
+**Output**: ~33-45 trained models per hashtag (distributed across top 3 winning buckets selected by Stage 1)
 
 **Quality**:
 - Models train successfully on N=100 videos per bucket (minimum 50 contrastive, 30 top mode)
@@ -101,6 +105,31 @@ This High-Level Design (HLD) documents Stage 5: ML Model Training, which trains 
 | Video-Level RF | Cross-window interactions | Window-specific feature importance |
 | Window-Level RF | Per-window feature rankings | Creative strategy clusters |
 | K-Means | 3 distinct strategies per window | Temporal progressions |
+
+### 2.1.1 Theoretical vs Actual Model Counts
+
+**Theoretical Capacity** (all 8 buckets trained):
+- 8 video-level RF + 36 window-level RF + 36 window-level K-Means = **80 models**
+
+**Actual Production** (adaptive bucket processing):
+- Stage 1 identifies top 3 winning buckets per analysis
+- Model count varies by selected buckets (9-21 models per type)
+- **Typical range: 33-45 total models per hashtag**
+
+**Example Scenarios**:
+
+| Winning Buckets | Video RF | Window RF | K-Means | Total |
+|-----------------|----------|-----------|---------|-------|
+| 18-33s, 33-60s, 60-90s | 3 | 20 (6+7+7) | 20 | **43** |
+| 9-13s, 13-18s, 18-33s | 3 | 12 (3+3+6) | 12 | **27** |
+| 33-60s, 60-90s, 90-120s | 3 | 21 (7+7+7) | 21 | **45** (max) |
+| 0-3s, 3-9s, 9-13s | 3 | 6 (1+2+3) | 6 | **15** (min) |
+
+**Why Adaptive Processing?**
+- Focuses training resources on buckets with highest winner concentration
+- Example: If 18-33s (45%), 33-60s (30%), 13-18s (20%) contain 95% of winners → skip remaining 5 buckets
+- Reduces training time from theoretical ~5-6 minutes → actual ~2-3 minutes
+- Provides better pattern discovery where success is actually concentrated
 
 ### 2.2 Data Flow
 
@@ -218,32 +247,48 @@ def train_bucket_models(bucket, windows, mode, config):
     start_time = time.time()
 
     try:
-        # 1. Train Video-Level RF
-        logger.info(f"Training video-level RF for {bucket}...")
-        X = pd.read_csv('ml_analysis/rf_transformed.csv')
-        y = X['is_top_performer']
-        X = X.drop(['is_top_performer', 'video_id'], axis=1)
+        # 1. Check Label Distribution (C7 Compatibility Fix - added 2025-10-20)
+        logger.info(f"Checking label distribution for {bucket}...")
+        X_check = pd.read_csv('ml_analysis/rf_transformed.csv')
+        unique_labels = X_check['is_top_performer'].unique()
+        can_train_rf = len(unique_labels) >= 2
 
-        rf_video = RandomForestClassifier(**config['random_forest'])
-        rf_video.fit(X, y)
-
-        model_path = f'models/rf_video_{bucket}.pkl'
-        joblib.dump(rf_video, model_path)
-        trained_models.append(model_path)
-
-        # 2. Train Window-Level RF (sequential loop)
-        for window in windows:
-            logger.info(f"Training window-level RF for {window}...")
-            X = pd.read_csv(f'ml_analysis/{window}_rf_transformed.csv')
+        if not can_train_rf:
+            logger.info(
+                f"Skipping Random Forest for {bucket}: Single class detected "
+                f"(expected in 'top' mode). Training K-Means only."
+            )
+            rf_video = None  # RF models will be None
+            rf_windows = []
+        else:
+            # 1a. Train Video-Level RF (only if binary classification possible)
+            logger.info(f"Training video-level RF for {bucket}...")
+            X = X_check.copy()
             y = X['is_top_performer']
-            X = X.drop(['is_top_performer'], axis=1)
+            X = X.drop(['is_top_performer', 'video_id'], axis=1)
 
-            rf_window = RandomForestClassifier(**config['random_forest'])
-            rf_window.fit(X, y)
+            rf_video = RandomForestClassifier(**config['random_forest'])
+            rf_video.fit(X, y)
 
-            model_path = f'models/rf_{window}_{bucket}.pkl'
-            joblib.dump(rf_window, model_path)
+            model_path = f'models/rf_video_{bucket}.pkl'
+            joblib.dump(rf_video, model_path)
             trained_models.append(model_path)
+
+            # 2. Train Window-Level RF (sequential loop, only if can_train_rf)
+            rf_windows = []
+            for window in windows:
+                logger.info(f"Training window-level RF for {window}...")
+                X = pd.read_csv(f'ml_analysis/{window}_rf_transformed.csv')
+                y = X['is_top_performer']
+                X = X.drop(['is_top_performer'], axis=1)
+
+                rf_window = RandomForestClassifier(**config['random_forest'])
+                rf_window.fit(X, y)
+
+                model_path = f'models/rf_{window}_{bucket}.pkl'
+                joblib.dump(rf_window, model_path)
+                trained_models.append(model_path)
+                rf_windows.append(rf_window)
 
         # 3. Train K-Means (sequential loop)
         for window in windows:
@@ -269,8 +314,13 @@ def train_bucket_models(bucket, windows, mode, config):
             joblib.dump(scalers, scalers_path)
             trained_models.append(scalers_path)
 
-        # 4. Generate model_metrics.json
-        metrics = generate_model_metrics(bucket, windows, rf_video, rf_windows, kmeans_models)
+        # 4. Generate model_metrics.json (handle optional RF - C7 fix)
+        metrics = generate_model_metrics(
+            bucket, windows,
+            rf_video,  # May be None if RF skipped
+            rf_windows,  # Empty list if RF skipped
+            kmeans_models
+        )
         metrics_path = 'models/model_metrics.json'
         with open(metrics_path, 'w') as f:
             json.dump(metrics, f, indent=2)
@@ -818,6 +868,74 @@ EXPLORATORY: <35 points
 
 ---
 
+### 🟡 MAJOR: Analysis Mode Compatibility (C7 Fix - added 2025-10-20)
+
+**Bug Risk**: MAJOR (affects core ML pipeline)
+
+**Problem**: Analysis mode determines which ML models can be trained:
+
+| Mode | Label Distribution | RF Training | K-Means Training |
+|------|-------------------|-------------|------------------|
+| 'contrastive' | Binary (80% top vs 20% bottom) | ✅ Possible | ✅ Possible |
+| 'top' | Single class (100% top) | ❌ Impossible | ✅ Possible |
+
+**Why RF Fails in 'Top' Mode**:
+- Random Forest is a binary classifier requiring 2+ classes to learn decision boundaries
+- 'Top' mode selects only winning videos → all have `is_top_performer=1` (single class)
+- Attempting to train RF with single class causes: `ValueError: This solver needs samples of at least 2 classes`
+
+**Solution**: Check label distribution before training (Section 6.1 Layer 4)
+
+```python
+# Before training, check label distribution
+X_check = pd.read_csv('ml_analysis/rf_transformed.csv')
+unique_labels = X_check['is_top_performer'].unique()
+can_train_rf = len(unique_labels) >= 2
+
+if not can_train_rf:
+    if selection_strategy == 'contrastive':
+        # ERROR: Contrastive should produce binary labels
+        raise ValidationError("Single class in contrastive mode (Stage 1 bug)")
+    elif selection_strategy == 'top':
+        # EXPECTED: Top mode produces single class
+        logger.info("Skipping RF (single class, expected in 'top' mode)")
+        rf_video = None
+        rf_windows = []
+        # Continue with K-Means only
+```
+
+**Schema Changes**: Update `model_metrics.json` to indicate when RF skipped
+
+```json
+{
+  "video_level_rf": {
+    "model_type": "random_forest",
+    "trained": false,
+    "skip_reason": "Single class in dataset (expected in 'top' mode)",
+    "purpose": "Cross-window pattern detection"
+  }
+}
+```
+
+**Downstream Impact**:
+- **Stage 6** must check `trained` flag before loading RF models
+- **Stage 6** must generate K-Means-only reports when RF unavailable
+- Reports adapt to available models ('contrastive' → RF+KM, 'top' → KM only)
+
+**Testing Requirements**:
+- **Unit Test**: `tests/unit/test_train_bucket_models.py::test_conditional_rf_training_single_class`
+- **Unit Test**: `tests/unit/test_train_bucket_models.py::test_conditional_rf_training_binary_class`
+- **Integration Test**: Validate with both 'top' and 'contrastive' mode data
+
+**Test Status**: ✅ Tests passed (Test 4 in Stage5Tests_REORGANIZED.md)
+
+**Reference**:
+- TI Document MLModelTrainingCHILDTI.md Section 11.5 Change #G001
+- Stage5Tests_REORGANIZED.md Test 4 (Training Pipeline Orchestration)
+- Mother Document MLPlanningv2.md Section 5.1, 5.2 (updated 2025-10-20)
+
+---
+
 ## 4. Dependencies & Integration
 
 ### 4.1 Input Dependencies
@@ -984,6 +1102,48 @@ Columns:
 }
 ```
 
+#### model_metrics.json Schema - Mode-Dependent Fields (C7 Compatibility - added 2025-10-20)
+
+The `video_level_rf` and `window_level_rf` sections have **conditional structures** based on whether RF training was possible:
+
+**When RF Trained** (`trained: true` - 'contrastive' mode):
+```json
+{
+  "video_level_rf": {
+    "model_type": "random_forest",
+    "trained": true,
+    "input_features": 189,
+    "accuracy": 0.87,
+    "precision": 0.89,
+    "recall": 0.84,
+    "f1_score": 0.86,
+    "top_feature": "hook_eye_contact_rate",
+    "top_feature_importance": 0.22,
+    "purpose": "Cross-window pattern detection"
+  }
+}
+```
+
+**When RF Skipped** (`trained: false` - 'top' mode):
+```json
+{
+  "video_level_rf": {
+    "model_type": "random_forest",
+    "trained": false,
+    "skip_reason": "Single class in dataset (expected in 'top' mode)",
+    "purpose": "Cross-window pattern detection"
+  }
+}
+```
+
+**Why This Matters**:
+- **Stage 6 (ML Analysis)** must check `trained` flag before loading RF model files
+- **Stage 6** must generate K-Means-only reports when RF unavailable
+- **Downstream consumers** can distinguish between "RF failed" vs "RF intentionally skipped"
+- **Mode implications**:
+  - `'contrastive'` mode → Binary labels (top 80% vs bottom 20%) → RF + K-Means
+  - `'top'` mode → Single class (all winners) → K-Means only
+
 **Purpose of model_metrics.json** (Q4):
 - Quick sanity check after training completes
 - Validate model performance is reasonable (accuracy >0.80)
@@ -1025,11 +1185,115 @@ if video_count < MIN_VIDEOS_CONTRASTIVE:  # 50 for contrastive, 30 for top
     raise InsufficientDataError(f"Bucket {bucket} has {video_count} videos (min {MIN_VIDEOS_CONTRASTIVE} required).")
 ```
 
-4. **Config Validation** (Q3 decision):
+4. **Label Distribution Validation** (C7 Compatibility - added 2025-10-20):
+```python
+# Check unique labels in target column
+unique_labels = df_rf['is_top_performer'].unique()
+label_count = len(unique_labels)
+
+if label_count < 2:
+    if selection_strategy == 'contrastive':
+        # ERROR: Contrastive mode should produce binary labels
+        raise ValidationError(
+            f"Only {label_count} class found in contrastive mode. "
+            f"Expected 2 classes (top 80% vs bottom 20%). "
+            f"Stage 1 selection error."
+        )
+    elif selection_strategy == 'top':
+        # EXPECTED: Top mode produces single class (all is_top_performer=1)
+        logger.info(
+            f"Single class in 'top' mode (expected). "
+            f"Random Forest training will be skipped. K-Means only."
+        )
+        can_train_rf = False
+    else:
+        raise ValueError(f"Unknown strategy: {selection_strategy}")
+else:
+    # Binary classification possible
+    can_train_rf = True
+```
+
+**Pass/Fail Criteria**:
+- **'contrastive' mode + single class** → FAIL (data error)
+- **'top' mode + single class** → PASS (expected, set flag)
+- **Any mode + binary labels** → PASS (RF trainable)
+
+**Result**: Sets `can_train_rf` flag used in Section 2.3.3 Training Process
+
+5. **Config Validation** (Q3 decision):
 ```python
 # Validate hyperparameters (if config file provided)
 if 'n_estimators' not in config['random_forest']:
     raise ConfigError("Invalid model_hyperparameters.json: Missing 'n_estimators' for random_forest")
+```
+
+5. **K-Means Feature Name Validation** (Cross-HLD Alignment Issue #13):
+```python
+def validate_kmeans_feature_naming(csv_path: str, expected_suffix: str = '_scaled') -> None:
+    """
+    Validate K-Means CSV has expected transformation suffixes.
+
+    Args:
+        csv_path: Path to K-Means transformed CSV (e.g., hook_kmeans_transformed.csv)
+        expected_suffix: Primary suffix to check (default: '_scaled')
+
+    Raises:
+        ValidationError: If <80% of features have expected suffix
+
+    Source: CrossHLDalignment2do.md Issue #13
+    """
+    # Read CSV header only
+    df = pd.read_csv(csv_path, nrows=1)
+    feature_names = [col for col in df.columns if col not in ['video_id', 'create_time', 'gender']]
+
+    # Count features with transformation suffixes
+    scaled_count = sum(1 for f in feature_names if '_scaled' in f)
+    log_count = sum(1 for f in feature_names if '_log' in f)
+    encoded_count = sum(1 for f in feature_names if '_encoded' in f)
+    total_transformed = scaled_count + log_count + encoded_count
+
+    # Expect at least 80% of features to have transformation suffixes
+    expected_threshold = len(feature_names) * 0.80
+
+    if total_transformed < expected_threshold:
+        raise ValidationError(
+            f"K-Means CSV feature naming validation failed: {csv_path}\n"
+            f"  Total features: {len(feature_names)}\n"
+            f"  Features with _scaled: {scaled_count}\n"
+            f"  Features with _log: {log_count}\n"
+            f"  Features with _encoded: {encoded_count}\n"
+            f"  Total transformed: {total_transformed}/{len(feature_names)} ({total_transformed/len(feature_names)*100:.1f}%)\n"
+            f"  Expected: ≥{expected_threshold:.0f} ({80}%)\n"
+            f"\n"
+            f"This indicates Stage 4 may not have applied transformations correctly.\n"
+            f"Check FeatureTransformationCHILD.md Section 2.3.2 for transformation logic.\n"
+            f"Expected suffixes: _scaled (StandardScaler), _log (log transform), _encoded (one-hot encoding)"
+        )
+
+    logger.info(
+        f"✓ K-Means feature naming validated: {total_transformed}/{len(feature_names)} "
+        f"({total_transformed/len(feature_names)*100:.1f}%) features have transformation suffixes"
+    )
+
+
+# Add to pre-flight validation (called before training each bucket)
+def run_preflight_validation(bucket_path: str, bucket: str) -> None:
+    """
+    Pre-flight validation before training bucket models.
+    Includes K-Means feature naming validation.
+    """
+    from config.bucket_definitions import BUCKET_WINDOWS
+    windows = BUCKET_WINDOWS[bucket]
+
+    # [Existing validation logic for missing files, empty files, etc...]
+
+    # === Layer 3: Schema and Naming Convention Validation ===
+    for window in windows:
+        # Validate K-Means CSV naming convention
+        km_csv_path = os.path.join(bucket_path, f'ml_analysis/{window}_kmeans_transformed.csv')
+        validate_kmeans_feature_naming(km_csv_path)
+
+        # [Rest of existing validation...]
 ```
 
 ### 6.2 Error Cases
@@ -1122,7 +1386,8 @@ Training duration before failure: 1.2s
 
 **Maximum Tested**:
 - N=200 videos per bucket (training time: ~60 seconds, acceptable)
-- 8 buckets active (total: 120 models, ~4 minutes)
+- 3 buckets active (typical: ~45 models, ~2-3 minutes)
+- 8 buckets theoretical (would be ~80 models, ~5-6 minutes - not used in production due to adaptive processing)
 
 **Memory**:
 - Peak: ~500 MB per bucket (RandomForest with 100 estimators, 190 features, 100 samples)

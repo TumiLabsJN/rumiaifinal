@@ -1390,12 +1390,14 @@ python3 scripts/content_analysis.py \
 
 **Key Architectural Insight**:
 Each bucket processes videos with **identical window structures**, eliminating the ragged array problem:
-- Bucket 0-3s, 3-9s: All videos have 2 windows (Hook + Closing only)
-- Bucket 9-13s, 13-18s: All videos have 5 windows (Hook + 3 Middle + Closing)
+- Bucket 0-3s: All videos have 1 window (Hook only - no closing)
+- Bucket 3-9s: All videos have 2 windows (Hook + Closing only)
+- Bucket 9-13s, 13-18s: All videos have 3 windows (Hook + Middle Aggregate + Closing)
+  - Note: Middle segments aggregated for feature reliability in short windows
 - Bucket 18-33s: All videos have 6 windows (Hook + 4 Middle + Closing)
 - Bucket 33-60s, 60-90s, 90-120s: All videos have 7 windows (Hook + 5 Middle + Closing)
 
-This enables **full temporal granularity** without averaging, preserving narrative structure and pacing patterns.
+This enables **full temporal granularity** for most buckets, preserving narrative structure and pacing patterns. Buckets 9-13s and 13-18s use middle aggregation to ensure all 21 features are reliably measured (see Section 3.1.1).
 
 **Process**:
 
@@ -1404,40 +1406,42 @@ This enables **full temporal granularity** without averaging, preserving narrati
 **Bucket 18-33s Example** (4 middle segments - fixed for all videos in this bucket):
 
 ```python
-# Base features per window (example subset of ~30 total features)
+# Base features per window (actual RumiAI features - 21 total)
 BASE_FEATURES = [
-    'scene_count', 'eye_contact_rate', 'word_count', 'speech_coverage',
-    'energy_level', 'joy_ratio', 'surprise_ratio', 'anger_ratio',
-    'close_ratio', 'medium_ratio', 'wide_ratio', 'element_count',
-    # ... ~18 more features
+    'average_face_size', 'overlay_unique_count', 'has_captions',
+    'scene_count', 'shortest_scene', 'longest_scene', 'scene_duration_variance',
+    'object_count', 'person_count', 'dominant_emotion_id',
+    'speech_coverage', 'word_count', 'energy_level', 'energy_variance',
+    'energy_max', 'pitch_scatter_ratio', 'gesture_count', 'gaze_variance',
+    'eye_contact_rate', 'emotional_valence', 'emotion_consistency'
 ]
 
 for temporal_windows_json in bucket_jsons:
     windows = load_json(temporal_windows_json)
     video_features = {}
 
-    # Hook features (1 window - all ~30 base features)
+    # Hook features (1 window - all 21 base features)
     for feature in BASE_FEATURES:
         video_features[f'hook_{feature}'] = windows['hook'][feature]
 
     # Middle features (4 segments - FIXED for bucket 18-33s)
-    # Full temporal granularity - no averaging!
+    # Full temporal granularity for 18-33s+ buckets (no aggregation)
     middle_segments = windows['middle_segments']  # Always 4 segments
     for i, segment in enumerate(middle_segments, start=1):
         for feature in BASE_FEATURES:
             video_features[f'middle_{i}_{feature}'] = segment[feature]
 
-    # Closing features (1 window - all ~30 base features)
+    # Closing features (1 window - all 21 base features)
     for feature in BASE_FEATURES:
         video_features[f'closing_{feature}'] = windows['closing'][feature]
 
-    # Metadata (non-temporal, non-collinear)
-    video_features['duration'] = windows['metadata']['duration']
+    # Metadata (non-temporal, non-collinear) - 3 fields total
+    video_features['video_id'] = temporal_windows_json.stem.replace('_temporal_windows_updated', '')
     video_features['create_time'] = windows['metadata']['create_time']
-
-    # Gender detection (video-level metadata)
     video_features['gender'] = windows['metadata'].get('gender_detection', {}).get('gender')
-    video_features['gender_confidence'] = windows['metadata'].get('gender_detection', {}).get('confidence')
+
+    # Note: duration removed (redundant with bucket assignment)
+    # Note: gender_confidence removed (not needed for ML training)
 
     # ❌ NO global features that sum temporal features (avoids collinearity)
     # DO NOT ADD: total_scene_count, total_word_count, total_energy, etc.
@@ -1446,24 +1450,76 @@ for temporal_windows_json in bucket_jsons:
     aggregated_rows.append(video_features)
 ```
 
+### 3.1.1: Middle Segment Aggregation (Buckets 9-13s, 13-18s)
+
+**Rationale**: Short middle windows (1-4s) in buckets 9-13s and 13-18s produce unreliable measurements for 8 out of 21 features (38%): `scene_count`, `shortest_scene`, `longest_scene`, `scene_duration_variance`, `speech_coverage`, `word_count`, `gesture_count`, `gaze_variance`. Aggregating the 3 middle segments into a single "middle_aggregate" window creates 4.5-9.3s windows where ALL 21 features are reliably measured.
+
+**Aggregation Strategies** (4 strategies applied based on feature semantics):
+- **SUM**: Count features (cumulative) → `scene_count`, `word_count`, `object_count`, `person_count`, `overlay_unique_count`, `gesture_count`
+- **MIN**: Minimum extreme values → `shortest_scene`
+- **MAX**: Maximum extreme values → `longest_scene`
+- **MODE**: Categorical features (most common) → `dominant_emotion_id`, `has_captions`
+- **AVERAGE** (default): All other continuous/ratio features → `energy_level`, `eye_contact_rate`, `speech_coverage`, etc.
+
+**Example for Bucket 9-13s**:
+```python
+# Instead of: middle_1_*, middle_2_*, middle_3_* (3 × 21 = 63 columns)
+# Create: middle_aggregate_* (1 × 21 = 21 columns)
+
+import numpy as np
+import pandas as pd
+
+middle_segments = windows['middle_segments']  # 3 segments for 9-13s bucket
+
+for feature in BASE_FEATURES:
+    # Collect non-null values from all 3 middle segments
+    values = [seg[feature] for seg in middle_segments if seg.get(feature) is not None]
+
+    if len(values) == 0:
+        video_features[f'middle_aggregate_{feature}'] = None
+        continue
+
+    # Apply strategy based on feature type
+    if feature in ['scene_count', 'word_count', 'gesture_count']:  # SUM
+        video_features[f'middle_aggregate_{feature}'] = sum(values)
+    elif feature == 'shortest_scene':  # MIN
+        video_features[f'middle_aggregate_{feature}'] = min(values)
+    elif feature == 'longest_scene':  # MAX
+        video_features[f'middle_aggregate_{feature}'] = max(values)
+    elif feature in ['dominant_emotion_id', 'has_captions']:  # MODE
+        video_features[f'middle_aggregate_{feature}'] = pd.Series(values).mode()[0]
+    else:  # AVERAGE (default for continuous features)
+        video_features[f'middle_aggregate_{feature}'] = np.mean(values)
+```
+
+**Result**: Buckets 9-13s and 13-18s have **3 windows total** (hook + middle_aggregate + closing) instead of 5 windows with unreliable middle segment features.
+
 **Why This Works**:
+
 - **No ragged arrays**: All videos in a bucket have IDENTICAL window counts
-- **No averaging**: Preserves temporal evolution (e.g., emotional arc: neutral → happy → sad)
+- **Limited averaging**: Only buckets 9-13s and 13-18s aggregate middle segments (for feature reliability). All other buckets preserve full temporal evolution (e.g., emotional arc: neutral → happy → sad)
 - **No collinearity**: Global features (like `total_scene_count`) would be mathematical sums of temporal features
 - **Fixed-size vectors**: Required for ML algorithms (one row per video)
 
 ### 3.2: Bucket-Specific Feature Counts
 
-**Output Feature Counts by Bucket**:
+**Output Feature Counts by Bucket** (Actual RumiAI values):
 
-| Bucket | Middle Segments | Total Windows | Base Features × Windows | Metadata | **Total Features** |
-|--------|-----------------|---------------|-------------------------|----------|-------------------|
-| 0-3s, 3-9s | 0 (null) | 2 | 30 × 2 = 60 | ~5 | **~65** |
-| 9-13s, 13-18s | 3 | 5 | 30 × 5 = 150 | ~5 | **~155** |
-| 18-33s | 4 | 6 | 30 × 6 = 180 | ~5 | **~185** |
-| 33-60s, 60-90s, 90-120s | 5 | 7 | 30 × 7 = 210 | ~5 | **~215** |
+| Bucket | Middle Segments | Middle Type | Total Windows | Base Features × Windows | Metadata | **Total Features** |
+|--------|-----------------|-------------|---------------|-------------------------|----------|-------------------|
+| 0-3s | 0 (null) | N/A | 1 (hook only) | 21 × 1 = 21 | 3 | **24** |
+| 3-9s | 0 (null) | N/A | 2 | 21 × 2 = 42 | 3 | **45** |
+| 9-13s | 3 | Aggregated | 3 | 21 × 3 = 63 | 3 | **66** |
+| 13-18s | 3 | Aggregated | 3 | 21 × 3 = 63 | 3 | **66** |
+| 18-33s | 4 | Separate | 6 | 21 × 6 = 126 | 3 | **129** |
+| 33-60s | 5 | Separate | 7 | 21 × 7 = 147 | 3 | **150** |
+| 60-90s | 5 | Separate | 7 | 21 × 7 = 147 | 3 | **150** |
+| 90-120s | 5 | Separate | 7 | 21 × 7 = 147 | 3 | **150** |
 
-**Note**: Exact feature count depends on which RumiAI features are selected. The ~30 base features is an estimate.
+**Note**:
+- **Base features**: 21 features per window (see Section 3.1 for complete list)
+- **Metadata**: 3 fields (video_id, create_time, gender)
+- **Middle Type**: "Aggregated" means middle segments combined into single middle_aggregate window (see Section 3.1.1)
 
 ### 3.3: Create Aggregated CSV
 ```python
@@ -1473,19 +1529,24 @@ df = pd.DataFrame(aggregated_rows)
 df.to_csv("ml_analysis/aggregated_features.csv", index=False)
 
 # Example output shape for bucket 18-33s with N=100 videos
-# Shape: (100 videos, ~185 features)
+# Shape: (100 videos, 129 features)
 ```
 
 **Output**: `ml_analysis/aggregated_features.csv`
-- Shape: **(N videos, ~65-215 features)** depending on bucket
-- Example columns for **bucket 18-33s**:
-  - Hook: `hook_scene_count`, `hook_eye_contact_rate`, `hook_word_count`, ... (30 features)
-  - Middle 1: `middle_1_scene_count`, `middle_1_eye_contact_rate`, ... (30 features)
-  - Middle 2: `middle_2_scene_count`, `middle_2_eye_contact_rate`, ... (30 features)
-  - Middle 3: `middle_3_scene_count`, `middle_3_eye_contact_rate`, ... (30 features)
-  - Middle 4: `middle_4_scene_count`, `middle_4_eye_contact_rate`, ... (30 features)
-  - Closing: `closing_scene_count`, `closing_energy_level`, ... (30 features)
-  - Metadata: `duration`, `create_time`, `gender`, `gender_confidence`, ... (5 features)
+- Shape: **(N videos, 24-150 features)** depending on bucket (see table in Section 3.2)
+- Example columns for **bucket 18-33s** (129 features total):
+  - Metadata: `video_id`, `create_time`, `gender` (3 features)
+  - Hook: `hook_scene_count`, `hook_eye_contact_rate`, `hook_word_count`, ... (21 features)
+  - Middle 1: `middle_1_scene_count`, `middle_1_eye_contact_rate`, ... (21 features)
+  - Middle 2: `middle_2_scene_count`, `middle_2_eye_contact_rate`, ... (21 features)
+  - Middle 3: `middle_3_scene_count`, `middle_3_eye_contact_rate`, ... (21 features)
+  - Middle 4: `middle_4_scene_count`, `middle_4_eye_contact_rate`, ... (21 features)
+  - Closing: `closing_scene_count`, `closing_energy_level`, ... (21 features)
+- Example columns for **bucket 9-13s** (66 features total):
+  - Metadata: `video_id`, `create_time`, `gender` (3 features)
+  - Hook: `hook_scene_count`, `hook_eye_contact_rate`, ... (21 features)
+  - Middle Aggregate: `middle_aggregate_scene_count`, `middle_aggregate_eye_contact_rate`, ... (21 features)
+  - Closing: `closing_scene_count`, `closing_energy_level`, ... (21 features)
 
 **Collinearity Prevention**:
 ```python
@@ -1854,16 +1915,27 @@ import joblib
 
 # Load video-level transformed data
 X = pd.read_csv('ml_analysis/rf_transformed.csv')  # (100 videos, ~190 features)
-y = X['is_top_performer']  # Binary labels (top 80% vs bottom 20%)
-X = X.drop(['is_top_performer'], axis=1)
+y = X['is_top_performer']
 
-# Train video-level Random Forest
-rf_video = RandomForestClassifier(
-    n_estimators=100,
-    max_depth=10,
-    random_state=42
-)
-rf_video.fit(X, y)
+# Check label distribution (C7 Compatibility Fix - added 2025-10-20)
+unique_labels = y.unique()
+can_train_rf = len(unique_labels) >= 2
+
+if not can_train_rf:
+    # 'top' mode produces single class - RF training impossible
+    print("Skipping RF: Single class detected (expected in 'top' mode)")
+    rf_video = None
+else:
+    # Binary classification possible - train RF
+    X = X.drop(['is_top_performer'], axis=1)
+
+    # Train video-level Random Forest
+    rf_video = RandomForestClassifier(
+        n_estimators=100,
+        max_depth=10,
+        random_state=42
+    )
+    rf_video.fit(X, y)
 
 # Extract feature importance
 feature_importance = pd.DataFrame({
@@ -1889,9 +1961,15 @@ metrics = {
 joblib.dump(rf_video, 'models/rf_video_18-33s.pkl')
 ```
 
-**Output**: `models/rf_video_18-33s.pkl`
+**Output**: `models/rf_video_18-33s.pkl` (or None if RF skipped)
 
-**What It Captures**:
+**Mode Compatibility Note** (added 2025-10-20):
+- **'contrastive' mode**: Trains RF + K-Means (binary labels: top 80% vs bottom 20%)
+- **'top' mode**: Trains K-Means only (single class: all videos are winners)
+- RF requires 2+ classes for binary classification - impossible in 'top' mode
+- See TI Document MLModelTrainingCHILDTI.md Section 11.5 Change #G001 for technical details
+
+**What It Captures** (when RF trained):
 - **Sequential patterns**: "Energy builds from hook → middle → closing predicts virality"
 - **Consistency patterns**: "Hook topic matches middle topic increases viral rate by 35%"
 - **Contrast effects**: "Large energy gap between middle avg and closing peak predicts virality"
@@ -1906,20 +1984,26 @@ joblib.dump(rf_video, 'models/rf_video_18-33s.pkl')
 **Bucket 18-33s Example** (6 window types):
 
 ```python
-# For each window type in bucket
-for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']:
-    # Load window-specific transformed data
-    X = pd.read_csv(f'ml_analysis/{window_type}_rf_transformed.csv')  # (100 videos, 22 features)
-    y = X['is_top_performer']  # Binary labels
-    X = X.drop(['is_top_performer'], axis=1)
+# Check if RF training is possible (same logic as video-level - added 2025-10-20)
+can_train_rf = len(y.unique()) >= 2  # From video-level check above
 
-    # Train window-level Random Forest
-    rf_window = RandomForestClassifier(
-        n_estimators=100,
-        max_depth=10,
-        random_state=42
-    )
-    rf_window.fit(X, y)
+if not can_train_rf:
+    print("Skipping all window-level RF models (single class)")
+else:
+    # For each window type in bucket
+    for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']:
+        # Load window-specific transformed data
+        X = pd.read_csv(f'ml_analysis/{window_type}_rf_transformed.csv')  # (100 videos, 22 features)
+        y = X['is_top_performer']  # Binary labels
+        X = X.drop(['is_top_performer'], axis=1)
+
+        # Train window-level Random Forest
+        rf_window = RandomForestClassifier(
+            n_estimators=100,
+            max_depth=10,
+            random_state=42
+        )
+        rf_window.fit(X, y)
 
     # Extract feature importance
     feature_importance = pd.DataFrame({
@@ -1934,14 +2018,16 @@ for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'clo
 ```
 
 **Outputs** (for bucket 18-33s):
-- `models/rf_hook_18-33s.pkl`
-- `models/rf_middle_1_18-33s.pkl`
-- `models/rf_middle_2_18-33s.pkl`
-- `models/rf_middle_3_18-33s.pkl`
-- `models/rf_middle_4_18-33s.pkl`
-- `models/rf_closing_18-33s.pkl`
+- `models/rf_hook_18-33s.pkl` (or none if RF skipped)
+- `models/rf_middle_1_18-33s.pkl` (or none if RF skipped)
+- `models/rf_middle_2_18-33s.pkl` (or none if RF skipped)
+- `models/rf_middle_3_18-33s.pkl` (or none if RF skipped)
+- `models/rf_middle_4_18-33s.pkl` (or none if RF skipped)
+- `models/rf_closing_18-33s.pkl` (or none if RF skipped)
 
-**What It Captures**:
+**Note** (added 2025-10-20): Window-level RF training follows same mode compatibility rules as video-level RF (see Section 5.1 Mode Compatibility Note).
+
+**What It Captures** (when RF trained):
 - Which features define a "strong hook" vs "weak hook"
 - Which features define a "strong middle" vs "weak middle"
 - Which features define a "strong closing" vs "weak closing"
@@ -2036,14 +2122,21 @@ for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'clo
 | 33-60s | 7 (hook, middle_1-5, closing) | 1 | 7 | 7 | **15** |
 | 60-90s | 7 | 1 | 7 | 7 | **15** |
 | 90-120s | 7 | 1 | 7 | 7 | **15** |
-| **TOTAL** | **41 windows** | **8** | **41** | **41** | **90 models** |
+| **TOTAL (All 8 buckets)** | **36 windows** | **8** | **36** | **36** | **80 models** |
 
-**Why 90 Models?**:
-- 90 models is only 16% more than K-Means alone (41 models)
-- But provides **complete pattern coverage** with no blind spots:
+**Note**: These are theoretical maximums if all 8 buckets were trained. In practice, Stage 1 selects only the **top 3 winning buckets** per analysis, resulting in **~33-45 actual models trained** (15-21 per model type).
+
+**Why Dual RF + K-Means Architecture?**:
+- Provides **complete pattern coverage** with no blind spots:
   - Cross-window patterns (video-level RF)
   - Within-window patterns (window-level RF)
   - Creative strategies (window-level K-Means)
+
+**Typical Model Count (3-Bucket Analysis)**:
+- 3 video-level RF
+- 15-21 window-level RF (depends on which 3 buckets selected)
+- 15-21 window-level K-Means
+- **Total: ~33-45 models per analysis**
 
 ---
 
@@ -3009,70 +3102,254 @@ Key Cross-Window Insights from RF:
 
 ## Your Task
 
-Identify 3-5 "Winning Formulas" - specific combinations of window strategies that represent successful video archetypes.
+Generate exactly 3 creative reports using a frequency-based approach with feature-based fallback.
 
-For each formula:
+### STEP 1: Filter Paths by 10% Frequency Threshold
+
+**CRITICAL RULE**: Only consider cluster paths with ≥10% frequency (minimum 10 videos out of 100).
+
+**Why 10% Threshold**:
+- Ensures formulas are proven patterns, not statistical noise
+- 10% = "1 in 10 videos use this pattern" = reliable for creator replication
+- Below 10% = too rare, might not replicate, wastes creator time
+
+**Examples**:
+- 22 videos (22%) → INCLUDE ✅ (very high confidence)
+- 18 videos (18%) → INCLUDE ✅ (high confidence)
+- 12 videos (12%) → INCLUDE ✅ (moderate confidence)
+- 8 videos (8%) → EXCLUDE ❌ (below threshold - statistical noise)
+
+**Action**: Count how many paths meet ≥10% threshold from the cluster path data provided above.
+
+---
+
+### STEP 2: Determine Report Mix (Path vs Feature-Based)
+
+Based on number of paths above 10% threshold:
+
+**Scenario A**: 3 or more paths ≥10%
+- Generate 3 path-based reports (take top 3 by frequency, ordered descending)
+
+**Scenario B**: Exactly 2 paths ≥10%
+- Generate 2 path-based reports (for the 2 paths above threshold)
+- Generate 1 feature-based report (using top RF features from video-level analysis)
+
+**Scenario C**: Exactly 1 path ≥10%
+- Generate 1 path-based report (for the 1 path above threshold)
+- Generate 2 feature-based reports (using top RF features)
+
+**Scenario D**: 0 paths ≥10% (high fragmentation)
+- Generate 3 feature-based reports (all based on top RF features)
+- Log: "High fragmentation detected: No paths meet 10% threshold. Using feature-based approach."
+
+**ALWAYS output exactly 3 reports total** (never 4, never 2).
+
+---
+
+### STEP 3: Generate Path-Based Reports (for paths ≥10%)
+
+For each cluster path above 10% threshold:
+
 1. **Name**: Creative, memorable name (e.g., "The Educator's Arc")
-2. **Structure**: Which cluster combination (e.g., Hook-0 + Middle_1-1 + Closing-0)
-3. **Frequency**: How common is this pattern?
-4. **Temporal Progression**: How do key features evolve across windows?
-   - VALIDATE against video-level RF cross-window features
-5. **RF Cross-Window Validation**: Which cross-window RF patterns does this formula exhibit?
-   - Does it show hook_to_middle_energy_delta near +0.15 (RF rank #4)?
-   - Does it show middle_to_closing_contrast near 0.28 (RF rank #5)?
-   - Does it show eye_contact_consistency near 0.12 std dev (RF rank #6)?
-6. **Strategy Description**: What is the overall creative approach?
-7. **When to Use**: What type of content/creator fits this formula?
-8. **Step-by-Step Template**: Concrete steps to replicate this formula
-   - Include cross-window targets (e.g., "Energy should increase by ~0.15 from hook to middle")
+2. **Structure**: Which cluster combination
+   - Hook: Cluster name from Phase 1 (e.g., "The Direct Eye Contact Hook")
+   - Middle pattern: Progression description
+   - Closing: Cluster name from Phase 1
+3. **Frequency & Confidence**:
+   - frequency: Video count (e.g., 22)
+   - percentage: Frequency percentage (e.g., 22.0)
+   - confidence_level: Based on percentage:
+     - ≥20%: "very_high" (1 in 5 videos - dominant pattern)
+     - 15-19.9%: "high" (1 in 6-7 videos - strong pattern)
+     - 10-14.9%: "moderate" (1 in 10 videos - proven pattern)
+4. **Temporal Progression**: How key features evolve across windows
+   - Show actual values per window (hook: 0.55, middle_avg: 0.65, closing: 0.85)
+   - Calculate deltas (hook_to_middle_delta, middle_to_closing_contrast)
+   - Describe pattern in words
+5. **RF Cross-Window Validation**: How formula matches video-level RF patterns
+   - Compare formula's deltas to RF top_performer_avg
+   - List matches (e.g., "hook_to_middle_energy_delta: 0.16 matches RF avg 0.15")
+   - Provide rf_validation_score (e.g., "9/10" if 3/3 patterns match)
+6. **Strategy Description**: Overall creative approach
+7. **When to Use**: Content types and creator profiles that fit this formula
+8. **Step-by-Step Template**: Concrete replication steps
+   - Include window-specific actions (Hook: do X, Middle: do Y)
+   - Include cross-window targets (Energy delta: +0.16, Contrast: 0.27)
+   - Reference RF-validated features
 
-Output format: JSON
+---
+
+### STEP 4: Generate Feature-Based Reports (fallback when needed)
+
+If fewer than 3 paths meet 10% threshold, generate feature-based reports to reach exactly 3 total.
+
+**Feature-Based Report Structure**:
+- **No cluster path** (not based on specific path combination)
+- Uses top features from video-level RF analysis
+- Focus on universal principles applicable to all videos
+- Always classified as "moderate" confidence (not frequency-based)
+
+**How to Create Feature-Based Reports**:
+1. Select top RF features (choose from video-level RF feature_importance)
+2. Group related features (e.g., eye_contact_rate + eye_contact_consistency = "Eye Contact Strategy")
+3. Use top_performer_avg as target values
+4. Provide actionable recommendations for each feature group
+
+**Example Feature-Based Report**:
 {{
-  "winning_formulas": [
+  "report_id": 3,
+  "type": "feature_based",
+  "frequency": null,
+  "percentage": null,
+  "confidence_level": "moderate",
+  "formula_name": "The High Eye Contact Strategy",
+  "strategy_description": "Maintain consistent direct eye contact throughout video journey",
+  "key_features": [
+    "eye_contact_rate: 0.88 (RF rank #1, importance 0.35, gap 0.43)",
+    "eye_contact_consistency: 0.12 std dev (RF rank #6, importance 0.08)"
+  ],
+  "rf_validation": {{
+    "insight": "Leverages #1 and #6 most predictive features across entire video"
+  }},
+  "when_to_use": "Universal strategy applicable when cluster paths are fragmented. Focus on proven principles.",
+  "creator_recommendations": [
+    "PRIORITY: Maintain 85-90% eye contact throughout video (RF #1 predictor)",
+    "Keep eye contact variance low (<0.15 std dev) across all windows",
+    "Use direct-to-camera framing in hook and closing windows"
+  ]
+}}
+
+**Feature-Based Report Categories** (use these groupings):
+1. **Eye Contact & Engagement**: eye_contact_rate, eye_contact_consistency
+2. **Energy & Pacing**: energy_level, hook_to_middle_energy_delta, middle_to_closing_contrast
+3. **Speech & Density**: word_count, speech_coverage, word_density
+4. **Visual Variety**: scene_count, object_count, overlay_unique_count
+
+---
+
+### STEP 5: Generate Supplementary Insights (for all creators)
+
+In addition to the 3 creative reports, provide supplementary insights that apply broadly:
+
+**A. Universal Principles** (5-7 insights):
+- Extract from video-level RF feature_importance (top 5-7 features)
+- Format: "Feature X (top avg vs bottom avg) - applies to Y% of videos"
+- Example: "High eye contact rate (88% vs 45% for top vs bottom) - applies to 78% of videos"
+- Purpose: Guidance for creators whose style doesn't match specific path formulas
+
+**B. Cross-Window Patterns** (3-5 insights):
+- Extract from video-level RF cross-window features
+- Format: Percentage-based insights about temporal evolution
+- Example: "78% of high-performing videos use 'bookend' eye contact pattern (high in hook/closing, lower in middle)"
+- Purpose: Understanding how features evolve across video journey
+
+---
+
+## Output Format: JSON
+
+{{
+  "bucket": "{bucket}",
+  "hashtag": "{hashtag or None}",
+  "total_videos": 100,
+  "total_unique_paths": 45,
+  "paths_above_threshold": 5,
+
+  "creative_reports": [
     {{
-      "name": "Formula name",
-      "structure": {{
-        "hook": "Cluster name from Phase 1",
-        "middle_pattern": "Cluster progression description",
-        "closing": "Cluster name from Phase 1"
+      "report_id": 1,
+      "type": "path_based",  // or "feature_based"
+      "path": [0, 1, 1, 1, 2, 0],  // Only for path_based (null for feature_based)
+      "frequency": 22,  // Only for path_based (null for feature_based)
+      "percentage": 22.0,  // Only for path_based (null for feature_based)
+      "confidence_level": "very_high",  // very_high, high, or moderate
+      "formula_name": "The Educator's Arc",
+      "structure": {{  // Only for path_based
+        "hook": "The Direct Eye Contact Hook (Cluster 0)",
+        "middle_pattern": "Information Dense Middle (Cluster 1 → 1 → 1 → 2)",
+        "closing": "High Energy CTA (Cluster 0)"
       }},
-      "cluster_path": [0, 1, 0, 1, 2, 0],
-      "frequency": 18,
-      "percentage": 18.0,
-      "temporal_progressions": [
+      "temporal_progressions": [  // Only for path_based
         {{
           "feature": "energy_level",
           "hook": 0.55,
-          "middle_avg": 0.65,
+          "middle_1": 0.60,
+          "middle_2": 0.62,
+          "middle_3": 0.68,
+          "middle_4": 0.75,
           "closing": 0.85,
-          "pattern": "Builds from moderate to high",
+          "pattern": "Steady build from moderate to high",
           "hook_to_middle_delta": 0.16,
           "middle_to_closing_contrast": 0.27
         }}
       ],
       "rf_cross_window_validation": {{
-        "matches_top_patterns": [...],
-        "insight": "How formula matches RF predictions",
-        "rf_validation_score": "9/10"
+        "matches_top_patterns": [
+          "hook_to_middle_energy_delta: 0.16 (RF top performer avg: 0.15, RF rank #4)",
+          "middle_to_closing_contrast: 0.27 (RF top performer avg: 0.28, RF rank #5)"
+        ],
+        "insight": "This formula exhibits 2 of 3 major cross-window patterns identified by video-level RF.",
+        "rf_validation_score": "8/10"
       }},
-      "strategy_description": "Overall creative approach",
-      "when_to_use": "Content types and creator profiles",
-      "step_by_step_template": [
-        "Step 1: ...",
-        "CROSS-WINDOW TARGETS (RF validated): ..."
+      "strategy_description": "Start with intimate eye contact to build trust, deliver dense educational content in middle segments, return to direct eye contact for high-energy call-to-action.",
+      "when_to_use": "Educational nutrition content, product explanations, how-to videos.",
+      "creator_recommendations": [
+        "Hook (0-3s): Direct eye contact (0.87), minimal words (14), moderate energy (0.55)",
+        "Middle_1 (3-8s): Shift to product view, increase talking speed (50+ words), build energy to 0.60",
+        "Middle_2-4 (8-23s): Continue information delivery, steady energy progression",
+        "Closing (23-26s): Return to direct eye contact (0.82), peak energy (0.85), clear CTA",
+        "CROSS-WINDOW TARGETS (RF validated):",
+        "  - Energy delta hook→middle: +0.16 (RF target: +0.15)",
+        "  - Energy contrast middle→closing: 0.27 gap (RF target: 0.28)"
       ]
-    }}
+    }},
+    // Report 2
+    // Report 3
   ],
-  "cross_window_insights": [
-    "Key insight about temporal patterns",
-    "Key insight about transitions between windows"
-  ]
+
+  "supplementary_insights": {{
+    "universal_principles": [
+      "High eye contact rate (88% vs 45% for top vs bottom performers) - applies to 78% of videos",
+      "Consistent energy maintenance across windows (std dev ≤0.15) - found in 65% of top performers",
+      "Clear CTA in closing window - present in 92% of high-performing videos",
+      "Text overlays within first 3 seconds - found in 60% of top performers",
+      "Energy builds from hook to closing - 65% of videos use this pattern"
+    ],
+    "cross_window_patterns": [
+      "78% of high-performing videos use 'bookend' eye contact pattern (high in hook/closing, lower in middle)",
+      "Energy progression: 65% build energy, 12% maintain consistent energy, 23% variable",
+      "Closing energy should match or exceed middle average (85% of top performers follow this)",
+      "Videos with energy delta >0.3 from hook to closing had 2x engagement"
+    ]
+  }},
+
+  "path_statistics": {{
+    "total_unique_paths": 45,
+    "paths_above_threshold": 5,
+    "needs_fallback": false
+  }},
+
+  "analysis_metadata": {{
+    "llm_model": "claude-sonnet-4-20250514",
+    "timestamp": "2025-10-16T...",
+    "phase": "phase2_synthesis"
+  }}
 }}
 
-Important:
-- Prioritize most frequent paths (top 3-5)
-- Highlight temporal evolutions (how features change across windows)
-- Be specific about when/why creators should use each formula
+---
+
+## Important Reminders:
+
+1. **Always output exactly 3 creative reports** (never more, never less)
+2. **Apply 10% threshold strictly** (8% paths are excluded)
+3. **Classify confidence levels accurately**:
+   - very_high: ≥20%
+   - high: 15-19.9%
+   - moderate: 10-14.9%
+   - Feature-based reports: always moderate
+4. **Use feature-based fallback when needed** (<3 paths above 10%)
+5. **Include supplementary_insights** (universal principles + cross-window patterns)
+6. **Focus on actionability**: Concrete steps creators can replicate
+7. **Validate against RF data**: Cross-window patterns should match video-level RF features
 """
 
     client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
