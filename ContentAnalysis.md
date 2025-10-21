@@ -1,24 +1,4 @@
 # ContentAnalysis.md - Independent Content Intelligence System
-## Brainstorm
-**Captions/Hashtag**
-Stage 3.2.5 selects videos from /insights, and distributes them to the unified buckets. 
-
-A. Add to Temporal_compute analysis: 
-   - Captions
-   - All hashtags used
-
-Then, we can refactor part of stage 3.2.5 , to also extract captions and hashtags used and pass them to a new .JSON which Content analysis will use
-
-**Transcriptions**
-For Speech Transcription, its current output: rumiaifinal\speech_transcriptions
-
-We need to find a way to move the transcriptions to their relevant bucket duration file (Right now we just move temporal)
-
-### Roadmap
-1. After you run your tests, make a copy of the transcripts and place them in /home/jorge/rumiaifinal/ContentAnalysis/
-
-
-
 ## Overview
 
 **Purpose**: Analyze video content (transcripts, captions, hashtags) to extract content intelligence insights independent of the ML pipeline constraints.

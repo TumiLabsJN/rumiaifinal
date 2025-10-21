@@ -6,7 +6,7 @@
 
 **Parent Document**: Stage8Planning.md (original 57.5-day automated MVP)
 
-**Trade-off**: Exchange development time (57.5 days → 17.5 days) for manual labor (~25 hours during onboarding)
+**Trade-off**: Exchange development time (57.5 days → 16.75 days) for manual labor (~25 hours during onboarding)
 
 ---
 
@@ -16,7 +16,7 @@
 
 **Phase 1: Template Structure Creation** (MUST happen BEFORE designer work - 2 days):
 1. ✅ **Hashtag → Client** template structure (COMPLETE - from MLCreativeReports.md)
-2. **Hashtag → Creator** template structure (define content sections, page layout)
+2. ✅ **Hashtag → Creator** template structure (COMPLETE - from Stage8Planning.md section 1.1)
 3. **Handle/Single Competitor → Client** template structure (benchmarking sections, comparison layout)
 4. **Handle/Multiple Competitor → Client** template structure (side-by-side comparison structure)
 
@@ -143,7 +143,7 @@ Same workflow as single, but populate Template D with side-by-side data.
 | # | Task | Owner | Effort | Status | Notes |
 |---|------|-------|--------|--------|-------|
 | 0.1 | Hashtag → Client structure | You | 0 days | ✅ **COMPLETE** | From MLCreativeReports.md |
-| 0.2 | Hashtag → Creator structure | You | 0.75 days | ⏸️ **TODO** | Define 2-page content sections, mobile layout specs |
+| 0.2 | Hashtag → Creator structure | You | 0 days | ✅ **COMPLETE** | From Stage8Planning.md section 1.1 |
 | 0.3 | Handle/Single Competitor → Client | You | 0.75 days | ⏸️ **TODO** | Benchmarking sections, comparison layout |
 | 0.4 | Handle/Multiple Competitor → Client | You | 0.5 days | ⏸️ **TODO** | Side-by-side comparison structure |
 
@@ -557,22 +557,22 @@ python extract_competitor_data.py --client acme --competitors rival_brand,compet
 
 ---
 
-## Total MVP Effort: ~17.5 days
+## Total MVP Effort: ~16.75 days
 
 | Section | Tasks | Effort |
 |---------|-------|--------|
-| Section 0: Template Structures | 4 tasks | 2 days |
+| Section 0: Template Structures | 4 tasks | 1.25 days (2 complete, 2 remaining) |
 | Section 1: Designer Templates | 4 tasks | 8 days |
 | Section 2: Branding Package | 3 tasks | 3 days |
 | Section 3: Data Extraction Scripts (Google Sheets) | 3 tasks | 3 days |
 | Section 4: Documentation | 2 tasks | 1 day |
 | Section 5: Testing | 2 tasks | 0.5 days |
-| **TOTAL** | **18 tasks** | **17.5 days (~3.5 weeks)** |
+| **TOTAL** | **18 tasks** | **16.75 days (~3.5 weeks)** |
 
 **Parallelizable**: Designer work (Sections 1-2: 11 days) + Development work (Section 3: 3 days) can run simultaneously after Section 0 complete
 
 **Critical Path**:
-1. Section 0 (2 days) → BLOCKS everything
+1. Section 0 (1.25 days remaining) → BLOCKS everything
 2. Section 1-2 (11 days) designer work in parallel with Section 3 (3 days) dev work
 3. Section 4-5 (1.5 days) sequential after above
 
@@ -584,7 +584,7 @@ python extract_competitor_data.py --client acme --competitors rival_brand,compet
 
 ### Phase 1 (NOW): Designer Template MVP
 **Timeline**: 3.5 weeks
-**Effort**: 17.5 days development (2 days template structures + 3 days scripts + 11 days designer + 1.5 days docs/testing)
+**Effort**: 16.75 days development (1.25 days template structures + 3 days scripts + 11 days designer + 1.5 days docs/testing)
 **Use for**: Onboarding (5 hashtags, 5-7 competitors)
 **Manual time investment**: ~25 hours total onboarding + ~2 hrs/month ongoing
 
@@ -664,7 +664,7 @@ python extract_competitor_data.py --client acme --competitors rival_brand,compet
 ## Next Steps
 
 ### Immediate Actions (Week 1)
-1. ✅ **COMPLETE Section 0 first** - Create 3 template structures (0.2, 0.3, 0.4) before anything else
+1. ✅ **COMPLETE Section 0 first** - Create 2 remaining template structures (0.3, 0.4) before anything else
 2. ✅ Select design software (InDesign vs Canva vs Figma)
 3. ✅ Hire/assign designer
 4. ⏸️ **WAIT for Section 0** - Designer cannot start until all template structures complete
@@ -750,6 +750,6 @@ python extract_competitor_data.py --client acme --competitors rival_brand,compet
 
 ---
 
-**Status**: ✅ **READY TO START** - Section 0 (template structures) is the critical path blocker. Complete Tasks 0.2, 0.3, 0.4 before designer/dev work begins.
+**Status**: ✅ **READY TO START** - Section 0 (template structures) is the critical path blocker. Complete Tasks 0.3, 0.4 before designer/dev work begins.
 
-**Next Action**: Create Hashtag → Creator template structure (Task 0.2)
+**Next Action**: Create Handle/Single Competitor → Client template structure (Task 0.3)

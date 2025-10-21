@@ -10,6 +10,17 @@
 
 ### 3.4 Review CSV Generation
 
+ How to Use (Per MLPlanningv2.md)
+
+  1. Open video_review.csv in Excel or Google Sheets
+  2. Apply conditional formatting to highlight outliers (Excel's built-in feature)
+  3. Click URL in column 2 to watch flagged videos on TikTok
+  4. Investigate why outliers occurred:
+    - Encoding issues
+    - Edge cases
+    - RumiAI bugs
+  5. All videos still proceed to ML training (no exclusions)
+
 **Quick Validation Checklist**:
 
 1. **Check output file exists**
