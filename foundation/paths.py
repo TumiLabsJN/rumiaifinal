@@ -104,6 +104,53 @@ class PathBuilder:
         """
         return target_dir / "buckets" / f"bucket_{bucket}"
 
+    def get_bucket_path(
+        self,
+        client_id: str,
+        analysis_type: str,
+        target: str,
+        analysis_mode: str,
+        selection_strategy: str,
+        bucket_name: str
+    ) -> Path:
+        """
+        Get full bucket directory path.
+
+        Centralizes bucket path construction to ensure consistency across all stages.
+        Automatically applies target sanitization (strips @ and # prefixes).
+
+        Args:
+            client_id: Client identifier
+            analysis_type: "hashtag", "competitor", or "creator"
+            target: Target with prefix (#nutrition, @brand)
+            analysis_mode: "top" or "recent"
+            selection_strategy: "contrastive" or "top"
+            bucket_name: Duration range (e.g., "18-33s")
+
+        Returns:
+            Path: Full bucket directory path
+            Example: /data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s
+
+        Example:
+            >>> pb = PathBuilder()
+            >>> pb.get_bucket_path("acme", "hashtag", "#nutrition", "top", "contrastive", "18-33s")
+            PosixPath('/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s')
+
+            >>> pb.get_bucket_path("acme", "competitor", "@vitalproteins", "top", "top", "33-60s")
+            PosixPath('/data/clients/acme/competitors/vitalproteins/top_top/buckets/bucket_33-60s')
+
+        Source: FixCheckpointBug.md - Centralized path construction fix
+        """
+        target_dir = self.get_target_dir(
+            client_id=client_id,
+            analysis_type=analysis_type,
+            target=target,
+            analysis_mode=analysis_mode,
+            selection_strategy=selection_strategy
+        )
+
+        return target_dir / "buckets" / f"bucket_{bucket_name}"
+
     def create_directory_structure(self, target_dir: Path) -> Dict[str, Path]:
         """
         Create directory structure for target.

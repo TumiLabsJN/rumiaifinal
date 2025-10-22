@@ -322,6 +322,44 @@ def test_get_bucket_path():
     assert "bucket_18-33s" in bucket_path
 
 
+def test_get_bucket_path_with_hashtag_prefix():
+    """Test bucket path construction with # prefix (FixCheckpointBug.md regression test)"""
+
+    config = {
+        "client_id": "test_client",
+        "analysis_type": "hashtag",
+        "target": "#nutrition",  # With # prefix
+        "analysis_mode": "top",
+        "selection_strategy": "contrastive"
+    }
+
+    bucket_path = utils.get_bucket_path(config, "18-33s")
+
+    # Should strip # prefix
+    assert "nutrition" in bucket_path
+    assert "#nutrition" not in bucket_path
+    assert "#" not in bucket_path
+
+
+def test_get_bucket_path_with_competitor_prefix():
+    """Test bucket path construction with @ prefix (FixCheckpointBug.md regression test)"""
+
+    config = {
+        "client_id": "test_client",
+        "analysis_type": "competitor",
+        "target": "@vitalproteins",  # With @ prefix
+        "analysis_mode": "top",
+        "selection_strategy": "top"
+    }
+
+    bucket_path = utils.get_bucket_path(config, "33-60s")
+
+    # Should strip @ prefix
+    assert "vitalproteins" in bucket_path
+    assert "@vitalproteins" not in bucket_path
+    assert "@" not in bucket_path
+
+
 # ============================================================================
 # Validation Module Tests
 # ============================================================================

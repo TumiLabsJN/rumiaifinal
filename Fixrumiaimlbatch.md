@@ -373,6 +373,155 @@ Run this and see if it reproduces the issue.
 4. Add detailed logging to track service execution flow
 5. Check if services are even being called vs returning cached empty results
 
+## 🎯 ROOT CAUSE IDENTIFIED - October 22, 2025 (08:22 AM)
+
+### THE BUG: rumiai_runner.py Rejects Local File Paths
+
+**File**: `scripts/rumiai_runner.py` lines 477-483
+
+```python
+if args.video_input.startswith('http'):
+    video_url = args.video_input
+else:
+    logger.error(f"Error: '{args.video_input}' is not a valid URL")
+    logger.error("Please provide a complete TikTok URL starting with http:// or https://")
+    sys.exit(1)  # ❌ EXITS BEFORE SERVICES RUN
+```
+
+### How the Bug Manifests
+
+**Batch Orchestrator Flow**:
+1. `rumiai_ml_batch.py` downloads videos to bucket directories
+2. `video_processor.py` copies videos to `/temp/` directory (line 74-76)
+3. `video_processor.py` calls: `subprocess.run(['python3', 'scripts/rumiai_runner.py', '/temp/VIDEO_ID.mp4'])`
+4. `rumiai_runner.py` receives local file path: `/temp/7550427512438803767.mp4`
+5. `rumiai_runner.py` validates input and finds it doesn't start with 'http'
+6. **Script exits with code 1 BEFORE any ML services run**
+7. No services execute → No output directories created → Empty `{}` in ml_data
+
+**Why Direct Runs Work**:
+```bash
+python3 scripts/rumiai_runner.py 'https://www.tiktok.com/@user/video/123'
+# ✅ URL input → passes validation → services run → features extracted
+```
+
+**Why Batch Runs Fail**:
+```bash
+python3 scripts/rumiai_runner.py '/temp/7550427512438803767.mp4'
+# ❌ Local path → fails validation → exits early → no services run
+```
+
+### Reproduction Test (Confirmed)
+
+```bash
+# Test 1: URL input (WORKS)
+python3 scripts/rumiai_runner.py 'https://www.tiktok.com/@naraazizasmith/video/7550427512438803767'
+# Result: ✅ Exit code 0, audio_energy mentioned, emotion mentioned
+# Output: energy_level: 0.047, emotional_valence: -1.0
+
+# Test 2: Local file path (FAILS)
+python3 scripts/rumiai_runner.py '/home/jorge/rumiaifinal/temp/7550427512438803767.mp4'
+# Result: ❌ Exit code 1, services NOT mentioned
+# Error: "'/home/jorge/.../temp/7550427512438803767.mp4' is not a valid URL"
+```
+
+### ⚠️ CRITICAL DISCOVERY: TWO SEPARATE BUGS (Oct 22, 09:00 AM)
+
+**Timeline Analysis Reveals**:
+
+| Date | Features | Bug Type | Cause |
+|------|----------|----------|-------|
+| **Oct 14** | `energy_level: 0.021`, `pitch_scatter_ratio: 0.628` | ✅ **WORKING** | Before any changes |
+| **Oct 15-20** | `energy_level: null`, `pitch_scatter_ratio: null` | ❌ **Bug #1** | Unknown (temporal_compute issue?) |
+| **Oct 21+** | `energy_level: 0.0`, `pitch_scatter_ratio: 0.0` | ❌ **Bug #2** | URL validation (confirmed) |
+
+**Evidence**:
+```bash
+# Oct 14 (WORKING)
+jq '.temporal_windows.hook | {energy_level, pitch_scatter_ratio}' \
+  data/clients/test_final/.../7546425205590215991_temporal_windows_updated.json
+# Result: {"energy_level": 0.021, "pitch_scatter_ratio": 0.628}
+
+# Oct 15-20 (Bug #1)
+jq '.temporal_windows.hook | {energy_level, pitch_scatter_ratio}' \
+  data/clients/test_run/.../7428596413707144481_temporal_windows_updated.json
+# Result: {"energy_level": null, "pitch_scatter_ratio": null}
+
+# Oct 21+ (Bug #2 - Current)
+jq '.temporal_windows.hook | {energy_level, pitch_scatter_ratio}' \
+  insights/7550427512438803767_temporal_windows_updated.json
+# Result: {"energy_level": 0.0, "pitch_scatter_ratio": 0.0}
+```
+
+**Key Difference**:
+- **Bug #1 (null)**: Features don't exist at all in output → temporal_compute not extracting them
+- **Bug #2 (0.0)**: Features exist but have zero values → services not running (URL validation)
+
+### Why Bug #2 (URL Validation) Explains Oct 21+ Symptoms
+
+1. **Empty `{}` in ml_data**: Services never ran, so UnifiedAnalysis creates empty dicts
+2. **No output directories**: Services never got to the point of creating directories
+3. **Zero values (not null)**: temporal_compute runs but has no ml_data to extract from
+4. **Exit code 1**: subprocess returns error but video_processor.py doesn't properly handle it
+5. **Bandaid fix (Oct 21)**: Changed from passing URLs to always passing local paths
+
+### Historical Context - The Bandaid Fix That Broke Things
+
+**Git commit a20bedb (Oct 21)**:
+```python
+# BEFORE (worked with URLs)
+cmd = ['python3', 'scripts/rumiai_runner.py', video_path]
+# video_path could be URL or local path
+
+# AFTER (always local path)
+cmd = ['python3', 'scripts/rumiai_runner.py', temp_video_path]
+# temp_video_path is ALWAYS /temp/VIDEO_ID.mp4 (local path)
+```
+
+**The "hybrid approach" in video_processor.py:183-188**:
+```python
+if os.path.exists(local_video_path):
+    video_path = local_video_path  # Local path
+elif 'webVideoUrl' in video:
+    video_path = video['webVideoUrl']  # URL
+```
+
+Before Oct 21, when videos weren't downloaded yet, the system passed URLs. After the bandaid fix, it ALWAYS copies to /temp/ and passes local paths, which rumiai_runner.py rejects.
+
+### Solution Options
+
+**Option 1: Make rumiai_runner.py Accept Local Paths** (RECOMMENDED)
+- Modify validation to detect local file paths
+- If local path exists, skip Apify scraping and process directly
+- Maintains backward compatibility with URL inputs
+
+**Option 2: Make Batch Orchestrator Pass URLs**
+- Store video URLs in metadata during Stage 1
+- Pass URLs instead of local paths to rumiai_runner.py
+- Requires rumiai_runner to re-download videos (wasteful)
+
+**Option 3: Create Separate Entry Point for Batch**
+- New script that accepts local paths
+- Bypasses URL validation and metadata scraping
+- More maintainable separation of concerns
+
+### 🎯 RECOMMENDED ACTION PLAN
+
+**Immediate Fix (Bug #2 - Oct 21+)**:
+1. ✅ Implement Option 1: Modify `rumiai_runner.py` to accept local file paths
+2. ✅ Test with batch orchestrator to confirm fix
+3. ✅ Verify audio_energy and emotion_detection outputs are created
+
+**Follow-up Investigation (Bug #1 - Oct 15-20)**:
+1. 🔍 Investigate why features became `null` after Oct 15
+2. 🔍 Check temporal_compute.py changes between Oct 14-15
+3. 🔍 Verify if this was a separate temporal_compute bug or data issue
+
+**Confidence Level**:
+- Bug #2 root cause: **100% confirmed** (reproduction test successful)
+- Option 1 as fix: **95% confident** (need to address metadata handling)
+- Bug #1 investigation: **Pending** (requires separate analysis)
+
 ## ✅ CONFIRMED FINDINGS - October 22, 2025 (07:45-07:52 AM)
 
 ### Test Results: 5 Fresh Videos Processed Through Batch
@@ -479,9 +628,171 @@ The issue IS in:
    - Log whether services are called vs skipped
    - Track execution flow through video_analyzer.py
 
-### Logging Status
+### Logging Status - FIXED October 22, 2025 (08:15 AM)
 
-**Note**: Batch orchestrator logs are empty (0 bytes) because the process is still running (PID 338550). Logs will be available after completion, but the enhanced logging added on Oct 22 should capture stderr from rumiai_runner.py subprocess calls.
+**Original Issue**: Batch orchestrator logs were 0 bytes even after process completion.
+
+**Root Cause**: `logging.basicConfig()` was being called AFTER logging was already initialized by imported modules. Python's `basicConfig()` only works on the first call - subsequent calls are silently ignored.
+
+**Fix Applied**: Added `force=True` parameter to `logging.basicConfig()` in `rumiai_ml_batch.py` line 95:
+
+```python
+# File: /home/jorge/rumiaifinal/rumiai_ml_batch.py
+# Location: lines 86-96
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler(sys.stdout)
+    ],
+    force=True  # Python 3.8+: Reconfigure even if already initialized
+)
+```
+
+**Why This Works**:
+- Without `force=True`: If any imported module calls `logging.getLogger()` or `basicConfig()` first, subsequent `basicConfig()` calls are ignored
+- With `force=True`: Forces reconfiguration of root logger and handlers, overriding any previous setup
+
+**Verification Test** (confirmed working):
+```python
+# Test that force=True allows reconfiguration
+import logging
+logging.getLogger('import').warning('First initialization')
+logging.basicConfig(
+    handlers=[logging.FileHandler('/tmp/test.log')],
+    force=True  # Without this, log file would be empty
+)
+logging.getLogger('main').info('This appears in log file')
+# Result: Log file contains "This appears in log file" ✅
+```
+
+**Status**: ✅ Fix applied and tested in isolation
+
+**Next Steps**: Re-run batch test to verify logs populate and capture enhanced debug logs from video_processor.py
+
+---
+
+### If Logging Still Fails - Troubleshooting Guide
+
+If logs remain 0 bytes after the `force=True` fix, follow these steps:
+
+#### 1. Verify Python Version Supports force Parameter
+```bash
+python3 --version  # Must be 3.8+
+```
+If < 3.8, `force=True` is silently ignored. Use alternative fix below.
+
+#### 2. Check File Permissions
+```bash
+ls -la /home/jorge/rumiaifinal/data/logs/
+# Verify:
+# - Directory is writable by current user
+# - No permission denied errors
+```
+
+#### 3. Test Logging in Isolation
+```bash
+python3 -c "
+import logging
+from pathlib import Path
+log_file = Path('/tmp/diagnostic.log')
+logging.basicConfig(
+    level=logging.INFO,
+    handlers=[logging.FileHandler(log_file)],
+    force=True
+)
+logging.getLogger('test').info('Diagnostic test')
+print(f'File size: {log_file.stat().st_size}')
+"
+# Expected output: File size: >0 bytes
+# If 0 bytes: Python logging is fundamentally broken
+```
+
+#### 4. Check for Handler Conflicts
+Add this diagnostic code to `setup_logging()` to see existing handlers:
+
+```python
+# DIAGNOSTIC: Add before basicConfig() call
+import logging
+root = logging.getLogger()
+print(f"[DIAGNOSTIC] Existing handlers BEFORE basicConfig: {root.handlers}")
+print(f"[DIAGNOSTIC] Root logger level: {root.level}")
+
+# ... existing basicConfig call ...
+
+# DIAGNOSTIC: Add after basicConfig() call
+print(f"[DIAGNOSTIC] Handlers AFTER basicConfig: {root.handlers}")
+print(f"[DIAGNOSTIC] Log file path: {log_file}")
+```
+
+Run batch and check console output for diagnostics.
+
+#### 5. Alternative Fix for Python < 3.8 or Persistent Issues
+
+If `force=True` doesn't work, manually clear handlers:
+
+```python
+# Replace basicConfig() with manual handler setup
+import logging
+
+# Clear any existing handlers
+root_logger = logging.getLogger()
+for handler in root_logger.handlers[:]:
+    root_logger.removeHandler(handler)
+    handler.close()
+
+# Add new handlers
+file_handler = logging.FileHandler(log_file)
+file_handler.setFormatter(
+    logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+)
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(
+    logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+)
+
+root_logger.addHandler(file_handler)
+root_logger.addHandler(console_handler)
+root_logger.setLevel(logging.INFO)
+```
+
+#### 6. Check for Buffering Issues
+
+If logs appear after process ends but not during:
+```python
+# Add to each handler:
+file_handler = logging.FileHandler(log_file)
+file_handler.flush()  # Force immediate write
+
+# OR set stream to unbuffered mode at start of main():
+import sys
+sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', buffering=1)  # Line buffered
+```
+
+#### 7. Verify Log File Path is Correct
+
+```bash
+# After running batch, check what log file was created
+ls -lt /home/jorge/rumiaifinal/data/logs/ | head -5
+
+# Check if logs went to a different location
+find /home/jorge/rumiaifinal -name "rumiai_ml_*.log" -type f -mmin -10
+```
+
+#### 8. Last Resort: Use Print Statements
+
+If all logging fails, temporarily replace logger calls with print:
+```python
+# In video_processor.py, replace:
+logger.info(f"[DEBUG] ...")
+
+# With:
+print(f"[DEBUG] ...", flush=True, file=sys.stderr)
+```
+
+This bypasses Python logging entirely and writes directly to stderr.
 
 ## Investigation Timeline & Key Discoveries
 

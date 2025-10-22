@@ -17,6 +17,11 @@ def get_bucket_path(config: dict, bucket_name: str) -> str:
     """
     Construct full bucket directory path from config and bucket name.
 
+    REFACTORED (FixCheckpointBug.md): Delegates to PathBuilder.get_bucket_path()
+    to ensure consistency with Stage 0 path construction. This fixes the bug where
+    Stage 2 wrote checkpoints to @vitalproteins while Stage 0 created directories
+    at vitalproteins (@ stripped).
+
     Naming convention:
     - bucket_name: Duration range only (e.g., "18-33s")
     - bucket_path: Full directory path (e.g., "/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s/")
@@ -30,17 +35,22 @@ def get_bucket_path(config: dict, bucket_name: str) -> str:
     Returns:
         str: Full bucket directory path with trailing slash
 
-    Source: VideoProcessingTI.md Section 4 (Helper Function)
+    Source: VideoProcessingTI.md Section 4 (Helper Function) + FixCheckpointBug.md
     """
-    data_root = os.getenv('DATA_ROOT', '/data')
+    from foundation.paths import PathBuilder
 
-    # Construct analysis_base path
-    analysis_base = (
-        f"{data_root}/clients/{config['client_id']}/{config['analysis_type']}s/"
-        f"{config['target']}/{config['analysis_mode']}_{config['selection_strategy']}/"
+    path_builder = PathBuilder()
+    bucket_path = path_builder.get_bucket_path(
+        client_id=config['client_id'],
+        analysis_type=config['analysis_type'],
+        target=config['target'],
+        analysis_mode=config['analysis_mode'],
+        selection_strategy=config['selection_strategy'],
+        bucket_name=bucket_name
     )
 
-    return f"{analysis_base}buckets/bucket_{bucket_name}/"
+    # Return as string with trailing slash (backward compatibility)
+    return f"{bucket_path}/"
 
 
 def save_json(filepath: str, data: Dict[str, Any]):

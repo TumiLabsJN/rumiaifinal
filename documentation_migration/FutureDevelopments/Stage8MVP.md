@@ -56,12 +56,12 @@
 | Step | Who | Time | Details |
 |------|-----|------|---------|
 | 1. Run pipeline Stages 1-7 | Automated | Auto | Existing ML pipeline |
-| 2. Extract data | Script | 30 sec | `python extract_creator_data.py --hashtag nutrition` → Google Sheet |
+| 2. Extract data + QR codes | Script | 30 sec | `python extract_creator_data.py --hashtag nutrition` → Google Sheet + 18 QR PNGs |
 | 3. Review data | You | 15 min | Open Google Sheet, verify accuracy, edit if needed |
-| 4. Populate Template A (x9) | You | ~3 hrs | Copy-paste from Sheet into 9 PDF templates (~20 min each) |
+| 4. Populate Template A (x9) | You | ~3 hrs | Copy-paste from Sheet + insert 2 QR code images per report (~20 min each) |
 | 5. Export PDFs | You | 5 min | Save as PDF from InDesign/Canva |
 
-**Total Manual Time per Hashtag**: ~3.5 hours (for 9 creator PDFs)
+**Total Manual Time per Hashtag**: ~3.5 hours (for 9 creator PDFs, includes QR code insertion)
 
 **Onboarding Total**: ~17.5 hours across 5 hashtags
 
@@ -143,8 +143,8 @@ Same workflow as single, but populate Template D with side-by-side data.
 | # | Task | Owner | Effort | Status | Notes |
 |---|------|-------|--------|--------|-------|
 | 0.1 | Hashtag → Client structure | You | 0 days | ✅ **COMPLETE** | From MLCreativeReports.md |
-| 0.2 | Hashtag → Creator structure | You | 0 days | ✅ **COMPLETE** | From Stage8Planning.md section 1.1 |
-| 0.3 | Handle/Single Competitor → Client | You | 0.75 days | ⏸️ **TODO** | Benchmarking sections, comparison layout |
+| 0.2 | Hashtag → Creator structure | You | 0 days | ✅ **COMPLETE** | Stage8MVP_Reports.md Section 2 (all 6 issues resolved) |
+| 0.3 | Handle/Single Competitor → Client | You | 0.75 days | ✅ **COMPLETE** | Stage8MVP_Reports.md Section 3 (4-page structure, dynamic fields). **REQUIRES 2 PIPELINE RUNS**: (1) `--analysis-mode recent --period 90` for posting frequency/hashtags, (2) `--analysis-mode top` for creative patterns/QR codes. Total: 4 runs per report (competitor + client baseline). |
 | 0.4 | Handle/Multiple Competitor → Client | You | 0.5 days | ⏸️ **TODO** | Side-by-side comparison structure |
 
 **Deliverables**: 4 content structure documents (similar to MLCreativeReports.md) defining:
@@ -162,10 +162,17 @@ Same workflow as single, but populate Template D with side-by-side data.
 
 | # | Task | Owner | Effort | Notes |
 |---|------|-------|--------|-------|
-| 1.1 | Design Template A (Content Creator) | Designer | 2 days | 2-page, mobile-optimized, actionable formulas |
+| 1.1 | Design Template A (Content Creator) | Designer | 2 days | 2-page, mobile-optimized, includes 2 QR code placeholders |
 | 1.2 | Design Template B (Client Executive) | Designer | 2 days | 3-page, intelligence dashboard |
 | 1.3 | Design Template C (Single Competitor) | Designer | 2 days | 3-page, benchmarking vs client |
 | 1.4 | Design Template D (Comparison) | Designer | 2 days | 4-page, side-by-side multi-competitor |
+
+**Template A Requirements** (from Issue 1 resolution - see Stage8MVP_Reports.md):
+- Include 2 QR code placeholders (~1" x 1" each):
+  - **QR Code 1**: After "The Proof" section (links to top performer video)
+  - **QR Code 2**: In "Contrastive Analysis" section (links to bottom performer video)
+- Labels: "Scan to watch: Top Performer Using This Pattern (520K views)" and "Bottom Performer - Don't Do This (95K views)"
+- Technical: Leave square placeholder boxes for QR code image insertion during manual workflow
 
 **Deliverables**: 4 editable PDF templates (InDesign/Canva/Figma) with clearly labeled text boxes
 
@@ -192,13 +199,20 @@ Same workflow as single, but populate Template D with side-by-side data.
 
 ---
 
-### Section 3: Data Extraction Scripts (3 days)
+### Section 3: Data Extraction Scripts (3.25 days)
 
 | # | Task | Owner | Effort | Notes |
 |---|------|-------|--------|-------|
-| 3.1 | Build `extract_creator_data.py` | Developer | 1 day | Stage 7 → 9 creator report datasets (Google Sheets) |
+| 3.1 | Build `extract_creator_data.py` + QR generation | Developer | 1.25 days | Stage 7 → 9 creator datasets + 18 QR code images |
 | 3.2 | Build `extract_client_data.py` | Developer | 1 day | Stages 1,6,7 → client dashboard data (Google Sheets) |
 | 3.3 | Build `extract_competitor_data.py` | Developer | 1 day | Competitor analysis → benchmarking data (Google Sheets) |
+
+**QR Code Addition** (from Issue 1 resolution):
+- Task 3.1 now includes QR code generation (+0.25 days effort)
+- Generates 2 QR codes per formula (18 total per hashtag: 9 formulas × 2 codes)
+- Maps Stage 2 video URLs (top/bottom cluster) to Stage 7 formulas
+- Uses Python `qrcode` library to generate PNG files
+- Output: `{hashtag}_{bucket}_{formula}_top.png` and `_bottom.png`
 
 **Script Requirements**:
 - **Input**: JSON files from Stages 1, 6, 7 (existing outputs)
@@ -557,22 +571,27 @@ python extract_competitor_data.py --client acme --competitors rival_brand,compet
 
 ---
 
-## Total MVP Effort: ~16.75 days
+## Total MVP Effort: ~17 days
 
 | Section | Tasks | Effort |
 |---------|-------|--------|
-| Section 0: Template Structures | 4 tasks | 1.25 days (2 complete, 2 remaining) |
-| Section 1: Designer Templates | 4 tasks | 8 days |
+| Section 0: Template Structures | 4 tasks | 0 days (Tasks 0.1, 0.2 ✅ COMPLETE, 0.3, 0.4 remaining) |
+| Section 1: Designer Templates | 4 tasks | 8 days (includes QR code placeholders in Template A) |
 | Section 2: Branding Package | 3 tasks | 3 days |
-| Section 3: Data Extraction Scripts (Google Sheets) | 3 tasks | 3 days |
+| Section 3: Data Extraction Scripts (Google Sheets) | 3 tasks | 3.25 days (includes QR code generation) |
 | Section 4: Documentation | 2 tasks | 1 day |
 | Section 5: Testing | 2 tasks | 0.5 days |
-| **TOTAL** | **18 tasks** | **16.75 days (~3.5 weeks)** |
+| **TOTAL** | **18 tasks** | **15.75 days (~3 weeks)** (2 tasks complete, 16 remaining) |
 
-**Parallelizable**: Designer work (Sections 1-2: 11 days) + Development work (Section 3: 3 days) can run simultaneously after Section 0 complete
+**Scope Changes from Issue Resolutions**:
+- Task 0.2 ✅ COMPLETE: Hashtag → Creator template (Stage8MVP_Reports.md Section 2)
+- Task 3.1 updated: +0.25 days for QR code generation (Issue 1: Visual Examples)
+- Template A updated: Includes 2 QR code placeholders per report
+
+**Parallelizable**: Designer work (Sections 1-2: 11 days) + Development work (Section 3: 3.25 days) can run simultaneously after Section 0 complete
 
 **Critical Path**:
-1. Section 0 (1.25 days remaining) → BLOCKS everything
+1. Section 0 (0.75 days remaining: Tasks 0.3, 0.4) → BLOCKS everything
 2. Section 1-2 (11 days) designer work in parallel with Section 3 (3 days) dev work
 3. Section 4-5 (1.5 days) sequential after above
 

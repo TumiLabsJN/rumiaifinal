@@ -84,13 +84,15 @@ def setup_logging(client_id: str, target: str):
     log_file = log_dir / f"rumiai_ml_{client_id}_{sanitized_target}_{timestamp}.log"
 
     # Configure logging
+    # force=True ensures reconfiguration even if logging was initialized by imports
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
             logging.FileHandler(log_file),
             logging.StreamHandler(sys.stdout)
-        ]
+        ],
+        force=True  # Python 3.8+: Reconfigure even if already initialized
     )
 
     logger = logging.getLogger(__name__)
@@ -1187,8 +1189,19 @@ def main():
 
                 # Count generated JSON files for checkpoint
                 # Expected: 1 video RF + N window RF + N window K-Means = 1 + (2 × N)
+                # Note: Only count Stage 6 JSONs (rf_video, *_rf_analysis, *_kmeans_analysis)
+                # Exclude other JSONs like aggregation_summary.json, transformation_summary.json
                 ml_analysis_dir = bucket_path / "ml_analysis"
-                json_files = list(ml_analysis_dir.glob("*.json"))
+
+                # Collect Stage 6-specific JSON files
+                stage6_json_files = []
+                stage6_json_files.append(ml_analysis_dir / "rf_video_analysis.json")
+                for window in windows:
+                    stage6_json_files.append(ml_analysis_dir / f"{window}_rf_analysis.json")
+                    stage6_json_files.append(ml_analysis_dir / f"{window}_kmeans_analysis.json")
+
+                # Filter to only existing files (for checkpoint output_files list)
+                json_files = [f for f in stage6_json_files if f.exists()]
                 json_count = len(json_files)
 
                 # Create checkpoint

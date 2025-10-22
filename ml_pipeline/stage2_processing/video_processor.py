@@ -61,25 +61,10 @@ def run_rumiai_pipeline(video_path: str, video_id: str, output_dir: str, timeout
     # FIXED: rumiai_runner.py outputs to hardcoded flat directory, not bucket-specific paths
     insights_path = f"{RUMIAI_OUTPUT_DIR}{video_id}_temporal_windows_updated.json"
 
-    # BANDAID FIX: Copy video to temp/ directory if it's a local file
-    # rumiai_runner.py expects videos in temp/ for audio extraction to work correctly
-    temp_video_path = video_path
-    copied_to_temp = False
-
-    if os.path.isfile(video_path) and not video_path.startswith(RUMIAI_TEMP_DIR):
-        # Ensure temp directory exists
-        os.makedirs(RUMIAI_TEMP_DIR, exist_ok=True)
-
-        # Copy video to temp directory
-        temp_video_path = f"{RUMIAI_TEMP_DIR}{video_id}.mp4"
-        logger.info(f"Copying video from {video_path} to {temp_video_path} for audio extraction compatibility")
-        shutil.copy2(video_path, temp_video_path)
-        copied_to_temp = True
-
     cmd = [
         sys.executable,  # python3
         'scripts/rumiai_runner.py',
-        temp_video_path  # Use temp path for local files, original for URLs
+        video_path  # Pass URL directly (Option 2 fix ensures URLs are preferred)
     ]
 
     try:
@@ -139,14 +124,6 @@ def run_rumiai_pipeline(video_path: str, video_id: str, output_dir: str, timeout
             message=f"RumiAI pipeline failed (exit code {e.returncode}). "
                    f"Stderr: {e.stderr[:200] if e.stderr else 'none'}"
         )
-    finally:
-        # Cleanup: Remove temporary video copy if we created one
-        if copied_to_temp and os.path.exists(temp_video_path):
-            try:
-                os.remove(temp_video_path)
-                logger.debug(f"Cleaned up temporary video copy: {temp_video_path}")
-            except Exception as e:
-                logger.warning(f"Failed to cleanup temp video {temp_video_path}: {e}")
 
 
 def process_videos_sequential(
@@ -179,13 +156,13 @@ def process_videos_sequential(
         video_id = video['id']
         local_video_path = f"{bucket_path}videos/{video_id}.mp4"
 
-        # Hybrid approach: Use local file if exists, otherwise use TikTok URL
-        if os.path.exists(local_video_path):
-            video_path = local_video_path
-            logger.info(f"Processing video {i}/{len(remaining_videos)}: {video_id} (local file)")
-        elif 'webVideoUrl' in video:
+        # Always prefer URL over local file (avoid rumiai_runner.py URL validation rejection)
+        if 'webVideoUrl' in video and video['webVideoUrl']:
             video_path = video['webVideoUrl']
             logger.info(f"Processing video {i}/{len(remaining_videos)}: {video_id} (TikTok URL)")
+        elif os.path.exists(local_video_path):
+            video_path = local_video_path
+            logger.warning(f"Processing video {i}/{len(remaining_videos)}: {video_id} (local file - no URL available)")
         else:
             logger.error(f"Video {video_id} not found locally and no webVideoUrl available")
             handle_video_processing_error(

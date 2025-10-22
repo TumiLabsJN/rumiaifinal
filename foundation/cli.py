@@ -147,8 +147,15 @@ def parse_args(argv: Optional[list] = None) -> CLIArgs:
     parser.add_argument(
         "--auto-confirm",
         action="store_true",
-        default=False,
-        help="Skip interactive confirmation prompts (for CI/CD automation)"
+        default=True,
+        help="Skip interactive confirmation prompts (default: enabled). Use --no-auto-confirm to enable prompts."
+    )
+
+    parser.add_argument(
+        "--no-auto-confirm",
+        dest="auto_confirm",
+        action="store_false",
+        help="Enable interactive confirmation prompts (disable auto-confirm)"
     )
 
     parser.add_argument(

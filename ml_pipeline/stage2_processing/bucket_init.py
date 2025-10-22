@@ -120,13 +120,23 @@ def ensure_bucket_exists(config: dict, bucket_name: str) -> str:
     # Step 0: Validate bucket name format
     validate_bucket_name(bucket_name)
 
-    # Step 1: Construct bucket path
-    data_root = os.getenv('DATA_ROOT', '/data')
-    analysis_base = (
-        f"{data_root}/clients/{config['client_id']}/{config['analysis_type']}s/"
-        f"{config['target']}/{config['analysis_mode']}_{config['selection_strategy']}/"
+    # Step 1: Construct bucket path using PathBuilder
+    # REFACTORED (FixCheckpointBug.md): Use PathBuilder for consistent path construction
+    # This ensures target sanitization (strips @ and #) matches Stage 0 behavior
+    from foundation.paths import PathBuilder
+
+    path_builder = PathBuilder()
+    bucket_path_obj = path_builder.get_bucket_path(
+        client_id=config['client_id'],
+        analysis_type=config['analysis_type'],
+        target=config['target'],
+        analysis_mode=config['analysis_mode'],
+        selection_strategy=config['selection_strategy'],
+        bucket_name=bucket_name
     )
-    bucket_path = f"{analysis_base}buckets/bucket_{bucket_name}/"
+
+    # Convert Path to string for os.makedirs compatibility
+    bucket_path = str(bucket_path_obj) + "/"
 
     # Step 2: Create bucket base directory (idempotent)
     try:
