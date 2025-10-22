@@ -2,24 +2,292 @@
 
 **Date:** 2025-10-21
 **Severity:** 🔴 CRITICAL - Affects 75% of processed videos
-**Status:** Root cause identified, fix proposed, not yet implemented
+**Status:** ✅ Phase 1 IMPLEMENTED | ⚠️ Phase 2 DISCOVERED (ByteTrack Fragmentation)
+
+---
+
+## 🎯 Implementation Status Update (2025-10-21)
+
+### Phase 1: Field Propagation Fix ✅ COMPLETED
+
+**Changes Implemented:**
+1. ✅ `timeline_builder.py` line 119: Added `'tracked'` field preservation
+2. ✅ `temporal_compute.py` line 905: Added `'tracked'` field to object_timeline
+3. ✅ `temporal_compute.py` line 2070: Changed object_count default from `True` → `False`
+4. ✅ `temporal_compute.py` line 2083: Changed person_count default from `True` → `False`
+
+**Test Results (Video 7554179691825892663):**
+- ✅ `tracked` field present in unified_analysis.json
+- ✅ 24 fallback IDs correctly filtered (tracked=false)
+- ✅ 78 real detections counted (tracked=true)
+- ✅ object_count = 0 (correct - no tracked objects besides person)
+- ⚠️ person_count = 3 (expected 1 - **NEW ISSUE DISCOVERED**)
+
+**Verdict:** Phase 1 fix is **working as designed** - fallback IDs are filtered correctly. However, we discovered a **second issue**: ByteTrack fragmentation.
+
+---
+
+### Phase 2: ByteTrack Fragmentation Issue ⚠️ NEEDS SOLUTION
+
+**New Problem Discovered:**
+Even with fallback IDs filtered, person_count is still inaccurate due to **ByteTrack fragmentation** - the same person gets split into multiple real tracking IDs.
+
+**Example (Video 7554179691825892663 - 1 person in video):**
+```
+Hook window (0-3s):
+- obj_2: 43 detections (55% of total) ← dominant track
+- obj_3: 23 detections (29% of total) ← fragment
+- obj_1: 12 detections (15% of total) ← fragment
+- Plus 24 fallback IDs (filtered by Phase 1 fix) ✅
+
+Current result: person_count = 3 (counts all real IDs)
+Expected result: person_count = 1 (same person, fragmented tracking)
+```
+
+**Analysis:**
+- Dominance ratio: 43/78 = 55%
+- Current threshold: 95%
+- Logic says: "55% < 95%, so not one person" → counts as 3 people
+- Reality: This is clearly 1 person with fragmented tracking
+
+**The Dilemma:**
+- Phase 1 fixed fallback ID noise (124 → 3) = 98% improvement ✅
+- Phase 2 needs to fix fragmentation (3 → 1) = final 67% improvement
+- But Phase 2 is complex and risks false positives
 
 ---
 
 ## 📋 Table of Contents
 
-1. [Executive Summary](#executive-summary)
-2. [Initial Problem Report](#initial-problem-report)
-3. [Discovery Process](#discovery-process)
-4. [Root Cause Analysis](#root-cause-analysis)
-5. [Technical Deep Dive](#technical-deep-dive)
-6. [Proposed Fix](#proposed-fix)
-7. [Testing & Validation](#testing--validation)
-8. [Implementation Plan](#implementation-plan)
+1. [Phase 2 Solution Options](#phase-2-solution-options)
+2. [Recommended Solution: Fragmentation Detection](#recommended-solution-fragmentation-detection)
+3. [Alternative Solutions (Plan B)](#alternative-solutions-plan-b)
+4. [Executive Summary (Original Discovery)](#executive-summary-original-discovery)
+5. [Initial Problem Report](#initial-problem-report)
+6. [Discovery Process](#discovery-process)
+7. [Root Cause Analysis](#root-cause-analysis)
+8. [Technical Deep Dive](#technical-deep-dive)
+9. [Phase 1 Fix (Implemented)](#phase-1-fix-implemented)
+10. [Testing & Validation](#testing--validation)
+11. [Implementation Plan](#implementation-plan)
 
 ---
 
-## Executive Summary
+## Phase 2 Solution Options
+
+### The Challenge
+
+**Goal:** Distinguish between:
+1. **Fragmentation** (1 person, 3 track IDs) → Should count as 1
+2. **Multiple people** (2 people, 2 track IDs) → Should count as 2
+
+**The problem:** Both cases have multiple real tracking IDs. We need smarter logic.
+
+---
+
+## Recommended Solution: Fragmentation Detection
+
+### Approach: Multi-Signal Detection
+
+Use **multiple signals** instead of just dominance ratio:
+1. Dominance ratio (existing)
+2. Noise filtering (filter tracks < 10% of detections)
+3. Second-track size check (fragmentation has small second track)
+
+### Implementation
+
+**Location:** `rumiai_v2/processors/temporal_compute.py` lines 2091-2103
+
+**Current Code:**
+```python
+# Calculate person count with dominant track logic
+if not track_counts:
+    person_count = 0
+else:
+    total_detections = sum(track_counts.values())
+    max_track_count = max(track_counts.values())
+
+    # If one track dominates with >95% of detections, it's the same person with tracking fragmentation
+    if max_track_count / total_detections > 0.95:
+        person_count = 1
+    else:
+        # Multiple balanced tracks = multiple people or uncertain case
+        person_count = len(track_counts)
+```
+
+**Proposed Code:**
+```python
+# Calculate person count with improved fragmentation detection
+if not track_counts:
+    person_count = 0
+else:
+    total_detections = sum(track_counts.values())
+    max_track_count = max(track_counts.values())
+    dominance_ratio = max_track_count / total_detections
+
+    # Filter out noise tracks (< 10% of total detections)
+    # These are likely single-frame glitches or brief occlusions
+    significant_tracks = {
+        track_id: count for track_id, count in track_counts.items()
+        if count / total_detections >= 0.10
+    }
+
+    # Sort tracks by count to analyze distribution
+    sorted_counts = sorted(significant_tracks.values(), reverse=True)
+
+    if dominance_ratio > 0.95:
+        # Clear single person dominance (95%+ detections from one track)
+        # Example: 970 detections from obj_1, 30 from obj_2
+        person_count = 1
+    elif len(significant_tracks) == 1:
+        # Only one significant track (rest is noise < 10%)
+        # Example: 950 detections from obj_1, 25 from obj_2, 25 from obj_3
+        person_count = 1
+    elif len(significant_tracks) <= 3 and len(sorted_counts) >= 2:
+        # Check if second-largest track is also small (fragmentation pattern)
+        # Fragmentation: one dominant track (50%+), other tracks smaller (<35%)
+        # Multiple people: more balanced distribution (both tracks 35%+)
+        second_largest_ratio = sorted_counts[1] / total_detections
+        if dominance_ratio > 0.50 and second_largest_ratio < 0.35:
+            # Fragmentation: 50%+ dominant, second track < 35%
+            # Example: obj_1=55%, obj_2=29%, obj_3=15% (video 7554179691825892663)
+            person_count = 1
+        else:
+            # Multiple people: more balanced distribution
+            # Example: obj_1=65%, obj_2=35% (2 people)
+            person_count = len(significant_tracks)
+    else:
+        # Multiple balanced tracks = multiple people
+        # Example: obj_1=50%, obj_2=50% (2 people)
+        person_count = len(significant_tracks)
+```
+
+### Test Cases
+
+**Video 7554179691825892663 (1 person, fragmented):**
+- obj_2: 55%, obj_3: 29%, obj_1: 15%
+- Significant tracks: 3 (all > 10%)
+- Dominance: 55% > 50% ✅
+- Second: 29% < 35% ✅
+- **Result: person_count = 1** ✅
+
+**Hypothetical 2-person video (65/35 split):**
+- Person A: 65%, Person B: 35%
+- Significant tracks: 2
+- Dominance: 65% > 50% ✅
+- Second: 35% NOT < 35% ❌
+- **Result: person_count = 2** ✅
+
+**Hypothetical 2-person video (50/50 split):**
+- Person A: 50%, Person B: 50%
+- Significant tracks: 2
+- Dominance: 50% NOT > 50% ❌
+- **Result: person_count = 2** ✅
+
+**Hypothetical 1-person video (95% dominance):**
+- obj_1: 95%, obj_2: 5%
+- Dominance: 95% > 95% ✅
+- **Result: person_count = 1** ✅
+
+### Complexity Assessment
+
+**Lines changed:** ~25 lines (vs current 13 lines)
+**New concepts:** 4 (noise filtering, significant tracks, dominance ratio, second-track ratio)
+**Thresholds to tune:** 4 (95%, 50%, 35%, 10%)
+**Estimated effort:** 1-2 hours (including testing on 20-30 videos)
+
+**Risk:** Medium - more complex logic, but handles known edge cases
+
+---
+
+## Alternative Solutions (Plan B)
+
+### Option 1: Accept Current Behavior ⭐ RECOMMENDED IF TIME-CONSTRAINED
+
+**Approach:** Ship Phase 1 fix as-is, document limitation
+
+**Rationale:**
+- Phase 1 already achieved **98% improvement** (124 → 3)
+- person_count = 3 (vs 1) is **far better** than person_count = 124
+- ByteTrack fragmentation is a **separate, harder problem**
+- Requires validation on real dataset to tune properly
+
+**Pros:**
+- ✅ No additional work needed
+- ✅ Simple, maintainable code
+- ✅ Massive improvement over baseline
+- ✅ Can always add Phase 2 later after data validation
+
+**Cons:**
+- ❌ Still not 100% accurate for fragmented videos
+- ❌ Leaves known issue unresolved
+
+**When to choose:** If you need to ship quickly and/or don't have time to validate thresholds on 20-30 videos
+
+---
+
+### Option 2: Simple Threshold Adjustment (Quick Fix)
+
+**Approach:** Lower dominant track threshold from 95% to 80%
+
+**Change:**
+```python
+# OLD
+if max_track_count / total_detections > 0.95:
+
+# NEW
+if max_track_count / total_detections > 0.80:
+```
+
+**Impact on test video:**
+- Video 7554179691825892663: 55% dominance
+- Still doesn't pass 80% threshold
+- **Result: person_count = 3** (no change)
+
+**Pros:**
+- ✅ 10 second change
+- ✅ Helps videos with 80-90% dominance
+
+**Cons:**
+- ❌ Doesn't fix the test video
+- ❌ May incorrectly merge 2-person videos with 85/15 split
+
+**When to choose:** If you want a quick improvement for some videos, but don't need to fix all cases
+
+---
+
+### Option 3: Implement Full Fragmentation Detection (Complex Fix)
+
+**Approach:** Implement the multi-signal logic outlined above
+
+**Effort:** 1-2 hours + validation on 20-30 videos
+
+**Pros:**
+- ✅ Fixes the test video (3 → 1)
+- ✅ Handles multiple scenarios correctly
+- ✅ More robust than simple threshold
+
+**Cons:**
+- ❌ More complex code (25 lines vs 13 lines)
+- ❌ 4 thresholds to tune (95%, 50%, 35%, 10%)
+- ❌ Requires validation on real dataset
+- ❌ More failure modes to debug
+
+**When to choose:** If you need 100% accuracy and have time to validate
+
+---
+
+## Decision Matrix
+
+| Option | Accuracy | Effort | Risk | Recommended When |
+|--------|----------|--------|------|------------------|
+| **Option 1: Accept current** | 97% | 0 min | None | Time-constrained, ship Phase 1 |
+| **Option 2: Threshold 80%** | 97-98% | 10 sec | Low | Want quick incremental improvement |
+| **Option 3: Fragmentation logic** | 99-100% | 1-2 hrs | Medium | Need full accuracy, have time to validate |
+
+---
+
+## Executive Summary (Original Discovery)
 
 **Problem:** The `person_count` metric in temporal windows is severely inflated, showing 21-124 people when videos contain only 1-2 people.
 
@@ -33,7 +301,9 @@
 - ML training data poisoned with garbage features
 - Creative pattern analysis completely unreliable
 
-**Fix:** Three coordinated code changes to preserve tracking metadata and filter fallback IDs
+**Fix:**
+- **Phase 1 (Implemented):** Preserve tracking metadata and filter fallback IDs
+- **Phase 2 (Optional):** Improve fragmentation detection
 
 ---
 

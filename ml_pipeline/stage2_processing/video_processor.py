@@ -97,6 +97,25 @@ def run_rumiai_pipeline(video_path: str, video_id: str, output_dir: str, timeout
         if result.stderr:
             logger.warning(f"RumiAI stderr: {result.stderr[:500]}")
 
+        # DEBUG: Capture full output to diagnose audio_energy/emotion_detection failures
+        logger.info(f"[DEBUG] RumiAI subprocess completed for video {video_id}")
+        logger.info(f"[DEBUG] Exit code: {result.returncode}")
+        logger.info(f"[DEBUG] Stdout length: {len(result.stdout) if result.stdout else 0} chars")
+        logger.info(f"[DEBUG] Stderr length: {len(result.stderr) if result.stderr else 0} chars")
+
+        # Log full stderr for service failure diagnostics
+        if result.stderr:
+            logger.info(f"[DEBUG] Full stderr:\n{result.stderr}")
+
+        # Check for specific failure indicators
+        if result.stderr:
+            if "audio_energy" in result.stderr.lower():
+                logger.warning(f"[DEBUG] Audio energy mentioned in stderr for {video_id}")
+            if "emotion" in result.stderr.lower():
+                logger.warning(f"[DEBUG] Emotion detection mentioned in stderr for {video_id}")
+            if "error" in result.stderr.lower() or "fail" in result.stderr.lower():
+                logger.error(f"[DEBUG] Error/failure keywords found in stderr for {video_id}")
+
         # Validate insights file exists (ground truth for success)
         if not os.path.exists(insights_path):
             raise ProcessingError(

@@ -862,6 +862,45 @@ WINDOW_KMEANS_JSON_TEMPLATE = "{window}_kmeans_analysis.json"
 
 **Columns**: 21-39 features with transformation suffixes (`_scaled`, `_log`, `_encoded`)
 
+**File 7**: `models/model_metrics.json` (from Stage 5)
+
+**Purpose**: Model performance metrics for displaying accuracy/precision/recall in output JSONs
+
+**Reference**: MLModelTrainingCHILDTI.md Section 3.3 (lines 511-549) - canonical schema
+
+**Schema** (nested structure with metadata):
+```python
+{
+    "bucket": str,                    # e.g., "18-33s"
+    "total_videos": int,              # e.g., 100
+    "video_level_rf": {
+        "accuracy": float,            # e.g., 0.82
+        "precision": float,           # e.g., 0.85
+        "recall": float,              # e.g., 0.78
+        "f1_score": float,            # e.g., 0.81
+        # ... additional metrics
+    },
+    "window_level_rf": {
+        "{window}": {                 # Keys: "hook", "middle_1", "closing" (NO "rf_" prefix)
+            "accuracy": float,
+            "precision": float,
+            "recall": float,
+            "f1_score": float,
+            # ... additional metrics
+        }
+        # ... one entry per window
+    }
+}
+```
+
+**Usage in Stage 6**:
+- Line 881: `all_metrics.get('window_level_rf', {}).get(window, {})`
+- Metrics are **optional** - used only for display in output JSONs
+- If missing or malformed, Stage 6 sets metrics to `None` (lines 918-922)
+- Feature importance comes from model `.feature_importances_` attribute, not from this file
+
+**Note**: This file is optional. Stage 6 gracefully handles missing metrics.
+
 ### 5.2 Output Schema
 
 **Output Files**: 13-15 JSON files per bucket (varies by bucket window count)

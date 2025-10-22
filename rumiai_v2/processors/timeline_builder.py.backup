@@ -115,8 +115,7 @@ class TimelineBuilder:
                         'class': obj_class,
                         'confidence': frame_data.get('confidence', 0),
                         'bbox': frame_data.get('bbox', []),
-                        'track_id': frame_data.get('trackId', frame_data.get('track_id', None)),  # Check frame for trackId/track_id
-                        'tracked': frame_data.get('tracked', True)  # Preserve tracking status from YOLO
+                        'track_id': frame_data.get('trackId', frame_data.get('track_id', None))  # Check frame for trackId/track_id
                     }
                 )
                 

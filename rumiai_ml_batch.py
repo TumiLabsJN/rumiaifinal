@@ -60,6 +60,9 @@ from rumiai_v2.processors.model_training import (
     ModelTrainingError,
     ValidationError
 )  # Source: MLModelTrainingCHILDTI.md Section 11.4, Section 6.1 (exception classes)
+# Stage 6: ML Analysis Generation
+from ml_pipeline.stage6_analysis.ml_analysis_generation import generate_ml_analysis_jsons
+from config.bucket_definitions import BUCKET_WINDOWS
 from pathlib import Path
 import json
 
@@ -166,6 +169,117 @@ def display_curation_instructions(raw_discovery_path: Path, taxonomy_path: Path)
     print(f"   ❌ Duplicate names or items")
 
 
+def validate_stage_6_prerequisites(bucket_path: str) -> None:
+    """
+    Validate Stage 6 input dependencies exist.
+    Source: MLAnalysisGenerationCHILDTI.md Section 3.1 (INPUT FILES)
+
+    Raises:
+        FileNotFoundError: If required upstream output missing
+    """
+    # Get bucket name from path
+    bucket_name = Path(bucket_path).name.replace('bucket_', '')
+
+    windows = BUCKET_WINDOWS[bucket_name]
+
+    bucket_path_obj = Path(bucket_path)
+
+    # Required files from TI Section 2.1 (Stage6Input)
+    required_files = []
+
+    # Stage 3 output (1 file)
+    required_files.append(bucket_path_obj / "ml_analysis" / "aggregated_features.csv")
+
+    # Stage 4 outputs (1 + 2×N files)
+    required_files.append(bucket_path_obj / "ml_analysis" / "rf_transformed.csv")
+    for window in windows:
+        required_files.append(bucket_path_obj / "ml_analysis" / f"{window}_rf_transformed.csv")
+        required_files.append(bucket_path_obj / "ml_analysis" / f"{window}_km_transformed.csv")
+
+    # Stage 5 outputs (2 + 4×N files)
+    required_files.append(bucket_path_obj / "models" / f"rf_video_{bucket_name}.pkl")
+    required_files.append(bucket_path_obj / "models" / "model_metrics.json")
+    for window in windows:
+        required_files.append(bucket_path_obj / "models" / f"rf_{window}_{bucket_name}.pkl")
+        required_files.append(bucket_path_obj / "models" / f"{window}_kmeans_{bucket_name}.pkl")
+        required_files.append(bucket_path_obj / "models" / f"{window}_scalers_{bucket_name}.pkl")
+        required_files.append(bucket_path_obj / "models" / f"{window}_X_data_{bucket_name}.pkl")
+
+    missing = [str(f) for f in required_files if not f.exists()]
+
+    if missing:
+        raise FileNotFoundError(
+            f"Stage 6 prerequisites missing ({len(missing)} files):\n" +
+            "\n".join(f"  - {f}" for f in missing[:5]) +  # Show first 5
+            (f"\n  ... and {len(missing)-5} more" if len(missing) > 5 else "") +
+            f"\n\nAction: Ensure Stages 3, 4, and 5 completed successfully"
+        )
+
+
+def validate_stage_6_outputs(bucket_path: str) -> None:
+    """
+    Validate Stage 6 outputs created correctly.
+    Source: MLAnalysisGenerationCHILDTI.md Section 5 (validate_stage_output)
+
+    Raises:
+        AssertionError: If output validation fails
+    """
+    # Get bucket name and windows
+    bucket_name = Path(bucket_path).name.replace('bucket_', '')
+    windows = BUCKET_WINDOWS[bucket_name]
+
+    bucket_path_obj = Path(bucket_path)
+    ml_analysis_dir = bucket_path_obj / "ml_analysis"
+
+    # Validate ml_analysis directory exists
+    assert ml_analysis_dir.exists(), \
+        f"Stage 6 output directory missing: {ml_analysis_dir}"
+
+    # Validate video-level RF JSON
+    video_rf_json = ml_analysis_dir / "rf_video_analysis.json"
+    assert video_rf_json.exists(), \
+        f"Stage 6 video RF JSON missing: {video_rf_json}"
+
+    # Validate video RF JSON structure
+    with open(video_rf_json) as f:
+        video_rf_data = json.load(f)
+
+    assert "bucket" in video_rf_data, "Video RF JSON missing 'bucket' field"
+    assert "feature_importance" in video_rf_data, "Video RF JSON missing 'feature_importance' field"
+    assert isinstance(video_rf_data["feature_importance"], list), \
+        "Video RF 'feature_importance' must be a list"
+    assert len(video_rf_data["feature_importance"]) <= 10, \
+        f"Video RF has {len(video_rf_data['feature_importance'])} features (max 10)"
+
+    # Validate window-level JSONs (2 per window)
+    for window in windows:
+        # Validate window RF JSON
+        window_rf_json = ml_analysis_dir / f"{window}_rf_analysis.json"
+        assert window_rf_json.exists(), \
+            f"Stage 6 window RF JSON missing: {window_rf_json}"
+
+        with open(window_rf_json) as f:
+            window_rf_data = json.load(f)
+
+        assert window_rf_data.get("window_type") == window, \
+            f"Window RF JSON has wrong window_type: {window_rf_data.get('window_type')} (expected {window})"
+
+        # Validate K-Means JSON
+        window_km_json = ml_analysis_dir / f"{window}_kmeans_analysis.json"
+        assert window_km_json.exists(), \
+            f"Stage 6 K-Means JSON missing: {window_km_json}"
+
+        with open(window_km_json) as f:
+            window_km_data = json.load(f)
+
+        assert "clusters" in window_km_data, f"K-Means JSON missing 'clusters' field"
+        assert len(window_km_data["clusters"]) == 3, \
+            f"K-Means has {len(window_km_data['clusters'])} clusters (expected 3)"
+
+    # All validations passed
+    print(f"  ✓ Output validation passed: {1 + len(windows)*2} JSON files")
+
+
 def main():
     """
     Main entry point for RumiAI ML Batch Pipeline.
@@ -180,7 +294,7 @@ def main():
     - Stage 3: Feature Aggregation
     - Stage 4: Feature Transformation
     - Stage 5: ML Model Training
-    - Stage 6: ML Analysis Generation (TODO)
+    - Stage 6: ML Analysis Generation
     - Stage 7: LLM Report Generation (TODO)
 
     Exit Codes:
@@ -997,6 +1111,184 @@ def main():
             logger.warning("Stage 5 completed but no buckets were processed")
             print("⚠️  No buckets processed in Stage 5 (all skipped)")
 
+        # ===== STAGE 6: ML ANALYSIS GENERATION =====
+        logger.info("Starting Stage 6: ML Analysis Generation")
+        print("\n" + "="*80)
+        print("STAGE 6: ML ANALYSIS GENERATION")
+        print("="*80)
+
+        # Process each winning bucket
+        stage6_summaries = {}
+        for bucket_name in winning_buckets:
+            logger.info(f"Starting Stage 6 for bucket: {bucket_name}")
+            print(f"\n--- Generating ML analysis for bucket: {bucket_name} ---")
+
+            bucket_path = analysis_base / f"buckets/bucket_{bucket_name}"
+
+            try:
+                # Validate Stage 5 completed successfully
+                stage5_checkpoint = bucket_path / "checkpoints" / "stage_5_checkpoint.json"
+                if not stage5_checkpoint.exists():
+                    logger.error(f"Bucket {bucket_name}: Stage 5 checkpoint missing")
+                    print(f"✗ Bucket {bucket_name}: Stage 5 not complete (skipping)")
+                    continue
+
+                with open(stage5_checkpoint) as f:
+                    stage5_status = json.load(f)
+
+                if stage5_status.get("status") != "completed":
+                    logger.error(f"Bucket {bucket_name}: Stage 5 status={stage5_status.get('status')}")
+                    print(f"✗ Bucket {bucket_name}: Stage 5 incomplete (skipping)")
+                    continue
+
+                # Check if Stage 6 already complete for this bucket
+                checkpoint_path = bucket_path / "checkpoints" / "stage_6_checkpoint.json"
+                if checkpoint_path.exists():
+                    logger.info(f"Bucket {bucket_name}: Stage 6 already complete (checkpoint exists)")
+                    print(f"✓ Bucket {bucket_name}: Analysis already complete (skipping)")
+
+                    # Load checkpoint to get output count
+                    with open(checkpoint_path) as f:
+                        checkpoint = json.load(f)
+
+                    stage6_summaries[bucket_name] = {
+                        "json_files_generated": len(checkpoint["output_files"]),
+                        "elapsed_time": 0.0  # Skipped, no time
+                    }
+                    continue
+
+                # Validate prerequisites
+                validate_stage_6_prerequisites(str(bucket_path))
+
+                # Get windows configuration for this bucket
+                # Source: MLAnalysisGenerationCHILDTI.md Section 2.1 (bucket parameter)
+                windows = BUCKET_WINDOWS[bucket_name]
+
+                # Execute Stage 6 analysis generation
+                # Source: MLAnalysisGenerationCHILDTI.md Section 8.2 (entry function)
+                # Entry point: generate_ml_analysis_jsons(bucket_path, bucket, windows)
+                # Returns: exit_code (0 = success, non-zero = failure)
+                import time
+                start_time = time.time()
+
+                exit_code = generate_ml_analysis_jsons(
+                    bucket_path=str(bucket_path),  # TI Section 2.1 StageInput param 1
+                    bucket=bucket_name,            # TI Section 2.1 StageInput param 2
+                    windows=windows                # TI Section 2.1 StageInput param 3
+                )
+
+                elapsed_time = time.time() - start_time
+
+                if exit_code != 0:
+                    raise ValueError(f"Stage 6 failed with exit code {exit_code}")
+
+                # Validate outputs (includes JSON count validation)
+                validate_stage_6_outputs(str(bucket_path))
+
+                # Count generated JSON files for checkpoint
+                # Expected: 1 video RF + N window RF + N window K-Means = 1 + (2 × N)
+                ml_analysis_dir = bucket_path / "ml_analysis"
+                json_files = list(ml_analysis_dir.glob("*.json"))
+                json_count = len(json_files)
+
+                # Create checkpoint
+                # Source: rumiai_ml_batch.py Stage 5 pattern (lines 894-909)
+                checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+
+                checkpoint_data = {
+                    "stage": "stage_6_ml_analysis_generation",
+                    "bucket": bucket_name,
+                    "status": "completed",
+                    "timestamp": datetime.utcnow().isoformat() + "Z",
+                    "json_files_generated": json_count,
+                    "output_files": [str(f.relative_to(bucket_path)) for f in json_files]
+                }
+
+                with open(checkpoint_path, 'w') as f:
+                    json.dump(checkpoint_data, f, indent=2)
+
+                stage6_summaries[bucket_name] = {
+                    "json_files_generated": json_count,
+                    "elapsed_time": elapsed_time
+                }
+
+                logger.info(
+                    f"Bucket {bucket_name} complete: "
+                    f"{json_count} JSON files generated in {elapsed_time:.1f}s"
+                )
+                print(
+                    f"✓ Bucket {bucket_name}: {json_count} analysis JSONs → "
+                    f"{elapsed_time:.1f}s"
+                )
+
+            except FileNotFoundError as e:
+                # Missing upstream file (Stage 5 models or Stage 4 CSVs)
+                # Source: MLAnalysisGenerationCHILDTI.md Section 6 (Error Case 1)
+                # Strategy: Skip bucket, continue pipeline
+                logger.error(f"Stage 6 prerequisite missing for bucket {bucket_name}: {e}")
+                print(f"✗ Bucket {bucket_name}: Prerequisites missing (skipping)")
+                print("   Ensure Stage 5 completed successfully for this bucket")
+                print("   Other buckets will continue processing")
+                continue
+
+            except ValueError as e:
+                # Input validation failed (corrupted PKL, invalid data)
+                # Source: MLAnalysisGenerationCHILDTI.md Section 6 (Error Case 2)
+                # Strategy: Skip bucket, continue pipeline
+                logger.error(f"Stage 6 validation failed for bucket {bucket_name}: {e}")
+                print(f"✗ Bucket {bucket_name}: Data validation failed (skipping)")
+                print("   This indicates Stage 5 produced invalid models")
+                print("   Other buckets will continue processing")
+                continue
+
+            except AssertionError as e:
+                # Output validation failed (JSON count mismatch, schema error)
+                # Source: MLAnalysisGenerationCHILDTI.md Section 6 (Error Case 3)
+                # Strategy: Skip bucket, continue pipeline
+                logger.error(f"Stage 6 output validation failed for bucket {bucket_name}: {e}")
+                print(f"✗ Bucket {bucket_name}: Output validation failed (skipping)")
+                print("   This indicates incorrect JSON generation")
+                print("   Other buckets will continue processing")
+                continue
+
+            except (IOError, OSError) as e:
+                # I/O failure (disk full, permission denied)
+                # Source: MLAnalysisGenerationCHILDTI.md Section 6 (Error Case 4)
+                # Strategy: Exit pipeline (system-wide issue)
+                logger.error(f"Stage 6 I/O error for bucket {bucket_name}: {e}")
+                print(f"✗ Bucket {bucket_name}: I/O error (exiting pipeline)")
+                print("   Check disk space and permissions")
+                print("   This is a system-wide issue - stopping pipeline")
+                return 4  # Exit code 4 = I/O failure
+
+            except Exception as e:
+                # Unexpected error
+                logger.error(
+                    f"Stage 6 unexpected error for bucket {bucket_name}: {e}",
+                    exc_info=True
+                )
+                print(f"✗ Bucket {bucket_name} unexpected error: {e}")
+                return 99  # Exit code 99 = unexpected error
+
+        logger.info("Stage 6 completed for all buckets")
+        print("\n✓ Stage 6: ML Analysis Generation - COMPLETE")
+
+        # Log Stage 6 summary
+        if stage6_summaries:
+            total_jsons = sum(s['json_files_generated'] for s in stage6_summaries.values())
+            avg_time = sum(s['elapsed_time'] for s in stage6_summaries.values()) / len(stage6_summaries)
+            logger.info(
+                f"Stage 6 Summary: {total_jsons} JSON files generated "
+                f"across {len(stage6_summaries)} buckets (avg {avg_time:.1f}s per bucket)"
+            )
+            print(
+                f"Summary: {total_jsons} analysis JSONs across "
+                f"{len(stage6_summaries)} buckets"
+            )
+        else:
+            logger.warning("Stage 6 completed but no buckets were processed")
+            print("⚠️  No buckets processed in Stage 6 (all skipped)")
+
         # ===== FINAL STATUS =====
         print("\n" + "="*80)
         print("PIPELINE STATUS")
@@ -1010,11 +1302,11 @@ def main():
         print("✓ Stage 3.4: Review CSV Generation - COMPLETE")
         print("✓ Stage 4: Feature Transformation - COMPLETE")
         print("✓ Stage 5: ML Model Training - COMPLETE")
-        print("⧗ Stage 6: ML Analysis Generation - TODO")
+        print("✓ Stage 6: ML Analysis Generation - COMPLETE")
         print("⧗ Stage 7: LLM Report Generation - TODO")
         print("="*80)
         print()
-        print(f"✅ Stages 0-5 complete!")
+        print(f"✅ Stages 0-6 complete!")
         print(f"   Processed {completed_videos} videos across {len(winning_buckets)} buckets")
         print(f"   Classified {summary['completed']} videos with content taxonomy")
         if stage3_summaries:
@@ -1023,11 +1315,13 @@ def main():
             print(f"   Transformed {total_files} ML-ready files for {len(stage4_summaries)} buckets")
         if stage5_summaries:
             print(f"   Trained {total_models} ML models across {len(stage5_summaries)} buckets")
+        if stage6_summaries:
+            print(f"   Generated {total_jsons} analysis JSONs across {len(stage6_summaries)} buckets")
         print(f"   Output location: {analysis_base}")
         print()
 
         logger.info("="*80)
-        logger.info("PIPELINE EXECUTION COMPLETE (Stages 0-5)")
+        logger.info("PIPELINE EXECUTION COMPLETE (Stages 0-6)")
         logger.info("="*80)
 
         return 0

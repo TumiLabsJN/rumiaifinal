@@ -268,6 +268,20 @@ Each 2-page report includes:
 
 ---
 
+### Summary of Design Decisions (Issues 1-5 Resolved)
+
+| Issue | Decision | Impact on Template | Location |
+|-------|----------|-------------------|----------|
+| **Issue 1: Visual Examples** | 2 QR Codes (top + bottom performer) | QR codes on Page 1 after "The Proof" and in "Contrastive Analysis" | Line 598+ (QR Code Implementation) |
+| **Issue 2: Confidence Score** | Remove entirely | Header shows 3 fields (Pattern, Duration, Hashtag) - no confidence | Line 296+ (Header Section) |
+| **Issue 3: Timeline Detail** | 3-Phase Pattern Blueprint | Page 2 structure: Hook (0-3s), Middle (flexible), Closing (last 3s) | Line 401+ (Structure Decision) |
+| **Issue 4: Timeline Structure** | Fixed 3-phase for ALL buckets | Same structure for 13-18s, 18-33s, 33-60s videos | Line 407+ (Structure Applied) |
+| **Issue 5: Checklist Length** | 5-7 items (pattern-specific) | Pre-Post Checklist with 6 items grouped by phase | Line 545+ (Pre-Post Checklist) |
+
+**Result**: Consistent, data-honest, mobile-optimized 2-page PDF template applicable to all 9 creative formulas.
+
+---
+
 ### Page 1: "Why This Works" (Hook with Proof + Pattern)
 
 ---
@@ -276,8 +290,13 @@ Each 2-page report includes:
 
 ```
 Pattern Name: "The Question Hook Formula"
-Duration: 18-33s | Hashtag: #nutrition | Confidence: 87%
+Duration: 18-33s | Hashtag: #nutrition
 ```
+
+**Design Decision**: Confidence score removed (Issue 2 resolution)
+- **Rationale**: Stage 7 already filters low-confidence patterns (<70%), so all patterns in reports are validated
+- **Simplified header**: 3 elements instead of 4 (cleaner, more scannable on mobile)
+- **Implicit trust model**: "If it's in the report, it's proven" - no need for creators to question reliability
 
 **Dynamic Fields**:
 | Template Field | Source | JSON Field/Calculation | Data Type | Example |
@@ -285,7 +304,6 @@ Duration: 18-33s | Hashtag: #nutrition | Confidence: 87%
 | Pattern Name | Stage 7 | `pattern_name` in winning_formulas.json | String | "The Question Hook Formula" |
 | Duration | Stage 7 | `bucket_range` in winning_formulas.json | String | "18-33s" |
 | Hashtag | Config | CLI parameter `--hashtag` | String | "#nutrition" |
-| Confidence | Stage 7 | `confidence_score` in winning_formulas.json | Integer (0-100%) | 87 |
 
 ---
 
@@ -380,61 +398,187 @@ Bottom performers do THIS:
 
 ### Page 2: "How to Execute" (Copy-Paste Implementation)
 
+**Structure Decision**: 3-Phase Pattern Blueprint (applies to ALL duration buckets)
+
+**Why This Structure**:
+- **Data Limitation**: Content Analysis provides VIDEO-LEVEL qualitative data (no second-by-second timestamps for middle content)
+- **Temporal Alignment**: RumiAI's data structure is 3 segments (0-3s hook, middle segments, last 3s closing)
+- **Consistency**: All 9 reports use identical structure - creators learn once, apply everywhere
+- **Honest Guidance**: Precise timing where we have data (hook, closing), flexible where we don't (middle)
+
+**Structure Applied to All Buckets**:
+- 13-18s bucket: Hook (0-3s), Middle (3-15s), Closing (last 3s)
+- 18-33s bucket: Hook (0-3s), Middle (3-30s), Closing (last 3s)
+- 33-60s bucket: Hook (0-3s), Middle (3-57s), Closing (last 3s)
+
+**Implementation**: 1 template design, 1 Stage 7 LLM prompt (reused for all buckets)
+
 ---
 
-#### Second-by-Second Timeline (Literal Script)
+#### Pattern Execution Blueprint
+
+**CONTENT FORMAT**
+```
+Format: Recipe Tutorial
+Step-by-step instructional content showing "how to make" or "how to prepare"
+```
+
+**How Content Category is Assigned**:
+- Stage 7 selects the **most common** `content_category` from videos in each cluster
+- No rotation forcing - if all 3 clusters in a bucket are "Recipe Tutorial", then all 3 formulas show "Recipe Tutorial"
+- Total distribution across 9 reports may vary (e.g., 5 recipe + 2 wellness + 2 supplement)
+- This is data-honest: reflects what actually separates top performers in each cluster
+
+**Dynamic Fields**:
+| Template Field | Source | JSON Field/Calculation | Data Type | Example |
+|----------------|--------|------------------------|-----------|---------|
+| Format name | Stage 7 | `content_category` in winning_formulas.json (most common in cluster) | String | "Recipe Tutorial" |
+| Format description | Stage 7 | `content_category_description` (LLM-generated) | String | "Step-by-step instructional content..." |
+
+---
+
+**⏱️ PHASE 1: HOOK (0-3 seconds)**
 
 ```
-⏱️ 0-2 seconds: THE QUESTION
-  Say: "Did you know [surprising fact about topic]?"
-  Visual: Your face, direct to camera
-  Text overlay: The question (animated in)
+Strategy: Ask question about audience pain point
+Example: "Did you know bloating might be a gut health issue?"
 
-⏱️ 3-5 seconds: SHOW THE THING
-  Visual: Close-up of product/ingredient
-  Text overlay: Product name
-  Say: "This is [product name]"
-
-⏱️ 6-15 seconds: EXPLAIN WHY IT MATTERS
-  Say: Main benefit (problem it solves)
-  Visual: Product in context (using it, showing it)
-  Text overlay: 2-3 key benefit points
-
-⏱️ 16-30 seconds: PROOF/DEMONSTRATION
-  Visual: Before/after OR step-by-step demo
-  Text overlay: Results/transformation
-  Say: Why it works scientifically/logically
-
-⏱️ 31-33 seconds: CALL TO ACTION
-  Say: "Save this!" or "Try it yourself!"
-  Visual: End card or gesture pointing to save button
-  Text overlay: Simple CTA
+Execution:
+• 10-15 words maximum
+• Face visible, direct to camera (close-up)
+• High energy from start (enthusiastic tone)
 ```
 
 **Dynamic Fields**:
 | Template Field | Source | JSON Field/Calculation | Data Type | Example |
 |----------------|--------|------------------------|-----------|---------|
-| Entire timeline (5+ segments) | Stage 7 | `second_by_second_script` in winning_formulas.json | Object (array of segments) | [{timing: "0-2s", label: "THE QUESTION", say: "...", visual: "...", text_overlay: "..."},...] |
+| Strategy name | Stage 7 | `hook_strategy` from Content Analysis | String | "problem_solution" |
+| Strategy description | Stage 7 | LLM interpretation of hook_strategy | String | "Ask question about audience pain point" |
+| Example phrase | Stage 7 | LLM-generated example using `pain_points` + `keywords` | String | "Did you know bloating..." |
+| Word count | Temporal Windows | Avg `word_count` from 0-3s window (top performers) | Integer | 10-15 |
+| Visual direction | Temporal Windows | Based on `close_ratio` from 0-3s window | String | "Face visible, direct to camera" |
+| Energy description | Temporal Windows | Based on `energy_level` from 0-3s window | String | "High energy" |
 
-**Note**: The timeline structure (timing ranges, segment labels, Say/Visual/Text overlay instructions) all come from Stage 7 LLM analysis. The example shows a typical 5-segment structure, but actual segments vary per pattern.
+---
+
+**⏱️ PHASE 2: BUILD & PROVE (3s to last 3s - flexible timing)**
+
+```
+💡 Include all these elements in whatever order flows naturally:
+
+Content Checklist:
+□ Mention "gut health" and "protein" keywords
+□ Share personal testimony ("This is what worked for me...")
+□ Show before/after comparison
+□ Demonstrate product use
+
+Execution Standards:
+• Fast pacing: 2-3 scene changes per 10 seconds
+• Use 5-7 text overlays throughout (highlight key points)
+• Maintain moderate energy (don't drop off mid-video)
+• Product clearly visible in shots
+```
+
+**Dynamic Fields**:
+| Template Field | Source | JSON Field/Calculation | Data Type | Example |
+|----------------|--------|------------------------|-----------|---------|
+| Keywords (checklist items) | Stage 7 | `keywords` array from Content Analysis | Array of strings | ["gut health", "protein"] |
+| Engagement drivers (checklist items) | Stage 7 | `engagement_drivers` array from Content Analysis | Array of strings | ["personal_testimony", "before_after_reveal"] |
+| Pain points (optional checklist) | Stage 7 | `pain_points` array from Content Analysis | Array of strings | ["bloating", "low energy"] |
+| Content tactics (style notes) | Stage 7 | `content_tactics` array from Content Analysis | Array of strings | ["direct_to_camera", "product_demonstration"] |
+| Scene changes rate | Temporal Windows | Avg `scene_count` per middle segment ÷ duration | Float | 2.3 scene changes per 10s |
+| Text overlay count | Temporal Windows | Sum of `text_overlay_count` across middle segments | Integer | 5-7 total |
+| Energy standard | Temporal Windows | Avg `energy_level` from middle segments | String | "Moderate energy (0.35+)" |
+
+---
+
+**⏱️ PHASE 3: CLOSING (Last 3 seconds)**
+
+```
+CTA: "Link in bio!" or "Save this for later!"
+
+Execution:
+• Peak energy (most enthusiastic moment of entire video)
+• Point to save button or bio link (gesture/visual cue)
+• Hold final frame 1-2 seconds (give viewers time to click)
+```
+
+**Dynamic Fields**:
+| Template Field | Source | JSON Field/Calculation | Data Type | Example |
+|----------------|--------|------------------------|-----------|---------|
+| CTA type | Stage 7 | `caption_analysis.cta_type` from Content Analysis | String | "link_in_bio" |
+| CTA example phrase | Stage 7 | LLM-generated example based on cta_type | String | "Link in bio!" |
+| Peak energy note | Temporal Windows | Based on `energy_max` from last 3s window | String | "Peak energy (0.9+)" |
+| Visual cue | Temporal Windows | Based on presence of gestures/visual elements | String | "Point to save button" |
+
+---
+
+**CAPTION STRUCTURE** (Don't skip this!)
+
+```
+[Question that matches your video opening]
+[1-2 sentence description or teaser]
+[Call-to-action: "Link in bio!" or "Save this!"]
+#keyword1 #keyword2 #keyword3
+
+Details:
+• Start caption with question (matches video hook)
+• Keep short: <100 characters before hashtags
+• Use 1-4 emojis (not excessive)
+• Include 5-10 relevant hashtags
+• Place hashtags at END (not mixed into text)
+• Always include clear CTA
+```
+
+**Dynamic Fields**:
+| Template Field | Source | JSON Field/Calculation | Data Type | Example |
+|----------------|--------|------------------------|-----------|---------|
+| Hook type | Stage 7 | `caption_analysis.hook_type` | String | "question" |
+| Caption length | Stage 7 | `caption_analysis.caption_length` | String | "short" |
+| Emoji usage | Stage 7 | `caption_analysis.emoji_usage` | String | "some" (1-4) |
+| Hashtag count | Stage 7 | `caption_analysis.hashtag_count` | Integer | 7 |
+| Hashtag placement | Stage 7 | `caption_analysis.hashtag_placement` | String | "end" |
+| CTA type | Stage 7 | `caption_analysis.cta_type` | String | "link_in_bio" |
 
 ---
 
 #### Pre-Post Checklist
 
+**Design Decision**: Medium Checklist (5-7 Items, Pattern-Specific)
+
+**Why This Length**:
+- **UX best practice**: 5-7 items is optimal for checklist compliance (research-backed sweet spot)
+- **Pattern-specific value**: Each item checks unique elements of this formula, not generic criteria
+- **Balances quality with usability**: Catches pattern-breaking mistakes without overwhelming creators
+- **Mobile-optimized**: 5-7 items fit comfortably on phone screen with readable 12pt font
+- **Realistic compliance**: Creators will check 5-7 items (1-2 min) but would skip 10+ items
+- **Maps to 3-phase structure**: 1-2 items for Hook, 2-3 items for Middle, 1-2 items for Closing/Caption
+
+**Structure**: 6-item checklist aligned to 3-Phase Blueprint
+
 ```
 ✓ CHECKLIST BEFORE POSTING
-□ Question in first 2 seconds?
-□ Product visible by 5 seconds?
-□ 5-7 text overlays placed?
-□ 2-3 scene changes in middle?
-□ Clear CTA at end?
+
+Hook:
+□ Hook strategy used in first 3s? (problem-solution question)
+
+Middle Content:
+□ Keywords mentioned? (gut health, protein)
+□ Engagement tactics included? (personal testimony, before/after)
+□ Execution standards met? (5-7 text overlays, fast pacing)
+
+Closing + Caption:
+□ CTA at end?
+□ Caption structure followed? (question hook + CTA + hashtags at end)
 ```
+
+**Item Count**: 5-7 items per report (varies slightly per pattern)
 
 **Dynamic Fields**:
 | Template Field | Source | JSON Field/Calculation | Data Type | Example |
 |----------------|--------|------------------------|-----------|---------|
-| Checklist items (5-7 items) | Stage 7 | `verification_checklist` in winning_formulas.json | String (array) | ["Question in first 2 seconds?", "Product visible by 5 seconds?", etc.] |
+| Checklist items (5-7 total) | Stage 7 | `verification_checklist` in winning_formulas.json | String (array) | ["Hook strategy used in first 3s?", "Keywords mentioned?", etc.] |
+| Items grouped by phase | Stage 7 | Optional: `checklist_grouped` (Hook, Middle, Closing sections) | Object | {hook: [...], middle: [...], closing: [...]} |
 
 ---
 
@@ -451,7 +595,7 @@ Bottom performers do THIS:
 
 ---
 
-### QR Code Implementation (Decision: Issue 1 Resolved)
+### QR Code Implementation
 
 **Decision**: Each creator report includes **2 QR codes** linking to real TikTok video examples
 
@@ -976,10 +1120,12 @@ Based on available data, here are the realistic options for creator reports:
 
 ### Next Steps for Implementation
 
-1. **Stage 7 LLM Prompt Update**: Modify report generation prompt to output `pattern_blueprint` structure (3 phases) instead of `second_by_second_script` (5+ segments)
-2. **Template Field Update**: Update Section 2 (Hashtag → Creator, Page 2) to reflect 3-phase structure
-3. **Data Mapping Table**: Add new dynamic fields table for pattern_blueprint extraction
-4. **Issue 3 Resolution**: Mark CreatorContentCritique.md Issue 3 as RESOLVED with Alternative 1 decision
+1. **Stage 7 LLM Prompt Update**: Modify report generation prompt to output `pattern_blueprint` structure (3 phases) instead of traditional segment-by-segment breakdown
+2. **Template Field Update**: Section 2 (Hashtag → Creator, Page 2) already reflects 3-phase structure (see lines 381-506)
+3. **Data Mapping Tables**: Already complete with dynamic fields for all 3 phases (see lines 396-504)
+4. **Content Category Assignment**: Stage 7 should select most common `content_category` per cluster (no rotation forcing)
+
+**Implementation Status**: ✅ Template structure finalized and documented
 
 ---
 

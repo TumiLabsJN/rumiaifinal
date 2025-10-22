@@ -3669,7 +3669,12 @@ ModelMetricsSchema = {
 - ✅ Loading code uses safe `.get().get()` pattern (returns empty dict if nested keys missing)
 - ✅ Downstream code handles missing metrics (lines 918-922: sets accuracy/precision/recall to None if not found)
 
-**Approval Status**: ⚠️ Requires Tech Lead approval for cross-stage schema alignment
+**Approval Status**: ✅ APPROVED (2025-10-21) - Cross-stage schema alignment justified and verified
+
+**Reconciliation Status**: ✅ Complete (Reconciled: 2025-10-21)
+- **HLD Updated**: Section 5.1 - Added File 7 (model_metrics.json) with canonical schema from MLModelTrainingCHILDTI.md Section 3.3
+- **Documentation**: HLD now references Stage 5 TI as canonical schema source
+- **Impact**: Future readers will see correct nested structure (`window_level_rf.{window}` path)
 
 ---
 

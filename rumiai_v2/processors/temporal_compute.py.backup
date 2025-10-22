@@ -901,8 +901,7 @@ def extract_timelines_for_temporal(analysis_dict: Dict[str, Any]) -> Dict[str, A
                 'className': entry.get('data', {}).get('class', 'unknown'),  # Use className for compatibility
                 'confidence': entry.get('data', {}).get('confidence', 0),
                 'bbox': entry.get('data', {}).get('bbox', []),
-                'trackId': entry.get('data', {}).get('track_id', None),  # Use trackId for compatibility
-                'tracked': entry.get('data', {}).get('tracked', True)  # Preserve tracking status
+                'trackId': entry.get('data', {}).get('track_id', None)  # Use trackId for compatibility
             })
     timelines['object_timeline'] = object_timeline
     
@@ -2067,7 +2066,7 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
         if obj.get('className') != 'person':
             timestamp = obj.get('timestamp', 0)
             if start <= timestamp < end:
-                tracked = obj.get('tracked', False)  # Default False: only count successfully tracked objects
+                tracked = obj.get('tracked', True)
                 if tracked:
                     unique_object_classes.add(obj.get('className'))
 
@@ -2079,8 +2078,8 @@ def process_segment(seg_bounds: Dict[str, float], timelines: Dict[str, Any],
             if start <= timestamp < end:
                 tracked = obj.get('tracked')
                 if tracked is None:
-                    logger.warning(f"Missing 'tracked' flag at {timestamp}s, defaulting to False")
-                    tracked = False  # Default False: only count successfully tracked persons
+                    logger.warning(f"Missing 'tracked' flag at {timestamp}s, defaulting to True")
+                    tracked = True
 
                 # Only count tracked detections (fallbacks have tracked=False)
                 if tracked:

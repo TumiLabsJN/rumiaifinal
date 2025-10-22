@@ -339,13 +339,42 @@
 
 ---
 
-### Recommendation Pending
+### ✅ Decision Made
 
-**Option A**: Alternative 2 (Medium Detail - Current) - Balances clarity with creativity
-**Option B**: Alternative 1 (High Detail) - If creators are mostly beginners who need strict guidance
-**Option C**: Adaptive approach - Short videos (13-18s) get 3-4 segments, long videos (60-90s) get 8-10 segments
+**Decision**: Alternative 1 (Modified) - **3-Phase Pattern Blueprint**
 
-**Decision Required**: What level of detail best serves creators?
+**Rationale**:
+After analyzing Content Analysis data capabilities (documented in Stage8MVP_Reports.md "Content Analysis Data Capabilities" section), we determined:
+- **Content Analysis provides VIDEO-LEVEL qualitative data** (no second-by-second timestamps)
+- **Temporal Windows provide SEGMENT-LEVEL quantitative data** (0-3s, middle, last 3s)
+- We cannot honestly deliver "second-by-second" precision for middle content
+
+**Implementation Structure**:
+
+**Phase 1: HOOK (0-3s)** - Precise timing + precise content
+- Content pattern: From `hook_strategy` (e.g., "problem_solution")
+- Execution metrics: From temporal window (word_count, energy_level, close_ratio)
+- Example provided
+
+**Phase 2: MIDDLE (3s to last 3s)** - Content checklist + execution standards (flexible timing)
+- Content elements: From `pain_points`, `keywords`, `engagement_drivers`, `content_tactics`
+- Presented as checklist: "Include all these elements in whatever order flows naturally"
+- Execution standards: Aggregated temporal window metrics (scene_changes, text_overlays, energy)
+- Explicit note: "Exact timing is flexible"
+
+**Phase 3: CLOSING (last 3s)** - Precise timing + precise content
+- CTA pattern: From `caption_analysis.cta_type` (e.g., "link_in_bio")
+- Execution metrics: From temporal window (energy_max, has_speech_cta)
+
+**Why This Works**:
+1. **Data-honest**: Uses qualitative (video-level) and quantitative (temporal-level) correctly
+2. **Still actionable**: Clear structure with specific guidance for critical moments
+3. **Mobile-friendly**: Concise format fits 2-page PDF
+4. **Honest about limitations**: Middle section acknowledges timing flexibility
+
+**Marketing Framing**: Call it "Pattern Execution Blueprint" not "second-by-second timeline"
+
+**Status**: ✅ Implemented
 
 ---
 
@@ -439,13 +468,41 @@
 
 ---
 
-### Recommendation Pending
+### ✅ Decision Made
 
-**Option A**: Alternative 1 (Fixed) - Simplest, assumes 5 segments work for all lengths
-**Option B**: Alternative 2 (Adaptive) - Most realistic, assumes length dictates structure
-**Option C**: Alternative 3 (Hybrid) - Balanced, keeps structure consistent but adapts timing
+**Decision**: Alternative 1 - **Fixed 3-Phase Structure for All Buckets**
 
-**Decision Required**: Should timeline structure vary by bucket?
+**Rationale**:
+- **Data honesty**: Content Analysis provides VIDEO-LEVEL qualitative data (no temporal breakdown for middle content). Adding middle subdivisions would fabricate timing precision we don't have.
+- **Temporal window alignment**: RumiAI's actual data structure IS 3 segments (0-3s hook, middle segments, last 3s closing). Fixed 3-phase structure matches our data architecture.
+- **Consistency**: All 9 reports have identical structure - creators learn the system once, apply to all formulas.
+- **Implementation simplicity**: 1 template, 1 LLM prompt, 1 PDF design.
+- **Natural pacing**: Content checklist items naturally spread across middle duration:
+  - 13-18s video (10s middle): 4-5 checklist items
+  - 33-60s video (54s middle): 6-8 checklist items
+  - Creators determine their own pacing for each item
+
+**Implementation Structure**:
+
+All buckets use identical 3-phase structure:
+- **Phase 1: HOOK (0-3s)** - Precise timing + content
+- **Phase 2: MIDDLE (3s to last 3s)** - Content checklist + execution standards (flexible timing)
+- **Phase 3: CLOSING (last 3s)** - Precise timing + content
+
+**Example Across Buckets**:
+- 13-18s bucket: Hook (0-3s), Middle (3-15s), Closing (last 3s)
+- 18-33s bucket: Hook (0-3s), Middle (3-30s), Closing (last 3s)
+- 33-60s bucket: Hook (0-3s), Middle (3-57s), Closing (last 3s)
+
+**Trade-off Accepted**: Longer videos (60-90s) receive less granular middle guidance, but this is honest - we don't have second-by-second data for middle content. Creators apply checklist items at their own pacing.
+
+**MVP Impact**:
+- 1 template design (no variants)
+- 1 Stage 7 LLM prompt (reused for all buckets)
+- Simple extraction logic (same fields for all reports)
+- Total effort: No additional work beyond Issue 3 implementation
+
+**Status**: ✅ Implemented
 
 ---
 
@@ -558,13 +615,11 @@
 
 ---
 
-### Recommendation Pending
+### ✅ Decision Made
 
-**Option A**: Alternative 2 (Medium - Current) - Standard UX best practice
-**Option B**: Alternative 1 (Short) - If creators are time-constrained
-**Option C**: Tiered checklist - 3 "Must-Have" items + 4 "Nice-to-Have" items (creators choose depth)
+**Decision**: Alternative 2 - **Medium Checklist (5-7 Items, Pattern-Specific)**
 
-**Decision Required**: What checklist length maximizes compliance without sacrificing quality?
+**Status**: ✅ Complete - See Stage8MVP_Reports.md lines 531-567 for full implementation details
 
 ---
 
@@ -675,6 +730,80 @@
 
 ## Resolved Issues
 
+### ✅ Issue 5: Pre-Post Checklist Length (RESOLVED)
+
+**Decision**: Alternative 2 - Medium Checklist (5-7 Items, Pattern-Specific)
+
+**Implementation**: See Stage8MVP_Reports.md lines 531-567
+
+**Status**: ✅ Complete
+
+---
+
+### ✅ Issue 4: Timeline Structure Variation Across Buckets (RESOLVED)
+
+**Decision**: Alternative 1 - **Fixed 3-Phase Structure for All Buckets**
+
+**Implementation**:
+All duration buckets use identical 3-phase structure:
+- **Phase 1: HOOK (0-3s)** - Precise timing + content
+- **Phase 2: MIDDLE (3s to last 3s)** - Content checklist + execution standards (flexible timing)
+- **Phase 3: CLOSING (last 3s)** - Precise timing + content
+
+**Rationale**:
+- Matches RumiAI's temporal window data structure (0-3s, middle, last 3s)
+- Consistent experience across all 9 reports (creators learn once)
+- Data-honest (no fabricated middle subdivisions)
+- Simple implementation (1 template, 1 LLM prompt)
+- Natural pacing (checklist items spread across middle duration)
+
+**Example Duration Adaptation**:
+- 13-18s video: Hook (0-3s), Middle (3-15s = 12s), Closing (last 3s)
+- 33-60s video: Hook (0-3s), Middle (3-57s = 54s), Closing (last 3s)
+
+**Trade-off**: Longer videos get less granular middle guidance, but this reflects honest data limitations.
+
+**MVP Impact**: No additional work (1 template design, 1 LLM prompt for all buckets)
+
+**Status**: ✅ Implemented
+
+---
+
+### ✅ Issue 3: Timeline Detail Level (RESOLVED)
+
+**Decision**: Alternative 1 (Modified) - **3-Phase Pattern Blueprint**
+
+**Implementation Structure**:
+- **Phase 1: HOOK (0-3s)**: Precise timing + precise content (from `hook_strategy` + temporal windows)
+- **Phase 2: MIDDLE (3s to last 3s)**: Content checklist + execution standards (flexible timing)
+- **Phase 3: CLOSING (last 3s)**: Precise timing + precise content (from `caption_analysis.cta_type` + temporal windows)
+
+**Qualitative Data to Include** (all 7 Content Analysis fields):
+1. **content_category** (single): Set context ("Format: Recipe Tutorial")
+2. **hook_strategy** (single): Opening pattern ("Use problem_solution hook")
+3. **pain_points** (array): Problems to address ("Mention bloating, low energy")
+4. **keywords** (array): Topics to mention ("Say 'gut health', 'protein'")
+5. **engagement_drivers** (array): Tactics to include ("Before/after reveal, personal testimony")
+6. **content_tactics** (array): Presentation style ("Direct-to-camera, vulnerability")
+7. **caption_analysis** (8 subfields): Caption structure (question hook + CTA + hashtags)
+
+**Rationale**:
+- Content Analysis provides VIDEO-LEVEL qualitative data (no second-by-second timestamps)
+- Temporal Windows provide SEGMENT-LEVEL quantitative data (0-3s, middle, last 3s)
+- 3-Phase structure is honest: precise for hook/closing, flexible for middle
+- All 7 qualitative fields included for complete creative blueprint
+- Marketing framing: "Pattern Execution Blueprint" not "second-by-second timeline"
+
+**MVP Impact**:
+- Stage 7 generates 3-phase structure (not 5-7 segments)
+- PDF Page 2 stays 2 pages (mobile-optimized)
+- Middle section includes flexibility note
+- Total effort: No change (same 2-page template)
+
+**Status**: ✅ Implemented
+
+---
+
 ### ✅ Issue 2: Confidence Score Display (RESOLVED)
 
 **Decision**: Alternative 3 - Remove Confidence Score Entirely
@@ -756,13 +885,13 @@
 | # | Issue | Priority | Status | Decision | Updated in Stage8MVP_Reports.md |
 |---|-------|----------|--------|----------|----------------------------------|
 | 1 | Visual Examples for Creators | HIGH | ✅ **COMPLETE** | **Alternative 2: QR Codes (2 per report - top + bottom performer)** | ✅ Yes |
-| 2 | Confidence Score Display | MEDIUM | ✅ **COMPLETE** | **Alternative 3: Remove Confidence Score Entirely** | ⏸️ Pending |
-| 3 | Timeline Detail Level | HIGH | ⏸️ **PENDING** | - | ❌ No |
-| 4 | Timeline Structure Variation | MEDIUM | ⏸️ **PENDING** | - | ❌ No |
-| 5 | Checklist Length | MEDIUM | ⏸️ **PENDING** | - | ❌ No |
+| 2 | Confidence Score Display | MEDIUM | ✅ **COMPLETE** | **Alternative 3: Remove Confidence Score Entirely** | ✅ Yes |
+| 3 | Timeline Detail Level | HIGH | ✅ **COMPLETE** | **Alternative 1 (Modified): 3-Phase Pattern Blueprint** | ✅ Yes |
+| 4 | Timeline Structure Variation | MEDIUM | ✅ **COMPLETE** | **Alternative 1: Fixed 3-Phase for All Buckets** | ✅ Yes |
+| 5 | Checklist Length | MEDIUM | ✅ **COMPLETE** | **Alternative 2: Medium Checklist (5-7 Items)** | ✅ Yes |
 | 6 | Pattern Naming Strategy | LOW | ⏸️ **PENDING** | - | ❌ No |
 
-**Progress**: 2 of 6 issues resolved (33%)
+**Progress**: 5 of 6 issues resolved (83%)
 
 ---
 
