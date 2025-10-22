@@ -1019,7 +1019,7 @@ def calculate_temporal_windows(video_duration: float) -> Dict[str, Optional[Tupl
     Calculate hook, middle, and closing windows based on video duration.
     Handles edge cases for short videos (Decision 9).
     """
-    if video_duration <= HOOK_WINDOW_DURATION:
+    if video_duration < HOOK_WINDOW_DURATION:
         return {
             'hook': (0, video_duration),
             'middle': None,
@@ -2670,8 +2670,17 @@ def compute_temporal_windows(analysis_dict: Dict[str, Any]) -> Dict[str, Any]:
     # Add gender detection data if available
     gender_data = ml_data.get('deepface_gender', {})
     if gender_data:
+        # Normalize problematic gender values for CSV compatibility
+        # null: No faces detected by DeepFace
+        # multiple_people: Multiple people in video, gender ambiguous
+        raw_gender = gender_data.get('gender')
+        if raw_gender is None or raw_gender == 'multiple_people':
+            normalized_gender = 'Unknown'
+        else:
+            normalized_gender = raw_gender
+
         calculated_metadata['gender_detection'] = {
-            'gender': gender_data.get('gender'),
+            'gender': normalized_gender,
             'confidence': gender_data.get('confidence', 0.0),
             'method': gender_data.get('method', 'deepface')
         }

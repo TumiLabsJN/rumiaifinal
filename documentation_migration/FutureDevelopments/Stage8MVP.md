@@ -158,6 +158,445 @@ Same workflow as single, but populate Template D with side-by-side data.
 
 ---
 
+### Section 0.5: Data Processing Functions (Reference Documentation)
+
+**Purpose**: Document reusable data processing functions used by Section 3 extraction scripts
+
+**Note**: This section provides reference documentation for function logic. Actual Python implementations live in Section 3 scripts (`extract_creator_data.py`, `extract_client_data.py`, `extract_competitor_data.py`).
+
+---
+
+#### 0.5.1: Content Analysis Aggregation
+
+**Function**: `aggregate_content_classifications(bucket_path, performance_group=None)`
+
+**Purpose**: Aggregate 120 individual Stage 2.7 classifications into frequency distributions for report generation
+
+**Prerequisites**:
+- Stage 2.7 must add `performance_group` field to each classification output
+- Field values: `"top"` or `"bottom"` (based on selection_manifest.json)
+- See ContentAnalysisCHILDpt2.md Decision 1 for implementation details
+- This field enables filtering by performance group without manifest cross-reference
+
+**When to Use**:
+- Report 1 (Hashtag → Client): Aggregate across all buckets for market-level content insights
+- Report 2 (Hashtag → Creator): Aggregate per bucket for formula-specific content patterns
+- Report 3 (Competitor): Aggregate competitor's content strategy patterns
+
+**Input Parameters**:
+- `bucket_path` (string): Path to bucket folder containing `content_analysis/` subdirectory
+  - Example: `/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s/`
+- `performance_group` (string, optional): Filter by "top" or "bottom" performers
+  - If None: Aggregate all videos (for overall insights)
+  - If "top": Only aggregate top performers
+  - If "bottom": Only aggregate bottom performers
+
+**Process**:
+1. Load all `{video_id}_content.json` files from `content_analysis/` folder
+2. Filter by `performance_group` if specified (using `performance_group` field from each file)
+3. **Quality Gate**: Filter by confidence (only include `high` and `medium` confidence classifications)
+   - Excludes unreliable `low` confidence classifications
+   - Tracks excluded count for quality reporting
+4. For each of 12 key fields, calculate frequency distributions:
+   - **Core Content Fields** (6): `content_category`, `hook_strategy`, `pain_points`, `keywords`, `engagement_drivers`, `content_tactics`
+   - **Caption Strategy Fields** (6): `cta_type`, `emoji_usage`, `caption_length`, `hashtag_count`, `hashtag_strategy` (broad/niche/branded counts), `transcript_available`
+5. Calculate effect sizes (if both top and bottom groups aggregated)
+
+**Note on `confidence` field**: Used for filtering (Step 3), NOT included in aggregated output. This ensures only reliable classifications inform reports.
+
+**Field Selection Rationale**: The 12 aggregated fields were chosen based on ContentAnalysisCHILDpt2.md Decision 2 (80/20 rule - highest value fields for actionable insights). Excluded fields: `caption_hook_type` (redundant with `hook_strategy`), `caption_cta_present` (90%+ have CTAs), `brand_mention_present`/`influencer_tag_present` (niche-specific), `hashtag_placement` (low variance).
+
+**Example Implementation**:
+```python
+from collections import Counter
+import glob
+import json
+
+def aggregate_content_classifications(bucket_path, performance_group=None):
+    """
+    Aggregate Stage 2.7 Content Analysis classifications.
+
+    Returns dict with frequency distributions for 13 key fields.
+    """
+    # Load all classification files
+    pattern = f"{bucket_path}/content_analysis/*_content.json"
+    classification_files = glob.glob(pattern)
+
+    # Load and filter classifications
+    all_classifications = []
+    for file_path in classification_files:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+
+            # Filter by performance group if specified
+            if performance_group is None or data.get('performance_group') == performance_group:
+                all_classifications.append(data)
+
+    if not all_classifications:
+        return None  # No data found
+
+    # Quality Gate: Filter by confidence (exclude low confidence)
+    classifications = [
+        c for c in all_classifications
+        if c.get('confidence', 'high') in ['high', 'medium']
+    ]
+
+    excluded_count = len(all_classifications) - len(classifications)
+
+    # Aggregate core content fields (strings)
+    aggregated = {
+        'total_videos': len(classifications),
+        'excluded_low_confidence': excluded_count,
+        'content_category': Counter([c['content_category'] for c in classifications]),
+        'hook_strategy': Counter([c['hook_strategy'] for c in classifications]),
+    }
+
+    # Aggregate array fields (flatten then count)
+    for field in ['pain_points', 'keywords', 'engagement_drivers', 'content_tactics']:
+        all_values = []
+        for c in classifications:
+            all_values.extend(c.get(field, []))
+        aggregated[field] = Counter(all_values)
+
+    # Aggregate caption analysis fields
+    aggregated['caption_cta_type'] = Counter([
+        c['caption_analysis']['cta_type'] for c in classifications
+    ])
+    aggregated['caption_emoji_usage'] = Counter([
+        c['caption_analysis']['emoji_usage'] for c in classifications
+    ])
+    aggregated['caption_length'] = Counter([
+        c['caption_analysis']['caption_length'] for c in classifications
+    ])
+
+    # Aggregate numeric fields (hashtag_count)
+    hashtag_counts = [c['caption_analysis']['hashtag_count'] for c in classifications]
+    aggregated['hashtag_count_stats'] = {
+        'mean': sum(hashtag_counts) / len(hashtag_counts),
+        'min': min(hashtag_counts),
+        'max': max(hashtag_counts),
+        'median': sorted(hashtag_counts)[len(hashtag_counts) // 2]
+    }
+
+    # Aggregate hashtag strategy (broad/niche/branded counts)
+    broad_counts = []
+    niche_counts = []
+    branded_counts = []
+    for c in classifications:
+        hs = c['caption_analysis'].get('hashtag_strategy', {})
+        broad_counts.append(hs.get('broad_count', 0))
+        niche_counts.append(hs.get('niche_count', 0))
+        branded_counts.append(hs.get('branded_count', 0))
+
+    aggregated['hashtag_strategy_avg'] = {
+        'avg_broad': sum(broad_counts) / len(broad_counts) if broad_counts else 0,
+        'avg_niche': sum(niche_counts) / len(niche_counts) if niche_counts else 0,
+        'avg_branded': sum(branded_counts) / len(branded_counts) if branded_counts else 0
+    }
+
+    # Transcript availability ratio
+    with_transcript = sum(1 for c in classifications if c.get('transcript_available', False))
+    aggregated['transcript_available_ratio'] = with_transcript / len(classifications)
+
+    return aggregated
+```
+
+**Output Format**:
+```python
+{
+    'total_videos': 38,  # High/medium confidence only
+    'excluded_low_confidence': 2,  # Low confidence classifications excluded
+    'content_category': Counter({
+        'recipe_tutorial': 23,
+        'wellness_practice': 11,
+        'supplement_review': 4
+    }),
+    'hook_strategy': Counter({
+        'problem_solution': 24,
+        'question': 10,
+        'direct_statement': 6
+    }),
+    'pain_points': Counter({
+        'bloating': 21,
+        'low_energy': 15,
+        'inflammation': 8
+    }),
+    'keywords': Counter({
+        'gut_health': 27,
+        'protein': 22,
+        'fiber': 18
+    }),
+    'engagement_drivers': Counter({
+        'before_after_reveal': 19,
+        'personal_testimony': 16,
+        'product_recommendation': 14
+    }),
+    'content_tactics': Counter({
+        'direct_to_camera': 31,
+        'product_demonstration': 25,
+        'text_overlay_heavy': 20
+    }),
+    'caption_cta_type': Counter({
+        'link_in_bio': 32,
+        'save_post': 5,
+        'comment': 3
+    }),
+    'caption_emoji_usage': Counter({
+        'some': 28,
+        'many': 8,
+        'none': 4
+    }),
+    'caption_length': Counter({
+        'short': 26,
+        'long': 14
+    }),
+    'hashtag_count_stats': {
+        'mean': 7.2,
+        'min': 3,
+        'max': 12,
+        'median': 7
+    },
+    'hashtag_strategy_avg': {
+        'avg_broad': 2.1,
+        'avg_niche': 4.8,
+        'avg_branded': 0.3
+    },
+    'transcript_available_ratio': 0.95
+}
+
+# Note: 'confidence' field is NOT in output - it was used for filtering only
+
+```
+
+**Usage in Reports**:
+- **Report 1**: Show top content categories, hook strategies at market level
+- **Report 2**: Show contrastive analysis (top vs bottom behaviors)
+- **Report 3**: Show competitor's content strategy patterns
+
+**Effect Size Calculation** (for contrastive analysis):
+```python
+def calculate_effect_sizes(top_stats, bottom_stats):
+    """
+    Calculate effect sizes for contrastive analysis.
+
+    Effect size = top_frequency / bottom_frequency
+    Example: If 60% top use problem_solution vs 20% bottom → 3.0x effect
+    """
+    effect_sizes = {}
+
+    # For each field that appears in both
+    for field in ['hook_strategy', 'content_category', 'engagement_drivers']:
+        if field not in top_stats or field not in bottom_stats:
+            continue
+
+        top_counter = top_stats[field]
+        bottom_counter = bottom_stats[field]
+
+        # Calculate percentages and ratios
+        for item in set(list(top_counter.keys()) + list(bottom_counter.keys())):
+            top_pct = (top_counter.get(item, 0) / top_stats['total_videos']) * 100
+            bottom_pct = (bottom_counter.get(item, 0) / bottom_stats['total_videos']) * 100
+
+            if bottom_pct > 0:  # Avoid division by zero
+                ratio = top_pct / bottom_pct
+
+                # Only include if meaningful difference (>1.5x or <0.67x)
+                if ratio > 1.5 or ratio < 0.67:
+                    effect_sizes[f"{field}.{item}"] = {
+                        'top_percentage': round(top_pct, 1),
+                        'bottom_percentage': round(bottom_pct, 1),
+                        'effect_size': round(ratio, 1)
+                    }
+
+    return effect_sizes
+
+# Example output:
+{
+    'hook_strategy.problem_solution': {
+        'top_percentage': 60.0,
+        'bottom_percentage': 20.0,
+        'effect_size': 3.0
+    },
+    'engagement_drivers.before_after_reveal': {
+        'top_percentage': 47.5,
+        'bottom_percentage': 15.0,
+        'effect_size': 3.2
+    }
+}
+```
+
+---
+
+#### 0.5.2: QR Code Video Selection
+
+**Function**: `select_qr_code_videos(bucket_path, formula_cluster_id)`
+
+**Purpose**: Select top and bottom performer videos for QR codes from Stage 6 K-means cluster assignments
+
+**When to Use**:
+- Report 2 (Hashtag → Creator): Generate 2 QR codes per formula (top + bottom performer examples)
+
+**Input Parameters**:
+- `bucket_path` (string): Path to bucket folder
+  - Example: `/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s/`
+- `formula_cluster_id` (int): Cluster ID of the winning formula (from Stage 7)
+  - Example: 0, 1, or 2 (from K-means clustering)
+
+**Process**:
+1. Load Stage 6 K-means cluster assignments (`{window}_kmeans_analysis.json`)
+2. Identify videos in winning cluster (top performers using this pattern)
+3. Identify videos NOT in winning cluster (bottom performers not using pattern)
+4. Select top video: Highest views, newest timestamp (reduces deletion risk)
+5. Select bottom video: Sufficient views for contrast, newest timestamp
+6. Load Stage 2 metadata to get video URLs and view counts
+
+**Example Implementation**:
+```python
+def select_qr_code_videos(bucket_path, formula_cluster_id):
+    """
+    Select top and bottom performer videos for QR codes.
+
+    Returns dict with top/bottom video URLs and metadata.
+    """
+    # Load K-means cluster assignments (using hook window as primary)
+    kmeans_path = f"{bucket_path}/ml_analysis/hook_kmeans_analysis.json"
+    with open(kmeans_path, 'r') as f:
+        kmeans_data = json.load(f)
+
+    # Get videos in winning cluster (top performers)
+    top_cluster_videos = [
+        v for v in kmeans_data['cluster_assignments']
+        if v['cluster_id'] == formula_cluster_id
+    ]
+
+    # Get videos NOT in winning cluster (bottom performers)
+    bottom_cluster_videos = [
+        v for v in kmeans_data['cluster_assignments']
+        if v['cluster_id'] != formula_cluster_id
+    ]
+
+    # Select top video (highest views, newest if tie)
+    top_video = max(
+        top_cluster_videos,
+        key=lambda v: (v['metadata']['views'], v['metadata']['timestamp'])
+    )
+
+    # Select bottom video (highest views among bottom, newest if tie)
+    bottom_video = max(
+        bottom_cluster_videos,
+        key=lambda v: (v['metadata']['views'], v['metadata']['timestamp'])
+    )
+
+    # Extract video URLs and metadata from Stage 2 unified_analysis
+    top_url = load_video_url(top_video['video_id'])
+    bottom_url = load_video_url(bottom_video['video_id'])
+
+    return {
+        'top_performer': {
+            'video_id': top_video['video_id'],
+            'url': top_url,
+            'views': top_video['metadata']['views'],
+            'timestamp': top_video['metadata']['timestamp']
+        },
+        'bottom_performer': {
+            'video_id': bottom_video['video_id'],
+            'url': bottom_url,
+            'views': bottom_video['metadata']['views'],
+            'timestamp': bottom_video['metadata']['timestamp']
+        }
+    }
+
+def load_video_url(video_id):
+    """Load video URL from Stage 2 unified_analysis metadata."""
+    unified_path = f"/home/jorge/rumiaifinal/unified_analysis/{video_id}.json"
+    with open(unified_path, 'r') as f:
+        data = json.load(f)
+    return data['metadata']['video_url']
+```
+
+**Output Format**:
+```python
+{
+    'top_performer': {
+        'video_id': '7526250443832331550',
+        'url': 'https://www.tiktok.com/@user/video/7526250443832331550',
+        'views': 520000,
+        'timestamp': '2025-01-15T10:30:00Z'
+    },
+    'bottom_performer': {
+        'video_id': '7428596413707144481',
+        'url': 'https://www.tiktok.com/@user/video/7428596413707144481',
+        'views': 95000,
+        'timestamp': '2025-01-10T14:20:00Z'
+    }
+}
+```
+
+**QR Code Generation** (from selected videos):
+```python
+import qrcode
+
+def generate_qr_codes(video_data, output_dir, formula_name):
+    """Generate QR code PNG files for top and bottom videos."""
+
+    # Generate top performer QR code
+    qr_top = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M)
+    qr_top.add_data(video_data['top_performer']['url'])
+    qr_top.make()
+    img_top = qr_top.make_image(fill_color="black", back_color="white")
+    img_top.save(f"{output_dir}/{formula_name}_top_performer.png")
+
+    # Generate bottom performer QR code
+    qr_bottom = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M)
+    qr_bottom.add_data(video_data['bottom_performer']['url'])
+    qr_bottom.make()
+    img_bottom = qr_bottom.make_image(fill_color="black", back_color="white")
+    img_bottom.save(f"{output_dir}/{formula_name}_bottom_performer.png")
+
+    return {
+        'top_qr_path': f"{output_dir}/{formula_name}_top_performer.png",
+        'bottom_qr_path': f"{output_dir}/{formula_name}_bottom_performer.png"
+    }
+```
+
+---
+
+#### 0.5.3: Hashtag Extraction
+
+**Function**: `extract_hashtag_analysis(manifest_path)`
+
+**Purpose**: Extract top 10 hashtags from selected videos (for competitor/handle analysis)
+
+**When to Use**:
+- Report 3 (Competitor): Show top hashtags competitor uses
+
+**Documentation**: See Stage8MVP_Reports.md Section 3, Item #2 (lines 1352-1400) for complete implementation details.
+
+**Quick Reference**:
+- **Input**: `selection_manifest.json` path
+- **Output**: Top 10 hashtags with usage percentages
+- **Source Data**: `unified_analysis/{video_id}.json` → `metadata.hashtags` array
+
+---
+
+#### 0.5.4: @Mention Extraction
+
+**Function**: `extract_mention_analysis(manifest_path)`
+
+**Purpose**: Extract @mentions to identify affiliate/repost partnerships
+
+**When to Use**:
+- Report 3 (Competitor): Analyze competitor's content sourcing strategy (original vs reposted)
+
+**Documentation**: See Stage8MVP_Reports.md Section 3, Item #3 (lines 1402-1505) for complete implementation details.
+
+**Quick Reference**:
+- **Input**: `selection_manifest.json` path
+- **Output**: Top 10 @mentions, repost rate percentage
+- **Source Data**: `unified_analysis/{video_id}.json` → `metadata.description` (extract via regex)
+
+---
+
 ### Section 1: Designer Templates (8 days)
 
 | # | Task | Owner | Effort | Notes |

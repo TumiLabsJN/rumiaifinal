@@ -55,11 +55,11 @@ def validate_temporal_windows_schema(insights: Dict[str, Any]):
         if len(windows[section]) < 50:
             logger.warning(f"Window section '{section}' has only {len(windows[section])} features (expected 60+)")
 
-    # 5. Validate middle_segments logic (null for short videos ≤9s, list otherwise)
+    # 5. Validate middle_segments logic (null for short videos <9s, list otherwise)
     video_duration = insights.get('duration', 0)
     middle_segments = windows.get('middle_segments')
 
-    if video_duration <= 9:
+    if video_duration < 9:
         # Short videos: middle_segments should be null
         if middle_segments is not None:
             raise ValidationError(video_id, 'middle_segments', 'null', f'not null (duration={video_duration}s)')

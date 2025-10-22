@@ -177,7 +177,10 @@ def sample_transcripts_for_discovery(
 def discover_patterns_llm(
     transcripts: List[Dict[str, Any]],
     hashtag: str,
-    client_id: str
+    client_id: str,
+    analysis_type: str,
+    analysis_mode: str = "top",
+    selection_strategy: str = "contrastive"
 ) -> Dict[str, Any]:
     """
     Discover content patterns using LLM (Claude 3.5 Sonnet).
@@ -186,8 +189,11 @@ def discover_patterns_llm(
 
     Args:
         transcripts: List of transcript dicts with video_id, text, bucket
-        hashtag: str, hashtag name (e.g., "nutrition")
+        hashtag: str, target name (e.g., "nutrition" or "cindyprado28")
         client_id: str, client identifier (e.g., "acme_corp")
+        analysis_type: str, "hashtag", "competitor", or "creator"
+        analysis_mode: str, "top" or "recent" (default: "top")
+        selection_strategy: str, "contrastive" or "top" (default: "contrastive")
 
     Returns:
         dict: Raw discovery JSON with patterns, frequencies, examples
@@ -375,13 +381,19 @@ TRANSCRIPTS:
             # Step 3.5: Calculate percentages for patterns
             raw_taxonomy = calculate_percentages(raw_taxonomy, len(transcripts))
 
-            # Step 3.6: Save raw discovery to file
+            # Step 3.6: Save raw discovery to file using PathBuilder
             # Source: ContentAnalysisCHILD.md Section 2.3.2 lines 237-238
-            output_path = construct_path(
+            from foundation.paths import PathBuilder, sanitize_target
+            path_builder = PathBuilder()
+            target_dir = path_builder.get_target_dir(
                 client_id=client_id,
-                hashtag=hashtag,
-                file_type="raw_discovery"
+                analysis_type=analysis_type,
+                target=hashtag,
+                analysis_mode=analysis_mode,
+                selection_strategy=selection_strategy
             )
+            target_sanitized = sanitize_target(hashtag, analysis_type)
+            output_path = str(target_dir / "content_taxonomies" / f"{target_sanitized}_raw_discovery.json")
             save_json(output_path, raw_taxonomy)
 
             # Step 3.7: Log success and manual curation instructions
@@ -459,6 +471,7 @@ def calculate_percentages(raw_taxonomy: Dict[str, Any], sample_size: int) -> Dic
 def run_discovery_stage(
     client_id: str,
     hashtag: str,
+    analysis_type: str,
     analysis_mode: str = "top",
     selection_strategy: str = "contrastive",
     sample_size: int = 100
@@ -470,7 +483,8 @@ def run_discovery_stage(
 
     Args:
         client_id: Client identifier (e.g., "acme_corp")
-        hashtag: Hashtag name (e.g., "nutrition")
+        hashtag: Target name (e.g., "nutrition" or "cindyprado28")
+        analysis_type: "hashtag", "competitor", or "creator"
         analysis_mode: "top" or "recent" (default: "top")
         selection_strategy: "contrastive" or "top" (default: "contrastive")
         sample_size: Number of transcripts to sample (default: 50)
@@ -485,17 +499,20 @@ def run_discovery_stage(
     """
     logger.info(f"=" * 80)
     logger.info(f"STAGE 2.6: CONTENT PATTERN DISCOVERY")
-    logger.info(f"Client: {client_id}, Hashtag: #{hashtag}, Sample Size: {sample_size}")
+    logger.info(f"Client: {client_id}, Target: {hashtag}, Type: {analysis_type}, Sample Size: {sample_size}")
     logger.info(f"=" * 80)
 
-    # Step 1: Construct manifest path
-    manifest_path = construct_path(
+    # Step 1: Construct manifest path using PathBuilder
+    from foundation.paths import PathBuilder
+    path_builder = PathBuilder()
+    target_dir = path_builder.get_target_dir(
         client_id=client_id,
-        hashtag=hashtag,
+        analysis_type=analysis_type,
+        target=hashtag,  # Will be sanitized by PathBuilder
         analysis_mode=analysis_mode,
-        selection_strategy=selection_strategy,
-        file_type="selection_manifest"
+        selection_strategy=selection_strategy
     )
+    manifest_path = str(target_dir / "selection_manifest.json")
 
     # Step 2: Validate inputs
     logger.info("Step 1/4: Validating inputs...")
@@ -507,7 +524,7 @@ def run_discovery_stage(
     logger.info("Step 2/4: Loading transcript validation cache...")
     try:
         validation_cache = load_validation_cache(
-            client_id, hashtag, analysis_mode, selection_strategy
+            client_id, hashtag, analysis_type, analysis_mode, selection_strategy
         )
         logger.info("✓ Validation cache loaded - will filter invalid transcripts")
     except FileNotFoundError:
@@ -526,7 +543,14 @@ def run_discovery_stage(
 
     # Step 4: Run LLM discovery
     logger.info("Step 4/4: Running LLM pattern discovery (Claude Sonnet)...")
-    raw_taxonomy = discover_patterns_llm(sampled_transcripts, hashtag, client_id)
+    raw_taxonomy = discover_patterns_llm(
+        sampled_transcripts,
+        hashtag,
+        client_id,
+        analysis_type,
+        analysis_mode,
+        selection_strategy
+    )
     logger.info("✓ Discovery complete")
 
     logger.info(f"=" * 80)

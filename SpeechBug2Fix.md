@@ -2,6 +2,142 @@
 
 ---
 
+## ✅ FINAL RESOLUTION (Oct 22, 2025)
+
+### Summary
+Bug #2 has been **fully resolved**. All issues have been identified and fixed:
+1. **Root cause**: venv missing ML dependencies (librosa, deepface, py-feat)
+2. **Secondary issue**: py-feat had unused lib2to3 import breaking Python 3.12
+3. **Option 2 inefficiency**: Confirmed to cause duplicate Apify metadata API calls
+4. **Long-term optimization**: Option 3 documented for future implementation
+
+---
+
+## 📊 Option 2 Efficiency Analysis (Oct 22, 2025)
+
+### Discovery: Does Option 2 Cause Duplicate Downloads/API Calls?
+
+**Initial concern:** Passing URLs instead of local paths might cause duplicate downloads and API calls.
+
+**Investigation findings:**
+
+#### Video Downloads (✅ NOT Duplicated)
+- **Stage 1 downloads to**: `{bucket_path}/videos/{video_id}.mp4`
+- **rumiai_runner.py downloads to**: `temp/{video_id}.mp4`
+- **Apify caching**: `apify_client.py` lines 165-168 checks if file exists before downloading
+- **Result**: Videos downloaded ONCE per location, then cached ✅
+
+#### Apify Metadata API Calls (⚠️ YES, Duplicated)
+- **Stage 1**: Calls Apify to scrape metadata (views, likes, description)
+- **Stage 2 (rumiai_runner.py line 241)**: Calls `_scrape_video(video_url)` again
+- **Result**: Metadata scraped TWICE per video ⚠️
+
+**Cost per video (Option 2):**
+- ⏱️ Time: ~2-3 seconds (duplicate metadata scrape)
+- 💰 API cost: ~$0.0001 (duplicate Apify call)
+- 📡 Bandwidth: 0 (videos cached, not re-downloaded)
+
+**Conclusion:** Option 2 is **slightly inefficient** but acceptable for short-term use.
+
+---
+
+## 🚀 Option 3 - Long-Term Optimization
+
+### What It Does
+Pass local file + pre-scraped metadata to rumiai_runner.py, eliminating duplicate API calls.
+
+### Efficiency Gains
+- ✅ **Removes duplicate Apify calls**: Metadata scraped ONCE (Stage 1 only)
+- ✅ **Saves time**: ~2-3 seconds per video
+- ✅ **Reduces cost**: ~$0.0001 per video (halves Apify metadata costs)
+
+### Backward Compatibility
+**Option 3 is additive, NOT breaking:**
+- ✅ Adds new mode: `--video-file <path> --metadata-file <json>`
+- ✅ Keeps existing mode: `<URL>` (continues working)
+- ✅ Only 1 caller to update: `video_processor.py` line 66
+- ✅ Zero risk to downstream code
+
+### Implementation Effort
+- **Time**: ~1 hour
+- **Changes**: 7 code locations (see lines 572-909 below)
+- **Status**: Documented, not implemented (deferred to future optimization)
+
+---
+
+## 🔧 Dependencies Fixed (Oct 22, 2025)
+
+### Summary
+Bug #2 has been **fully resolved** via dependency fixes, NOT code workarounds.
+
+### What We Discovered
+
+**1. Missing Packages in venv:**
+- venv was missing: `librosa`, `deepface`, `py-feat`
+- System Python had these in `~/.local/` and was working
+- Orchestrator uses `sys.executable` which points to venv when activated
+- Subprocess would fail with `ModuleNotFoundError` when spawned from venv
+
+**2. py-feat lib2to3 Issue (Python 3.12 Compatibility):**
+- venv's py-feat 0.6.0 had `from lib2to3.pytree import convert` (line 4 of resmasknet_test.py)
+- System's py-feat 0.6.0 did NOT have this import (different package version)
+- Python 3.12 removed lib2to3 from stdlib → ImportError
+- **Fix**: Removed unused import from venv's py-feat installation
+- **File**: `venv/lib/python3.12/site-packages/feat/emo_detectors/ResMaskNet/resmasknet_test.py:4`
+
+**3. scipy Compatibility (Non-Issue):**
+- Initial testing showed `ImportError: cannot import name 'binom_test' from 'scipy.stats'`
+- Investigation revealed `scipy_compat.py` already exists and patches scipy 1.14+ to restore `binom_test`
+- `emotion_detection_service.py` (line 20) imports `scipy_compat` **BEFORE** importing feat
+- **Result**: feat works with both scipy 1.14.1 (system) and scipy 1.16.1 (venv) via the patch
+
+**4. DeepFace tf-keras Dependency:**
+- DeepFace 0.0.95 requires `tf-keras` package (not automatically installed)
+- TensorFlow 2.20.0 in venv requires tf-keras for RetinaFace face detection
+- **Fix**: Install tf-keras package in venv
+
+**5. The Fix:**
+```bash
+source venv/bin/activate
+
+# Install ML dependencies
+pip install librosa==0.11.0 deepface==0.0.95 py-feat==0.6.0
+
+# Install tf-keras for DeepFace
+pip install tf-keras
+
+# Remove unused lib2to3 import from py-feat
+# Manually edited: venv/lib/python3.12/site-packages/feat/emo_detectors/ResMaskNet/resmasknet_test.py
+# Removed line 4: from lib2to3.pytree import convert
+```
+
+**Installed versions match system Python:**
+| Package | System | venv | Status |
+|---------|--------|------|--------|
+| librosa | 0.11.0 | 0.11.0 | ✅ MATCH |
+| deepface | 0.0.95 | 0.0.95 | ✅ MATCH |
+| py-feat | 0.6.0 | 0.6.0 | ✅ MATCH (after lib2to3 fix) |
+| scipy | 1.14.1 | 1.16.1 | ✅ Both work with scipy_compat |
+
+### Implementation Complete
+
+**Changes made:**
+1. ✅ Option 2 fix applied (video_processor.py lines 160-165) - URLs now preferred over local paths
+2. ✅ Bandaid fix removed (video_processor.py lines 64-77 cleanup)
+3. ✅ ML dependencies installed in venv (librosa, deepface, py-feat)
+4. ✅ py-feat lib2to3 import removed (Python 3.12 compatibility)
+5. ✅ tf-keras installed in venv (DeepFace dependency)
+
+**Result:**
+- ✅ Orchestrator can now run with venv activated
+- ✅ Subprocess `rumiai_runner.py` has all required dependencies
+- ✅ FEAT emotion detection working (lib2to3 fix + scipy_compat)
+- ✅ DeepFace gender detection working (tf-keras installed)
+- ✅ Ready for batch processing
+- ⚠️ Option 2 causes duplicate Apify metadata calls (~2-3s per video overhead)
+
+---
+
 ## 🔴 ADDENDUM: Post-Implementation Discovery (Oct 22, 2025)
 
 ### What Happened After Implementing Option 2

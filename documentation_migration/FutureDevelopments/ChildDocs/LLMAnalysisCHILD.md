@@ -1228,7 +1228,76 @@ def _generate_recommendations(features: list[dict]) -> list[str]:
 
 ---
 
-**Summary**: Section 2.2 introduces 9 preprocessing functions that handle all arithmetic, mechanical operations, and data labeling BEFORE LLM sees the data. This division of labor prevents hallucination while preserving LLM's creative strengths in semantic interpretation and narrative synthesis.
+#### 2.2.7 Cross-Window Pattern Generation
+
+```python
+def generate_cross_window_patterns(window_analyses: dict, min_windows: int = 2) -> list[dict]:
+    """Extract temporal progressions from video-level RF cross-window features."""
+```
+
+Identifies patterns that span multiple temporal windows (e.g., "joy increases from hook to closing"). Uses video-level RF features like `hook_to_closing_joy_delta` to detect progression patterns.
+
+#### 2.2.8 Feature-Based Report Generation
+
+```python
+def generate_feature_based_reports(rf_features: list[dict], kmeans_data: dict, num_reports: int = 3) -> list[dict]:
+    """Generate fallback reports when <3 cluster paths meet 10% threshold."""
+```
+
+Creates 3 category-based reports (visual, audio, behavioral) when insufficient cluster paths exist. Returns JSON reports with top 3 features per category and strategy templates.
+
+#### 2.2.9 Phase 1 Parallel Orchestration
+
+```python
+def run_phase1_parallel(bucket_path: str, bucket: str, hashtag: str, window_types: list[str]) -> dict:
+    """Execute Phase 1 window analyses in parallel with checkpoint/resume."""
+```
+
+Orchestrates parallel execution of 6-7 window analyses using ThreadPoolExecutor. Implements checkpoint file for resume capability and tracks completion status.
+
+#### 2.2.10 Single Window Analysis with Retry
+
+```python
+def analyze_window_with_retry(bucket_path: str, window_type: str, bucket: str,
+                               hashtag: str | None, max_attempts: int = 3) -> dict:
+    """Analyze single window with exponential backoff retry logic."""
+```
+
+Calls Claude API for one window with 3-attempt retry using exponential backoff [0s, 2s, 4s]. Distinguishes retryable errors (503, 429, timeout) from non-retryable (401, 400).
+
+#### 2.2.11 Phase 2 Synthesis Orchestration
+
+```python
+def run_phase2_synthesis(bucket_path: str, bucket: str, hashtag: str) -> dict:
+    """Execute Phase 2 cross-window synthesis with scenario detection."""
+```
+
+Loads Phase 1 results, extracts cluster paths, applies 10% threshold filter, detects scenario (A/B/C/D), calls Claude API with scenario-specific instructions.
+
+#### 2.2.12 Phase 1 Prompt Construction
+
+```python
+def build_phase1_prompt(window_type: str, bucket: str, hashtag: str,
+                        rf_data: dict, kmeans_data: dict) -> str:
+    """Build Phase 1 prompt with bimodal formatting and RF alignment."""
+```
+
+Generates 150-line prompt for single window analysis. Applies bimodal pattern detection, high-contrast feature filtering, RF alignment scoring. Returns formatted prompt string.
+
+#### 2.2.13 Phase 2 Prompt Construction
+
+```python
+def build_phase2_prompt(bucket: str, hashtag: str, window_analyses: dict,
+                        rf_video_data: dict, feature_based_reports: list[dict],
+                        scenario: str) -> str:
+    """Build Phase 2 prompt with scenario-specific instructions."""
+```
+
+Generates 180-line prompt for cross-window synthesis. Embeds Phase 1 analyses, cluster path data, universal principles, cross-window patterns. Adapts instructions based on scenario A/B/C/D.
+
+---
+
+**Summary**: Section 2.2 introduces 16 total preprocessing and orchestration functions (9 preprocessing + 7 orchestration/prompt) that handle all arithmetic, mechanical operations, and data labeling BEFORE LLM sees the data. This division of labor prevents hallucination while preserving LLM's creative strengths in semantic interpretation and narrative synthesis.
 
 ### 2.3 Data Flow
 

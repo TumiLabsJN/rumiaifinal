@@ -70,7 +70,7 @@ WARNING_MEMORY_MULTIPLIER = 2.0     # Warn if >2x expected
 FAIL_MEMORY_MULTIPLIER = 4.0        # Fail if >4x expected
 MAX_MEMORY_MB = 2048                # Absolute maximum regardless of count
 
-MINIMUM_VIDEO_COUNT = 50       # Minimum videos for reliable ML training
+MINIMUM_VIDEO_COUNT = 10       # TEMPORARY: Lowered for testing (TODO: Revert to 50 for production)
 
 # ===== Expected Column Counts =====
 EXPECTED_INPUT_COLUMNS = {

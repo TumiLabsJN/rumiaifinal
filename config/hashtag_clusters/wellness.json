@@ -1,0 +1,20 @@
+{
+  "cluster_id": "wellness",
+  "description": "Wellness cluster focused on supplement-related content - 4 hashtags for semantic coverage",
+  "primary_hashtag": "#wellness",
+  "variant_hashtags": [
+    "#wellnesssupplements",
+    "#healthandwellness",
+    "#wellnessjourney"
+  ],
+  "scrape_config": {
+    "runs_per_hashtag": 2,
+    "delay_between_runs_ms": 120000,
+    "results_per_page": 600
+  },
+  "metadata": {
+    "created_date": "2025-10-22T00:00:00Z",
+    "created_by": "jorge",
+    "notes": "Wellness test cluster - 4 hashtags × 2 runs × 600 results = 8 scrapes, ~1,500-2,000 unique videos expected after deduplication"
+  }
+}

@@ -261,11 +261,11 @@ def validate_cli_args(args: argparse.Namespace) -> None:
                 f"Must start with @ and have at least 2 characters (e.g., @rival_brand)."
             )
 
-    # Validate video_count range (lowered to 3 for testing purposes)
-    if not (3 <= args.video_count <= 500):
+    # Validate video_count range (lowered to 1 for testing purposes)
+    if not (1 <= args.video_count <= 500):
         raise ValueError(
             f"Invalid --video-count {args.video_count}. "
-            f"Must be between 3 and 500 (inclusive)."
+            f"Must be between 1 and 500 (inclusive)."
         )
 
     # Validate date_filter format

@@ -19,7 +19,7 @@ class Config(BaseModel):
     target: str
     analysis_mode: str = Field(..., pattern=r"^(top|recent)$")
     selection_strategy: str = Field(..., pattern=r"^(contrastive|top)$")
-    video_count: int = Field(..., ge=3, le=500)  # Lowered to 3 for testing
+    video_count: int = Field(..., ge=1, le=500)  # Lowered to 1 for testing
     date_filter: str = Field(..., pattern=r"^last_\d+_days$")
     report_type: str = Field(..., pattern=r"^(single|comparison)$")
     report_audience: str = Field(..., pattern=r"^(client|internal|creator)$")

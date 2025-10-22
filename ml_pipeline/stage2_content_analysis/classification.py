@@ -568,6 +568,7 @@ def classify_all_videos_parallel(
 def classify_all_videos(
     client_id: str,
     hashtag: str,
+    analysis_type: str,
     taxonomy: Dict[str, Any],
     manifest: Dict[str, Any],
     anthropic_client: anthropic.Anthropic,
@@ -584,7 +585,8 @@ def classify_all_videos(
 
     Args:
         client_id: Client identifier
-        hashtag: Hashtag name
+        hashtag: Target name
+        analysis_type: "hashtag", "competitor", or "creator"
         taxonomy: Curated taxonomy from Stage 2.6
         manifest: Selection manifest from Stage 2.5
         anthropic_client: Initialized Anthropic API client
@@ -607,21 +609,23 @@ def classify_all_videos(
     # Log estimated cost
     log_estimated_cost("classification", video_count=len(all_videos))
 
-    # Determine output directory
-    base_path = construct_path(
+    # Determine output directory using PathBuilder
+    from foundation.paths import PathBuilder
+    path_builder = PathBuilder()
+    target_dir = path_builder.get_target_dir(
         client_id=client_id,
-        hashtag=hashtag,
+        analysis_type=analysis_type,
+        target=hashtag,
         analysis_mode=analysis_mode,
-        selection_strategy=selection_strategy,
-        file_type="base"
+        selection_strategy=selection_strategy
     )
-    output_dir = f"{base_path}/content_analysis"
+    output_dir = str(target_dir / "content_analysis")
     os.makedirs(output_dir, exist_ok=True)
 
     # Set up checkpoint path
     checkpoint_path = None
     if checkpoint_enabled:
-        checkpoint_dir = f"{base_path}/.checkpoints"
+        checkpoint_dir = str(target_dir / ".checkpoints")
         os.makedirs(checkpoint_dir, exist_ok=True)
         checkpoint_path = f"{checkpoint_dir}/classification_checkpoint.json"
 
@@ -661,6 +665,7 @@ def classify_all_videos(
 def run_classification_stage(
     client_id: str,
     hashtag: str,
+    analysis_type: str,
     analysis_mode: str = "top",
     selection_strategy: str = "contrastive",
     parallel: bool = None,
@@ -674,7 +679,8 @@ def run_classification_stage(
 
     Args:
         client_id: Client identifier (e.g., "acme_corp")
-        hashtag: Hashtag name (e.g., "nutrition")
+        hashtag: Target name (e.g., "nutrition" or "cindyprado28")
+        analysis_type: "hashtag", "competitor", or "creator"
         analysis_mode: "top" or "recent" (default: "top")
         selection_strategy: "contrastive" or "top" (default: "contrastive")
         parallel: Enable parallel mode (default: reads ENABLE_PARALLEL_CLASSIFICATION env var)
@@ -690,7 +696,7 @@ def run_classification_stage(
     """
     logger.info(f"=" * 80)
     logger.info(f"STAGE 2.7: VIDEO CLASSIFICATION")
-    logger.info(f"Client: {client_id}, Hashtag: #{hashtag}")
+    logger.info(f"Client: {client_id}, Target: {hashtag}, Type: {analysis_type}")
     logger.info(f"=" * 80)
 
     # Step 1: Read environment variables for configuration
@@ -700,21 +706,19 @@ def run_classification_stage(
 
     max_workers = int(os.environ.get('MAX_CLASSIFICATION_WORKERS', str(max_workers)))
 
-    # Step 2: Construct paths
-    taxonomy_path = construct_path(
+    # Step 2: Construct paths using PathBuilder
+    from foundation.paths import PathBuilder, sanitize_target
+    path_builder = PathBuilder()
+    target_dir = path_builder.get_target_dir(
         client_id=client_id,
-        hashtag=hashtag,
+        analysis_type=analysis_type,
+        target=hashtag,
         analysis_mode=analysis_mode,
-        selection_strategy=selection_strategy,
-        file_type="taxonomy"
+        selection_strategy=selection_strategy
     )
-    manifest_path = construct_path(
-        client_id=client_id,
-        hashtag=hashtag,
-        analysis_mode=analysis_mode,
-        selection_strategy=selection_strategy,
-        file_type="selection_manifest"
-    )
+    target_sanitized = sanitize_target(hashtag, analysis_type)
+    taxonomy_path = str(target_dir / "content_taxonomies" / f"{target_sanitized}_taxonomy.json")
+    manifest_path = str(target_dir / "selection_manifest.json")
 
     # Step 3: Validate inputs
     logger.info("Step 1/3: Validating inputs...")
@@ -735,6 +739,7 @@ def run_classification_stage(
     summary = classify_all_videos(
         client_id=client_id,
         hashtag=hashtag,
+        analysis_type=analysis_type,
         taxonomy=taxonomy,
         manifest=manifest,
         anthropic_client=anthropic_client,

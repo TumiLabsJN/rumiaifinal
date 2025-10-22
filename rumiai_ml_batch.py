@@ -62,6 +62,8 @@ from rumiai_v2.processors.model_training import (
 )  # Source: MLModelTrainingCHILDTI.md Section 11.4, Section 6.1 (exception classes)
 # Stage 6: ML Analysis Generation
 from ml_pipeline.stage6_analysis.ml_analysis_generation import generate_ml_analysis_jsons
+# Stage 7: LLM Analysis - Hybrid Two-Phase Approach
+from ml_pipeline.stage7_llm_analysis.stage7_llm_analysis import main as stage7_llm_analysis_main
 from config.bucket_definitions import BUCKET_WINDOWS
 from pathlib import Path
 import json
@@ -282,6 +284,207 @@ def validate_stage_6_outputs(bucket_path: str) -> None:
     print(f"  ✓ Output validation passed: {1 + len(windows)*2} JSON files")
 
 
+def validate_stage7_prerequisites(bucket_path: str, bucket: str) -> None:
+    """
+    Validate Stage 7 input dependencies exist.
+    Source: LLMAnalysisCHILDTI.md Section 12.2 (Upstream TI Requirements)
+
+    Stage 7 requires Stage 6 outputs:
+    - rf_video_analysis.json (video-level RF features)
+    - {window}_rf_analysis.json (per window RF features)
+    - {window}_kmeans_analysis.json (per window K-Means clusters)
+
+    Raises:
+        FileNotFoundError: If required upstream output missing
+    """
+    ml_analysis_dir = os.path.join(bucket_path, "ml_analysis")
+
+    # BUCKET_WINDOWS already imported at top
+    window_types = BUCKET_WINDOWS.get(bucket, [])
+
+    if not window_types:
+        raise ValueError(f"Invalid bucket: {bucket}")
+
+    required_files = [
+        # Video-level RF (cross-window features)
+        os.path.join(ml_analysis_dir, "rf_video_analysis.json"),
+    ]
+
+    # Window-level files (RF + K-Means for each window)
+    for window in window_types:
+        required_files.append(os.path.join(ml_analysis_dir, f"{window}_rf_analysis.json"))
+        required_files.append(os.path.join(ml_analysis_dir, f"{window}_kmeans_analysis.json"))
+
+    missing = [f for f in required_files if not os.path.exists(f)]
+
+    if missing:
+        raise FileNotFoundError(
+            f"Stage 7 prerequisites missing ({len(missing)} files):\n" +
+            "\n".join(f"  - {os.path.basename(f)}" for f in missing) +
+            f"\n\nAction: Ensure Stage 6 (ML Analysis Generation) completed successfully for bucket {bucket}"
+        )
+
+    logger = logging.getLogger(__name__)
+    logger.info(f"✓ Stage 7 prerequisites validated for bucket {bucket} ({len(required_files)} files)")
+
+
+def validate_stage7_outputs(bucket_path: str, bucket: str) -> None:
+    """
+    Validate Stage 7 outputs created correctly.
+    Source: LLMAnalysisCHILDTI.md Section 3 (Stage Contract - StageOutput)
+
+    Validates:
+    - Phase 1 window analyses (hook, middle_X, closing)
+    - Phase 2 synthesis (cross-window insights)
+    - Complete analysis (combined Phase 1 + Phase 2)
+
+    Raises:
+        AssertionError: If output validation fails
+        FileNotFoundError: If required output missing
+    """
+    llm_output_dir = os.path.join(bucket_path, "ml_analysis/llm")
+
+    # BUCKET_WINDOWS already imported at top
+    window_types = BUCKET_WINDOWS.get(bucket, [])
+
+    if not window_types:
+        raise ValueError(f"Invalid bucket: {bucket}")
+
+    # Validate Phase 1 outputs (one per window)
+    for window in window_types:
+        window_file = os.path.join(llm_output_dir, f"{window}_analysis.json")
+
+        assert os.path.exists(window_file), \
+            f"Stage 7 Phase 1 output missing: {window}_analysis.json"
+
+        # Validate JSON structure
+        with open(window_file, 'r') as f:
+            data = json.load(f)
+            assert 'window_type' in data, f"{window}_analysis.json missing 'window_type' field"
+            assert 'clusters' in data, f"{window}_analysis.json missing 'clusters' field"
+            assert len(data['clusters']) == 3, f"{window}_analysis.json must have exactly 3 clusters"
+
+    # Validate Phase 2 synthesis output
+    synthesis_file = os.path.join(llm_output_dir, "synthesis.json")
+    assert os.path.exists(synthesis_file), \
+        "Stage 7 Phase 2 output missing: synthesis.json"
+
+    with open(synthesis_file, 'r') as f:
+        synthesis = json.load(f)
+        assert 'winning_formulas' in synthesis, "synthesis.json missing 'winning_formulas'"
+        assert 'scenario' in synthesis, "synthesis.json missing 'scenario' field"
+
+    # Validate complete analysis (combined output)
+    complete_file = os.path.join(llm_output_dir, "complete_analysis.json")
+    assert os.path.exists(complete_file), \
+        "Stage 7 complete analysis output missing: complete_analysis.json"
+
+    with open(complete_file, 'r') as f:
+        complete = json.load(f)
+        assert 'phase1_window_analyses' in complete
+        assert 'phase2_synthesis' in complete
+        assert 'bucket' in complete
+        assert complete['bucket'] == bucket
+
+    logger = logging.getLogger(__name__)
+    logger.info(f"✓ Stage 7 outputs validated for bucket {bucket} (Phase 1: {len(window_types)} windows, Phase 2: synthesis, Complete: 1 file)")
+
+
+def handle_stage7_error(error: Exception, bucket_path: str) -> None:
+    """
+    Handle Stage 7 errors.
+    Source: LLMAnalysisCHILDTI.md Section 6 (Error Handling)
+
+    Stage 7 has 3 main error categories:
+    - LLMValidationError: Invalid LLM response (wrong schema, missing fields)
+    - Phase1ExecutionError: Phase 1 window analysis failure
+    - InsufficientDataError: <3 cluster paths meet 10% threshold (fallback to feature-based reports)
+
+    Note: Stage 7 raises exceptions with error codes in message strings.
+    This error matching pattern is specific to current Stage 7 implementation.
+    """
+    logger = logging.getLogger(__name__)
+
+    # LLM Validation Errors (malformed API responses)
+    if "Missing 'clusters' key" in str(error) or "Expected 3 clusters" in str(error):
+        logger.error("Stage 7 Error: LLM response validation failed")
+        logger.error("Issue: Claude API returned malformed response (wrong schema)")
+        logger.error("Action: Check LLM prompt construction and API response parsing")
+        logger.error("Retry Policy: Automatic retry with exponential backoff [0s, 2s, 4s]")
+
+    # Phase 1 Execution Errors (window analysis failures)
+    elif "Phase1ExecutionError" in str(type(error).__name__):
+        logger.error("Stage 7 Error: Phase 1 window analysis failed")
+        logger.error(f"Details: {error}")
+        logger.error("Action: Check .phase1_status.json for partial progress, resume from checkpoint")
+
+    # Insufficient Data Errors (fallback scenario)
+    elif "InsufficientDataError" in str(error):
+        logger.error("Stage 7 Error: Insufficient cluster paths (<3 paths meet 10% threshold)")
+        logger.error("Issue: Not enough common viral patterns detected")
+        logger.error("Action: System will automatically use feature-based fallback reports")
+        logger.info("Note: This is not a failure - fallback strategy will generate insights from RF features")
+
+    # API Errors (authentication, rate limits, timeouts)
+    elif "401" in str(error):
+        logger.error("Stage 7 Error: Claude API authentication failed")
+        logger.error("Issue: ANTHROPIC_API_KEY invalid or missing")
+        logger.error("Action: Verify ANTHROPIC_API_KEY in .env file")
+        logger.error("Retry Policy: NO RETRY (non-retryable error)")
+
+    elif "429" in str(error) or "503" in str(error):
+        logger.error(f"Stage 7 Error: Claude API {error}")
+        logger.error("Issue: Rate limit exceeded or service unavailable")
+        logger.error("Retry Policy: Automatic retry with exponential backoff [0s, 2s, 4s]")
+
+    else:
+        logger.error(f"Stage 7 Error: Unexpected error - {error}")
+        logger.error("Action: Check logs for full traceback")
+
+    # Cleanup partial outputs (only if catastrophic failure)
+    if not isinstance(error, (FileNotFoundError, ValueError)):
+        cleanup_stage7_partial_outputs(bucket_path)
+
+
+def cleanup_stage7_partial_outputs(bucket_path: str) -> None:
+    """
+    Remove partial outputs from failed Stage 7 execution.
+    Source: LLMAnalysisCHILDTI.md Section 3 StageOutput
+
+    Note: Stage 7 has checkpoint/resume capability (.phase1_status.json).
+    Only cleanup if catastrophic failure (not for recoverable errors).
+    """
+    logger = logging.getLogger(__name__)
+    llm_output_dir = os.path.join(bucket_path, "ml_analysis/llm")
+
+    if not os.path.exists(llm_output_dir):
+        return
+
+    # List of output files to clean up (all Phase 1 + Phase 2 outputs)
+    partial_files = [
+        "synthesis.json",
+        "complete_analysis.json",
+        ".phase1_status.json"
+    ]
+
+    # Add window-specific files (variable count based on bucket)
+    try:
+        for filename in os.listdir(llm_output_dir):
+            if filename.endswith("_analysis.json") and filename != "complete_analysis.json":
+                partial_files.append(filename)
+    except Exception:
+        pass
+
+    for filename in partial_files:
+        file_path = os.path.join(llm_output_dir, filename)
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                logger.info(f"Cleaned up partial output: {filename}")
+            except Exception as e:
+                logger.warning(f"Failed to clean up {filename}: {e}")
+
+
 def main():
     """
     Main entry point for RumiAI ML Batch Pipeline.
@@ -484,13 +687,14 @@ def main():
         print("STAGE 2.6/2.7: CONTENT ANALYSIS")
         print("="*80)
 
-        # Extract hashtag name (remove # prefix if present)
-        hashtag_clean = cli_args.target.lstrip('#')
+        # Sanitize target name (remove # and @ prefixes)
+        from foundation.paths import sanitize_target
+        target_sanitized = sanitize_target(cli_args.target, cli_args.analysis_type)
 
         # Construct taxonomy path
         taxonomy_dir = analysis_base / "content_taxonomies"
         taxonomy_dir.mkdir(parents=True, exist_ok=True)
-        taxonomy_path = taxonomy_dir / f"{hashtag_clean}_taxonomy.json"
+        taxonomy_path = taxonomy_dir / f"{target_sanitized}_taxonomy.json"
 
         # Load or initialize content analysis state
         ca_state = load_content_analysis_state(analysis_base)
@@ -506,7 +710,8 @@ def main():
                 # Run discovery
                 raw_taxonomy = run_discovery_stage(
                     client_id=sanitize_client_id(cli_args.client),
-                    hashtag=hashtag_clean,
+                    hashtag=cli_args.target,  # Pass original target with prefix
+                    analysis_type=cli_args.analysis_type,
                     analysis_mode=cli_args.analysis_mode,
                     selection_strategy=cli_args.selection_strategy,
                     sample_size=50  # Default from TI spec
@@ -515,12 +720,12 @@ def main():
                 # Update content analysis state
                 ca_state['taxonomy_discovered'] = True
                 ca_state['taxonomy_curated'] = False
-                ca_state['taxonomy_path'] = f"content_taxonomies/{hashtag_clean}_taxonomy.json"
+                ca_state['taxonomy_path'] = f"content_taxonomies/{target_sanitized}_taxonomy.json"
                 ca_state['discovery_date'] = datetime.utcnow().isoformat() + "Z"
                 save_content_analysis_state(analysis_base, ca_state)
 
                 # Display curation instructions
-                raw_discovery_path = taxonomy_dir / f"{hashtag_clean}_raw_discovery.json"
+                raw_discovery_path = taxonomy_dir / f"{target_sanitized}_raw_discovery.json"
                 display_curation_instructions(raw_discovery_path, taxonomy_path)
 
                 logger.info("Stage 2.6 complete - awaiting manual curation")
@@ -582,7 +787,8 @@ def main():
 
             summary = run_classification_stage(
                 client_id=sanitize_client_id(cli_args.client),
-                hashtag=hashtag_clean,
+                hashtag=cli_args.target,  # Pass original target with prefix
+                analysis_type=cli_args.analysis_type,
                 analysis_mode=cli_args.analysis_mode,
                 selection_strategy=cli_args.selection_strategy,
                 parallel=enable_parallel,
@@ -1302,6 +1508,157 @@ def main():
             logger.warning("Stage 6 completed but no buckets were processed")
             print("⚠️  No buckets processed in Stage 6 (all skipped)")
 
+        # ===== STAGE 7: LLM ANALYSIS - HYBRID TWO-PHASE APPROACH =====
+        logger.info("Starting Stage 7: LLM Analysis")
+        print("\n" + "="*80)
+        print("STAGE 7: LLM ANALYSIS - HYBRID TWO-PHASE APPROACH")
+        print("="*80)
+
+        # Validate API key availability
+        anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not anthropic_api_key:
+            logger.error("ANTHROPIC_API_KEY environment variable not set")
+            print("\n✗ ERROR: ANTHROPIC_API_KEY environment variable not set")
+            print("  Obtain API key from: https://console.anthropic.com/settings/keys")
+            print("  Set with: export ANTHROPIC_API_KEY='your_key_here'")
+            return 1
+
+        # Source: Pattern from Stage 3-6 (analysis_base and winning_buckets already defined)
+        # Process each winning bucket
+        stage7_summaries = {}
+        for bucket_name in winning_buckets:
+            logger.info(f"Starting Stage 7 for bucket: {bucket_name}")
+            print(f"\n--- LLM Analysis for bucket: {bucket_name} ---")
+
+            bucket_path = analysis_base / f"buckets/bucket_{bucket_name}"
+
+            try:
+                # Check if Stage 7 outputs already exist
+                llm_output_dir = bucket_path / "ml_analysis/llm"
+                complete_analysis_file = llm_output_dir / "complete_analysis.json"
+
+                if complete_analysis_file.exists():
+                    logger.info(f"Bucket {bucket_name}: Stage 7 already complete (complete_analysis.json found)")
+                    print(f"✓ Bucket {bucket_name}: LLM analysis already complete (skipping)")
+
+                    # Count existing output files for summary
+                    json_count = 0
+                    if llm_output_dir.exists():
+                        json_count = len([f for f in llm_output_dir.glob("*.json") if f.name != ".phase1_status.json"])
+
+                    stage7_summaries[bucket_name] = {
+                        "json_files_generated": json_count,
+                        "elapsed_time": 0.0  # Skipped, no time
+                    }
+                    continue
+
+                # Validate prerequisites
+                validate_stage7_prerequisites(str(bucket_path), bucket_name)
+
+                # Execute Stage 7 LLM Analysis
+                # Source: stage7_llm_analysis.py main() function at line 536
+                # Parameters: bucket_path (str), bucket (str), hashtag (str | None)
+                import time
+                start_time = time.time()
+
+                stage7_llm_analysis_main(
+                    bucket_path=str(bucket_path),  # Convert Path to str for Stage 7 API
+                    bucket=bucket_name,             # e.g., "18-33s"
+                    hashtag=cli_args.target         # From CLI args (e.g., "#nutrition")
+                )
+
+                elapsed_time = time.time() - start_time
+
+                # Validate outputs
+                validate_stage7_outputs(str(bucket_path), bucket_name)
+
+                # Count generated JSON files
+                json_count = 0
+                if llm_output_dir.exists():
+                    json_count = len([f for f in llm_output_dir.glob("*.json") if f.name != ".phase1_status.json"])
+
+                stage7_summaries[bucket_name] = {
+                    "json_files_generated": json_count,
+                    "elapsed_time": elapsed_time
+                }
+
+                logger.info(
+                    f"Bucket {bucket_name} complete: "
+                    f"{json_count} JSON files generated in {elapsed_time:.1f}s"
+                )
+                print(
+                    f"✓ Bucket {bucket_name}: {json_count} LLM analysis JSONs → "
+                    f"{elapsed_time:.1f}s"
+                )
+
+            except FileNotFoundError as e:
+                # Missing upstream file (Stage 6 JSONs or checkpoint)
+                # Source: LLMAnalysisCHILDTI.md Section 6 (Pre-Flight Validation Errors)
+                # Strategy: Skip bucket, continue pipeline
+                logger.error(f"Stage 7 prerequisite missing for bucket {bucket_name}: {e}")
+                print(f"✗ Bucket {bucket_name}: Prerequisites missing (skipping)")
+                print("   Ensure Stage 6 completed successfully for this bucket")
+                print("   Other buckets will continue processing")
+                continue
+
+            except ValueError as e:
+                # Input validation failed (invalid JSON, schema error)
+                # Source: LLMAnalysisCHILDTI.md Section 6 (Phase 1 Execution Failures)
+                # Strategy: Skip bucket, continue pipeline
+                logger.error(f"Stage 7 validation failed for bucket {bucket_name}: {e}")
+                print(f"✗ Bucket {bucket_name}: Data validation failed (skipping)")
+                print("   This indicates Stage 6 produced invalid data")
+                print("   Other buckets will continue processing")
+                continue
+
+            except RuntimeError as e:
+                # API error (401, 403, rate limit exceeded)
+                # Source: LLMAnalysisCHILDTI.md Section 6.2 (Non-Retryable API Errors)
+                # Strategy: Exit pipeline (system-wide issue)
+                logger.error(f"Stage 7 API error for bucket {bucket_name}: {e}")
+                print(f"✗ Bucket {bucket_name}: API error (exiting pipeline)")
+                print("   Check ANTHROPIC_API_KEY and account status")
+                print("   This is a system-wide issue - stopping pipeline")
+                return 4  # Exit code 4 = API authentication failure
+
+            except (IOError, OSError) as e:
+                # I/O failure (disk full, permission denied)
+                # Source: LLMAnalysisCHILDTI.md Section 6 (Phase 2 Synthesis Failures)
+                # Strategy: Exit pipeline (system-wide issue)
+                logger.error(f"Stage 7 I/O error for bucket {bucket_name}: {e}")
+                print(f"✗ Bucket {bucket_name}: I/O error (exiting pipeline)")
+                print("   Check disk space and permissions")
+                print("   This is a system-wide issue - stopping pipeline")
+                return 4  # Exit code 4 = I/O failure
+
+            except Exception as e:
+                # Unexpected error
+                logger.error(
+                    f"Stage 7 unexpected error for bucket {bucket_name}: {e}",
+                    exc_info=True
+                )
+                print(f"✗ Bucket {bucket_name} unexpected error: {e}")
+                return 99  # Exit code 99 = unexpected error
+
+        logger.info("Stage 7 completed for all buckets")
+        print("\n✓ Stage 7: LLM Analysis - COMPLETE")
+
+        # Log Stage 7 summary
+        if stage7_summaries:
+            total_jsons = sum(s['json_files_generated'] for s in stage7_summaries.values())
+            avg_time = sum(s['elapsed_time'] for s in stage7_summaries.values()) / len(stage7_summaries)
+            logger.info(
+                f"Stage 7 Summary: {total_jsons} JSON files generated "
+                f"across {len(stage7_summaries)} buckets (avg {avg_time:.1f}s per bucket)"
+            )
+            print(
+                f"Summary: {total_jsons} LLM analysis JSONs across "
+                f"{len(stage7_summaries)} buckets"
+            )
+        else:
+            logger.warning("Stage 7 completed but no buckets were processed")
+            print("⚠️  No buckets processed in Stage 7 (all skipped)")
+
         # ===== FINAL STATUS =====
         print("\n" + "="*80)
         print("PIPELINE STATUS")
@@ -1316,10 +1673,10 @@ def main():
         print("✓ Stage 4: Feature Transformation - COMPLETE")
         print("✓ Stage 5: ML Model Training - COMPLETE")
         print("✓ Stage 6: ML Analysis Generation - COMPLETE")
-        print("⧗ Stage 7: LLM Report Generation - TODO")
+        print("✓ Stage 7: LLM Analysis - COMPLETE")
         print("="*80)
         print()
-        print(f"✅ Stages 0-6 complete!")
+        print(f"✅ All stages complete!")
         print(f"   Processed {completed_videos} videos across {len(winning_buckets)} buckets")
         print(f"   Classified {summary['completed']} videos with content taxonomy")
         if stage3_summaries:
@@ -1330,11 +1687,14 @@ def main():
             print(f"   Trained {total_models} ML models across {len(stage5_summaries)} buckets")
         if stage6_summaries:
             print(f"   Generated {total_jsons} analysis JSONs across {len(stage6_summaries)} buckets")
+        if stage7_summaries:
+            total_llm_jsons = sum(s['json_files_generated'] for s in stage7_summaries.values())
+            print(f"   Generated {total_llm_jsons} LLM analysis JSONs across {len(stage7_summaries)} buckets")
         print(f"   Output location: {analysis_base}")
         print()
 
         logger.info("="*80)
-        logger.info("PIPELINE EXECUTION COMPLETE (Stages 0-6)")
+        logger.info("PIPELINE EXECUTION COMPLETE (Stages 0-7)")
         logger.info("="*80)
 
         return 0
