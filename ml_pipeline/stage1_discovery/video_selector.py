@@ -175,8 +175,16 @@ class VideoSelector:
         # Select top performers (first N videos, already sorted DESC)
         top_videos = bucket_videos[:actual_top]
 
+        # Tag top performers with is_top_performer status
+        for video in top_videos:
+            video['is_top_performer'] = True
+
         # Select bottom performers (last N videos)
         bottom_videos = bucket_videos[-actual_bottom:] if actual_bottom > 0 else []
+
+        # Tag bottom performers with is_top_performer status
+        for video in bottom_videos:
+            video['is_top_performer'] = False
 
         # Combine
         selected_videos = top_videos + bottom_videos

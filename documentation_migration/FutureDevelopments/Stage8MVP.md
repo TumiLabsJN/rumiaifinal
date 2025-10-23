@@ -56,7 +56,7 @@
 | Step | Who | Time | Details |
 |------|-----|------|---------|
 | 1. Run pipeline Stages 1-7 | Automated | Auto | Existing ML pipeline |
-| 2. Extract data + QR codes | Script | 30 sec | `python extract_creator_data.py --hashtag nutrition` → Google Sheet + 18 QR PNGs |
+| 2. Extract data + QR codes | Script | 30 sec | `python extract_creator_data.py --hashtag nutrition` → Google Sheet (with real engagement metrics) + 18 QR PNGs |
 | 3. Review data | You | 15 min | Open Google Sheet, verify accuracy, edit if needed |
 | 4. Populate Template A (x9) | You | ~3 hrs | Copy-paste from Sheet + insert 2 QR code images per report (~20 min each) |
 | 5. Export PDFs | You | 5 min | Save as PDF from InDesign/Canva |
@@ -74,7 +74,7 @@
 | Step | Who | Time | Details |
 |------|-----|------|---------|
 | 1. Run pipeline Stages 1-7 | Automated | Auto | Existing ML pipeline |
-| 2. Extract data | Script | 30 sec | `python extract_client_data.py --hashtag nutrition` → Google Sheet |
+| 2. Extract data | Script | 30 sec | `python extract_client_data.py --hashtag nutrition` → Google Sheet (with real engagement metrics) |
 | 3. Review data | You | 10 min | Open Google Sheet, verify bucket distributions, view counts, formulas |
 | 4. Populate Template B | You | 20 min | Copy-paste from Sheet into 3-page template |
 | 5. Export PDF | You | 2 min | Save as PDF |
@@ -98,7 +98,7 @@
 | Step | Who | Time | Details |
 |------|-----|------|---------|
 | 1. Run pipeline Stages 1-7 for competitor | Automated | Auto | Existing ML pipeline |
-| 2. Extract competitor data | Script | 30 sec | `python extract_competitor_data.py --competitor @rival_brand` → Google Sheet |
+| 2. Extract competitor data | Script | 30 sec | `python extract_competitor_data.py --competitor @rival_brand` → Google Sheet (with real engagement metrics) |
 | 3. Review benchmarks | You | 10 min | Open Google Sheet, verify competitor vs client gaps |
 | 4. Populate Template C | You | 25 min | Copy-paste from Sheet into Template C |
 | 5. Export PDF | You | 2 min | Save as PDF |
@@ -597,6 +597,106 @@ def generate_qr_codes(video_data, output_dir, formula_name):
 
 ---
 
+#### 0.5.5: Engagement Rate Calculation
+
+**Function**: `calculate_engagement_metrics(video_metadata)`
+
+**Purpose**: Calculate real engagement rate from Apify metadata (views, likes, comments, shares, saves)
+
+**When to Use**:
+- All reports (Templates 1-4): Show real engagement performance alongside view metrics
+- Replaces "Industry Benchmark Mapping" estimation method
+
+**Input Parameters**:
+- `video_metadata` (dict): Video metadata from `unified_analysis/{video_id}.json`
+  - Source location: Lines 8-12 of metadata section
+  - Required fields: `views`, `likes`, `comments`, `shares`, `saves`
+
+**Process**:
+1. Load metadata from `unified_analysis/{video_id}.json` → `metadata` (lines 8-12)
+2. Extract: `views`, `likes`, `comments`, `shares`, `saves`
+3. Calculate total interactions: likes + comments + shares + saves
+4. Calculate engagement rate: (total_interactions / views) × 100%
+5. Calculate individual metric rates (likes_rate, comments_rate, shares_rate, saves_rate)
+
+**Example Implementation**:
+```python
+def calculate_engagement_metrics(video_metadata):
+    """
+    Calculate engagement rate from Apify metadata.
+
+    Source: unified_analysis/{video_id}.json → metadata (lines 8-12)
+
+    Returns dict with engagement rates and interaction counts.
+    """
+    views = video_metadata.get('views', 0)
+    if views == 0:
+        return {
+            'engagement_rate': 0.0,
+            'total_interactions': 0,
+            'likes_rate': 0.0,
+            'comments_rate': 0.0,
+            'shares_rate': 0.0,
+            'saves_rate': 0.0
+        }
+
+    likes = video_metadata.get('likes', 0)
+    comments = video_metadata.get('comments', 0)
+    shares = video_metadata.get('shares', 0)
+    saves = video_metadata.get('saves', 0)
+
+    total_interactions = likes + comments + shares + saves
+    engagement_rate = (total_interactions / views) * 100
+
+    return {
+        'engagement_rate': round(engagement_rate, 2),  # e.g., 1.23%
+        'total_interactions': total_interactions,
+        'likes_rate': round((likes / views) * 100, 2),
+        'comments_rate': round((comments / views) * 100, 2),
+        'shares_rate': round((shares / views) * 100, 2),
+        'saves_rate': round((saves / views) * 100, 2)
+    }
+```
+
+**Output Format**:
+```python
+{
+    'engagement_rate': 1.23,  # Percentage
+    'total_interactions': 2507,  # Sum of all engagement actions
+    'likes_rate': 0.86,  # Percentage
+    'comments_rate': 0.03,  # Percentage
+    'shares_rate': 0.12,  # Percentage
+    'saves_rate': 0.11  # Percentage
+}
+```
+
+**Usage in Reports**:
+- **Template 1 (Client)**: Show engagement alongside views in performance by duration table
+- **Template 2 (Creator)**: Show real engagement comparison (top vs bottom cluster)
+- **Template 3 (Competitor)**: Show engagement in bucket performance comparison
+- **Template 4 (Multi-Competitor)**: Show engagement in cross-competitor performance matrix
+
+**Data Source**:
+```json
+// From unified_analysis/{video_id}.json → metadata (lines 8-12)
+{
+  "metadata": {
+    "views": 223700,
+    "likes": 1923,
+    "comments": 65,
+    "shares": 266,
+    "saves": 253
+  }
+}
+```
+
+**Comparison to Industry Benchmark Mapping** (Previous Method):
+- **OLD**: Estimated engagement rates based on view performance tiers (6-9% for top, 2-4% for bottom)
+- **NEW**: Real calculated engagement from actual TikTok interaction data
+- **Benefit**: Data integrity, transparency, no estimation needed
+
+---
+
 ### Section 1: Designer Templates (8 days)
 
 | # | Task | Owner | Effort | Notes |
@@ -679,9 +779,19 @@ Hashtag: [#nutrition]
 Confidence: [87%]
 
 --- THE PROOF ---
-Videos using this pattern: [8.4%] avg engagement
-Videos NOT using this: [3.1%] avg engagement
-Engagement difference: [2.7x MORE ENGAGEMENT]
+PERFORMANCE COMPARISON:
+
+Videos using this pattern (Top Cluster):
+• Average Views: [620K]
+• Average Engagement: [1.2%] ([7,440] interactions/video)
+
+Videos NOT using this pattern (Bottom Cluster):
+• Average Views: [380K]
+• Average Engagement: [0.8%] ([3,040] interactions/video)
+
+RESULTS:
+→ [1.6x] MORE VIEWS (63% higher reach)
+→ [1.5x] MORE ENGAGEMENT (50% higher resonance)
 
 --- CONTRASTIVE ANALYSIS ---
 Top performers do THIS:
@@ -740,98 +850,39 @@ python extract_creator_data.py --client acme --hashtag nutrition --mode top --st
 **Purpose**: Extract hashtag intelligence dashboard data for client executive report
 
 **Input**:
-- Stage 1 `winner_analysis.json` (bucket distributions)
-- Stage 1 `cluster_analytics.json` (duration stats)
+- Cluster Config: `/config/hashtag_clusters/{target}.json` (primary hashtag)
+- Cluster Analytics: `/data/clients/{client}/hashtag/{target}/cluster_analytics.json` (total scraped videos, duration stats)
+- Winner Analysis: `/data/clients/{client}/hashtag/{target}/{mode}_{strategy}/winner_analysis.json` (top 3 buckets, percentages)
+- Selection Manifest: `/data/clients/{client}/hashtag/{target}/{mode}_{strategy}/selection_manifest.json` (top/bottom performer counts)
 - Stage 6 `rf_video_analysis.json` (ML metrics)
 - Stage 7 `winning_formulas.json` (formula names for Page 3)
 
 **Output Format**:
-```
-=== PAGE 1: SCALE OF ANALYSIS ===
-Hashtag: [#nutrition]
-Analysis Period: [Past 2-3 months]
-Videos Analyzed: [480]
-Analysis Mode: [Top performers (engagement-based)]
 
-Total Video Duration: [6.2 hours of content]
-Duration Range: [0-120 seconds (8 distinct buckets)]
-Content Elements Tracked: [60+ features per video]
+Google Sheet with 3 tabs containing data for client executive report:
 
---- ANALYSIS METHOD ---
-Multi-dimensional machine learning and AI content analysis:
+**Tab 1: Page_1_Scale_of_Analysis**
+- Hashtag (from cluster config)
+- Analysis period (static text)
+- Total videos analyzed (from cluster analytics)
+- Winning buckets (3) with percentages (from winner analysis)
+- Top/bottom performer counts (from selection manifest)
+- Total video duration (calculated)
+- Analysis method description (static text)
 
-• Visual & Behavioral Pattern Recognition - Advanced ML analyzed 60+ features
-  per video (eye contact, pacing, energy levels, scene transitions, gesture
-  frequency) to identify what separates top performers from bottom performers
+**Tab 2: Page_2_Hashtag_Intelligence**
+- Duration distribution (8 buckets with percentages)
+- Performance metrics (3 winning buckets: views + engagement)
+- Content intelligence (categories, hooks, pain points, keywords from Stage 2.7)
+- Creator profile priorities (tiered list based on winning buckets)
 
-• Content & Messaging Intelligence - AI-powered analysis of video transcripts
-  and captions identified trending hook strategies, audience pain points,
-  keywords, and engagement tactics unique to #nutrition content
+**Tab 3: Page_3_Your_Reports**
+- Report distribution (9 formulas across 3 buckets)
+- Formula names per bucket (from Stage 7 winning_formulas.json)
+- Report contents description (static text)
 
-• Formula Discovery - K-Means clustering revealed 3-5 distinct creative strategies
-  per video length, validated by Random Forest classification models
-
-Result: 9 proven formulas combining both "how to present" (visuals, pacing)
-and "what to say" (hooks, messaging) for complete creative guidance.
-
-=== PAGE 2: HASHTAG INTELLIGENCE DASHBOARD ===
-
---- SECTION 1: DURATION DISTRIBUTION ---
-0-3s:   [8%]
-3-9s:   [12%]
-9-13s:  [15%]
-13-18s: [22%] ← HIGH VOLUME
-18-33s: [28%] ← HIGHEST VOLUME
-33-60s: [12%]
-60-90s: [2%]
-90-120s: [1%]
-
-Key Insight: [65% of #nutrition content is 13-33s]
-
---- SECTION 2: PERFORMANCE BY DURATION ---
-0-3s:    [125K] avg views  ⭐⭐
-3-9s:    [210K] avg views  ⭐⭐
-9-13s:   [380K] avg views  ⭐⭐⭐
-13-18s:  [520K] avg views  ⭐⭐⭐⭐
-18-33s:  [490K] avg views  ⭐⭐⭐⭐
-33-60s:  [310K] avg views  ⭐⭐⭐
-60-90s:  [180K] avg views  ⭐⭐
-90-120s: [95K] avg views   ⭐
-
-Sweet Spot: [13-33s (highest views + sufficient volume)]
-
---- SECTION 3: CREATOR PROFILE PRIORITIES ---
-TIER 1 (Immediate Hire):
-• [13-18s Creators (highest performance: 520K avg views)]
-• [18-33s Creators (strong performance + volume: 490K avg views)]
-• [33-60s Creators (proven success: 310K avg views)]
-
-Note: These are the 3 winning buckets where top performers cluster most.
-Your creative reports focus exclusively on these durations.
-
-=== PAGE 3: YOUR CREATIVE REPORTS ===
-
---- REPORT DISTRIBUTION ---
-Duration Bucket 13-18s:
-  • Formula 1: [The Question Hook Formula]
-  • Formula 2: [The Fast-Paced Product Demo]
-  • Formula 3: [The Myth-Busting Reveal]
-
-Duration Bucket 18-33s:
-  • Formula 4: [The Transformation Story]
-  • Formula 5: [The Ingredient Deep-Dive]
-  • Formula 6: [The Side-by-Side Comparison]
-
-Duration Bucket 33-60s:
-  • Formula 7: [The Step-by-Step Tutorial]
-  • Formula 8: [The Expert Interview Format]
-  • Formula 9: [The Before-After Journey]
-
-Each 2-page report includes:
-  • Proof with numbers (engagement differences)
-  • Second-by-second execution guide
-  • Pre-post checklist
-```
+**For detailed report template structure and dynamic field mappings, see:**
+→ `Stage8MVP_Reports.md` Section "1. Hashtag → Client (Executive Report)"
 
 **CLI Usage**:
 ```bash
@@ -852,10 +903,13 @@ python extract_client_data.py --client acme --hashtag nutrition --mode top --str
 
 **Purpose**: Extract competitor benchmarking data for single or comparison reports
 
+**Engagement Metrics**: Uses `calculate_engagement_metrics()` (Section 0.5.5) to calculate real engagement rates from Apify metadata for both competitor and client videos
+
 **Input**:
 - Competitor Stage 7 `winning_formulas.json`
 - Competitor Stage 6 ML analysis JSONs
 - Competitor Stage 1 `winner_analysis.json` (bucket distribution)
+- Competitor Stage 2 metadata (`views`, `likes`, `comments`, `shares`, `saves`) for engagement calculation
 - Competitor metadata (handle, posting frequency, top hashtags)
 - Client baseline data (for benchmarking)
 

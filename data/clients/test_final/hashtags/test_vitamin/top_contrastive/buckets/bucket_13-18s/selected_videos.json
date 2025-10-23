@@ -100,7 +100,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7558703458434452748",
@@ -202,7 +203,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7550349543510904086",
@@ -315,7 +317,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7543543150158122247",
@@ -418,7 +421,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7558884835939372296",
@@ -514,7 +518,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7545969809784147206",
@@ -619,7 +624,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7559395311899184391",
@@ -744,7 +750,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7545618454397668613",
@@ -861,7 +868,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7559272505802755346",
@@ -965,7 +973,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7550600508977794322",
@@ -1055,7 +1064,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7549787084500864274",
@@ -1157,7 +1167,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7560371659669130551",
@@ -1253,7 +1264,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7554027348580912440",
@@ -1348,7 +1360,8 @@
       ],
       "source_runs": [
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7561051157213252878",
@@ -1457,7 +1470,8 @@
       "source_runs": [
         2,
         1
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7560492860504542495",
@@ -1716,7 +1730,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7529728671326719287",
@@ -1817,7 +1832,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7556109799247711543",
@@ -1933,7 +1949,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7527778449218424094",
@@ -2075,7 +2092,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7529376976470101304",
@@ -2195,7 +2213,8 @@
       ],
       "source_runs": [
         1
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7546651178247916813",
@@ -2298,7 +2317,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7553533122717961490",
@@ -2413,7 +2433,8 @@
       ],
       "source_runs": [
         1
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7560992348897840396",
@@ -2521,7 +2542,8 @@
       ],
       "source_runs": [
         1
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7560986657982336270",
@@ -2622,7 +2644,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": true
     },
     {
       "id": "7554850198338555167",
@@ -2733,7 +2756,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": false
     },
     {
       "id": "7560953019978861838",
@@ -2818,7 +2842,8 @@
       ],
       "source_runs": [
         1
-      ]
+      ],
+      "is_top_performer": false
     },
     {
       "id": "7560964241084271903",
@@ -2958,7 +2983,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": false
     },
     {
       "id": "7561091261822799117",
@@ -3068,7 +3094,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": false
     },
     {
       "id": "7560902097986768141",
@@ -3164,7 +3191,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": false
     },
     {
       "id": "7560904188645985567",
@@ -3274,7 +3302,8 @@
       "source_runs": [
         1,
         2
-      ]
+      ],
+      "is_top_performer": false
     }
   ],
   "selection_date": "2025-10-14T16:52:54.608009+00:00"

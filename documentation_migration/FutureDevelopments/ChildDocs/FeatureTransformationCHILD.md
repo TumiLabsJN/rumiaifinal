@@ -24,10 +24,10 @@ Stage 3 (Feature Aggregation) produces a single CSV with raw temporal window fea
 Stage 3: Feature Aggregation
    ↓ Output: ml_analysis/aggregated_features.csv (N videos, 65-215 features depending on bucket)
 Stage 4: Feature Transformation (THIS COMPONENT)
-   ↓ Output: 13 transformation files per bucket
-      - 1 Video-Level RF file (~178 features)
-      - 6 Window-Level RF files (22 features each)
-      - 6 Window-Level K-Means files (39 features each)
+   ↓ Output: Transformation files per bucket (varies by window count)
+      - Formula: 1 + 3N files (where N = window count)
+      - Reference: config.bucket_definitions.get_stage4_output_count(bucket)
+      - Example bucket_18-33s: 19 files (1 Video RF + 6 Window RF + 6 Window KM + 6 Scalers)
 Stage 5: ML Model Training
 ```
 
@@ -35,7 +35,7 @@ Stage 5: ML Model Training
 
 - [ ] Process N=100 videos (bucket 18-33s) in < 30 seconds (target) / < 5 minutes (timeout)
 - [ ] Peak memory usage < 500 MB (warn at 1 GB, fail at 2 GB)
-- [ ] Generate all 13 transformation files with correct schemas (no missing columns)
+- [ ] Generate all transformation files with correct schemas (count varies by bucket, see config.bucket_definitions.get_stage4_output_count)
 - [ ] All K-Means scaled columns are in [0-1] range (validated before save)
 - [ ] Fail-fast on invalid input data (NaN, missing columns, out-of-range values)
 - [ ] No rows dropped during transformation (input N = output N)
@@ -74,20 +74,13 @@ Pipeline 2: Window-Level RF Transformation (6 iterations for bucket 18-33s)
    ↓
 Pipeline 3: Window-Level K-Means Transformation (6 iterations)
    - For each window (hook, middle_1-4, closing):
-     - Log + scale (11 features): scene_count, word_count, gesture_count, object_count, person_count,
-       overlay_unique_count, shortest_scene, longest_scene, scene_duration_variance, energy_variance, gaze_variance
-       → {feature}_log, {feature}_scaled (22 output columns)
-     - Scale [0-1] (7 features): average_face_size, speech_coverage, energy_level, energy_max,
-       pitch_scatter_ratio, eye_contact_rate, emotion_consistency
-       → {feature}_scaled (7 output columns)
+     - Log + scale using sklearn MinMaxScaler (11 features → 11 scaled columns)
+     - Scale [0-1] using sklearn MinMaxScaler (7 features → 7 scaled columns)
      - Shift + scale (1 feature): emotional_valence [-1,1] → [0,1]
-       → emotional_valence_scaled (1 output column)
      - Label encode (1 feature): has_captions True/False → 0/1
-       → has_captions_encoded (1 output column)
      - One-hot (1 feature): dominant_emotion_id 1-7 → 7 binary columns
-       → joy, sadness, anger, fear, disgust, surprise, neutral (7 output columns)
-     - Drop original features, keep only transformed
-     - Output: {window}_km_transformed.csv (39 features)
+     - Output CSV: {window}_km_transformed.csv (27 features)
+     - Output PKL: {window}_scalers.pkl (fitted MinMaxScaler objects for inference)
    ↓
 Output Validation: Check column counts, scaled ranges [0-1], no NaNs introduced
    ↓

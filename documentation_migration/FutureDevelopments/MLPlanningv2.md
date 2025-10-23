@@ -1632,6 +1632,11 @@ calculated_metadata = {
 
 **Input**: `ml_analysis/aggregated_features.csv` (bucket-specific feature count: ~65-215 features)
 
+**Output Count** (varies by bucket): Reference `config.bucket_definitions.get_stage4_output_count(bucket)` for counts
+- **Formula**: `1 + 3N` files (N = window count)
+- **Example bucket_18-33s**: 19 files (1 Video RF + 6 Window RF + 6 Window KM + 6 Scalers)
+- See FeatureTransformationCHILD.md for schemas
+
 **Architectural Decision**: This stage creates **3 transformation pipelines** to support:
 1. **Video-Level RF** (cross-window patterns)
 2. **Window-Level RF** (within-window validation)

@@ -22,6 +22,8 @@ import threading
 from datetime import datetime
 from typing import Dict, List, Tuple, Any
 from pathlib import Path
+from sklearn.preprocessing import MinMaxScaler
+import joblib
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -89,6 +91,7 @@ def get_expected_output_files(bucket: str) -> List[str]:
     for window in windows:
         files.append(f'{window}_rf_transformed.csv')
         files.append(f'{window}_km_transformed.csv')
+        files.append(f'{window}_scalers.pkl')  # NEW
     return files
 
 
@@ -414,7 +417,8 @@ def transform_video_level_rf(
     df: pd.DataFrame,
     bucket: str,
     strategy: str,
-    video_count: int
+    video_count: int,
+    bucket_path: str = None
 ) -> pd.DataFrame:
     """
     Transform aggregated features for Video-Level Random Forest.
@@ -472,8 +476,39 @@ def transform_video_level_rf(
 
     # 5. Add target variable is_top_performer (contrastive strategy only)
     if strategy == 'contrastive':
-        top_count = int(video_count * 0.8)
-        df_rf['is_top_performer'] = (df_rf.index < top_count).astype(int)
+        # Read performer status from selected_videos.json (Stage 1 output)
+        if bucket_path:
+            import json
+            selected_videos_path = os.path.join(bucket_path, "selected_videos.json")
+
+            if os.path.exists(selected_videos_path):
+                with open(selected_videos_path) as f:
+                    selected = json.load(f)
+
+                # Create mapping: video_id → is_top_performer
+                performer_map = {
+                    str(v['id']): v.get('is_top_performer', True)
+                    for v in selected['videos']
+                }
+                df_rf['is_top_performer'] = df_rf['video_id'].astype(str).map(performer_map).fillna(1).astype(int)
+
+                # Log distribution for verification
+                top_count = (df_rf['is_top_performer'] == 1).sum()
+                bottom_count = (df_rf['is_top_performer'] == 0).sum()
+                logger.info(
+                    f"Loaded performer status from selected_videos.json: "
+                    f"{top_count} top ({top_count/len(df_rf)*100:.1f}%), "
+                    f"{bottom_count} bottom ({bottom_count/len(df_rf)*100:.1f}%)"
+                )
+            else:
+                logger.warning(f"selected_videos.json not found at {selected_videos_path}, using fallback labeling")
+                top_count = int(len(df_rf) * 0.8)
+                df_rf['is_top_performer'] = (df_rf.index < top_count).astype(int)
+        else:
+            # Fallback for old code paths without bucket_path
+            logger.warning("bucket_path not provided to transform_video_level_rf, using fallback labeling")
+            top_count = int(len(df_rf) * 0.8)
+            df_rf['is_top_performer'] = (df_rf.index < top_count).astype(int)
 
     # 6. Compute Cross-Window Delta Features (NEW)
     from config.bucket_definitions import BUCKET_WINDOWS
@@ -532,7 +567,8 @@ def transform_window_level_rf(
     df: pd.DataFrame,
     window_type: str,
     strategy: str,
-    video_count: int
+    video_count: int,
+    bucket_path: str = None
 ) -> pd.DataFrame:
     """
     Transform features for Window-Level Random Forest (single window).
@@ -559,8 +595,30 @@ def transform_window_level_rf(
 
     # Add target variable is_top_performer (contrastive strategy only)
     if strategy == 'contrastive':
-        top_count = int(video_count * 0.8)
-        df_window['is_top_performer'] = (df.index < top_count).astype(int)
+        # Read performer status from selected_videos.json (Stage 1 output)
+        if bucket_path:
+            import json
+            selected_videos_path = os.path.join(bucket_path, "selected_videos.json")
+
+            if os.path.exists(selected_videos_path):
+                with open(selected_videos_path) as f:
+                    selected = json.load(f)
+
+                # Create mapping: video_id → is_top_performer
+                performer_map = {
+                    str(v['id']): v.get('is_top_performer', True)
+                    for v in selected['videos']
+                }
+                df_window['is_top_performer'] = df['video_id'].astype(str).map(performer_map).fillna(1).astype(int)
+            else:
+                logger.warning(f"selected_videos.json not found at {selected_videos_path}, using fallback labeling")
+                top_count = int(len(df) * 0.8)
+                df_window['is_top_performer'] = (df.index < top_count).astype(int)
+        else:
+            # Fallback for old code paths without bucket_path
+            logger.warning("bucket_path not provided to transform_window_level_rf, using fallback labeling")
+            top_count = int(len(df) * 0.8)
+            df_window['is_top_performer'] = (df.index < top_count).astype(int)
 
     # NOTE: NO encoding transformations here
     # - has_captions stays Boolean (RF handles Boolean natively)
@@ -580,18 +638,40 @@ def transform_window_level_rf(
 def transform_window_level_kmeans(
     df: pd.DataFrame,
     window_type: str
-) -> pd.DataFrame:
+) -> Tuple[pd.DataFrame, Dict[str, Dict]]:
     """
     Transform features for Window-Level K-Means (single window).
 
-    Source: FeatureTransformationTI.md Section 4.4 (Lines 926-1032)
+    Source: FeatureTransformationTI.md Section 4.4
 
     Args:
         df: pandas DataFrame from aggregated_features.csv
         window_type: str, window identifier (e.g., "hook", "middle_1", "closing")
 
     Returns:
-        pandas DataFrame with 27 columns (all numerical, scaled [0-1])
+        Tuple[pd.DataFrame, Dict[str, Dict]]:
+            - DataFrame: Transformed K-Means features (27 columns, all numerical [0-1])
+            - Dict: Scaler metadata with structure:
+                {
+                    'fitted': {
+                        'scene_count': MinMaxScaler(...),  # Fitted scaler objects
+                        'word_count': MinMaxScaler(...),
+                        # ... up to 18 scalers (features with variance > 0)
+                    },
+                    'constant': [
+                        'overlay_unique_count',  # Features with zero variance
+                        # ... list of constant features (all same value)
+                    ]
+                }
+
+    Example:
+        >>> df_hook_km, scalers = transform_window_level_kmeans(df, 'hook')
+        >>> print(len(scalers['fitted']))     # e.g., 16 fitted scalers
+        >>> print(scalers['constant'])         # e.g., ['overlay_unique_count', 'gaze_variance']
+
+    Note:
+        Features with zero variance (max == min) cannot have scalers fitted.
+        These are tracked in 'constant' list and scaled to 0.5 (midpoint).
     """
     # Extract window-specific columns only
     window_prefix = f'{window_type}_'
@@ -601,6 +681,12 @@ def transform_window_level_kmeans(
 
     # Remove window prefix from column names
     df_km.columns = [c.replace(window_prefix, '') for c in df_km.columns]
+
+    # Initialize scaler storage with metadata structure
+    scaler_result = {
+        'fitted': {},      # MinMaxScaler objects for features with variance
+        'constant': []     # List of features with zero variance
+    }
 
     # 1. Log1p + MinMax Scale for count/variance features (11 features → 11 output columns)
     log_scale_features = [
@@ -613,16 +699,20 @@ def transform_window_level_kmeans(
             # Apply log1p (log(1+x) to handle zeros)
             df_km[feature] = np.log1p(df_km[feature])
 
-            # MinMax scale to [0,1]
+            # Fit scaler
+            scaler = MinMaxScaler()
             min_val = df_km[feature].min()
             max_val = df_km[feature].max()
-            if max_val > min_val:
-                df_km[f'{feature}_scaled'] = (df_km[feature] - min_val) / (max_val - min_val)
-            else:
-                # All values same (variance=0), set to midpoint
-                df_km[f'{feature}_scaled'] = 0.5
 
-            # Drop original column, keep only scaled version
+            if max_val > min_val:
+                scaler.fit(df_km[[feature]])
+                df_km[f'{feature}_scaled'] = scaler.transform(df_km[[feature]]).flatten()
+                scaler_result['fitted'][feature] = scaler  # Save to 'fitted' dict
+            else:
+                # Constant feature
+                df_km[f'{feature}_scaled'] = 0.5
+                scaler_result['constant'].append(feature)  # Track constant features
+
             df_km.drop(columns=[feature], inplace=True)
 
     # 2. MinMax Scale only for normalized features (7 features → 7 output columns)
@@ -632,13 +722,17 @@ def transform_window_level_kmeans(
     ]
     for feature in scale_features:
         if feature in df_km.columns:
-            # MinMax scale to [0,1] (already in [0,1] range, but scale for consistency)
+            scaler = MinMaxScaler()
             min_val = df_km[feature].min()
             max_val = df_km[feature].max()
+
             if max_val > min_val:
-                df_km[f'{feature}_scaled'] = (df_km[feature] - min_val) / (max_val - min_val)
+                scaler.fit(df_km[[feature]])
+                df_km[f'{feature}_scaled'] = scaler.transform(df_km[[feature]]).flatten()
+                scaler_result['fitted'][feature] = scaler  # Save to 'fitted' dict
             else:
                 df_km[f'{feature}_scaled'] = 0.5
+                scaler_result['constant'].append(feature)  # Track constant features
 
             df_km.drop(columns=[feature], inplace=True)
 
@@ -666,7 +760,7 @@ def transform_window_level_kmeans(
         f"Window-Level K-Means ({window_type}) transformation complete: "
         f"{len(df_km)} rows, {len(df_km.columns)} columns (expect 27)"
     )
-    return df_km
+    return df_km, scaler_result  # Returns {'fitted': {...}, 'constant': [...]}
 
 
 # ============================================================================
@@ -776,12 +870,15 @@ def validate_outputs_and_checkpoint(
         assert not df_window_km.isnull().any().any(), \
             f"{window} K-Means contains NaN values"
 
-        # Validate all _scaled columns are in [0,1] range
+        # Validate all _scaled columns are in [0,1] range (with tolerance for float precision)
         scaled_cols = [c for c in df_window_km.columns if c.endswith('_scaled')]
         for col in scaled_cols:
-            assert df_window_km[col].between(0, 1).all(), \
+            min_val = df_window_km[col].min()
+            max_val = df_window_km[col].max()
+            # Allow small floating point error (1e-10 tolerance)
+            assert min_val >= -1e-10 and max_val <= 1 + 1e-10, \
                 f"{window} K-Means column {col} has values outside [0,1]: " \
-                f"{df_window_km[col].min()}-{df_window_km[col].max()}"
+                f"{min_val}-{max_val}"
 
     # 5. Write checkpoint
     checkpoint = {
@@ -878,7 +975,7 @@ def run_stage4_transformation(
     # Step 2: Transform Video-Level RF
     logger.info("Transforming features for Video-Level Random Forest")
     rf_start = time.time()
-    df_rf = transform_video_level_rf(df, bucket, strategy, video_count)
+    df_rf = transform_video_level_rf(df, bucket, strategy, video_count, bucket_path)
     metrics.record_transformation_time('video_rf', time.time() - rf_start)
 
     # Step 3: Transform Window-Level RF
@@ -889,7 +986,7 @@ def run_stage4_transformation(
     wrf_start = time.time()
     window_rf_dfs = {}
     for window in windows:
-        df_window_rf = transform_window_level_rf(df, window, strategy, video_count)
+        df_window_rf = transform_window_level_rf(df, window, strategy, video_count, bucket_path)
         window_rf_dfs[window] = df_window_rf
     metrics.record_transformation_time('window_rf', time.time() - wrf_start)
     logger.info(f"Window-Level RF complete: {len(windows)} files ({time.time() - wrf_start:.1f}s)")
@@ -898,38 +995,110 @@ def run_stage4_transformation(
     logger.info("Transforming features for Window-Level K-Means")
     km_start = time.time()
     window_km_dfs = {}
+    window_scalers = {}  # NEW
     for window in windows:
-        df_window_km = transform_window_level_kmeans(df, window)
+        df_window_km, scalers = transform_window_level_kmeans(df, window)  # MODIFIED
         window_km_dfs[window] = df_window_km
+        window_scalers[window] = scalers  # NEW
     metrics.record_transformation_time('window_km', time.time() - km_start)
     logger.info(f"Window-Level K-Means complete: {len(windows)} files ({time.time() - km_start:.1f}s)")
+
+    # Step 4.5: Save scaler files BEFORE validation
+    logger.info("Saving fitted scalers for inference")
+    scaler_save_start = time.time()
+    window_scaler_paths = {}  # Track paths for output_files dict
+
+    # Ensure output directory exists
+    output_dir = os.path.join(bucket_path, 'ml_analysis')
+    os.makedirs(output_dir, exist_ok=True)
+
+    for window in windows:
+        scaler_path = os.path.join(output_dir, f'{window}_scalers.pkl')
+
+        # Save scaler dict with metadata
+        import sklearn  # Import to get version
+
+        scaler_metadata = {
+            'version': '1.0',  # Format version for future compatibility
+            'sklearn_version': sklearn.__version__,  # Track sklearn version for compatibility
+            'scalers': window_scalers[window]['fitted'],        # Translation from internal 'fitted'
+            'constant_features': window_scalers[window]['constant']  # Translation from internal 'constant'
+        }
+
+        # Save with error handling
+        try:
+            joblib.dump(scaler_metadata, scaler_path)
+            window_scaler_paths[window] = scaler_path  # Store path for output_files dict
+            logger.debug(f"Successfully dumped scaler metadata to {scaler_path}")
+        except Exception as e:
+            logger.error(f"Failed to save {window}_scalers.pkl: {e}")
+            logger.error(f"Error details: {type(e).__name__}, Path: {scaler_path}")
+            raise IOError(f"Scaler save failed for {window}: {e}") from e
+
+        # Post-save validation - verify immediately after saving
+        try:
+            loaded = joblib.load(scaler_path)
+            assert 'version' in loaded, f"{window}_scalers.pkl missing version"
+            assert 'sklearn_version' in loaded, f"{window}_scalers.pkl missing sklearn_version"
+            assert 'scalers' in loaded, f"{window}_scalers.pkl missing scalers"
+            assert 'constant_features' in loaded, f"{window}_scalers.pkl missing constant_features"
+            assert isinstance(loaded['scalers'], dict), f"{window}_scalers.pkl scalers not a dict"
+
+            scaler_count = len(loaded['scalers'])
+            constant_count = len(loaded['constant_features'])
+            file_size_kb = os.path.getsize(scaler_path) / 1024
+            logger.info(
+                f"  ✓ Saved {window}_scalers.pkl: {scaler_count} fitted scalers, "
+                f"{constant_count} constant features, sklearn {loaded['sklearn_version']}, {file_size_kb:.1f} KB"
+            )
+        except Exception as e:
+            logger.error(f"Failed to validate {window}_scalers.pkl: {e}")
+            # Fail-fast approach - raise error immediately
+            # Partial .pkl files remain on disk for debugging
+            # User should delete ml_analysis/ directory and re-run Stage 4
+            raise IOError(f"Scaler validation failed for {window}: {e}") from e
+
+    # Update metrics to include scaler files
+    scaler_elapsed = time.time() - scaler_save_start
+    metrics.record_transformation_time('scaler_save', scaler_elapsed)
+    logger.info(f"Scaler saving complete: {len(windows)} files ({scaler_elapsed:.1f}s)")
 
     # Step 5: Collect all output files into dict
     output_files = {'rf_transformed.csv': df_rf}
     for window in windows:
         output_files[f'{window}_rf_transformed.csv'] = window_rf_dfs[window]
         output_files[f'{window}_km_transformed.csv'] = window_km_dfs[window]
+        output_files[f'{window}_scalers.pkl'] = window_scaler_paths[window]  # Add scaler PATHS
 
     # Step 6: Validate outputs and write checkpoint
     logger.info("Validating output schemas")
     validate_outputs_and_checkpoint(output_files, bucket, len(df), bucket_path)
 
-    # Step 7: Write output files to disk
-    logger.info("Writing output files to disk")
+    # Step 7: Write CSV output files to disk
+    logger.info("Writing CSV files to disk")
     output_dir = os.path.join(bucket_path, 'ml_analysis')
-    os.makedirs(output_dir, exist_ok=True)
+    # Note: os.makedirs already called in Step 4.5
 
     io_start = time.time()
+    csv_count = 0
     for filename, df_output in output_files.items():
+        # Skip .pkl files (already saved in Step 4.5)
+        if filename.endswith('.pkl'):
+            continue
+
         output_path = os.path.join(output_dir, filename)
         df_output.to_csv(output_path, index=False)
         file_size_kb = os.path.getsize(output_path) / 1024
         logger.info(f"  Wrote {filename}: {file_size_kb:.1f} KB")
+        csv_count += 1
+
     metrics.record_transformation_time('file_io', time.time() - io_start)
-    logger.info(f"File I/O complete: {len(output_files)} files ({time.time() - io_start:.1f}s)")
+    logger.info(f"CSV file I/O complete: {csv_count} files ({time.time() - io_start:.1f}s)")
 
     # Step 8: Finalize metrics and log summary
     metrics.record_output(len(output_files), len(df_rf.columns))
+    logger.info(f"METRIC: scaler_file_count={len(windows)}")  # Track scaler count
+    logger.info(f"METRIC: total_output_files={len(output_files)} (CSVs + scalers)")
     final_metrics = metrics.finalize()
 
     elapsed = final_metrics['stage_4_duration_seconds']

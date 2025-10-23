@@ -5,14 +5,15 @@ SINGLE SOURCE OF TRUTH for temporal window structure across all stages.
 
 Used by:
 - Stage 3: Feature Aggregation (aggregates windows into features)
-- Stage 4: Feature Transformation (creates window-specific transformed CSVs)
+- Stage 4: Feature Transformation (creates window-specific transformed CSVs + scalers)
 - Stage 5: ML Model Training (trains models per window)
 - Stage 6: ML Analysis Generation (generates JSONs per window)
 - Stage 7: LLM Analysis (analyzes windows)
+- Documentation: Reference get_stage4_output_count() instead of hardcoding file counts
 
 DO NOT DUPLICATE: All stages should import from this file.
 
-Last Updated: 2025-01-28
+Last Updated: 2025-10-23 (Added get_stage4_output_count for scaler tracking)
 """
 
 # Bucket-specific window configurations
@@ -83,3 +84,53 @@ def get_all_buckets() -> list:
         ['0-3s', '3-9s', '9-13s', '13-18s', '18-33s', '33-60s', '60-90s', '90-120s']
     """
     return list(BUCKET_WINDOWS.keys())
+
+
+def get_stage4_output_count(bucket: str) -> dict:
+    """
+    Get expected Stage 4 output file counts for a bucket.
+
+    Stage 4 (Feature Transformation) produces:
+    - 1 Video-Level RF CSV (rf_transformed.csv)
+    - N Window-Level RF CSVs ({window}_rf_transformed.csv)
+    - N Window-Level K-Means CSVs ({window}_km_transformed.csv)
+    - N Scaler PKL files ({window}_scalers.pkl)
+
+    Total = 1 + 3N, where N = number of windows
+
+    Args:
+        bucket: Duration bucket (e.g., '18-33s')
+
+    Returns:
+        Dictionary with file counts:
+        {
+            'video_rf_csv': 1,
+            'window_rf_csv': N,
+            'window_km_csv': N,
+            'scaler_pkl': N,
+            'total_csv': 1 + 2N,
+            'total_files': 1 + 3N
+        }
+
+    Example:
+        >>> get_stage4_output_count('18-33s')
+        {'video_rf_csv': 1, 'window_rf_csv': 6, 'window_km_csv': 6,
+         'scaler_pkl': 6, 'total_csv': 13, 'total_files': 19}
+
+        >>> get_stage4_output_count('13-18s')
+        {'video_rf_csv': 1, 'window_rf_csv': 3, 'window_km_csv': 3,
+         'scaler_pkl': 3, 'total_csv': 7, 'total_files': 10}
+    """
+    if bucket not in BUCKET_WINDOWS:
+        raise ValueError(f"Unknown bucket: {bucket}. Valid buckets: {list(BUCKET_WINDOWS.keys())}")
+
+    window_count = len(BUCKET_WINDOWS[bucket])
+
+    return {
+        'video_rf_csv': 1,
+        'window_rf_csv': window_count,
+        'window_km_csv': window_count,
+        'scaler_pkl': window_count,
+        'total_csv': 1 + (2 * window_count),
+        'total_files': 1 + (3 * window_count)
+    }

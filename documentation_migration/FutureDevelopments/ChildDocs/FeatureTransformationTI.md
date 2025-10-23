@@ -226,6 +226,24 @@ class Stage4Output:
     middle_4_km_transformed_csv_path: str    # Window-Level K-Means: middle_4 window
     closing_km_transformed_csv_path: str     # Window-Level K-Means: closing window
 
+    # ===== SCALER OUTPUTS (6 files for bucket 18-33s) - NEW 2025-10-23 =====
+    hook_scalers_pkl_path: str               # K-Means scalers: hook window
+                                              # Location: "{bucket_base}/ml_analysis/hook_scalers.pkl"
+                                              # Format: Joblib pickle (sklearn MinMaxScaler objects)
+                                              # Structure: {'version': '1.0', 'sklearn_version': '1.7.2',
+                                              #             'scalers': {feature: MinMaxScaler(...)},
+                                              #             'constant_features': []}
+                                              # Size: ~10-15 KB per file
+                                              # Consumers: Stage 5 (copies to models/ for inference)
+
+    middle_1_scalers_pkl_path: str           # K-Means scalers: middle_1 window
+                                              # Location: "{bucket_base}/ml_analysis/middle_1_scalers.pkl"
+
+    middle_2_scalers_pkl_path: str           # K-Means scalers: middle_2 window
+    middle_3_scalers_pkl_path: str           # K-Means scalers: middle_3 window
+    middle_4_scalers_pkl_path: str           # K-Means scalers: middle_4 window
+    closing_scalers_pkl_path: str            # K-Means scalers: closing window
+
     # ===== CHECKPOINT OUTPUT =====
     stage_4_checkpoint_json_path: str        # Stage checkpoint file
                                               # Location: "{bucket_base}/checkpoints/stage_4_checkpoint.json"
@@ -235,7 +253,7 @@ class Stage4Output:
                                               # Consumers: Orchestrator (resume logic)
 
     # ===== EXIT CODES =====
-    exit_code_success: int = 0               # All 13 files generated successfully
+    exit_code_success: int = 0               # All files generated successfully (count varies by bucket)
     exit_code_pre_flight: int = 1            # Stage 3 output (aggregated_features.csv) missing or invalid
     exit_code_execution: int = 2             # Transformation logic failed (parsing, encoding errors)
     exit_code_output_validation: int = 3     # Generated output failed schema validation
@@ -248,7 +266,10 @@ class Stage4Output:
 
 ### 2.3 Output File Listing
 
-**Total Output Files**: 13 CSV files + 1 checkpoint JSON (for bucket 18-33s with 6 windows)
+**Total Output Files** (varies by bucket):
+- **Formula**: `Total = 1 + 3N` where N = number of windows
+- **Reference**: `config.bucket_definitions.get_stage4_output_count(bucket)`
+- **Example bucket_18-33s** (6 windows): 19 files (13 CSVs + 6 scalers) + 1 checkpoint
 
 **Output Directory**: `{bucket_base}/ml_analysis/`
 
@@ -261,12 +282,18 @@ class Stage4Output:
 ├── middle_3_rf_transformed.csv        # Window-Level RF (22 columns)
 ├── middle_4_rf_transformed.csv        # Window-Level RF (22 columns)
 ├── closing_rf_transformed.csv         # Window-Level RF (22 columns)
-├── hook_km_transformed.csv            # Window-Level K-Means (39 columns)
-├── middle_1_km_transformed.csv        # Window-Level K-Means (39 columns)
-├── middle_2_km_transformed.csv        # Window-Level K-Means (39 columns)
-├── middle_3_km_transformed.csv        # Window-Level K-Means (39 columns)
-├── middle_4_km_transformed.csv        # Window-Level K-Means (39 columns)
-└── closing_km_transformed.csv         # Window-Level K-Means (39 columns)
+├── hook_km_transformed.csv            # Window-Level K-Means (27 columns)
+├── middle_1_km_transformed.csv        # Window-Level K-Means (27 columns)
+├── middle_2_km_transformed.csv        # Window-Level K-Means (27 columns)
+├── middle_3_km_transformed.csv        # Window-Level K-Means (27 columns)
+├── middle_4_km_transformed.csv        # Window-Level K-Means (27 columns)
+├── closing_km_transformed.csv         # Window-Level K-Means (27 columns)
+├── hook_scalers.pkl                   # NEW: MinMaxScaler objects for K-Means (10-15 KB)
+├── middle_1_scalers.pkl               # NEW: Scalers for middle_1
+├── middle_2_scalers.pkl               # NEW: Scalers for middle_2
+├── middle_3_scalers.pkl               # NEW: Scalers for middle_3
+├── middle_4_scalers.pkl               # NEW: Scalers for middle_4
+└── closing_scalers.pkl                # NEW: Scalers for closing
 
 /data/clients/{client_id}/hashtags/{target}/{mode}_{strategy}/bucket_{bucket}/checkpoints/
 └── stage_4_checkpoint.json            # Checkpoint for orchestrator
@@ -530,6 +557,69 @@ WindowKMTransformedSchema = {
 **Files** (bucket 18-33s): `hook_km_transformed.csv`, `middle_1_km_transformed.csv`, `middle_2_km_transformed.csv`, `middle_3_km_transformed.csv`, `middle_4_km_transformed.csv`, `closing_km_transformed.csv`
 
 **Note**: K-Means files do NOT include `is_top_performer` target (unsupervised learning).
+
+---
+
+### 3.6 Stage 4 Output Schema: Scaler Files (NEW 2025-10-23)
+
+**Files**: 6 files for bucket 18-33s (`{window}_scalers.pkl`)
+**Format**: Joblib pickle (sklearn MinMaxScaler objects)
+**Purpose**: Store fitted scalers for K-Means inference preprocessing in Stage 5/6
+**Size**: ~10-15 KB per file
+
+```python
+# Scaler File Structure (saved via joblib.dump)
+ScalerFileSchema = {
+    # ===== METADATA =====
+    "version": str,                          # Format version (currently "1.0")
+    "sklearn_version": str,                  # sklearn version used (e.g., "1.7.2")
+
+    # ===== FITTED SCALERS =====
+    "scalers": dict,                         # Dictionary of fitted MinMaxScaler objects
+                                             # Keys: Feature names (18 features for K-Means)
+                                             # Values: sklearn.preprocessing.MinMaxScaler instances
+                                             # Example: {
+                                             #   'scene_count': MinMaxScaler(data_min_=[0.693], data_max_=[1.609]),
+                                             #   'word_count': MinMaxScaler(data_min_=[0.0], data_max_=[2.89]),
+                                             #   ... (16 more scalers)
+                                             # }
+
+    # ===== CONSTANT FEATURES =====
+    "constant_features": list,               # List of feature names with zero variance
+                                             # Features with all same values (max == min)
+                                             # Cannot fit scaler, hardcoded to 0.5
+                                             # Example: ['overlay_unique_count'] if all videos have 0
+                                             # Usually empty list (most features have variance)
+}
+```
+
+**Usage Example**:
+```python
+import joblib
+
+# Load scaler file
+scalers_metadata = joblib.load('ml_analysis/hook_scalers.pkl')
+
+# Access fitted scaler for a feature
+scene_count_scaler = scalers_metadata['scalers']['scene_count']
+
+# Apply to new data for inference
+new_data_scaled = scene_count_scaler.transform([[5]])  # Returns [[0.42]]
+
+# Check constant features
+if 'scene_count' in scalers_metadata['constant_features']:
+    # Use 0.5 instead of scaler
+    scaled_value = 0.5
+```
+
+**Files** (bucket 18-33s): `hook_scalers.pkl`, `middle_1_scalers.pkl`, `middle_2_scalers.pkl`, `middle_3_scalers.pkl`, `middle_4_scalers.pkl`, `closing_scalers.pkl`
+
+**Important Notes**:
+- Scalers generated in **Stage 4** (after K-Means transformation)
+- Copied to `models/` directory by **Stage 5** during training
+- Used by **Stage 6** for inference on new videos
+- Each scaler is fitted on the **log1p-transformed** data for count features (not raw counts)
+- Zero-variance features tracked separately (cannot fit scaler when all values same)
 
 ---
 
@@ -936,19 +1026,29 @@ def transform_window_level_rf(
 **Implementation**:
 
 ```python
+from sklearn.preprocessing import MinMaxScaler
+import joblib
+
 def transform_window_level_kmeans(
     df: pd.DataFrame,
     window_type: str
-) -> pd.DataFrame:
+) -> Tuple[pd.DataFrame, Dict[str, Dict]]:
     """
     Transform aggregated features for Window-Level K-Means (one window type).
+
+    UPDATED 2025-10-23: Now returns fitted scalers for inference.
 
     Args:
         df: pandas DataFrame from aggregated_features.csv
         window_type: str, e.g., "hook", "middle_1", "closing"
 
     Returns:
-        pandas DataFrame with 27 features (all numerical, scaled [0-1])
+        Tuple containing:
+        - pandas DataFrame with 27 features (all numerical, scaled [0-1])
+        - Dict with scaler metadata: {
+            'fitted': {feature: MinMaxScaler(...)},  # 18 fitted scalers
+            'constant': [feature_names]              # Zero-variance features
+          }
 
     Source: FeatureTransformationCHILD.md Section 2.3.4
     """
@@ -964,6 +1064,12 @@ def transform_window_level_kmeans(
 
     df_km = window_features.copy()
 
+    # Initialize scaler storage (NEW 2025-10-23)
+    scaler_result = {
+        'fitted': {},       # MinMaxScaler objects for features with variance
+        'constant': []      # Features with zero variance (all same value)
+    }
+
     # 2. Log + Scale for count/variance features (11 features → 11 output columns)
     log_scale_features = [
         'scene_count', 'word_count', 'gesture_count', 'object_count', 'person_count',
@@ -974,15 +1080,22 @@ def transform_window_level_kmeans(
     for feature in log_scale_features:
         if feature in df_km.columns:
             # Log transform: log(1 + x) to handle zeros
-            log_values = np.log1p(df_km[feature])
+            df_km[feature] = np.log1p(df_km[feature])
 
-            # MinMax scale to [0, 1]
-            min_val = log_values.min()
-            max_val = log_values.max()
+            # Fit sklearn MinMaxScaler (NEW 2025-10-23)
+            scaler = MinMaxScaler()
+            min_val = df_km[feature].min()
+            max_val = df_km[feature].max()
+
             if max_val > min_val:
-                df_km[f'{feature}_scaled'] = (log_values - min_val) / (max_val - min_val)
+                # Fit and transform using sklearn
+                scaler.fit(df_km[[feature]])
+                df_km[f'{feature}_scaled'] = scaler.transform(df_km[[feature]]).flatten()
+                scaler_result['fitted'][feature] = scaler  # Save fitted scaler
             else:
-                df_km[f'{feature}_scaled'] = 0.5  # All same value → midpoint
+                # Constant feature (zero variance)
+                df_km[f'{feature}_scaled'] = 0.5
+                scaler_result['constant'].append(feature)  # Track constant
 
             # Drop original
             df_km.drop(columns=[feature], inplace=True)
@@ -995,12 +1108,18 @@ def transform_window_level_kmeans(
 
     for feature in scale_features:
         if feature in df_km.columns:
+            # Fit sklearn MinMaxScaler (NEW 2025-10-23)
+            scaler = MinMaxScaler()
             min_val = df_km[feature].min()
             max_val = df_km[feature].max()
+
             if max_val > min_val:
-                df_km[f'{feature}_scaled'] = (df_km[feature] - min_val) / (max_val - min_val)
+                scaler.fit(df_km[[feature]])
+                df_km[f'{feature}_scaled'] = scaler.transform(df_km[[feature]]).flatten()
+                scaler_result['fitted'][feature] = scaler  # Save fitted scaler
             else:
                 df_km[f'{feature}_scaled'] = 0.5
+                scaler_result['constant'].append(feature)  # Track constant
 
             df_km.drop(columns=[feature], inplace=True)
 
@@ -1028,8 +1147,12 @@ def transform_window_level_kmeans(
         f"Window-Level K-Means ({window_type}) transformation complete: "
         f"{len(df_km)} rows, {len(df_km.columns)} columns (expect 27)"
     )
-    return df_km
+
+    # Return both dataframe and scaler metadata (NEW 2025-10-23)
+    return df_km, scaler_result
 ```
+
+**Note**: Scalers are saved to `ml_analysis/{window}_scalers.pkl` immediately after transformation, before validation. See Section 4.6 for scaler saving logic.
 
 **Edge Cases**:
 

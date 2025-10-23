@@ -4,7 +4,7 @@
 
 **Parent Document**: Stage8MVP.md
 
-**Status**: 2 of 4 templates complete (Hashtag → Client, Hashtag → Creator)
+**Status**: 4 of 4 templates complete - Section 0 complete, ready for design + development
 
 ---
 
@@ -14,8 +14,8 @@
 |---|-------------|----------|--------|--------|
 | 1 | Hashtag → Client | Tumi Labs Clients | ✅ **COMPLETE** | MLCreativeReports.md |
 | 2 | Hashtag → Creator | Content Creators | ✅ **COMPLETE** | Stage8Planning.md section 1.1 |
-| 3 | Handle/Single Competitor → Client | Tumi Labs Clients | ⏸️ **TODO** | To be designed |
-| 4 | Handle/Multiple Competitor → Client | Tumi Labs Clients | ⏸️ **TODO** | To be designed |
+| 3 | Handle/Single Competitor → Client | Tumi Labs Clients | ✅ **COMPLETE** | This document (Page 1-4 structure) |
+| 4 | Handle/Multiple Competitor → Client | Tumi Labs Clients | ✅ **COMPLETE** | This document (Page 1-4 structure) |
 
 ---
 
@@ -36,6 +36,7 @@
 ### Input Data Sources
 
 - Stage 1: `winner_analysis.json`, `cluster_analytics.json`
+- Stage 2: Video metadata (`views`, `likes`, `comments`, `shares`, `saves`) from `unified_analysis/{video_id}.json` → `metadata` (lines 8-12) for engagement calculation
 - Stage 6: `rf_video_analysis.json`, `kmeans_analysis.json`
 - Stage 7: `winning_formulas.json` (all 3 buckets)
 
@@ -45,28 +46,48 @@
 
 **Purpose**: Show the business owner how comprehensive the analysis is
 
-**Header Section**:
+---
+
+#### Header Section
+
 ```
-#nutrition Hashtag Analysis
+#vitamin Hashtag Analysis
 Analysis Period: Past 2-3 months
-Videos Analyzed: 480
-Analysis Mode: Top performers (engagement-based)
+Videos Analyzed: 1,826
+
+WINNING CONTENT FORMATS:
+Our analysis identified 3 highest-performing duration ranges:
+• 18-33 seconds: 43% of top performers
+• 13-18 seconds: 12% of top performers
+• 60-90 seconds: 11% of top performers
+
+DEEP ANALYSIS:
+88 top-performing videos + 23 moderate-performing videos analyzed
+using 60+ ML features per video (computer vision, audio analysis, NLP)
 ```
 
 **Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Hashtag | Config | CLI parameter `--hashtag` | String | "#nutrition" |
-| Videos Analyzed | Stage 1 | `total_videos_analyzed` in winner_analysis.json | Integer | 480 |
-| Analysis Mode | Config | Mapped from CLI parameter `--mode`:<br>• `top` → "Top performers (engagement-based)"<br>• `contrastive` → "Contrastive analysis (top vs bottom performers)" | String | "Top performers (engagement-based)" |
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Hashtag | Cluster Config | `/config/hashtag_clusters/{target}.json` → `primary_hashtag` | String | "#vitamin" | ✅ **Report 1 Header** |
+| Analysis Period | Static | Fixed string: "Past 2-3 months" | String | "Past 2-3 months" | ✅ **Report 1 Header** |
+| Videos Analyzed | Cluster Analytics | `/data/clients/{client}/hashtag/{target}/cluster_analytics.json` → `scrape_summary.total_scraped_videos` | Integer | 1,826 | ✅ **Report 1 Header** |
+| Winning Buckets (3) | Winner Analysis | `/data/clients/{client}/hashtag/{target}/{mode}_{strategy}/winner_analysis.json` → `top_3_buckets` array | Array[String] | ["18-33s", "13-18s", "60-90s"] | ✅ **Report 1 Header** |
+| Winning Bucket %s (3) | Winner Analysis | Same file → `top_100_distribution[bucket]` for each winning bucket | Array[Integer] | [43, 12, 11] | ✅ **Report 1 Header** |
+| Top Performers Count | Selection Manifest | `/data/clients/{client}/hashtag/{target}/{mode}_{strategy}/selection_manifest.json` → Sum all `top_performers` array lengths | Integer | 88 | ✅ **Report 1 Header** |
+| Bottom Performers Count | Selection Manifest | Same file → Sum all `bottom_performers` array lengths | Integer | 23 | ✅ **Report 1 Header** |
 
 **Decision**: ✅ Always display "Past 2-3 months" regardless of actual `--date-filter` parameter for marketing consistency and perceived recency.
 
+**Decision**: ✅ Display total scraped videos (1,826) instead of selected videos (111) for marketing impact. The full funnel (winning formats + deep analysis counts) provides context and shows rigor without misleading.
+
+**Decision**: ✅ Show all 3 winning buckets with percentages (not just top bucket) to demonstrate comprehensive pattern identification.
+
 ---
 
-**What We Analyzed**:
+#### Analysis Scope & Methodology
+
 ```
-Total Video Duration: 6.2 hours of content
 Duration Range: 0-120 seconds (8 distinct buckets)
 Content Elements Tracked: 60+ features per video
 
@@ -89,10 +110,9 @@ and "what to say" (hooks, messaging) for complete creative guidance.
 ```
 
 **Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Total Video Duration | Stage 1 | Calculated: sum of all video durations from metadata | String | "6.2 hours of content" |
-| Hashtag (in Content & Messaging text) | Config | CLI parameter `--hashtag` | String | "#nutrition" |
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Hashtag (in Content & Messaging text) | Cluster Config | `/config/hashtag_clusters/{target}.json` → `primary_hashtag` | String | "#vitamin" | ✅ **Report 1 Header** |
 
 **Decision**: ✅ Use integrated description showing both quantitative ML (Random Forest, K-Means) and qualitative content analysis (AI transcript analysis) without separating into explicit dual tracks.
 
@@ -133,26 +153,30 @@ Key Insight: 65% of #nutrition content is 13-33s
 #### Section 2: Performance by Duration (What Performs Best)
 
 ```
-0-3s:    125K avg views  ⭐⭐
-3-9s:    210K avg views  ⭐⭐
-9-13s:   380K avg views  ⭐⭐⭐
-13-18s:  520K avg views  ⭐⭐⭐⭐
-18-33s:  490K avg views  ⭐⭐⭐⭐
-33-60s:  310K avg views  ⭐⭐⭐
-60-90s:  180K avg views  ⭐⭐
-90-120s: 95K avg views   ⭐
+Your Top 3 Performing Durations:
 
-Sweet Spot: 13-33s (highest views + sufficient volume)
+Duration | Avg Views  | Avg Engagement | Rating
+---------|------------|----------------|------------
+18-33s   | 490K       | 1.4%           | ⭐⭐⭐⭐⭐  ← BEST
+13-18s   | 520K       | 1.2%           | ⭐⭐⭐⭐
+60-90s   | 310K       | 1.3%           | ⭐⭐⭐
+
+These 3 durations represent 75.9% of top-performing #nutrition content.
+Your 9 creative reports focus exclusively on these high-opportunity durations.
 ```
 
 **Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Avg views per bucket (all 8 rows) | Stage 1 | `avg_views` per bucket in winner_analysis.json | Integer (formatted with K/M) | 125K, 210K, 380K, 520K, etc. |
-| Star ratings (all 8 rows) | Calculated | Based on view performance tier (highest = 4 stars, lowest = 1 star) | String (emoji) | ⭐⭐⭐⭐ |
-| Sweet Spot range | Stage 1 | Calculated: buckets with highest avg views + sufficient volume | String | "13-33s" |
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Winning bucket ranges (3 rows) | Stage 1 | `/data/clients/{client}/hashtag/{target}/{mode}_{strategy}/winner_analysis.json` → `top_3_buckets` array | Array[String] | ["18-33s", "13-18s", "60-90s"] | ✅ **Report 1 Header** |
+| Avg views per winning bucket (3 rows) | Calculated | `calculate_avg_views_per_bucket()` for each winning bucket: load `selected_videos.json` → filter `is_top_performer == true` → average `playCount` → format with K/M suffix (from Section 0.5.6) | Integer (formatted with K/M) | 1.9M, 2.1M, 980K | ✅ **This session** |
+| Avg engagement per winning bucket (3 rows) | Calculated | For each winning bucket: load top performer video IDs from `selected_videos.json` → for each, load `/unified_analysis/{video_id}.json` → `metadata` → call `calculate_engagement_metrics()` → average all rates (from Section 0.5.5) | Float (%) | 15.2, 12.8, 10.5 | ✅ **This session** |
+| Star ratings (3 rows) | Calculated | Sort 3 winning buckets by `avg_engagement` DESC (primary), then `avg_views` DESC (secondary) → assign 5 stars (rank 1), 4 stars (rank 2), 3 stars (rank 3) | String (emoji) | ⭐⭐⭐⭐⭐, ⭐⭐⭐⭐, ⭐⭐⭐ | ✅ **This session** |
+| Top bucket label | Calculated | Bucket ranked #1 from Field 4 (highest engagement + views) gets "← BEST" label, others blank | String | "← BEST", "", "" | ✅ **This session** |
+| Coverage percentage | Calculated | Load `winner_analysis.json` → for each bucket in `top_3_buckets`, sum counts from `top_100_distribution` → divide by total of all buckets → multiply by 100 → round to 1 decimal | Float (%) | 75.9 | ✅ **This session** |
+| Hashtag (in description) | Config | `/config/hashtag_clusters/{target}.json` → `primary_hashtag` | String | "#nutrition" | ✅ **Report 1 Header** |
 
-**Decision**: ✅ Show raw average view counts (not engagement % or normalized scores) for transparency and concreteness.
+**Decision**: ✅ Show engagement metrics ONLY for 3 winning buckets (Option A - data availability constraint). Cannot calculate engagement for non-winning buckets as `selection_manifest.json` only contains video IDs for top 3 buckets.
 
 ---
 
@@ -169,11 +193,11 @@ Your creative reports focus exclusively on these durations.
 ```
 
 **Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Tier 1 bucket ranges (3 buckets) | Stage 1 | Top 3 buckets from `winning_buckets` in winner_analysis.json | String (array) | "13-18s", "18-33s", "33-60s" |
-| Avg views per winning bucket | Stage 1 | `avg_views` for each winning bucket | Integer (formatted with K/M) | 520K, 490K, 310K |
-| Performance labels | Calculated | Based on bucket ranking (highest, strong, proven) | String | "highest performance", "strong performance + volume", "proven success" |
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Tier 1 bucket ranges (3 buckets) | Stage 1 | `/data/clients/{client}/hashtag/{target}/{mode}_{strategy}/winner_analysis.json` → `top_3_buckets` array | Array[String] | ["18-33s", "13-18s", "60-90s"] | ✅ **Report 1 Header** |
+| Avg views per winning bucket | Calculated | `calculate_avg_views_per_bucket()` for each winning bucket: load `selected_videos.json` → filter `is_top_performer == true` → average `playCount` → format with K/M suffix (from Section 0.5.6) | Integer (formatted with K/M) | 1.9M, 575K, 2.1M | ✅ **This session** |
+| Performance labels | Calculated | Based on Section 2 star rating rank (engagement + views): Rank 1 (5 stars) = "highest performance", Rank 2 (4 stars) = "strong performance + volume", Rank 3 (3 stars) = "proven success" | String | "highest performance", "strong performance + volume", "proven success" | ✅ **This session** |
 
 **Decision**: ✅ Keep only Creator Profile Priorities section. Removed redundant sections:
 - Content Saturation (not actionable, redundant)
@@ -182,26 +206,59 @@ Your creative reports focus exclusively on these durations.
 
 ---
 
-#### Section 4: Content Intelligence (⏸️ TO BE DESIGNED)
+#### Section 4: Content Intelligence
 
 **Purpose**: Show what types of content perform best in this hashtag
 
-**Placeholder**: This section will show aggregated Content Analysis insights from Stage 2.7, including:
-- Top content categories (e.g., "Recipe Tutorial: 38% of winning content")
-- Dominant hook strategies (e.g., "Problem-Solution hook: 60% of top performers")
-- Audience pain points addressed (e.g., "Bloating, Low Energy, Inflammation")
-- Top engagement drivers (e.g., "Before/After Reveal, Personal Testimony")
+```
+CONTENT INTELLIGENCE:
+
+What Type of Content Wins:
+1. Recipe Tutorial (38% of top performers)
+2. Wellness Practice (28% of top performers)
+3. Supplement Review (22% of top performers)
+
+What Hooks Capture Attention:
+• Problem-Solution approach (42% of winning videos)
+• Question Hook (35% of winning videos)
+• Direct Statement (23% of winning videos)
+
+What Topics Resonate:
+Top Keywords: #guthealth, #protein, #antiinflammatory, #metabolism
+Pain Points Addressed: Bloating (48%), Low Energy (42%), Inflammation (38%)
+
+What Drives Engagement:
+• Before/After Reveal (45% of top performers use this)
+• Personal Testimony (38% of top performers)
+• Specific Metrics Mentioned (52% of top performers)
+
+Caption Strategy That Works:
+• Optimal Hashtag Count: 7 hashtags
+• Caption Length: Short captions (<100 characters) in 68% of winners
+• Emoji Usage: Light emoji use (1-4 emojis) in 72% of winners
+• Call-to-Action: "Link in bio" CTA in 58% of top performers
+```
+
+**Dynamic Fields**:
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Top 3 content categories | Stage 2.7 | For each of 120 winning videos, load `{bucket_base}/content_analysis/{video_id}_content.json` → `content_category` field → aggregate all values, rank by frequency, take top 3 with percentages: `(count / 120) × 100%` (from Section 0.5.1) | String (array) with percentages | ["Recipe Tutorial: 38%", "Wellness Practice: 28%", "Supplement Review: 22%"] | ✅ **This session** |
+| Top 3 hook strategies | Stage 2.7 | For each of 120 winning videos, load content.json → `hook_strategy` field → aggregate, rank by frequency, take top 3 with percentages (from Section 0.5.1) | String (array) with percentages | ["Problem-Solution: 42%", "Question Hook: 35%", "Direct Statement: 23%"] | ✅ **This session** |
+| Top 4 keywords | Stage 2.7 | For each of 120 winning videos, load content.json → `keywords` array → flatten all arrays, aggregate unique keywords, rank by frequency, take top 4 (from Section 0.5.1) | String (array) | ["#guthealth", "#protein", "#antiinflammatory", "#metabolism"] | ✅ **This session** |
+| Top 3 pain points | Stage 2.7 | For each of 120 winning videos, load content.json → `pain_points` array → flatten, aggregate, rank, take top 3 with percentages (from Section 0.5.1) | String (array) with percentages | ["Bloating: 48%", "Low Energy: 42%", "Inflammation: 38%"] | ✅ **This session** |
+| Top 3 engagement drivers | Stage 2.7 | For each of 120 winning videos, load content.json → `engagement_drivers` array → flatten, aggregate, rank, take top 3 with percentages (from Section 0.5.1) | String (array) with percentages | ["Before/After Reveal: 45%", "Personal Testimony: 38%", "Specific Metrics Mentioned: 52%"] | ✅ **This session** |
+| Optimal hashtag count | Stage 2.7 | For each of 120 winning videos, load content.json → `caption_analysis.hashtag_count` → calculate mean → round to nearest integer (from Section 0.5.1) | Integer | 7 | ✅ **This session** |
+| ~~Hashtag strategy breakdown~~ | ~~Stage 2.7~~ | ~~`caption_analysis.hashtag_strategy.niche_count` and `broad_count`~~ | ~~String~~ | ~~"5 niche, 2 broad"~~ | ❌ **REMOVED FROM SCHEMA** (ContentAnalysisCHILDTI.md lines 533-537: hashtag_strategy object removed, only hashtag_count and hashtag_placement retained) |
+| Caption length winner | Stage 2.7 | For each of 120 winning videos, load content.json → `caption_analysis.caption_length` (values: "short" <100 chars or "long" 100+ chars) → find most common value with percentage (from Section 0.5.1) | String with percentage | "Short captions (<100 chars): 68%" | ✅ **This session** |
+| Emoji usage winner | Stage 2.7 | For each of 120 winning videos, load content.json → `caption_analysis.emoji_usage` (values: "none" (0), "some" (1-4), "many" (5+)) → find most common value with percentage (from Section 0.5.1) | String with percentage | "Some emoji use (1-4 emojis): 72%" | ✅ **This session** |
+| Top CTA type | Stage 2.7 | For each of 120 winning videos, load content.json → `caption_analysis.cta_type` (values: "link_in_bio", "save_post", "comment", "follow", "share", "tag_friend", "none") → aggregate, rank, take top 1 with percentage (from Section 0.5.1) | String with percentage | "Link in bio: 58%" | ✅ **This session** |
 
 **Data Source**:
-- Stage 2.7 Content Analysis classifications (aggregated in Stage 8 using Section 0.5.1 function)
-- See Stage8MVP.md Section 0.5.1 for aggregation logic
+- Stage 2.7 Content Analysis classifications from 120 winning videos (40 per bucket × 3 winning buckets)
+- Aggregated using `aggregate_content_classifications()` function (see Stage8MVP.md Section 0.5.1)
+- Percentages calculated as: `(videos_with_feature / total_winning_videos) × 100%`
 
-**Dynamic Fields**: ⏸️ TO BE DEFINED (once section structure is finalized)
-
-**Design Decision Pending**:
-- Placement: After Creator Profile Priorities or separate page?
-- Depth: Show top 3 or top 5 items per category?
-- Visual format: Simple list or chart?
+**Decision**: ✅ Compact dashboard format - fits on Page 2, provides actionable qualitative insights for creator briefs without overwhelming client. Shows top 3-4 items per category for scannability.
 
 ---
 
@@ -209,7 +266,9 @@ Your creative reports focus exclusively on these durations.
 
 **Purpose**: Show what reports were delivered
 
-**Report Distribution**:
+---
+
+#### Report Distribution
 
 Your content creators will receive 9 creative strategy reports tailored to the #nutrition hashtag:
 
@@ -228,19 +287,23 @@ Your content creators will receive 9 creative strategy reports tailored to the #
   • Formula 8: The Expert Interview Format
   • Formula 9: The Before-After Journey
 
-Each 2-page report includes:
-  • Proof with numbers (engagement differences)
-  • Second-by-second execution guide
-  • Pre-post checklist
-
-**Would you like to review a sample report?** Contact us at [email]
-
 **Dynamic Fields**:
 | Template Field | Source | JSON Field/Calculation | Data Type | Example |
 |----------------|--------|------------------------|-----------|---------|
 | Hashtag (in intro text) | Config | CLI parameter `--hashtag` | String | "#nutrition" |
 | Duration Bucket ranges (3 buckets) | Stage 1 | Top 3 buckets from `winning_buckets` in winner_analysis.json | String (array) | "13-18s", "18-33s", "33-60s" |
 | Formula names (9 formulas) | Stage 7 | `pattern_name` from winning_formulas.json (3 per bucket) | String (array) | "The Question Hook Formula", etc. |
+
+---
+
+#### What Each Report Contains
+
+Each 2-page report includes:
+  • Proof with numbers (engagement differences)
+  • Second-by-second execution guide
+  • Pre-post checklist
+
+**Would you like to review a sample report?** Contact us at [email]
 
 **Decision**: ✅ Minimal Page 3 with report distribution list and sample report offer. "How to Use These Reports", "What Makes These Reports Effective", and "Next Steps" sections removed (onboarding material, not recurring report content).
 
@@ -271,45 +334,36 @@ Each 2-page report includes:
      - Key insight percentage (sum of top 2 buckets)
 
 3. **Performance Star Rating Logic**
-   - **Source**: Stage 1 `winner_analysis.json` → `avg_views` per bucket
+   - **Source**: Stage 1 `winner_analysis.json` → `avg_views` per winning bucket
    - **Process**:
-     1. Load avg_views for all 8 buckets
-     2. Identify min and max avg_views across buckets
-     3. Calculate quartiles or tiers
-     4. Assign star ratings:
-        - Top quartile (90-100%): ⭐⭐⭐⭐ (4 stars)
-        - Upper-mid quartile (70-90%): ⭐⭐⭐ (3 stars)
-        - Lower-mid quartile (40-70%): ⭐⭐ (2 stars)
-        - Bottom quartile (0-40%): ⭐ (1 star)
-   - **Output**: Star emoji strings for each bucket
+     1. Load avg_views for 3 winning buckets only
+     2. Identify min and max avg_views across 3 winning buckets
+     3. Assign star ratings based on relative performance:
+        - Top performer (highest views + engagement): ⭐⭐⭐⭐⭐ (5 stars)
+        - Second performer: ⭐⭐⭐⭐ (4 stars)
+        - Third performer: ⭐⭐⭐ (3 stars)
+   - **Output**: Star emoji strings for 3 winning buckets only
+   - **Note**: Only winning buckets shown due to data availability constraint (Option A)
 
 4. **Sweet Spot Identification**
-   - **Source**: Stage 1 `winner_analysis.json` → `avg_views` + `bucket_distribution`
+   - **Source**: Stage 1 `winner_analysis.json` → `avg_views` + `bucket_distribution` for winning buckets
    - **Process**:
-     1. Load avg_views for all buckets
-     2. Load bucket_distribution percentages
-     3. Identify buckets with BOTH:
-        - High avg_views (top 3-4 buckets by performance)
-        - Sufficient volume (>10% of total content)
-     4. Format as range: "13-33s" (combining adjacent high-performing buckets)
-   - **Output**: Sweet spot duration range string
+     1. Load avg_views for 3 winning buckets
+     2. Load bucket_distribution percentages for winning buckets
+     3. Identify the top performing winning bucket with:
+        - Highest avg_views or engagement
+        - Strong volume (high % of total content)
+     4. Return as single bucket label (e.g., "18-33s")
+   - **Output**: Sweet spot duration range string (single bucket from winning 3)
+   - **Note**: Simplified for Option A - focuses on single best bucket rather than range
    - **Example Logic**:
      ```python
-     def identify_sweet_spot(bucket_stats):
-         # Sort buckets by avg_views
-         sorted_buckets = sorted(bucket_stats, key=lambda x: x['avg_views'], reverse=True)
+     def identify_sweet_spot(winning_buckets):
+         # winning_buckets is array of 3 buckets with avg_views and engagement
+         # Sort by engagement (primary) or combined score
+         best_bucket = max(winning_buckets, key=lambda x: x['avg_engagement'])
 
-         # Filter for buckets with >10% volume
-         high_volume_buckets = [b for b in sorted_buckets if b['percentage'] > 10]
-
-         # Take top 2-3 high-volume buckets
-         sweet_spot_buckets = high_volume_buckets[:3]
-
-         # Format as range
-         min_duration = min([b['min_seconds'] for b in sweet_spot_buckets])
-         max_duration = max([b['max_seconds'] for b in sweet_spot_buckets])
-
-         return f"{min_duration}-{max_duration}s"
+         return best_bucket['bucket_range']  # e.g., "18-33s"
      ```
 
 5. **Performance Label Assignment**
@@ -331,6 +385,113 @@ Each 2-page report includes:
      4. Total: 9 formula names
    - **Output**: Array of 9 formula names organized by bucket
 
+7. **Content Intelligence Aggregation (Section 4)**
+   - **Source**: Stage 2.7 Content Analysis classifications (120 winning videos: 40 per bucket × 3 buckets)
+   - **Process**:
+     1. Load `selection_manifest.json` to get all winning video IDs (top performers across 3 buckets)
+     2. For each winning video ID, load `{bucket}/content_analysis/{video_id}_content.json`
+     3. Aggregate classifications using `aggregate_content_classifications()` (see Stage8MVP.md Section 0.5.1)
+     4. Calculate frequencies for each category:
+        - **Content Categories**: Count `content_category` field (single selection per video)
+        - **Hook Strategies**: Count `hook_strategy` field (single selection per video)
+        - **Keywords**: Aggregate `keywords` array (multiple per video)
+        - **Pain Points**: Aggregate `pain_points` array (multiple per video)
+        - **Engagement Drivers**: Aggregate `engagement_drivers` array (multiple per video)
+        - **Caption Strategy**: Extract from `caption_analysis` object (6 fields)
+     5. Calculate percentages: `(videos_with_feature / 120) × 100%`
+     6. Rank by frequency and select top N items per category
+   - **Outputs**:
+     - Top 3 content categories with percentages (e.g., "Recipe Tutorial: 38%")
+     - Top 3 hook strategies with percentages (e.g., "Problem-Solution: 42%")
+     - Top 4 keywords (e.g., "#guthealth, #protein, #antiinflammatory, #metabolism")
+     - Top 3 pain points with percentages (e.g., "Bloating: 48%")
+     - Top 3 engagement drivers with percentages (e.g., "Before/After Reveal: 45%")
+     - **Caption strategy** (5 fields):
+       - Optimal hashtag count: mean of `hashtag_count` (e.g., "7 hashtags")
+       - Hashtag breakdown: mean of `hashtag_strategy.niche_count` and `broad_count` (e.g., "5 niche, 2 broad")
+       - Caption length winner: most common `caption_length` value (e.g., "Short: 68%")
+       - Emoji usage winner: most common `emoji_usage` value (e.g., "Light (1-4): 72%")
+       - Top CTA type: most common `caption_cta_type` value (e.g., "Link in bio: 58%")
+   - **Example Implementation**:
+     ```python
+     from collections import Counter
+     import numpy as np
+
+     def aggregate_content_intelligence(selection_manifest_path, bucket_paths):
+         # Load all winning video IDs
+         manifest = load_json(selection_manifest_path)
+         winning_video_ids = []
+         for bucket, videos in manifest['videos_by_bucket'].items():
+             winning_video_ids.extend(videos.get('top_performers', []))
+
+         # Aggregate classifications
+         content_categories = []
+         hook_strategies = []
+         keywords_list = []
+         pain_points_list = []
+         engagement_drivers_list = []
+
+         # Caption strategy aggregation
+         hashtag_counts = []
+         niche_counts = []
+         broad_counts = []
+         caption_lengths = []
+         emoji_usages = []
+         cta_types = []
+
+         for video_id in winning_video_ids:
+             # Find and load content analysis file
+             content_path = find_content_analysis_file(video_id, bucket_paths)
+             data = load_json(content_path)
+
+             # Extract core content fields
+             content_categories.append(data.get('content_category'))
+             hook_strategies.append(data.get('hook_strategy'))
+             keywords_list.extend(data.get('keywords', []))
+             pain_points_list.extend(data.get('pain_points', []))
+             engagement_drivers_list.extend(data.get('engagement_drivers', []))
+
+             # Extract caption strategy fields
+             caption_analysis = data.get('caption_analysis', {})
+             hashtag_counts.append(caption_analysis.get('hashtag_count', 0))
+             hashtag_strategy = caption_analysis.get('hashtag_strategy', {})
+             niche_counts.append(hashtag_strategy.get('niche_count', 0))
+             broad_counts.append(hashtag_strategy.get('broad_count', 0))
+             caption_lengths.append(caption_analysis.get('caption_length'))
+             emoji_usages.append(caption_analysis.get('emoji_usage'))
+             cta_types.append(caption_analysis.get('caption_cta_type'))
+
+         total_videos = len(winning_video_ids)
+
+         # Calculate top items with percentages
+         return {
+             'top_content_categories': format_top_n(Counter(content_categories), 3, total_videos),
+             'top_hook_strategies': format_top_n(Counter(hook_strategies), 3, total_videos),
+             'top_keywords': [k for k, _ in Counter(keywords_list).most_common(4)],
+             'top_pain_points': format_top_n(Counter(pain_points_list), 3, total_videos),
+             'top_engagement_drivers': format_top_n(Counter(engagement_drivers_list), 3, total_videos),
+
+             # Caption strategy
+             'optimal_hashtag_count': round(np.mean(hashtag_counts)),
+             'hashtag_breakdown': f"{round(np.mean(niche_counts))} niche, {round(np.mean(broad_counts))} broad",
+             'caption_length_winner': format_top_1(Counter(caption_lengths), total_videos),
+             'emoji_usage_winner': format_top_1(Counter(emoji_usages), total_videos),
+             'top_cta_type': format_top_1(Counter(cta_types), total_videos)
+         }
+
+     def format_top_n(counter, n, total):
+         return [
+             f"{item}: {round((count/total)*100)}%"
+             for item, count in counter.most_common(n)
+         ]
+
+     def format_top_1(counter, total):
+         if not counter:
+             return "N/A"
+         item, count = counter.most_common(1)[0]
+         return f"{item}: {round((count/total)*100)}%"
+     ```
+
 ---
 
 ### Summary of Resolved Design Decisions
@@ -344,6 +505,7 @@ Each 2-page report includes:
 | **Trend Direction** | Remove section entirely | Too risky to fabricate M-o-M trends |
 | **Creator Recommendations** | Keep Section 3 only, remove Section 6 | Eliminates redundancy, avoids prescriptiveness |
 | **Page 3 Scope** | Minimal - report list + sample offer only | Non-repetitive, executive-focused, scalable |
+| **Content Intelligence** | Compact dashboard (Option 1) - Section 4 Page 2 | Actionable qualitative insights, fits existing structure, scannable format |
 
 ---
 
@@ -363,6 +525,7 @@ Each 2-page report includes:
 
 ### Input Data Sources
 
+- Stage 2: Video metadata (`views`, `likes`, `comments`, `shares`, `saves`) from `unified_analysis/{video_id}.json` → `metadata` (lines 8-12) for engagement calculation
 - Stage 7: `winning_formulas.json` (3 creative reports per bucket)
 
 ---
@@ -378,21 +541,6 @@ Each 2-page report includes:
 
 ---
 
-### Summary of Design Decisions (Issues 1-6 Resolved)
-
-| Issue | Decision | Impact on Template | Location |
-|-------|----------|-------------------|----------|
-| **Issue 1: Visual Examples** | 2 QR Codes (top + bottom performer) | QR codes on Page 1 after "The Proof" and in "Contrastive Analysis" | Line 598+ (QR Code Implementation) |
-| **Issue 2: Confidence Score** | Remove entirely | Header shows 3 fields (Pattern, Duration, Hashtag) - no confidence | Line 296+ (Header Section) |
-| **Issue 3: Timeline Detail** | 3-Phase Pattern Blueprint | Page 2 structure: Hook (0-3s), Middle (flexible), Closing (last 3s) | Line 401+ (Structure Decision) |
-| **Issue 4: Timeline Structure** | Fixed 3-phase for ALL buckets | Same structure for 13-18s, 18-33s, 33-60s videos | Line 407+ (Structure Applied) |
-| **Issue 5: Checklist Length** | 5-7 items (pattern-specific) | Pre-Post Checklist with 6 items grouped by phase | Line 545+ (Pre-Post Checklist) |
-| **Issue 6: Pattern Naming** | Data-driven from Content Analysis | Pattern names generated from cluster's dominant Content Analysis fields | Line 301+ (Pattern Naming Strategy) |
-
-**Result**: Consistent, data-honest, mobile-optimized 2-page PDF template applicable to all 9 creative formulas.
-
----
-
 ### Page 1: "Why This Works" (Hook with Proof + Pattern)
 
 ---
@@ -404,78 +552,62 @@ Pattern Name: "The Question Hook Formula"
 Duration: 18-33s | Hashtag: #nutrition
 ```
 
-**Design Decision**: Confidence score removed (Issue 2 resolution)
-- **Rationale**: Stage 7 already filters low-confidence patterns (<70%), so all patterns in reports are validated
-- **Simplified header**: 3 elements instead of 4 (cleaner, more scannable on mobile)
-- **Implicit trust model**: "If it's in the report, it's proven" - no need for creators to question reliability
-
-**Design Decision**: Pattern naming strategy (Issue 6 resolution)
-- **Approach**: Data-driven names generated from Content Analysis labels
-- **Format**: "The [Primary Distinctive Element] [Secondary Element OR 'Formula']"
-- **Generation**: Stage 7 LLM analyzes cluster's dominant Content Analysis fields and constructs readable name
-- **Rationale**:
-  - Data integrity: Names directly reflect what Content Analysis found in cluster
-  - Consistency: Repeatable across different hashtags
-  - No hallucination: Can't invent promises not backed by data
-  - Professional: Sounds proven, not clickbait
-
-**Naming Logic**:
-- Identify most common `hook_strategy`, `engagement_drivers`, or `content_category` in cluster
-- Translate technical labels to readable format:
-  - `hook_strategy="question_hook"` → "The Question Hook Formula"
-  - `engagement_driver="before_after_reveal"` → "The Before-After Transformation"
-  - `hook_strategy="problem_solution"` + `content_category="recipe_tutorial"` → "The Problem-Solution Recipe"
-- Ensure uniqueness within bucket (no duplicate names)
-- Keep 3-6 words (mobile-friendly)
-
 **Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Pattern Name | Stage 7 | `pattern_name` in winning_formulas.json (LLM-generated from Content Analysis) | String | "The Question Hook Formula" |
-| Duration | Stage 7 | `bucket_range` in winning_formulas.json | String | "18-33s" |
-| Hashtag | Config | CLI parameter `--hashtag` | String | "#nutrition" |
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Hashtag | Cluster Config | `/config/hashtag_clusters/{target}.json` → `primary_hashtag` | String | "#vitamin" | ✅ **Report 1** |
+| Duration | Stage 7 | `winning_formulas.json` → `bucket_range` for this formula | String | "18-33s" | ✅ **Report 1** |
+| Pattern Name | Stage 7 | `winning_formulas.json` → `pattern_name` (LLM-generated from Content Analysis) | String | "The Question Hook Formula" | ⚠️ **NOT VERIFIED** |
 
 ---
 
-#### The Proof (Numbers First)
+#### The Proof (Real Performance Data)
 
 ```
-📊 Videos using this pattern: 8.4% avg engagement
-   Videos NOT using this: 3.1% avg engagement
-   → 2.7x MORE ENGAGEMENT
+📊 PERFORMANCE COMPARISON:
+
+Videos using this pattern (Top Cluster):
+• Average Views: 620K
+• Average Engagement: 1.2% (7,440 interactions per video)
+
+Videos NOT using this pattern (Bottom Cluster):
+• Average Views: 380K
+• Average Engagement: 0.8% (3,040 interactions per video)
+
+RESULTS:
+→ 1.6x MORE VIEWS (63% higher reach)
+→ 1.5x MORE ENGAGEMENT (50% higher resonance)
 
 [QR CODE]
-Scan to watch: Top Performer Using This Pattern (520K views)
+Scan to watch: Top Performer Using This Pattern (620K views, 1.4% engagement)
 ```
 
 **Dynamic Fields**:
 | Template Field | Source | JSON Field/Calculation | Data Type | Example |
 |----------------|--------|------------------------|-----------|---------|
-| Pattern engagement % | Calculated | Industry Benchmark Mapping (see method below) | Float (%) | 8.4 |
-| Non-pattern engagement % | Calculated | Industry Benchmark Mapping (see method below) | Float (%) | 3.1 |
-| Engagement multiplier | Calculated | Pattern % ÷ Non-pattern % | Float (ratio) | 2.7 |
+| Top cluster avg views | Stage 1 + 6 | Avg `view_count` for videos in top cluster | Integer (formatted with K) | 620K |
+| Top cluster avg engagement | Calculated | Avg `calculate_engagement_metrics()` for top cluster videos | Float (%) | 1.2 |
+| Top cluster interactions | Calculated | Avg engagement × Avg views | Integer | 7,440 |
+| Bottom cluster avg views | Stage 1 + 6 | Avg `view_count` for videos in bottom cluster | Integer (formatted with K) | 380K |
+| Bottom cluster avg engagement | Calculated | Avg `calculate_engagement_metrics()` for bottom cluster videos | Float (%) | 0.8 |
+| Bottom cluster interactions | Calculated | Avg engagement × Avg views | Integer | 3,040 |
+| View multiplier | Calculated | Top views / Bottom views | Float (ratio) | 1.6x |
+| Engagement multiplier | Calculated | Top engagement / Bottom engagement | Float (ratio) | 1.5x |
+| View percentage increase | Calculated | ((Top - Bottom) / Bottom) × 100% | Integer (%) | 63 |
+| Engagement percentage increase | Calculated | ((Top - Bottom) / Bottom) × 100% | Integer (%) | 50 |
 | QR Code (Top Performer) | Stage 2 + 7 | Video URL from top cluster in Stage 2 metadata, mapped to this formula | QR Code Image | Links to TikTok video |
-| Example video views | Stage 2 | `view_count` from top performer video metadata | Integer (formatted with K/M) | 520K |
+| Example video views | Stage 2 | `view_count` from top performer video metadata | Integer (formatted with K/M) | 620K |
+| Example video engagement | Calculated | `calculate_engagement_metrics()` for top performer video | Float (%) | 1.4 |
 
-**Engagement Rate Calculation Method** (Industry Benchmark Mapping):
+**Calculation Method** (Real Engagement from Apify Data):
 
-**Step 1: Identify Performance Tiers from View Data**
-- Analyze avg view counts per bucket from Stage 1 `winner_analysis.json`
-- Rank buckets by performance: Top (highest views), Middle, Bottom (lowest views)
+Uses `calculate_engagement_metrics()` function (Section 0.5.5 in Stage8MVP.md) to calculate real engagement rates from actual TikTok interaction data:
+- **Data Source**: `unified_analysis/{video_id}.json` → `metadata` (lines 8-12)
+- **Formula**: `(likes + comments + shares + saves) / views × 100%`
+- **Applied to**: All videos in top cluster (pattern users) and bottom cluster (non-pattern users)
+- **Output**: Real measured engagement rates, not estimates
 
-**Step 2: Map to Industry Engagement Benchmarks**
-- **Top performers** (highest view bucket): 6-9% engagement rate
-- **Middle performers**: 4-6% engagement rate
-- **Bottom performers**: 2-4% engagement rate
-
-**Step 3: Apply to Pattern-Specific Groups**
-- Videos using this pattern (from top bucket): Assign high-end benchmark (e.g., 8.4%)
-- Videos NOT using this pattern (from bottom/middle): Assign low-end benchmark (e.g., 3.1%)
-- Calculate multiplier: 8.4% / 3.1% = 2.7x
-
-**Rationale**: TikTok industry standard engagement rates are 3-9% for good content. We map our view performance tiers to these established benchmarks to provide realistic, defensible engagement estimates.
-
-**Note**: These are estimated engagement rates based on view performance and industry benchmarks, not directly measured engagement data.
+**Benefit**: Data integrity and transparency - shows actual engagement performance, not industry benchmark estimates.
 
 ---
 
@@ -915,9 +1047,9 @@ Closing + Caption:
 
 **Audience**: Tumi Labs clients (business owners)
 
-**Purpose**: Competitive intelligence - benchmark 1 competitor vs client baseline
+**Purpose**: Competitive intelligence on 1 competitor
 
-**Deliverable**: 1 PDF comparing 1 competitor vs client
+**Deliverable**: 1 PDF analyzing 1 competitor
 
 **Format**: 4-page PDF (desktop-optimized, executive-focused)
 
@@ -930,10 +1062,9 @@ Closing + Caption:
 - Competitor Stage 7: `winning_formulas.json`
 - Competitor Stage 6: `rf_video_analysis.json`, `kmeans_analysis.json`
 - Competitor Stage 1: `winner_analysis.json` (bucket distribution)
-- Competitor Stage 2: Video metadata (URLs, view counts, hashtags, timestamps)
+- Competitor Stage 2: Video metadata (URLs, view counts, hashtags, timestamps, `likes`, `comments`, `shares`, `saves` for engagement calculation)
 - Competitor Stage 2.7: `content_analysis` outputs (content categories, hook strategies)
-- Client baseline: All of above for client (for benchmarking)
-- Config: CLI parameters (`--competitor`, `--client`, `--analysis-period`)
+- Config: CLI parameters (`--competitor`, `--analysis-period`)
 
 ---
 
@@ -945,7 +1076,7 @@ Closing + Caption:
 - ✅ Content category: Competitor only (no side-by-side)
 - ✅ QR codes: 1 code (competitor's top video)
 - ✅ Data type: Single snapshot analysis
-- ✅ Comparison approach: Competitor focus with client baseline context
+- ✅ Comparison approach: Competitor focus only (no client comparison)
 
 ---
 
@@ -960,32 +1091,25 @@ Closing + Caption:
 ```
 Competitive Intelligence Report
 Competitor: @rival_brand
-Client Baseline: @acme_nutrition
 Analysis Period: Last 90 days
 ```
 
 **Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Competitor handle | Config | CLI parameter `--competitor` | String | "@rival_brand" |
-| Client handle | Config | CLI parameter `--client` | String | "@acme_nutrition" |
-| Analysis period | Config | CLI parameter `--analysis-period` (default "Last 90 days") | String | "Last 90 days" |
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Competitor handle | Config | `/data/clients/{client}/competitors/{target}/{mode}_{strategy}/config.json` → `target` (includes @ symbol) | String | "@drinkpoppi" | ✅ **This session** |
+| Analysis period | Static | Fixed string: "Last 90 days" | String | "Last 90 days" | ✅ **Report 1 Header** |
 
 ---
 
 #### Analysis Scope
 
 ```
-COMPETITOR ANALYSIS SCOPE:
+ANALYSIS SCOPE:
 Videos Analyzed: 127
 Total Video Duration: 42 minutes
 Duration Range: 0-120 seconds (8 distinct buckets)
 Content Elements Tracked: 60+ features per video
-
-CLIENT BASELINE:
-Videos Analyzed: 89
-Total Video Duration: 28 minutes
-Duration Range: 0-120 seconds (8 distinct buckets)
 
 Analysis Method:
 Multi-dimensional machine learning and AI content analysis:
@@ -1006,12 +1130,10 @@ strategy, creative patterns, and strategic opportunities.
 ```
 
 **Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Competitor videos analyzed | Stage 1 (Comp) | `total_videos_analyzed` in winner_analysis.json | Integer | 127 |
-| Competitor total duration | Stage 2 (Comp) | Sum of all video durations from metadata | String | "42 minutes" |
-| Client videos analyzed | Stage 1 (Client) | `total_videos_analyzed` in winner_analysis.json | Integer | 89 |
-| Client total duration | Stage 2 (Client) | Sum of all video durations from metadata | String | "28 minutes" |
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Videos analyzed | Selection Manifest | `/data/clients/{client}/competitors/{target}/{mode}_{strategy}/selection_manifest.json` → Sum all `top_performers` + `bottom_performers` | Integer | 127 | ✅ **Report 1 Header** |
+| Total duration | Temporal Windows | For each video ID in selection_manifest, load temporal_windows_updated.json → metadata.duration, sum and convert to minutes | String | "42 minutes" | ⚠️ **NOT VERIFIED** |
 
 ---
 
@@ -1019,41 +1141,32 @@ strategy, creative patterns, and strategic opportunities.
 
 ```
 POSTING FREQUENCY:
-Competitor: 14 videos per week (average over last 90 days)
-Client: 10 videos per week (average over last 90 days)
-→ Competitor posts 40% more frequently
+14 videos per week (average over last 90 days)
 
 POSTING CONSISTENCY:
-Competitor: High (posts 12-16 videos weekly, low variance)
-Client: Moderate (posts 7-13 videos weekly, medium variance)
+High (posts 12-16 videos weekly, low variance)
 
 CONTENT VELOCITY:
-Recent 30 days: 16 videos/week (competitor accelerating)
+Recent 30 days: 16 videos/week (accelerating)
 Prior 60 days: 13 videos/week
 → 23% increase in posting rate
 
 ANALYSIS PERIOD COVERAGE:
-Competitor: 127 videos analyzed (from 180 total posted in 90 days)
-Client: 89 videos analyzed (from 120 total posted in 90 days)
+127 videos analyzed (from 180 total posted in 90 days)
 Coverage: Top 70% of content by engagement
 ```
 
 **Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Competitor posting frequency | Stage 2 (Comp) | Count videos in last 90 days ÷ 13 weeks | Float | 14 videos/week |
-| Client posting frequency | Stage 2 (Client) | Count videos in last 90 days ÷ 13 weeks | Float | 10 videos/week |
-| Posting frequency gap | Calculated | (Comp freq - Client freq) / Client freq × 100% | Integer (%) | 40% |
-| Competitor consistency | Calculated | Weekly variance (Low/Medium/High based on std deviation) | String | "High" |
-| Client consistency | Calculated | Weekly variance (Low/Medium/High based on std deviation) | String | "Moderate" |
-| Recent velocity (30 days) | Stage 2 (Comp) | Count videos in last 30 days ÷ 4.3 weeks | Float | 16 videos/week |
-| Prior velocity (60 days) | Stage 2 (Comp) | Count videos in days 31-90 ÷ 8.6 weeks | Float | 13 videos/week |
-| Velocity change | Calculated | (Recent - Prior) / Prior × 100% | Integer (%) | 23% |
-| Competitor total posted | Stage 2 (Comp) | Count all videos in 90-day period | Integer | 180 |
-| Competitor analyzed | Stage 1 (Comp) | `total_videos_analyzed` | Integer | 127 |
-| Client total posted | Stage 2 (Client) | Count all videos in 90-day period | Integer | 120 |
-| Client analyzed | Stage 1 (Client) | `total_videos_analyzed` | Integer | 89 |
-| Coverage description | Config | Based on `--mode` (e.g., "Top 70% by engagement") | String | "Top 70% of content by engagement" |
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Posting frequency | Stage 2 | Count videos in last 90 days ÷ 13 weeks | Float | 14 videos/week | ⚠️ **NOT VERIFIED** |
+| Posting consistency | Calculated | Weekly variance (Low/Medium/High based on std deviation) | String | "High" | ⚠️ **NOT VERIFIED** |
+| Recent velocity (30 days) | Stage 2 | Count videos in last 30 days ÷ 4.3 weeks | Float | 16 videos/week | ⚠️ **NOT VERIFIED** |
+| Prior velocity (60 days) | Stage 2 | Count videos in days 31-90 ÷ 8.6 weeks | Float | 13 videos/week | ⚠️ **NOT VERIFIED** |
+| Velocity change | Calculated | (Recent - Prior) / Prior × 100% | Integer (%) | 23% | ⚠️ **NOT VERIFIED** |
+| Total posted | Stage 2 | Count all videos in 90-day period | Integer | 180 | ⚠️ **NOT VERIFIED** |
+| Videos analyzed | Selection Manifest | Sum all `top_performers` + `bottom_performers` | Integer | 127 | ✅ **Report 1 Header** |
+| Coverage description | Config | Based on `--mode` (e.g., "Top 70% by engagement") | String | "Top 70% of content by engagement" | ⚠️ **NOT VERIFIED** |
 
 ---
 
@@ -1063,14 +1176,13 @@ Coverage: Top 70% of content by engagement
 
 ---
 
-#### Section 1: Bucket Strategy Comparison
+#### Section 1: Bucket Strategy (Content Distribution)
 
 ```
-WHERE COMPETITOR FOCUSES CONTENT:
+CONTENT DISTRIBUTION BY DURATION:
 
 [Horizontal bar chart showing % of videos per bucket]
 
-Competitor Distribution:
 0-3s:   ██ 3%
 3-9s:   ████ 8%
 9-13s:  ████████ 12%
@@ -1080,85 +1192,45 @@ Competitor Distribution:
 60-90s: ███ 4%
 90-120s: █ 1%
 
-Key Insight: Competitor focuses 52% of content in 18-33s + 33-60s buckets
-
-
-WHERE YOU FOCUS CONTENT:
-
-Client Distribution:
-0-3s:   ████ 6%
-3-9s:   ████████ 12%
-9-13s:  ██████████ 15%
-13-18s: ████████████████ 25%  ← HIGH VOLUME
-18-33s: ██████████████ 22%  ← MODERATE VOLUME
-33-60s: ████████ 13%
-60-90s: ████ 6%
-90-120s: █ 1%
-
-Key Insight: You focus 47% of content in 13-18s + 18-33s buckets
-
-
-STRATEGIC DIFFERENCES:
-→ Competitor invests heavily in 33-60s content (22% vs your 13%)
-→ You focus more on 13-18s content (25% vs competitor's 18%)
-→ Competitor produces 2x more long-form content (60s+)
+Key Insight: 52% of content concentrated in 18-33s + 33-60s buckets
 ```
 
 **Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Competitor % per bucket (8 rows) | Stage 1 (Comp) | `bucket_distribution` in winner_analysis.json | Integer (%) | 3, 8, 12, 18, 32, 22, 4, 1 |
-| Client % per bucket (8 rows) | Stage 1 (Client) | `bucket_distribution` in winner_analysis.json | Integer (%) | 6, 12, 15, 25, 22, 13, 6, 1 |
-| Competitor key insight | Calculated | Sum of top 2 buckets percentages + bucket names | String | "52% of content in 18-33s + 33-60s" |
-| Client key insight | Calculated | Sum of top 2 buckets percentages + bucket names | String | "47% of content in 13-18s + 18-33s" |
-| Strategic differences (3 items) | Calculated | Identify largest percentage gaps between competitor and client | String (array) | ["Competitor invests heavily in 33-60s...", etc.] |
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| % per bucket (8 rows) | Stage 1 | `bucket_distribution` in winner_analysis.json | Integer (%) | 3, 8, 12, 18, 32, 22, 4, 1 | ⚠️ **NOT VERIFIED** |
+| Key insight | Calculated | Sum of top 2 buckets percentages + bucket names | String | "52% of content in 18-33s + 33-60s" | ⚠️ **NOT VERIFIED** |
 
 ---
 
-#### Section 2: Bucket Performance Comparison
+#### Section 2: Bucket Performance (Top 3 Winning Buckets)
 
 ```
-COMPETITOR PERFORMANCE BY DURATION:
+PERFORMANCE BY DURATION:
 
-13-18s:  580K avg views  ⭐⭐⭐⭐
-18-33s:  620K avg views  ⭐⭐⭐⭐⭐  ← BEST BUCKET
-33-60s:  490K avg views  ⭐⭐⭐⭐
-(Other buckets: 150K-380K avg views)
+Duration | Avg Views | Avg Engagement | Rating
+---------|-----------|----------------|--------
+13-18s   | 580K      | 1.3%           | ⭐⭐⭐⭐
+18-33s   | 620K      | 1.5%           | ⭐⭐⭐⭐⭐  ← SWEET SPOT
+33-60s   | 490K      | 1.4%           | ⭐⭐⭐⭐
 
-Competitor's Sweet Spot: 18-33s (highest performance + high volume)
+(Other buckets: 150K-380K views)
 
+Sweet Spot: 18-33s (highest views + highest engagement + high volume)
 
-YOUR PERFORMANCE BY DURATION:
-
-13-18s:  520K avg views  ⭐⭐⭐⭐
-18-33s:  460K avg views  ⭐⭐⭐⭐
-33-60s:  410K avg views  ⭐⭐⭐
-(Other buckets: 120K-340K avg views)
-
-Your Sweet Spot: 13-18s (highest performance + high volume)
-
-
-PERFORMANCE GAPS:
-
-13-18s:  -60K gap  (Competitor: 580K vs You: 520K = -12% performance gap)
-18-33s:  -160K gap (Competitor: 620K vs You: 460K = -35% performance gap) ⚠️ BIGGEST GAP
-33-60s:  -80K gap  (Competitor: 490K vs You: 410K = -19% performance gap)
-
-Key Insight: Competitor outperforms in all major buckets, with largest gap in 18-33s
+KEY INSIGHT:
+→ 18-33s duration delivers best performance (620K avg views, 1.5% engagement)
+→ Consistent engagement rates across top 3 buckets (1.3-1.5%)
+→ Strong content resonance in mid-length formats (13-60s)
 ```
 
 **Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Competitor avg views per bucket | Stage 1 (Comp) | `avg_views` per bucket in winner_analysis.json | Integer (formatted with K) | 580K, 620K, 490K |
-| Competitor star ratings | Calculated | Based on view performance tier (5 stars = highest, 1 star = lowest) | String (emoji) | ⭐⭐⭐⭐⭐ |
-| Competitor sweet spot | Stage 1 (Comp) | Bucket with highest avg_views + sufficient volume | String | "18-33s" |
-| Client avg views per bucket | Stage 1 (Client) | `avg_views` per bucket in winner_analysis.json | Integer (formatted with K) | 520K, 460K, 410K |
-| Client star ratings | Calculated | Based on view performance tier | String (emoji) | ⭐⭐⭐⭐ |
-| Client sweet spot | Stage 1 (Client) | Bucket with highest avg_views + sufficient volume | String | "13-18s" |
-| Performance gap (per bucket) | Calculated | Competitor avg_views - Client avg_views | Integer (formatted with K) | -60K, -160K, -80K |
-| Performance gap % (per bucket) | Calculated | (Comp views - Client views) / Client views × 100% | Integer (%) | -12%, -35%, -19% |
-| Biggest gap bucket | Calculated | Bucket with largest absolute gap | String | "18-33s" |
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Avg views per bucket | Stage 1 | `avg_views` per bucket in winner_analysis.json | Integer (formatted with K) | 580K, 620K, 490K | ⚠️ **NOT VERIFIED** |
+| Avg engagement per bucket | Calculated | Avg `calculate_engagement_metrics()` per bucket | Float (%) | 1.3, 1.5, 1.4 | ⚠️ **NOT VERIFIED** |
+| Star ratings | Calculated | Based on view + engagement performance (5 stars = high both) | String (emoji) | ⭐⭐⭐⭐⭐ | ⚠️ **NOT VERIFIED** |
+| Sweet spot | Calculated | Bucket with highest views + highest engagement + high volume | String | "18-33s" | ⚠️ **NOT VERIFIED** |
 
 ---
 
@@ -1199,6 +1271,106 @@ Branded hashtags: None detected
 | Top 5 concentration % | Calculated | Avg usage % of top 5 hashtags | Integer (%) | 73 |
 | Strategy type | Calculated | If unique hashtags > 20: "Diversified", else "Focused" | String | "Diversified" |
 | Branded hashtags | Calculated | Detect hashtags with brand name or custom branded tags | String | "None detected" or list |
+
+---
+
+#### Section 4: Caption Strategy Intelligence
+
+**Purpose**: Analyze competitor's caption formatting and CTA strategies
+
+```
+COMPETITOR'S CAPTION STRATEGY:
+
+Avg Hashtag Count:        12 hashtags per video
+Hashtag Strategy:         8 broad, 4 niche (broad-reach focused)
+Caption Length:           Long captions (68% of content >100 chars)
+Emoji Usage:              Heavy emoji use (45% use 5+ emojis)
+Top CTA Type:             "Follow me" (52% of videos)
+
+STRATEGIC APPROACH:
+→ Broad-reach hashtag strategy (8 broad hashtags prioritize discovery)
+→ Longer captions suggest storytelling/educational approach
+→ Heavy emoji use indicates engaging, personality-driven style
+→ "Follow" CTA prioritizes audience building over link clicks
+→ Overall strategy: Growth-focused (maximize followers and reach)
+
+CAPTION FORMULA PATTERN:
+Typical structure: [Engaging opener with emojis] + [Long-form story/explanation] +
+[12 hashtags: 8 broad for reach, 4 niche for targeting] + ["Follow for more!" CTA]
+```
+
+**Dynamic Fields**:
+| Template Field | Source | JSON Field/Calculation | Data Type | Example |
+|----------------|--------|------------------------|-----------|---------|
+| Competitor avg hashtag count | Stage 2.7 (Comp) | Mean of `caption_analysis.hashtag_count` from competitor's winning videos | Integer | 12 |
+| Competitor hashtag breakdown | Stage 2.7 (Comp) | Mean of `caption_analysis.hashtag_strategy.niche_count` and `broad_count` | String | "8 broad, 4 niche" |
+| Competitor hashtag focus | Calculated | Identify whether broad or niche dominates | String | "broad-reach focused" |
+| Competitor caption length winner | Stage 2.7 (Comp) | Most common `caption_analysis.caption_length` value with % | String with % | "Long (68%)" |
+| Competitor emoji usage winner | Stage 2.7 (Comp) | Most common `caption_analysis.emoji_usage` value with % | String with % | "Heavy (5+) 45%" |
+| Competitor top CTA | Stage 2.7 (Comp) | Most common `caption_analysis.caption_cta_type` with % | String with % | "Follow (52%)" |
+| Strategic approach insights (4-5 items) | Calculated | Interpret competitor's caption strategy characteristics | String (array) | ["Broad-reach hashtag strategy...", "Longer captions suggest...", etc.] |
+| Overall strategy summary | Calculated | High-level strategy label based on caption patterns | String | "Growth-focused (maximize followers and reach)" |
+| Caption formula pattern | Calculated | Describe typical caption structure based on aggregated data | String | "[Engaging opener...] + [Long-form story...] + [12 hashtags...] + [CTA]" |
+
+**Data Source**:
+- Stage 2.7 Content Analysis classifications from competitor's winning videos (40 per bucket × 3 buckets = 120 videos)
+- Aggregated using `aggregate_content_intelligence()` function
+
+**Note**: Caption analysis provides competitive intelligence about how competitor formats captions, uses hashtags, and drives engagement. No client comparison - pure competitor analysis.
+
+---
+
+#### Section 5: Content Sourcing Strategy
+
+**Purpose**: Identify affiliate partnerships and repost content strategy
+
+```
+CONTENT SOURCING STRATEGY:
+
+Original Content: 58% (no affiliate mentions or repost indicators)
+Reposted/Affiliate Content: 42% (contains repost indicators)
+
+TOP AFFILIATE CONTRIBUTORS:
+1. @fitnessguru123     (18% of videos - 54 mentions)
+2. @healthcoach_jane   (12% of videos - 36 mentions)
+3. @nutritionpro       (8% of videos - 24 mentions)
+4. @wellnesswarrior    (5% of videos - 15 mentions)
+5. @cleaneatingclub    (4% of videos - 12 mentions)
+
+Total unique @mentions: 47
+Videos with @mentions: 126 out of 300 (42%)
+
+STRATEGY INSIGHT:
+Competitor leverages affiliate network heavily - 42% of content is reposted
+from 5 core partners. This allows them to maintain high posting frequency
+(14 videos/week) with reduced production costs.
+
+YOUR OPPORTUNITY:
+Build similar affiliate partnerships to increase content volume without
+proportional production cost increase. Consider developing UGC (user-generated
+content) network with micro-influencers in your niche.
+```
+
+**Dynamic Fields**:
+| Template Field | Source | JSON Field/Calculation | Data Type | Example |
+|----------------|--------|------------------------|-----------|---------|
+| Original content % | Calculated | 100% - repost_rate | Integer (%) | 58 |
+| Reposted/Affiliate content % | Calculated | `repost_rate` from extract_mention_analysis() | Integer (%) | 42 |
+| Top affiliate contributors (5-10 items) | Stage 2 (Comp) | `top_10_mentions` from extract_mention_analysis() | Array of objects | [{handle: "@fitnessguru123", percentage: 18, mention_count: 54}, ...] |
+| Total unique mentions | Calculated | `total_unique_mentions` from extract_mention_analysis() | Integer | 47 |
+| Videos with mentions | Calculated | `videos_with_mentions` from extract_mention_analysis() | Integer | 126 |
+| Total videos analyzed | Stage 1 (Comp) | Count from selection_manifest.json | Integer | 300 |
+| Mention rate | Calculated | `mention_rate` from extract_mention_analysis() | Integer (%) | 42 |
+| Competitor posting frequency | Stage 2 (Comp) | From posting activity analysis | Float | 14 videos/week |
+| Strategy insight | Calculated | Synthesize based on repost_rate and top affiliates | String | "Competitor leverages affiliate network heavily..." |
+| Opportunity recommendation | Manual | Strategic recommendation based on competitor's approach | String | "Build similar affiliate partnerships..." |
+
+**Data Source**:
+- `unified_analysis/{video_id}.json` → `metadata.description` (caption text)
+- Regex extraction: `re.findall(r'@(\w+)', caption)`
+- Repost indicators: ["repost", "via", "credit", "by", "from"]
+
+**Implementation**: See Stage8MVP.md Section 0.5.4 for `extract_mention_analysis()` function
 
 ---
 
@@ -1255,10 +1427,64 @@ Formula 5: "The Quick Win Tutorial" (13-18s bucket)
 
 ---
 
-#### Section 2: Pattern Versatility & Content Mix
+#### Section 2: Content Strategy Profile
+
+**Purpose**: Show competitor's content approach, messaging themes, and audience targeting
 
 ```
-PATTERN VERSATILITY:
+COMPETITOR'S CONTENT STRATEGY:
+
+Top Content Types:
+1. Recipe Tutorial (38% of content) - Step-by-step cooking instructions
+2. Wellness Practice (28% of content) - Daily health routines and habits
+3. Supplement Review (17% of content) - Product recommendations and reviews
+4. Expert Interview (12% of content) - Professional perspectives
+5. Personal Testimony (5% of content) - Personal success stories
+
+Top Hook Strategies:
+1. Question Hook (42% of videos) - Opens with engaging question
+2. Problem-Solution (31% of videos) - Identifies pain point, offers solution
+3. Direct Statement (18% of videos) - Bold claim or fact
+4. Curiosity Gap (9% of videos) - Creates mystery or intrigue
+
+Audience Pain Points Addressed:
+• Bloating/Digestive Issues (48% of videos)
+• Low Energy/Fatigue (42% of videos)
+• Weight Management (38% of videos)
+• Inflammation (32% of videos)
+• Gut Health (28% of videos)
+
+Top Keywords Used:
+#guthealth, #protein, #antiinflammatory, #metabolism, #fiber
+
+Top Engagement Drivers:
+• Before/After Reveal (45% of videos) - Visual transformations
+• Specific Metrics (42% of videos) - "Lost 15 lbs in 30 days"
+• Personal Testimony (38% of videos) - "This worked for me..."
+• Expert Credentials (28% of videos) - "Registered nutritionist here..."
+
+---
+
+Note: Content categories and patterns discovered from competitor's content using
+AI analysis. Categories reflect competitor-specific content approach and may differ
+from other creators' content taxonomies.
+```
+
+**Dynamic Fields**:
+| Template Field | Source | JSON Field/Calculation | Data Type | Example |
+|----------------|--------|------------------------|-----------|---------|
+| Top content categories (5 types) | Stage 2.7 (Comp) | Aggregate `content_category` field, rank by frequency, top 5 with descriptions | String (array) with descriptions | ["Recipe Tutorial (38%) - Step-by-step...", ...] |
+| Top hook strategies (4 types) | Stage 2.7 (Comp) | Aggregate `hook_strategy` field, rank by frequency, top 4 with descriptions | String (array) with descriptions | ["Question Hook (42%) - Opens with...", ...] |
+| Top pain points (5 items) | Stage 2.7 (Comp) | Aggregate `pain_points` array, rank by frequency, top 5 with % | String (array) with % | ["Bloating/Digestive Issues (48%)", ...] |
+| Top keywords (5 items) | Stage 2.7 (Comp) | Aggregate `keywords` array, rank by frequency, top 5 | String (array) | ["#guthealth", "#protein", ...] |
+| Top engagement drivers (4 items) | Stage 2.7 (Comp) | Aggregate `engagement_drivers` array, rank by frequency, top 4 with % and descriptions | String (array) with % | ["Before/After Reveal (45%) - Visual...", ...] |
+
+---
+
+#### Section 3: Pattern Versatility
+
+```
+CREATIVE APPROACH:
 
 Total distinct formulas: 9 (across all winning buckets)
 Formula rotation: High (competitor uses 5-9 different patterns per bucket)
@@ -1266,19 +1492,7 @@ Pattern repetition rate: 24% (avg % of content using single most-used formula)
 
 Insight: Competitor diversifies creative approach, avoiding pattern fatigue
 
-
-CONTENT CATEGORY MIX:
-
-Recipe Tutorial:        38% of content
-Wellness Practice:      28% of content
-Supplement Review:      17% of content
-Expert Interview:       12% of content
-Personal Testimony:     5% of content
-
-Dominant Format: Recipe Tutorial (38% of content)
-Secondary Format: Wellness Practice (28% of content)
-
-Strategy: Competitor focuses on instructional content (recipe + wellness = 66%)
+Content Focus: Instructional content dominates (recipe + wellness = 66%)
 ```
 
 **Dynamic Fields**:
@@ -1287,42 +1501,7 @@ Strategy: Competitor focuses on instructional content (recipe + wellness = 66%)
 | Total distinct formulas | Stage 7 (Comp) | Count unique formulas across all buckets in winning_formulas.json | Integer | 9 |
 | Formula rotation level | Calculated | If formulas > 6: "High", 4-6: "Medium", <4: "Low" | String | "High" |
 | Pattern repetition rate | Calculated | Avg of highest formula usage % across buckets | Integer (%) | 24 |
-| Content categories (5 types) | Stage 2.7 (Comp) | Aggregate `content_category` field, count frequency | String (array) | ["Recipe Tutorial", "Wellness Practice", ...] |
-| Category percentages (5 values) | Calculated | (Videos with category / Total videos) × 100% | Integer (%) | 38, 28, 17, 12, 5 |
-| Dominant format | Calculated | Content category with highest % | String | "Recipe Tutorial" |
-| Secondary format | Calculated | Content category with 2nd highest % | String | "Wellness Practice" |
-| Strategy insight | Calculated | Sum related categories, identify theme | String | "Competitor focuses on instructional content..." |
-
----
-
-#### Section 3: Hook Strategy Distribution
-
-```
-OPENING PATTERNS COMPETITOR USES:
-
-Question Hook:          42% of content (most common)
-Problem-Solution:       31% of content
-Direct Statement:       18% of content
-Teaser/Curiosity Gap:   9% of content
-
-Dominant Hook: Question Hook (42% of content)
-
-Example Question Hooks from Competitor:
-• "Did you know this common food is destroying your gut?"
-• "Want to know the secret ingredient nutritionists use?"
-• "Ever wonder why you're always bloated after meals?"
-
-Strategy: Competitor leads with questions to create immediate curiosity and engagement
-```
-
-**Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Hook strategies (4 types) | Stage 2.7 (Comp) | Aggregate `hook_strategy` field, count frequency | String (array) | ["Question Hook", "Problem-Solution", ...] |
-| Hook percentages (4 values) | Calculated | (Videos with hook type / Total videos) × 100% | Integer (%) | 42, 31, 18, 9 |
-| Dominant hook | Calculated | Hook strategy with highest % | String | "Question Hook" |
-| Example hooks (3 items) | Stage 2.7 (Comp) | Sample actual transcript openings from videos using dominant hook | String (array) | ["Did you know this common food...", ...] |
-| Strategy insight | Manual | Interpretation of hook distribution | String | "Competitor leads with questions to create..." |
+| Content focus insight | Calculated | Sum related categories from Section 2, identify theme | String | "Instructional content dominates..." |
 
 ---
 
@@ -1808,10 +1987,10 @@ for your content team.
 ### Input Data Sources
 
 - Competitor Stage 1: `winner_analysis.json` (bucket distribution, avg views per bucket)
+- Competitor Stage 2: Video metadata (posting frequency, total duration, hashtags, @mentions, `views`, `likes`, `comments`, `shares`, `saves` for engagement calculation)
+- Competitor Stage 2.7: Content Analysis (categories, hooks, pain points, keywords, engagement drivers)
 - Competitor Stage 6: `kmeans_analysis.json` (pattern diversity)
 - Competitor Stage 7: `winning_formulas.json` (top formulas per competitor)
-- Competitor Stage 2: Video metadata (posting frequency, total duration, hashtags, @mentions)
-- Competitor Stage 2.7: Content Analysis (categories, hooks, pain points, keywords, engagement drivers)
 - Config: CLI parameters (`--competitors` list, `--analysis-period`)
 
 ---
@@ -1841,10 +2020,10 @@ Analysis Period: Last 90 days
 ```
 
 **Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Competitor handles (2-5) | Config | CLI parameter `--competitors` (array) | String (array) | ["@rival_brand", "@wellness_pro", "@fitness_guru"] |
-| Analysis period | Config | CLI parameter `--analysis-period` (default "Last 90 days") | String | "Last 90 days" |
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Competitor handles (2-5) | Config | Array of `/data/clients/{client}/competitors/{target}/{mode}_{strategy}/config.json` → `target` fields (one per competitor) | String (array) | ["@drinkpoppi", "@nike", "@wellness_pro"] | ✅ **This session** |
+| Analysis period | Static | Fixed string: "Last 90 days" | String | "Last 90 days" | ✅ **Report 1 Header** |
 
 ---
 
@@ -1853,24 +2032,25 @@ Analysis Period: Last 90 days
 ```
 COMPETITOR PERFORMANCE RANKING:
 
-Rank | Handle            | Avg Views | Posting Freq | Videos Analyzed | Total Duration
------|-------------------|-----------|--------------|-----------------|----------------
-1    | @wellness_pro     | 580K      | 16/week      | 145             | 68 minutes
-2    | @rival_brand      | 520K      | 14/week      | 127             | 42 minutes
-3    | @fitness_guru     | 480K      | 11/week      | 98              | 31 minutes
+Rank | Handle            | Avg Views | Avg Engagement | Posting Freq | Videos Analyzed | Total Duration
+-----|-------------------|-----------|----------------|--------------|-----------------|----------------
+1    | @wellness_pro     | 580K      | 1.4%           | 16/week      | 145             | 68 minutes
+2    | @rival_brand      | 520K      | 1.3%           | 14/week      | 127             | 42 minutes
+3    | @fitness_guru     | 480K      | 1.2%           | 11/week      | 98              | 31 minutes
 
-Market Leader: @wellness_pro (580K avg views, highest posting frequency)
+Market Leader: @wellness_pro (580K avg views, 1.4% engagement, highest posting frequency)
 ```
 
 **Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Competitor handles (all) | Config | CLI parameter `--competitors` | String (array) | ["@wellness_pro", "@rival_brand", "@fitness_guru"] |
-| Avg Views (per competitor) | Stage 1 (All Comp) | Weighted avg of `avg_views` across all buckets | Integer (formatted with K) | 580K, 520K, 480K |
-| Posting Freq (per competitor) | Stage 2 (All Comp) | Count videos in 90 days ÷ 13 weeks | Float | 16, 14, 11 |
-| Videos Analyzed (per competitor) | Stage 1 (All Comp) | `total_videos_analyzed` in winner_analysis.json | Integer | 145, 127, 98 |
-| Total Duration (per competitor) | Stage 2 (All Comp) | Sum of all video durations | String | "68 minutes", "42 minutes", "31 minutes" |
-| Market leader | Calculated | Competitor with highest avg_views | String | "@wellness_pro" |
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Competitor handles (all) | Config | Array of `/data/clients/{client}/competitors/{target}/{mode}_{strategy}/config.json` → `target` fields (one per competitor) | String (array) | ["@drinkpoppi", "@nike", "@wellness_pro"] | ✅ **This session** |
+| Avg Views (per competitor) | Stage 1 (All Comp) | Weighted avg of `avg_views` across all buckets | Integer (formatted with K) | 580K, 520K, 480K | ⚠️ **NOT VERIFIED** |
+| Avg Engagement (per competitor) | Calculated | Avg `calculate_engagement_metrics()` across all videos | Float (%) | 1.4, 1.3, 1.2 | ⚠️ **NOT VERIFIED** |
+| Posting Freq (per competitor) | Stage 2 (All Comp) | Count videos in 90 days ÷ 13 weeks | Float | 16, 14, 11 | ⚠️ **NOT VERIFIED** |
+| Videos Analyzed (per competitor) | Selection Manifest (All Comp) | Per competitor: `/data/clients/{client}/competitors/{target}/{mode}_{strategy}/selection_manifest.json` → Sum all `top_performers` + `bottom_performers` | Integer | 145, 127, 98 | ✅ **Report 1 Header** |
+| Total Duration (per competitor) | Temporal Windows (All Comp) | Per competitor: Sum video durations from temporal_windows_updated.json | String | "68 minutes", "42 minutes", "31 minutes" | ⚠️ **NOT VERIFIED** |
+| Market leader | Calculated | Competitor with highest avg_views + engagement | String | "@wellness_pro" | ⚠️ **NOT VERIFIED** |
 
 ---
 
@@ -1954,35 +2134,47 @@ KEY MARKET INSIGHTS:
 #### Section 2: Performance by Duration
 
 ```
-AVERAGE VIEWS BY COMPETITOR:
+PERFORMANCE BY COMPETITOR (VIEWS / ENGAGEMENT):
+Shows each competitor's top 3 performing durations (winning buckets)
 
-Duration   | @wellness_pro | @rival_brand | @fitness_guru | Best Performer
------------|---------------|--------------|---------------|----------------
-0-3s       | 180K          | 125K         | 220K          | @fitness_guru
-3-9s       | 250K          | 210K         | 280K          | @fitness_guru
-9-13s      | 420K          | 380K         | 400K          | @wellness_pro
-13-18s     | 580K 👑       | 580K 👑      | 490K          | TIE (wellness/rival)
-18-33s     | 620K 👑       | 620K 👑      | 510K          | TIE (wellness/rival)
-33-60s     | 590K 👑       | 490K         | 450K          | @wellness_pro
-60-90s     | 320K          | 180K         | 210K          | @wellness_pro
-90-120s    | 150K          | 95K          | 110K          | @wellness_pro
+Duration   | @wellness_pro (V/E) | @rival_brand (V/E) | @fitness_guru (V/E) | Best Performer
+-----------|---------------------|-------------------|--------------------|-----------------
+9-13s      | 420K / 1.2% 👑      | —                 | —                  | @wellness_pro
+13-18s     | 580K / 1.3% 👑      | 580K / 1.4% 👑    | 490K / 1.2% 👑     | @rival_brand (engagement wins tie)
+18-33s     | 620K / 1.5% 👑      | 620K / 1.4% 👑    | 510K / 1.3% 👑     | @wellness_pro (engagement wins tie)
+33-60s     | 590K / 1.4% 👑      | 490K / 1.3% 👑    | 450K / 1.2% 👑     | @wellness_pro (views + engagement)
+60-90s     | —                   | —                 | 320K / 1.1% 👑     | @fitness_guru
 
-👑 = Top-tier performance (>550K avg views)
+👑 = Winning bucket for this competitor (top 3 performing durations)
+— = Not a winning bucket (engagement data not available)
+
+COMPETITOR WINNING BUCKETS:
+• @wellness_pro: 9-13s, 13-18s, 18-33s, 33-60s (showing top 3 only)
+• @rival_brand: 13-18s, 18-33s, 33-60s
+• @fitness_guru: 13-18s, 18-33s, 60-90s
+
+Note: Each competitor analyzed independently - only their top 3 performing buckets shown
+(Option B: Data availability constraint - can only show engagement for winning buckets)
 
 PERFORMANCE INSIGHTS:
-• @wellness_pro and @rival_brand dominate high-volume buckets (13-33s)
-• @fitness_guru excels in short-form content (0-9s)
-• @wellness_pro leads in long-form performance (33-120s)
-• Sweet spot consensus: 13-33s buckets show strongest performance across all competitors
+• All competitors share 13-18s and 18-33s as winning buckets (market consensus)
+• @wellness_pro excels in 9-13s content (unique winning bucket)
+• @fitness_guru dominates 60-90s long-form (unique winning bucket)
+• Common ground: 18-33s appears in all 3 competitors' winning buckets
 ```
 
 **Dynamic Fields**:
 | Template Field | Source | JSON Field/Calculation | Data Type | Example |
 |----------------|--------|------------------------|-----------|---------|
-| Avg views (per competitor × 8 buckets) | Stage 1 (All Comp) | `avg_views` per bucket in winner_analysis.json | Integer (formatted with K) matrix | 180K, 250K, 420K, etc. |
-| Best performer (per bucket) | Calculated | Competitor with max avg_views per bucket | String per bucket | "@fitness_guru", "TIE (wellness/rival)", etc. |
-| Top-tier markers | Calculated | Flag performances >550K | Boolean per cell | True/False |
-| Performance insights (4 items) | Calculated | Identify dominance patterns, specializations | String (array) | ["@wellness_pro and @rival_brand dominate...", ...] |
+| Unique buckets (union of all winning buckets) | Stage 1 (All Comp) | Union of `winning_buckets` across all competitors | String (array) | ["9-13s", "13-18s", "18-33s", "33-60s", "60-90s"] |
+| Avg views (per competitor, winning buckets only) | Stage 1 (All Comp) | `avg_views` for each competitor's winning buckets | Integer (formatted with K) or "—" | 420K, 580K, "—", etc. |
+| Avg engagement (per competitor, winning buckets only) | Calculated | Avg `calculate_engagement_metrics()` for winning buckets or "—" | Float (%) or "—" | 1.2, 1.3, "—", etc. |
+| Winning bucket markers (per competitor) | Stage 1 (All Comp) | 👑 if bucket is in competitor's winning 3 | String (emoji) or blank | 👑 or blank |
+| Best performer (per bucket) | Calculated | Among competitors with data, who has max views + engagement | String per bucket | "@wellness_pro", "@rival_brand (engagement wins tie)", etc. |
+| Competitor winning bucket lists (3 per competitor) | Stage 1 (All Comp) | Top 3 buckets from `winning_buckets` in winner_analysis.json per competitor | String (array per competitor) | ["9-13s", "13-18s", "18-33s"] |
+| Performance insights (4 items) | Calculated | Identify shared buckets, unique buckets, dominance patterns | String (array) | ["All competitors share 13-18s...", ...] |
+
+**Option B Implementation Note**: Each competitor is analyzed independently and has their own top 3 winning buckets. The table shows the UNION of all winning buckets (typically 3-6 unique buckets), with "—" for competitors who don't have a particular bucket in their winning 3.
 
 ---
 
@@ -2073,79 +2265,135 @@ Formula 2: "The Ingredient Deep-Dive" (18-33s bucket)
 
 ---
 
-#### Section 2: Content Category Distribution
+#### Section 2: Content Strategy Profiles
+
+**Purpose**: Show each competitor's content approach, discovered independently
 
 ```
-WHAT TYPE OF CONTENT EACH COMPETITOR CREATES:
+CONTENT STRATEGY BY COMPETITOR:
 
-Category           | @wellness_pro | @rival_brand | @fitness_guru | Market Leader
--------------------|---------------|--------------|---------------|---------------
-Recipe Tutorial    | 25%           | 38% 🥇       | 20%           | @rival_brand
-Wellness Practice  | 35% 🥇        | 28%          | 18%           | @wellness_pro
-Supplement Review  | 15%           | 17%          | 28% 🥇        | @fitness_guru
-Expert Interview   | 18%           | 12%          | 8%            | @wellness_pro
-Personal Testimony | 7%            | 5%           | 26%           | @fitness_guru
+═══════════════════════════════════════════════════════════════
+@wellness_pro
+═══════════════════════════════════════════════════════════════
 
-🥇 = Dominates this category (highest % among competitors)
+Top Content Types:
+1. Wellness Practice (35% of content) - Daily health routines and holistic habits
+2. Recipe Tutorial (25% of content) - Step-by-step healthy cooking instructions
+3. Expert Interview (18% of content) - Professional nutritionist perspectives
+4. Supplement Review (15% of content) - Product recommendations and analysis
+5. Personal Testimony (7% of content) - Personal health journey stories
 
-STRATEGIC POSITIONING:
-• @wellness_pro: Wellness authority (35% practices + 18% expert interviews = 53%)
-• @rival_brand: Recipe educator (38% tutorials - clear market leader in this format)
-• @fitness_guru: Balanced approach (28% supplements + 26% personal stories = 54%)
+Top Hook Strategies:
+1. Problem-Solution (35% of videos) - Identifies pain point, offers solution
+2. Question Hook (38% of videos) - Opens with engaging health question
+3. Direct Statement (20% of videos) - Bold health claim or fact
+4. Curiosity Gap (7% of videos) - Creates intrigue or mystery
 
-MARKET PATTERNS:
-• Recipe tutorials popular across all competitors (20-38% allocation)
-• Wellness practices show widest variance (18-35% - differentiation opportunity)
-• Supplement reviews concentrated in @fitness_guru's strategy
+Audience Pain Points Addressed:
+• Gut Health/Digestion (52% of videos)
+• Low Energy/Fatigue (45% of videos)
+• Inflammation (38% of videos)
+• Weight Management (32% of videos)
+
+Top Keywords: #guthealth, #wellness, #holistic, #naturalhealing, #inflammation
+
+Top Engagement Drivers:
+• Personal Testimony (45%) - "This worked for me..."
+• Expert Credentials (42%) - "As a nutritionist..."
+• Before/After Reveal (38%) - Visual transformations
+
+Strategic Positioning: "The Wellness Authority" - Focuses on holistic health practices
+with expert validation. Emphasizes lifestyle changes over quick fixes.
+
+---
+
+═══════════════════════════════════════════════════════════════
+@rival_brand
+═══════════════════════════════════════════════════════════════
+
+Top Content Types:
+1. Recipe Tutorial (38% of content) - Step-by-step cooking demonstrations
+2. Ingredient Deep-Dive (32% of content) - Science behind specific ingredients
+3. Product Demonstration (18% of content) - How products work and benefits
+4. Nutrition Myth-Busting (12% of content) - Debunking common misconceptions
+
+Top Hook Strategies:
+1. Question Hook (42% of videos) - Engaging questions about food/nutrition
+2. Problem-Solution (31% of videos) - Identifies issue, provides recipe solution
+3. Direct Statement (18% of videos) - Nutritional facts and claims
+4. Curiosity Gap (9% of videos) - Mysterious ingredient or method
+
+Audience Pain Points Addressed:
+• Bloating/Digestive Issues (58% of videos)
+• Low Energy (48% of videos)
+• Weight Loss (42% of videos)
+• Food Sensitivities (35% of videos)
+
+Top Keywords: #protein, #guthealth, #antiinflammatory, #metabolism, #cleaneating
+
+Top Engagement Drivers:
+• Before/After Reveal (52%) - Recipe transformations and results
+• Specific Metrics (48%) - "30g of protein in this meal"
+• Product Features (38%) - Ingredient highlights
+
+Strategic Positioning: "The Recipe Educator" - Emphasizes practical cooking solutions
+with scientific backing. Content is highly actionable and tutorial-focused.
+
+---
+
+═══════════════════════════════════════════════════════════════
+@fitness_guru
+═══════════════════════════════════════════════════════════════
+
+Top Content Types:
+1. Workout Tutorial (42% of content) - Exercise demonstrations and form tips
+2. Transformation Story (26% of content) - Personal and client success stories
+3. Supplement Review (18% of content) - Product recommendations for fitness
+4. Nutrition Advice (14% of content) - Diet tips for performance and recovery
+
+Top Hook Strategies:
+1. Direct Statement (42% of videos) - Bold fitness/nutrition claims
+2. Question Hook (35% of videos) - Fitness and diet questions
+3. Problem-Solution (15% of videos) - Fitness challenges and solutions
+4. Before/After Hook (8% of videos) - Transformation teasers
+
+Audience Pain Points Addressed:
+• Weight Management/Fat Loss (65% of videos)
+• Muscle Gain (48% of videos)
+• Low Energy (42% of videos)
+• Performance/Strength (38% of videos)
+
+Top Keywords: #fitness, #transformation, #weightloss, #musclegain, #workoutroutine
+
+Top Engagement Drivers:
+• Before/After Reveal (68%) - Body transformation visuals
+• Specific Metrics (55%) - "Lost 15 lbs in 30 days"
+• Personal Testimony (52%) - Personal fitness journey
+
+Strategic Positioning: "The Transformation Motivator" - Focuses on results and
+personal proof. Balances workout content with nutrition guidance for complete fitness.
+
+═══════════════════════════════════════════════════════════════
+
+Note: Each competitor analyzed independently with AI-discovered content taxonomy.
+Categories reflect each competitor's unique content focus and are not directly
+comparable due to different content specializations (wellness vs recipes vs fitness).
 ```
 
 **Dynamic Fields**:
 | Template Field | Source | JSON Field/Calculation | Data Type | Example |
 |----------------|--------|------------------------|-----------|---------|
-| Category % (per competitor × 5 categories) | Stage 2.7 (All Comp) | Aggregate `content_category`, calculate % | Integer (%) matrix | 25, 35, 15, 18, 7 (per competitor) |
-| Market leader (per category) | Calculated | Competitor with max % per category | String per category | "@rival_brand", "@wellness_pro", etc. |
-| Strategic positioning (per competitor) | Calculated | Identify dominant categories + positioning theme | String per competitor | "Wellness authority (35% practices...)" |
-| Market patterns (3 items) | Calculated | Identify trends, variance, concentrations | String (array) | ["Recipe tutorials popular across...", ...] |
+| Competitor handles | Config | CLI parameter `--competitors` | String (array) | ["@wellness_pro", "@rival_brand", "@fitness_guru"] |
+| Top content types (5 per competitor) | Stage 2.7 (All Comp) | Aggregate `content_category` per competitor, rank by frequency, top 5 with descriptions | String (array per competitor) with % | ["Wellness Practice (35%) - Daily health...", ...] |
+| Top hook strategies (4 per competitor) | Stage 2.7 (All Comp) | Aggregate `hook_strategy` per competitor, rank by frequency, top 4 with descriptions | String (array per competitor) with % | ["Problem-Solution (35%) - Identifies...", ...] |
+| Top pain points (4 per competitor) | Stage 2.7 (All Comp) | Aggregate `pain_points` array per competitor, top 4 with % | String (array per competitor) with % | ["Gut Health/Digestion (52%)", ...] |
+| Top keywords (5 per competitor) | Stage 2.7 (All Comp) | Aggregate `keywords` array per competitor, top 5 | String (array per competitor) | ["#guthealth", "#wellness", ...] |
+| Top engagement drivers (3 per competitor) | Stage 2.7 (All Comp) | Aggregate `engagement_drivers` array per competitor, top 3 with % | String (array per competitor) with % | ["Personal Testimony (45%)", ...] |
+| Strategic positioning (per competitor) | Calculated | Synthesize positioning statement from dominant content types | String per competitor | "The Wellness Authority - Focuses on..." |
 
 ---
 
-#### Section 3: Hook Strategy Analysis
-
-```
-OPENING PATTERNS USED BY COMPETITORS:
-
-Hook Type          | @wellness_pro | @rival_brand | @fitness_guru | Most Common
--------------------|---------------|--------------|---------------|-------------
-Question Hook      | 38%           | 42% 🥇       | 35%           | @rival_brand
-Problem-Solution   | 35%           | 31%          | 28%           | @wellness_pro
-Direct Statement   | 20%           | 18%          | 25%           | @fitness_guru
-Teaser/Curiosity   | 7%            | 9%           | 12%           | @fitness_guru
-
-🥇 = Highest usage among competitors
-
-HOOK STRATEGY INSIGHTS:
-• Question hooks dominate across all competitors (35-42% usage)
-• @rival_brand relies most heavily on question hooks (42%)
-• Problem-solution is secondary strategy for all (28-35%)
-• Teaser/curiosity hooks remain underutilized across market (7-12%)
-
-Example Question Hooks from @rival_brand:
-• "Did you know this common food is destroying your gut?"
-• "Want to know the secret ingredient nutritionists use?"
-• "Ever wonder why you're always bloated after meals?"
-```
-
-**Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Hook type % (per competitor × 4 types) | Stage 2.7 (All Comp) | Aggregate `hook_strategy`, calculate % | Integer (%) matrix | 38, 35, 20, 7 (per competitor) |
-| Most common (per hook type) | Calculated | Competitor with max % per hook type | String per type | "@rival_brand", "@wellness_pro", etc. |
-| Hook insights (4 items) | Calculated | Identify dominance patterns, underutilization | String (array) | ["Question hooks dominate across...", ...] |
-| Example hooks (3 items) | Stage 2.7 (Competitor) | Sample actual transcript openings from dominant competitor | String (array) | ["Did you know this common food...", ...] |
-
----
-
-#### Section 4: Hashtag Strategy Comparison
+#### Section 3: Hashtag Strategy Comparison
 
 ```
 HASHTAG STRATEGY BY COMPETITOR:
@@ -2193,6 +2441,151 @@ HASHTAG STRATEGY INSIGHTS:
 | Hashtag metrics (per competitor) | Stage 2 (All Comp) | Extract from hashtag aggregation function | Object per competitor | {unique, avg_per_video, top5_conc, strategy_type} |
 | Top 5 hashtags (per competitor) | Stage 2 (All Comp) | Aggregate hashtag frequency, rank by frequency, top 5 | Array of objects per competitor | [{tag, usage_percent}, ...] |
 | Hashtag insights (4 items) | Calculated | Identify common patterns, diversity differences, trends | String (array) | ["All competitors use #nutrition...", ...] |
+
+---
+
+#### Section 4: Caption Strategy Comparison
+
+**Purpose**: Compare caption formatting and CTA strategies across multiple competitors
+
+```
+CAPTION STRATEGY ACROSS COMPETITORS:
+
+Metric                  | @wellness_pro | @rival_brand | @fitness_guru | Market Pattern
+------------------------|---------------|--------------|---------------|----------------
+Avg Hashtag Count       | 11            | 9            | 10            | Moderate (10 avg)
+Hashtag Strategy        | 7 broad, 4 niche | 5 niche, 4 broad | 6 broad, 4 niche | Balanced approach
+Caption Length          | Long (65%)    | Short (82%)  | Short (75%)   | Short dominates (74% avg)
+Emoji Usage             | Some (68%)    | Some (72%)   | Many (58%)    | Light-to-moderate (66% avg)
+Top CTA Type            | Follow (48%)  | Link bio (68%)| Follow (55%)  | Link bio consensus (57% avg)
+
+CAPTION STRATEGY INSIGHTS:
+• Caption length consensus: 74% of market uses short captions (<100 chars)
+• CTA strategy split: 57% prioritize "link in bio", 43% drive followers
+• Hashtag count: Consistent across competitors (9-11 hashtags per video)
+• Emoji usage: Light-to-moderate dominates (66% use 1-4 emojis)
+• @rival_brand shows most conversion-focused strategy (short captions + link bio CTA)
+
+STRATEGIC DIFFERENTIATION:
+• @wellness_pro: Longer captions + follower growth focus
+• @rival_brand: Conversion-optimized (short + link bio)
+• @fitness_guru: Engagement-heavy (more emojis + follower CTAs)
+```
+
+**Dynamic Fields**:
+| Template Field | Source | JSON Field/Calculation | Data Type | Example |
+|----------------|--------|------------------------|-----------|---------|
+| Avg hashtag count (per competitor) | Stage 2.7 (All Comp) | Mean of `caption_analysis.hashtag_count` per competitor | Integer per competitor | 11, 9, 10 |
+| Hashtag breakdown (per competitor) | Stage 2.7 (All Comp) | Mean of `caption_analysis.hashtag_strategy.niche_count` and `broad_count` | String per competitor | "7 broad, 4 niche", "5 niche, 4 broad", etc. |
+| Caption length winner (per competitor) | Stage 2.7 (All Comp) | Most common `caption_analysis.caption_length` with % | String with % per competitor | "Long (65%)", "Short (82%)", "Short (75%)" |
+| Emoji usage winner (per competitor) | Stage 2.7 (All Comp) | Most common `caption_analysis.emoji_usage` with % | String with % per competitor | "Some (68%)", "Some (72%)", "Many (58%)" |
+| Top CTA (per competitor) | Stage 2.7 (All Comp) | Most common `caption_analysis.caption_cta_type` with % | String with % per competitor | "Follow (48%)", "Link bio (68%)", "Follow (55%)" |
+| Market pattern avg hashtag count | Calculated | Mean across all competitors | Integer | 10 |
+| Market pattern hashtag strategy | Calculated | Describe dominant approach | String | "Balanced approach" |
+| Market pattern caption length | Calculated | Most common caption_length across competitors with % | String with % | "Short dominates (74% avg)" |
+| Market pattern emoji usage | Calculated | Most common emoji_usage across competitors with % | String with % | "Light-to-moderate (66% avg)" |
+| Market pattern CTA | Calculated | Most common caption_cta_type across competitors with % | String with % | "Link bio consensus (57% avg)" |
+| Caption insights (3 items) | Calculated | Identify market patterns, consensus, outliers | String (array) | ["Caption length consensus...", "CTA strategy split...", "Hashtag count consistent..."] |
+| Strategic differentiation (3 items) | Calculated | Describe each competitor's unique caption approach | String (array) | ["@wellness_pro: Longer captions...", "@rival_brand: Conversion-optimized...", etc.] |
+
+**Data Source**:
+- Stage 2.7 Content Analysis classifications from all competitors' winning videos (40 per bucket × 3 buckets × N competitors)
+- Aggregated using `aggregate_content_intelligence()` function per competitor
+- Market patterns calculated by aggregating across all competitors
+
+**Note**: Caption analysis fields are universal (standardized enums/integers), so they're directly comparable across all competitors without taxonomy dependency.
+
+---
+
+#### Section 5: Content Sourcing Strategy
+
+**Purpose**: Show each competitor's affiliate partnerships and content sourcing approach
+
+```
+CONTENT SOURCING STRATEGY BY COMPETITOR:
+
+═══════════════════════════════════════════════════════════════
+@wellness_pro
+═══════════════════════════════════════════════════════════════
+
+Original Content: 72% (no affiliate mentions or repost indicators)
+Reposted/Affiliate Content: 28% (contains repost indicators)
+
+Top Affiliate Contributors:
+1. @holistichealth_coach  (12% of videos - 36 mentions)
+2. @wellness_collective   (8% of videos - 24 mentions)
+3. @naturalremedies       (5% of videos - 15 mentions)
+4. @ayurveda_lifestyle    (3% of videos - 9 mentions)
+
+Total unique @mentions: 22
+Sourcing Strategy: Mostly original content with selective affiliate partnerships
+
+---
+
+═══════════════════════════════════════════════════════════════
+@rival_brand
+═══════════════════════════════════════════════════════════════
+
+Original Content: 58% (no affiliate mentions or repost indicators)
+Reposted/Affiliate Content: 42% (contains repost indicators)
+
+Top Affiliate Contributors:
+1. @fitnessguru123       (18% of videos - 54 mentions)
+2. @healthcoach_jane     (12% of videos - 36 mentions)
+3. @nutritionpro         (8% of videos - 24 mentions)
+4. @wellnesswarrior      (5% of videos - 15 mentions)
+5. @cleaneatingclub      (4% of videos - 12 mentions)
+
+Total unique @mentions: 47
+Sourcing Strategy: Heavy affiliate network - 42% reposted content from 5 core partners
+
+---
+
+═══════════════════════════════════════════════════════════════
+@fitness_guru
+═══════════════════════════════════════════════════════════════
+
+Original Content: 85% (no affiliate mentions or repost indicators)
+Reposted/Affiliate Content: 15% (contains repost indicators)
+
+Top Affiliate Contributors:
+1. @transformationclub    (8% of videos - 24 mentions)
+2. @fitnesstips_daily     (4% of videos - 12 mentions)
+3. @workout_motivation    (3% of videos - 9 mentions)
+
+Total unique @mentions: 12
+Sourcing Strategy: Predominantly original content creator
+
+═══════════════════════════════════════════════════════════════
+
+MARKET INSIGHTS:
+• Sourcing approach varies significantly: 15% - 42% reposted/affiliate content
+• @rival_brand relies most heavily on affiliate network (42% reposted)
+• @fitness_guru creates most original content (85% original)
+• Affiliate partnerships enable higher posting frequency without proportional cost increase
+• Average affiliate network size: 27 unique @mentions per competitor
+```
+
+**Dynamic Fields**:
+| Template Field | Source | JSON Field/Calculation | Data Type | Example |
+|----------------|--------|------------------------|-----------|---------|
+| Competitor handles | Config | CLI parameter `--competitors` | String (array) | ["@wellness_pro", "@rival_brand", "@fitness_guru"] |
+| Original content % (per competitor) | Calculated | 100% - repost_rate per competitor | Integer (%) per competitor | 72, 58, 85 |
+| Reposted/Affiliate % (per competitor) | Calculated | `repost_rate` from extract_mention_analysis() per competitor | Integer (%) per competitor | 28, 42, 15 |
+| Top affiliate contributors (per competitor) | Stage 2 (All Comp) | `top_10_mentions` from extract_mention_analysis(), show top 3-5 per competitor | Array per competitor | [{handle, percentage, mention_count}, ...] |
+| Total unique mentions (per competitor) | Calculated | `total_unique_mentions` from extract_mention_analysis() per competitor | Integer per competitor | 22, 47, 12 |
+| Sourcing strategy label (per competitor) | Calculated | Classify based on repost_rate: <20% "Predominantly original", 20-40% "Selective partnerships", >40% "Heavy affiliate network" | String per competitor | "Mostly original...", "Heavy affiliate...", etc. |
+| Market insight - variance | Calculated | Range of repost rates across competitors | String | "15% - 42% reposted/affiliate content" |
+| Market insight - highest reliance | Calculated | Competitor with max repost_rate | String | "@rival_brand relies most heavily (42%)" |
+| Market insight - most original | Calculated | Competitor with min repost_rate | String | "@fitness_guru creates most original (85%)" |
+| Market insight - avg network size | Calculated | Mean of total_unique_mentions across competitors | Integer | 27 |
+
+**Data Source**:
+- `unified_analysis/{video_id}.json` → `metadata.description` per competitor
+- Regex extraction: `re.findall(r'@(\w+)', caption)`
+- Repost indicators: ["repost", "via", "credit", "by", "from"]
+
+**Implementation**: See Stage8MVP.md Section 0.5.4 for `extract_mention_analysis()` function
 
 ---
 
@@ -2298,7 +2691,7 @@ TOP PERFORMING VIDEOS BY COMPETITOR:
 @wellness_pro (Market Leader):
 [QR CODE - 1" x 1"]
 
-📹 Video Stats: 820K views | 45s duration
+📹 Video Stats: 820K views | 1.5% engagement | 45s duration
 Formula: "The Transformation Journey" (33-60s bucket)
 Hashtags: #wellness #guthealth #transformation #healthylifestyle
 
@@ -2313,7 +2706,7 @@ Key Pattern Elements:
 @rival_brand:
 [QR CODE - 1" x 1"]
 
-📹 Video Stats: 720K views | 22s duration
+📹 Video Stats: 720K views | 1.4% engagement | 22s duration
 Formula: "The Question Hook Recipe Tutorial" (18-33s bucket)
 Hashtags: #nutrition #guthealth #recipe #protein
 
@@ -2328,7 +2721,7 @@ Key Pattern Elements:
 @fitness_guru:
 [QR CODE - 1" x 1"]
 
-📹 Video Stats: 650K views | 16s duration
+📹 Video Stats: 650K views | 1.3% engagement | 16s duration
 Formula: "The Quick Win Tutorial" (13-18s bucket)
 Hashtags: #fitness #supplements #protein #healthytips
 
@@ -2345,6 +2738,7 @@ Key Pattern Elements:
 |----------------|--------|------------------------|-----------|---------|
 | QR codes (3 competitors) | Stage 2 (All Comp) | Generate from top performer video URLs | QR Code Image (array) | 3 QR codes |
 | Video stats (per competitor) | Stage 2 (All Comp) | `view_count`, `duration` from top performer metadata | Object per competitor | {views, duration} |
+| Video engagement (per competitor) | Calculated | `calculate_engagement_metrics()` for top performer video | Float (%) per competitor | 1.5, 1.4, 1.3 |
 | Formula names (per competitor) | Stage 7 (All Comp) | `pattern_name` mapped to top video | String per competitor | "The Transformation Journey", etc. |
 | Video buckets (per competitor) | Stage 1 (All Comp) | Bucket classification from duration | String per competitor | "33-60s", "18-33s", "13-18s" |
 | Hashtags (per competitor) | Stage 2 (All Comp) | `video_hashtags` from metadata (first 4) | String (array per competitor) | ["#wellness", "#guthealth", ...] |

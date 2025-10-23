@@ -825,9 +825,16 @@ def validate_kmeans_feature_naming(csv_path: str, expected_suffix: str = '_scale
     scaled_count = sum(1 for f in feature_names if '_scaled' in f)
     log_count = sum(1 for f in feature_names if '_log' in f)
     encoded_count = sum(1 for f in feature_names if '_encoded' in f)
-    total_transformed = scaled_count + log_count + encoded_count
 
-    # Expect at least 80% of features to have transformation suffixes
+    # Count one-hot encoded emotion features (from dominant_emotion_id)
+    # Source: Stage 4 feature_transformation.py line 714 - these ARE transformed but lack suffixes by ML convention
+    EMOTION_FEATURES = ['joy', 'sadness', 'anger', 'fear', 'disgust', 'surprise', 'neutral']
+    emotion_count = sum(1 for f in feature_names if f in EMOTION_FEATURES)
+
+    # Total transformed includes both suffix-based AND one-hot encoded features
+    total_transformed = scaled_count + log_count + encoded_count + emotion_count
+
+    # Expect at least 80% of features to be transformed
     expected_threshold = len(feature_names) * 0.80
 
     if total_transformed < expected_threshold:
@@ -837,6 +844,7 @@ def validate_kmeans_feature_naming(csv_path: str, expected_suffix: str = '_scale
             f"  Features with _scaled: {scaled_count}\n"
             f"  Features with _log: {log_count}\n"
             f"  Features with _encoded: {encoded_count}\n"
+            f"  One-hot emotion features: {emotion_count}\n"
             f"  Total transformed: {total_transformed}/{len(feature_names)} ({total_transformed/len(feature_names)*100:.1f}%)\n"
             f"  Expected: >={expected_threshold:.0f} ({80}%)\n"
             f"\n"

@@ -239,7 +239,7 @@ def test_window_rf_output_schema(fixture_bucket_18_33s):
 def test_window_kmeans_log_scale(fixture_bucket_18_33s):
     """Test: Log + scale transformation for count features"""
     df = fixture_bucket_18_33s.copy()
-    df_hook_km = transform_window_level_kmeans(df, 'hook')
+    df_hook_km, _ = transform_window_level_kmeans(df, 'hook')  # Ignore scalers in existing tests
 
     # Check scene_count_scaled exists (not scene_count)
     assert 'scene_count_scaled' in df_hook_km.columns
@@ -252,7 +252,7 @@ def test_window_kmeans_log_scale(fixture_bucket_18_33s):
 def test_window_kmeans_shift_scale(fixture_bucket_18_33s):
     """Test: emotional_valence shifted from [-1,1] to [0,1]"""
     df = fixture_bucket_18_33s.copy()
-    df_hook_km = transform_window_level_kmeans(df, 'hook')
+    df_hook_km, _ = transform_window_level_kmeans(df, 'hook')  # Ignore scalers in existing tests
 
     # Check emotional_valence_scaled exists
     assert 'emotional_valence_scaled' in df_hook_km.columns
@@ -265,7 +265,7 @@ def test_window_kmeans_shift_scale(fixture_bucket_18_33s):
 def test_window_kmeans_label_encode(fixture_bucket_18_33s):
     """Test: has_captions label encoded (True→1, False→0)"""
     df = fixture_bucket_18_33s.copy()
-    df_hook_km = transform_window_level_kmeans(df, 'hook')
+    df_hook_km, _ = transform_window_level_kmeans(df, 'hook')  # Ignore scalers in existing tests
 
     # Check has_captions_encoded exists
     assert 'has_captions_encoded' in df_hook_km.columns
@@ -278,7 +278,7 @@ def test_window_kmeans_label_encode(fixture_bucket_18_33s):
 def test_window_kmeans_emotion_one_hot(fixture_bucket_18_33s):
     """Test: dominant_emotion_id one-hot encoded to 7 columns"""
     df = fixture_bucket_18_33s.copy()
-    df_hook_km = transform_window_level_kmeans(df, 'hook')
+    df_hook_km, _ = transform_window_level_kmeans(df, 'hook')  # Ignore scalers in existing tests
 
     # Check 7 emotion columns exist
     emotions = ['joy', 'sadness', 'anger', 'fear', 'disgust', 'surprise', 'neutral']
@@ -296,7 +296,7 @@ def test_window_kmeans_output_schema(fixture_bucket_18_33s):
     windows = ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']
 
     for window in windows:
-        df_window_km = transform_window_level_kmeans(df, window)
+        df_window_km, _ = transform_window_level_kmeans(df, window)  # Ignore scalers in existing tests
         assert len(df_window_km.columns) == 27, f"{window} K-Means should have 27 columns, got {len(df_window_km.columns)}"
 
 
@@ -311,7 +311,7 @@ def test_edge_case_zero_variance(fixture_bucket_18_33s):
     # Set all hook_scene_count to same value
     df['hook_scene_count'] = 5
 
-    df_hook_km = transform_window_level_kmeans(df, 'hook')
+    df_hook_km, _ = transform_window_level_kmeans(df, 'hook')  # Ignore scalers in existing tests
 
     # Check scaled value is 0.5 (midpoint)
     assert (df_hook_km['scene_count_scaled'] == 0.5).all()
@@ -360,7 +360,7 @@ def test_output_validation_row_count_preserved(fixture_bucket_18_33s):
     assert len(df_hook_rf) == len(df)
 
     # Window-Level K-Means
-    df_hook_km = transform_window_level_kmeans(df, 'hook')
+    df_hook_km, _ = transform_window_level_kmeans(df, 'hook')  # Ignore scalers in existing tests
     assert len(df_hook_km) == len(df)
 
 
@@ -374,19 +374,110 @@ def test_output_validation_no_nan_introduced(fixture_bucket_18_33s):
     df_hook_rf = transform_window_level_rf(df, 'hook', 'contrastive', 10)
     assert not df_hook_rf.isnull().any().any(), "Window-Level RF introduced NaN values"
 
-    df_hook_km = transform_window_level_kmeans(df, 'hook')
+    df_hook_km, _ = transform_window_level_kmeans(df, 'hook')  # Ignore scalers in existing tests
     assert not df_hook_km.isnull().any().any(), "Window-Level K-Means introduced NaN values"
 
 
 def test_output_validation_kmeans_scaled_range(fixture_bucket_18_33s):
     """Test: All _scaled columns in K-Means are [0,1]"""
     df = fixture_bucket_18_33s.copy()
-    df_hook_km = transform_window_level_kmeans(df, 'hook')
+    df_hook_km, _ = transform_window_level_kmeans(df, 'hook')  # Ignore scalers in existing tests
 
     scaled_cols = [c for c in df_hook_km.columns if c.endswith('_scaled')]
 
     for col in scaled_cols:
         assert df_hook_km[col].between(0, 1).all(), f"{col} has values outside [0,1]"
+
+
+# ============================================================================
+# TEST SCALER CREATION AND VALIDATION
+# ============================================================================
+
+def test_scalers_created(fixture_bucket_18_33s):
+    """Test: Scalers are created and have correct structure"""
+    df = fixture_bucket_18_33s.copy()
+    df_hook_km, scaler_result = transform_window_level_kmeans(df, 'hook')
+
+    # Check structure
+    assert 'fitted' in scaler_result
+    assert 'constant' in scaler_result
+    assert isinstance(scaler_result['fitted'], dict)
+    assert isinstance(scaler_result['constant'], list)
+
+
+def test_scalers_loadable(fixture_bucket_18_33s):
+    """Test: Scalers can be saved and loaded via joblib"""
+    import joblib
+    import tempfile
+
+    df = fixture_bucket_18_33s.copy()
+    df_hook_km, scaler_result = transform_window_level_kmeans(df, 'hook')
+
+    # Save to temp file
+    with tempfile.NamedTemporaryFile(suffix='.pkl', delete=False) as f:
+        scaler_metadata = {
+            'version': '1.0',
+            'scalers': scaler_result['fitted'],
+            'constant_features': scaler_result['constant']
+        }
+        joblib.dump(scaler_metadata, f.name)
+
+        # Load back
+        loaded = joblib.load(f.name)
+        assert loaded['version'] == '1.0'
+        assert 'scalers' in loaded
+        assert 'constant_features' in loaded
+
+
+def test_scaler_min_max_values(fixture_bucket_18_33s):
+    """Test: Scalers have sensible min/max values"""
+    from sklearn.preprocessing import MinMaxScaler
+
+    df = fixture_bucket_18_33s.copy()
+    df_hook_km, scaler_result = transform_window_level_kmeans(df, 'hook')
+
+    # Check all fitted scalers are MinMaxScaler instances
+    for feature, scaler in scaler_result['fitted'].items():
+        assert isinstance(scaler, MinMaxScaler)
+
+        # Check data_min_ and data_max_ exist and make sense
+        assert hasattr(scaler, 'data_min_')
+        assert hasattr(scaler, 'data_max_')
+        assert scaler.data_max_[0] >= scaler.data_min_[0]
+
+
+def test_zero_variance_handling(fixture_bucket_18_33s):
+    """Test: Zero-variance features tracked in constant list"""
+    df = fixture_bucket_18_33s.copy()
+
+    # Set all hook_scene_count to same value (zero variance)
+    df['hook_scene_count'] = 5
+
+    df_hook_km, scaler_result = transform_window_level_kmeans(df, 'hook')
+
+    # Should be in constant list, not fitted scalers
+    assert 'scene_count' in scaler_result['constant']
+    assert 'scene_count' not in scaler_result['fitted']
+
+    # Scaled column should exist and be 0.5
+    assert 'scene_count_scaled' in df_hook_km.columns
+    assert (df_hook_km['scene_count_scaled'] == 0.5).all()
+
+
+def test_scaler_count_consistent(fixture_bucket_18_33s):
+    """Test: Scaler count + constant count = total features"""
+    df = fixture_bucket_18_33s.copy()
+    df_hook_km, scaler_result = transform_window_level_kmeans(df, 'hook')
+
+    # Total features that get scaled (11 log+scale + 7 scale-only)
+    expected_total = 18
+
+    fitted_count = len(scaler_result['fitted'])
+    constant_count = len(scaler_result['constant'])
+
+    # Sum should equal total (or less if some features missing from data)
+    assert fitted_count + constant_count <= expected_total
+    assert fitted_count > 0  # Should have at least some fitted scalers
 
 
 # ============================================================================

@@ -186,7 +186,7 @@ def process_bucket(bucket_path: Path) -> Dict:
     km_window_files = []
     for window_name in window_names:
         try:
-            window_km_df = transform_window_level_kmeans(df, window_name)
+            window_km_df, _ = transform_window_level_kmeans(df, window_name)  # Ignore scalers
             window_km_file = ml_analysis_dir / f'{window_name}_km_transformed.csv'
             window_km_df.to_csv(window_km_file, index=False)
             km_window_files.append(window_km_file.name)
