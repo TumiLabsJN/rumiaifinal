@@ -240,6 +240,21 @@ class Stage1Output:
                                     # Size: ~5KB
                                     # Purpose: Debugging, audit trail, reporting
 
+    # ===== CHECKPOINT FILE (Skip Logic) =====
+    # **ADDED**: 2025-10-24 (Bug #1 Fix - Stage 1 Skip Logic)
+    # **Purpose**: Enable pipeline resume without re-scraping videos (saves 45+ min + $0.80 for clusters)
+
+    stage_1_checkpoint_json_path: str  # Path to Stage 1 checkpoint file
+                                       # Location: "{analysis_base}/checkpoints/stage_1_checkpoint.json"
+                                       # Example: "/data/clients/acme_corp/hashtags/nutrition/top_contrastive/checkpoints/stage_1_checkpoint.json"
+                                       # Schema: Stage1CheckpointSchema (defined below)
+                                       # Format: JSON object
+                                       # Size: ~800 bytes
+                                       # Purpose: Skip logic for pipeline resume (orchestrator checks this file)
+                                       # Consumer: rumiai_ml_batch.py (orchestrator skip logic)
+                                       # Created: After successful Stage 1 completion
+                                       # Verified: Before skipping Stage 1 on resume
+
     # ===== OUTPUT SCHEMA DETAILS =====
 
     # Schema 1: selected_videos.json (per bucket)
@@ -267,6 +282,35 @@ class Stage1Output:
                                                  # Example: "2025-01-28T10:30:00Z"
         "analysis_date": str,                    # Required, ISO 8601 timestamp
                                                  # Example: "2025-01-28T10:32:15Z"
+    }
+
+    # Schema 3: stage_1_checkpoint.json (ADDED 2025-10-24)
+    # **Purpose**: Enable orchestrator skip logic for pipeline resume
+    # **Source**: Bug #1 Fix (SkipLogic.md) - Checkpoint pattern matching Stages 4-7
+    stage_1_checkpoint_schema = {
+        "stage": str,                            # Required, Always "stage_1_video_discovery"
+                                                 # Example: "stage_1_video_discovery"
+        "completion_timestamp": str,             # Required, ISO 8601 with timezone
+                                                 # Example: "2025-10-24T22:31:45.086030+00:00"
+        "winning_buckets": list[str],            # Required, Top 3 bucket names (copied from winner_analysis.json)
+                                                 # Example: ["18-33s", "33-60s", "13-18s"]
+        "output_files": list[str],               # Required, Absolute paths to all Stage 1 outputs
+                                                 # Example: [
+                                                 #   "/data/clients/.../winner_analysis.json",
+                                                 #   "/data/clients/.../bucket_18-33s/selected_videos.json",
+                                                 #   "/data/clients/.../bucket_33-60s/selected_videos.json",
+                                                 #   "/data/clients/.../bucket_13-18s/selected_videos.json",
+                                                 #   "/data/clients/.../cluster_analytics.json"  # Only if cluster mode
+                                                 # ]
+                                                 # Purpose: Verify outputs exist before skipping
+        "analysis_mode": str,                    # Required, Metadata for debugging
+                                                 # Example: "top"
+        "analysis_type": str,                    # Required, Metadata for debugging
+                                                 # Example: "hashtag"
+        "target": str,                           # Required, Metadata for debugging
+                                                 # Example: "#nutrition"
+        "video_count": int,                      # Required, Metadata for debugging
+                                                 # Example: 100
     }
 
     # ===== VIDEO METADATA (passed through from Apify) =====
@@ -299,7 +343,8 @@ class Stage1Output:
     #   ├── ml_analysis/          (empty, populated by Stages 3-6)
     #   ├── models/               (empty, populated by Stage 5)
     #   ├── reports/              (empty, populated by Stage 7)
-    #   ├── checkpoints/          (empty, populated by Stages 2-7)
+    #   ├── checkpoints/          # Stage 1 checkpoint + Stages 2-7 checkpoints
+    #   │   └── stage_1_checkpoint.json  # (ADDED 2025-10-24) Skip logic checkpoint
     #   └── logs/                 (empty, populated by Stages 2-7)
 
     # ===== EXIT CODES =====
@@ -3297,7 +3342,8 @@ Stage 1 creates the following directory structure:
     │   │   ├── analysis/
     │   │   └── formatted/
     │   ├── reports/                     # Empty (populated by Stage 7)
-    │   ├── checkpoints/                 # Empty (populated by Stages 2-7)
+    │   ├── checkpoints/                 # Stage 1 checkpoint + Stages 2-7 checkpoints
+    │   │   └── stage_1_checkpoint.json  # (ADDED 2025-10-24) Skip logic checkpoint
     │   └── logs/                        # Empty (populated by Stages 2-7)
     ├── bucket_{bucket_2}/               # Same structure as bucket_1
     └── bucket_{bucket_3}/               # Same structure as bucket_1
@@ -3306,8 +3352,9 @@ Stage 1 creates the following directory structure:
 **Stage 1 Responsibilities**:
 - **Read**: `config.json` (from Stage 0)
 - **Create**: Bucket directories for top 3 winning buckets only
-- **Write**: `selected_videos.json` (per bucket) + `winner_analysis.json`
+- **Write**: `selected_videos.json` (per bucket) + `winner_analysis.json` + `stage_1_checkpoint.json` (ADDED 2025-10-24)
 - **Empty subdirectories**: Create all subdirectories (videos/, analysis/, ml_analysis/, etc.) but leave empty for downstream stages
+- **Checkpoint**: Create `checkpoints/stage_1_checkpoint.json` to enable skip logic on pipeline resume (saves 45+ min + $0.80)
 
 ### 8.2 Path Templates
 
