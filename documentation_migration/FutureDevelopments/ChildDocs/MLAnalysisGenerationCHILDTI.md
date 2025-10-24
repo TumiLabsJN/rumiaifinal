@@ -84,6 +84,44 @@
 
 ---
 
+## Section 1.1: Document Changes
+
+**Last Updated**: 2025-10-24
+
+### Bug Fixes & Improvements
+
+**2025-10-24 - Bug #1 & Bug #2 Resolution**:
+
+1. **Bug #1: Boolean Features TypeError in Quantile Computation** ✅ RESOLVED
+   - **Issue**: Line 243 (`generate_video_rf_json()`) - TypeError when computing .quantile() on boolean has_captions columns
+   - **Root Cause**: Stage 4 kept boolean features as dtype=bool, but NumPy 1.26.4 .quantile() doesn't support boolean arrays
+   - **Fix Location**: Stage 4 (feature_transformation.py lines 439-444, 627-630)
+   - **Fix Applied**: Boolean features now encoded to int64 [0, 1] in Stage 4 before reaching Stage 6
+   - **Impact**: 16 has_captions columns across all buckets now properly encoded
+   - **Stage 6 Changes**: None required - Stage 6 now receives int64 instead of bool
+   - **Dependency Update**: Stage 6 now expects all features from Stage 4 to be numeric (int64/float64), not boolean
+
+2. **Bug #2: video_count UnboundLocalError in Window-Level RF** ✅ RESOLVED
+   - **Issue**: Line 377 (`generate_window_rf_json()`) - UnboundLocalError when video_count only defined in if branch
+   - **Root Cause**: Variable scoping issue - video_count defined conditionally but used outside block
+   - **Fix Location**: ml_analysis_generation.py line 377
+   - **Fix Applied**: Changed to use `len(df)` directly instead of conditionally-defined variable
+   - **Before**: `'total_videos': video_count` (crashes if else branch taken)
+   - **After**: `'total_videos': len(df)` (always works)
+   - **Impact**: bucket_60-90s now completes successfully (previously failed at window-level RF)
+
+**Validation**: All fixes validated via comprehensive test suite (2025-10-24):
+- ✅ Boolean Encoding: 16/16 columns int64 [0, 1]
+- ✅ Stage 6 Execution: 35/35 JSON files generated
+- ✅ No TypeError or UnboundLocalError in any outputs
+
+**References**:
+- Bug1_Discovery_Report.md - Root cause analysis
+- Bug1_OptionB_RootCauseFix.md - Implementation plan
+- Stage6_Test_Results.md - Validation results
+
+---
+
 ## Section 2: Stage Contract
 
 ### 2.1 Input Contract

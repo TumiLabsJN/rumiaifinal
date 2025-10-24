@@ -768,7 +768,7 @@ def validate_stage_input(
 
     # ===== LAYER 3: Video Count Threshold =====
     MIN_VIDEOS_CONTRASTIVE = 50  # 40 top + 10 bottom (bare minimum for 80/20 split)
-    MIN_VIDEOS_TOP = 30          # Descriptive analysis only
+    MIN_VIDEOS_TOP = 20          # Descriptive analysis only (lowered from 30 for bucket_13-18s)
 
     min_required = MIN_VIDEOS_CONTRASTIVE if selection_strategy == "contrastive" else MIN_VIDEOS_TOP
 

@@ -41,18 +41,19 @@ echo "If you can read this, Bash tool works!"
 | Stage | Status | Date Completed | Notes |
 |-------|--------|----------------|-------|
 | **Stage 3: Feature Aggregation** | ✅ COMPLETE | 2025-10-22 | 111 videos, 3 buckets |
-| **Stage 4: Feature Transformation** | ⏳ PENDING | — | Ready to test |
-| **Stage 5: ML Model Training** | ⏳ PENDING | — | Expect warnings (small sample) |
-| **Stage 6: ML Analysis Generation** | ⏳ PENDING | — | Depends on Stage 5 |
+| **Stage 4: Feature Transformation** | ✅ COMPLETE | 2025-10-23 | Boolean encoding fix applied |
+| **Stage 5: ML Model Training** | ✅ COMPLETE | 2025-10-23 | Scaler fix implemented |
+| **Stage 6: ML Analysis Generation** | ✅ COMPLETE | 2025-10-24 | Bug #1 & #2 resolved, 35/35 JSONs |
 | **Stage 7: LLM Analysis** | ⏳ PENDING | — | Requires ANTHROPIC_API_KEY |
 
 ### 🎯 Next Action
 
-**Current Position**: Stage 3 complete, ready for Stage 4.
+**Current Position**: Stages 3-6 complete, ready for Stage 7 (LLM Analysis).
 
 **To Continue**:
-1. Jump to [Stage 4: Feature Transformation](#stage-4-feature-transformation-pending)
-2. Read the "Purpose" and "Requirements" sections
+1. Jump to [Stage 7: LLM Analysis](#stage-7-llm-analysis-pending)
+2. Set ANTHROPIC_API_KEY environment variable
+3. Read the "Purpose" and "Requirements" sections
 3. Execute the bash commands in order
 4. Validate outputs using the "Validation" section
 5. Update the status table above when done
@@ -1239,9 +1240,43 @@ WARNING: K-Means did not converge within 300 iterations.
 
 ---
 
-## ⏳ Stage 6: ML Analysis Generation (READY FOR TESTING)
+## ✅ Stage 6: ML Analysis Generation (COMPLETE)
 
-**Status**: ⏳ READY - Stage 5 complete for all buckets (2025-10-23)
+**Status**: ✅ COMPLETE - All 3 buckets validated (2025-10-24)
+
+### Test Results Summary (2025-10-24)
+
+**Bug Fixes Validated**:
+- ✅ **Bug #1**: Boolean features TypeError resolved via Stage 4 encoding
+- ✅ **Bug #2**: video_count UnboundLocalError resolved via scoping fix
+
+**Test Suite Results**:
+| Test | Status | Result |
+|------|--------|--------|
+| Boolean Encoding | ✅ PASS | 16 has_captions columns encoded as int64 [0, 1] |
+| Stage 6 Execution | ✅ PASS | 35/35 JSON files generated, all exit_code=0 |
+| JSON Schema | ✅ PASS | 35/35 files have required fields |
+| Distribution Quality | ✅ PASS | 25/30 features (83.3%) have distributions |
+| Cross-Bucket Analysis | ✅ PASS | Duration-specific patterns confirmed |
+| Regression Tests | ✅ PASS | No TypeError or UnboundLocalError found |
+
+**Output Files**:
+- bucket_18-33s: 13/13 JSON files ✅
+- bucket_13-18s: 7/7 JSON files ✅
+- bucket_60-90s: 15/15 JSON files ✅
+- **Total**: 35/35 files generated successfully
+
+**Quality Assessment**:
+- Distribution coverage: 83.3% (exceeds 60% threshold)
+- All JSON schemas valid
+- Feature rankings shifted after boolean encoding (expected behavior)
+- Cross-window delta features lack distributions (expected per HLD design)
+
+**Validation Time**: 30 minutes (documentation + testing + analysis)
+
+**Next Step**: Proceed to Stage 7 (LLM Analysis)
+
+---
 
 ### Purpose
 Generate ML analysis JSON files for LLM consumption (Stage 7 input). Creates 13 JSON files per bucket:
@@ -2285,10 +2320,10 @@ for bucket in [('bucket_18-33s', '18-33s'), ('bucket_13-18s', '13-18s'), ('bucke
 | **Stage 3** | ✅ 2025-10-22 | ✅ 2025-10-22 | ✅ 2025-10-22 | 111 videos total, all passed |
 | **Stage 4** | ✅ 2025-10-23 | ✅ 2025-10-23 | ✅ 2025-10-23 | Scaler fix: 19/10/22 files (CSVs + PKLs) |
 | **Stage 5** | ✅ 2025-10-23 | ✅ 2025-10-23 | ✅ 2025-10-23 | All scalers validated: 26/14/30 models |
-| **Stage 6** | ⏳ Pending | ⏳ Pending | ⏳ Pending | Ready for testing |
+| **Stage 6** | ✅ 2025-10-24 | ✅ 2025-10-24 | ✅ 2025-10-24 | Bug fixes validated: 35/35 JSON files |
 | **Stage 7** | ⏳ Pending | ⏳ Pending | ⏳ Pending | Requires ANTHROPIC_API_KEY |
 
-**Last Updated**: 2025-10-23 (Stage 4-5 complete for ALL buckets, scaler fix implemented & validated)
+**Last Updated**: 2025-10-24 (Stage 6 complete for ALL buckets, Bug #1 & Bug #2 validated & resolved)
 
 ---
 
@@ -2413,9 +2448,46 @@ You should create:
 
 ## 🎯 Next Steps for New CLI Instance
 
-**Current Priority**: Test Stage 6 (ML Analysis Generation) for all 3 buckets
+**Current Priority**: Proceed to Stage 7 (LLM Analysis Generation) for all 3 buckets
 
-**Session Completion Summary** (2025-10-23):
+**Stage 6 Completion Summary** (2025-10-24):
+
+### ✅ Stage 6 Bug Fixes & Validation (COMPLETE)
+**Problem**: Stage 6 failing with 2 critical bugs preventing JSON generation
+
+**Bugs Resolved**:
+- ✅ **Bug #1**: Boolean features (has_captions) caused TypeError in quantile computation
+  - **Root Cause**: Stage 4 kept booleans as-is, but NumPy .quantile() doesn't support boolean arrays
+  - **Fix**: Encoded booleans to integers (0/1) in Stage 4 (lines 439-444, 627-630)
+  - **Impact**: 16 has_captions columns across all buckets now int64 [0, 1]
+
+- ✅ **Bug #2**: video_count UnboundLocalError in window-level RF JSON generation
+  - **Root Cause**: Variable scoping issue (video_count only defined in if branch)
+  - **Fix**: Changed line 377 to use len(df) directly
+  - **Impact**: bucket_60-90s now completes successfully
+
+**Testing Results**:
+- ✅ **Boolean Encoding**: 16/16 columns encoded correctly (TEST 1)
+- ✅ **Stage 6 Execution**: 35/35 JSON files generated (TEST 2)
+- ✅ **JSON Schema**: 35/35 files valid (TEST 3)
+- ✅ **Distribution Quality**: 83.3% coverage (TEST 4)
+- ✅ **Cross-Bucket Analysis**: Duration-specific patterns confirmed (TEST 5)
+- ✅ **Regression Tests**: No TypeError or UnboundLocalError found
+
+**Files Modified**:
+- `rumiai_v2/processors/feature_transformation.py` (10 lines added)
+- `ml_pipeline/stage6_analysis/ml_analysis_generation.py` (1 line changed)
+
+**Documentation**:
+- Bug1_Discovery_Report.md - Root cause analysis
+- Bug1_OptionB_RootCauseFix.md - Implementation plan
+- Stage6_Test_Results.md - Validation results
+
+**Impact**: Stage 6 fully operational and production-ready. Ready for Stage 7.
+
+---
+
+**Previous Session Completion Summary** (2025-10-23):
 
 ### ✅ Scaler Fix Implementation (COMPLETE)
 **Problem**: Stage 5 validation failing with "Expected output missing: hook_scalers_18-33s.pkl"

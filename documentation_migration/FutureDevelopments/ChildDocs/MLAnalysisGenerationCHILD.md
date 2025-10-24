@@ -1,9 +1,27 @@
 # ML Analysis Generation (Stage 6) - High-Level Design
 
 > **Parent**: MLPlanningv2.md - Stage 6: ML Analysis Generation (Lines 1993-2388)
-> **Version**: 1.0
-> **Last Updated**: 2025-01-28
-> **Status**: Draft
+> **Version**: 1.1
+> **Last Updated**: 2025-10-24
+> **Status**: Implementation Complete
+
+## Document Changes
+
+**2025-10-24 - Bug Fixes & Production Validation**:
+
+✅ **Stage 6 Implementation Complete**: All 3 test buckets (18-33s, 13-18s, 60-90s) validated successfully
+- **Bug #1 Resolved**: Boolean features TypeError fixed via Stage 4 encoding
+- **Bug #2 Resolved**: video_count scoping issue fixed in ml_analysis_generation.py
+- **Validation**: 35/35 JSON files generated, 83.3% distribution coverage
+- **Status**: Production-ready
+
+**Key Architectural Change**:
+- **Dependency Update**: Stage 6 now expects all features from Stage 4 to be numeric (int64/float64)
+- **Previously**: Stage 4 kept boolean features as dtype=bool (failed in quantile computation)
+- **Now**: Stage 4 encodes boolean features to int64 [0, 1] before Stage 6
+- **Impact**: 16 has_captions columns across all buckets properly encoded
+
+See Section 3.3 (Cross-Stage Dependencies) for details.
 
 ---
 

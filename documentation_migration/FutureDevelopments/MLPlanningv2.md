@@ -2283,6 +2283,14 @@ bucket_18-33s/
 
 ## Stage 6: ML Analysis Generation
 
+**Status**: ✅ **COMPLETE** (2025-10-24) - Production-ready after bug fixes
+
+**Recent Updates** (2025-10-24):
+- ✅ Bug #1 Resolved: Boolean features TypeError fixed via Stage 4 encoding
+- ✅ Bug #2 Resolved: video_count scoping issue fixed
+- ✅ Validation: 35/35 JSON files generated successfully across 3 test buckets
+- ✅ Quality: 83.3% distribution coverage (exceeds 60% threshold)
+
 **Purpose**: Generate ML analysis JSONs for LLM consumption (13 JSON files per bucket for dual RF + window-level K-Means architecture)
 
 **Architectural Decision**: This stage generates **13 JSON files per bucket**:
@@ -2291,6 +2299,8 @@ bucket_18-33s/
 3. **6 Window-Level K-Means JSONs** (~5KB each) - Cluster centroids per window
 
 **Total per bucket**: ~95KB across 13 files
+
+**Critical Dependency**: Stage 6 expects all features from Stage 4 to be numeric (int64/float64). Boolean features (has_captions) are encoded to int64 [0, 1] in Stage 4 before reaching Stage 6.
 
 **Input**:
 - Trained models (90 models total from Stage 5)

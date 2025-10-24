@@ -436,8 +436,12 @@ def transform_video_level_rf(
     """
     df_rf = df.copy()
 
-    # 1. Keep has_captions as Boolean (no encoding needed - RF handles Boolean natively)
-    # has_captions already in 126 temporal features, preserved as-is
+    # 1. Encode has_captions to 0/1 for RF (prevents quantile errors in Stage 6)
+    # Match K-means encoding approach (line 746-748) for consistency
+    # Boolean features need explicit encoding before distribution analysis
+    window_columns = [col for col in df_rf.columns if 'has_captions' in col]
+    for col in window_columns:
+        df_rf[col] = df_rf[col].astype(int)  # True → 1, False → 0
 
     # 2. One-hot encode hook_dominant_emotion_id as video-level emotion (Categorical 1-7 → 7 features)
     # FIXED: TI references dominant_emotion_id but input only has window-specific emotions
@@ -620,8 +624,11 @@ def transform_window_level_rf(
             top_count = int(len(df) * 0.8)
             df_window['is_top_performer'] = (df.index < top_count).astype(int)
 
-    # NOTE: NO encoding transformations here
-    # - has_captions stays Boolean (RF handles Boolean natively)
+    # NOTE: Encode has_captions for RF (prevents quantile errors in Stage 6)
+    # Match video-level encoding (line 439-444) for consistency
+    if 'has_captions' in df_window.columns:
+        df_window['has_captions'] = df_window['has_captions'].astype(int)  # True → 1, False → 0
+
     # - dominant_emotion_id stays ordinal 1-7 (RF handles ordinal natively)
     # - emotional_valence stays continuous [-1,1] (RF handles continuous natively)
 
