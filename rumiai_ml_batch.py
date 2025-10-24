@@ -16,7 +16,7 @@ Source: VideoDiscoveryCHILDTI.md + FoundationCHILD.md
 import sys
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Add project root to path
@@ -568,19 +568,140 @@ def main():
         # ===== STAGE 1: VIDEO DISCOVERY & SELECTION =====
         logger.info("Starting Stage 1: Video Discovery & Selection")
 
-        video_discovery = VideoDiscovery(
-            config=config.model_dump(),  # Convert pydantic model to dict
-            apify_api_key=apify_api_key,
-            path_builder=path_builder
-        )
+        # Define checkpoint path (consistent with Stages 4-7)
+        stage1_checkpoint_path = analysis_base / "checkpoints" / "stage_1_checkpoint.json"
 
-        exit_code = video_discovery.run()
+        # Check if Stage 1 already complete
+        if stage1_checkpoint_path.exists():
+            logger.info(f"Stage 1 checkpoint found: {stage1_checkpoint_path}")
 
-        if exit_code != 0:
-            logger.error(f"Stage 1 failed with exit code {exit_code}")
-            return exit_code
+            try:
+                # Load checkpoint
+                with open(stage1_checkpoint_path, 'r') as f:
+                    checkpoint = json.load(f)
 
-        logger.info("Stage 1 completed successfully")
+                # Validate checkpoint schema (required fields)
+                required_fields = ["winning_buckets", "output_files", "completion_timestamp"]
+                missing_fields = [field for field in required_fields if field not in checkpoint]
+
+                if missing_fields:
+                    # Corrupt checkpoint: missing required fields
+                    logger.warning(f"Checkpoint corrupt (missing fields: {missing_fields}). Deleting and re-running Stage 1.")
+                    stage1_checkpoint_path.unlink()
+                    raise ValueError("Checkpoint validation failed")
+
+                # Verify all output files exist
+                output_files = checkpoint["output_files"]
+                missing_files = [f for f in output_files if not Path(f).exists()]
+
+                if missing_files:
+                    # Incomplete outputs: some files missing
+                    logger.warning(f"Stage 1 outputs incomplete ({len(missing_files)} files missing). Re-running Stage 1.")
+                    logger.debug(f"Missing files: {missing_files}")
+                    stage1_checkpoint_path.unlink()
+                    raise ValueError("Output files missing")
+
+                # Checkpoint valid - skip Stage 1
+                winning_buckets = checkpoint["winning_buckets"]
+
+                logger.info("Stage 1 already complete (checkpoint valid)")
+                print("\n" + "="*80)
+                print("STAGE 1: VIDEO DISCOVERY & SELECTION")
+                print("="*80)
+                print(f"\n✓ Stage 1: Video Discovery - SKIPPED (already complete)")
+                print(f"  Winning buckets: {', '.join(winning_buckets)}\n")
+
+                # Skip to Stage 2 (winning_buckets loaded from checkpoint)
+
+            except (json.JSONDecodeError, ValueError, KeyError) as e:
+                # Checkpoint invalid (JSON error, validation error, or missing key)
+                logger.warning(f"Checkpoint invalid ({type(e).__name__}: {e}). Deleting and re-running Stage 1.")
+                if stage1_checkpoint_path.exists():
+                    stage1_checkpoint_path.unlink()
+                # Fall through to run Stage 1
+
+        # If checkpoint doesn't exist OR was deleted above, run Stage 1
+        if not stage1_checkpoint_path.exists():
+            logger.info("Running Stage 1: Video Discovery & Selection")
+            print("\n" + "="*80)
+            print("STAGE 1: VIDEO DISCOVERY & SELECTION")
+            print("="*80)
+
+            # Run full Stage 1
+            video_discovery = VideoDiscovery(
+                config=config.model_dump(),  # Convert pydantic model to dict
+                apify_api_key=apify_api_key,
+                path_builder=path_builder
+            )
+
+            exit_code = video_discovery.run()
+
+            if exit_code != 0:
+                logger.error(f"Stage 1 failed with exit code {exit_code}")
+                return exit_code
+
+            logger.info("Stage 1 completed successfully")
+
+            # Load winning buckets from newly created files
+            winner_analysis_path = analysis_base / "winner_analysis.json"
+            with open(winner_analysis_path, 'r') as f:
+                winner_analysis = json.load(f)
+            winning_buckets = winner_analysis['top_3_buckets']
+
+            # ===== CREATE CHECKPOINT =====
+            logger.info("Creating Stage 1 checkpoint")
+
+            # Build output file list
+            output_files = [
+                str(analysis_base / "winner_analysis.json")
+            ]
+
+            # Add selected_videos.json for each winning bucket
+            for bucket in winning_buckets:
+                selected_videos_path = analysis_base / f"buckets/bucket_{bucket}/selected_videos.json"
+                output_files.append(str(selected_videos_path))
+
+            # Add cluster_analytics.json if cluster mode
+            # Cluster mode detection: hashtag analysis with target NOT starting with #
+            is_cluster_mode = (
+                config.analysis_type == "hashtag" and
+                not config.target.startswith("#")
+            )
+
+            if is_cluster_mode:
+                cluster_analytics_path = analysis_base / "cluster_analytics.json"
+                if cluster_analytics_path.exists():
+                    output_files.append(str(cluster_analytics_path))
+                    logger.info("Cluster mode detected: Added cluster_analytics.json to checkpoint")
+
+            # Create checkpoint data
+            checkpoint_data = {
+                "stage": "stage_1_video_discovery",
+                "completion_timestamp": datetime.now(timezone.utc).isoformat(),
+                "winning_buckets": winning_buckets,
+                "output_files": output_files,
+                "analysis_mode": config.analysis_mode,
+                "analysis_type": config.analysis_type,
+                "target": config.target,
+                "video_count": config.video_count,
+            }
+
+            # Ensure checkpoints directory exists
+            checkpoint_dir = analysis_base / "checkpoints"
+            checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+            # Write checkpoint
+            try:
+                with open(stage1_checkpoint_path, 'w') as f:
+                    json.dump(checkpoint_data, f, indent=2)
+                logger.info(f"Stage 1 checkpoint created: {stage1_checkpoint_path}")
+            except (IOError, PermissionError) as e:
+                # Checkpoint creation failed (non-fatal warning)
+                logger.warning(f"Failed to create Stage 1 checkpoint: {e}")
+                logger.warning("Pipeline will re-run Stage 1 on next resume")
+
+            print(f"\n✓ Stage 1: Video Discovery - COMPLETE")
+            print(f"  Winning buckets: {', '.join(winning_buckets)}\n")
 
         # ===== STAGE 2: VIDEO PROCESSING =====
         logger.info("Starting Stage 2: Video Processing")

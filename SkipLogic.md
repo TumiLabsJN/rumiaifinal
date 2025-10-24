@@ -653,9 +653,15 @@ else:
     video_discovery.run()
 ```
 
-**Fix Priority:** 🔴 **HIGH** - Must implement before production use
+**Status:** ✅ **FIXED (2025-10-24)** - Checkpoint pattern implemented
 
-**Workaround:** Complete taxonomy curation quickly (<5 min) to avoid long resume delays
+**Implementation Notes:**
+- Pattern: External checkpoint (consistent with Stages 4-7 A+)
+- Checkpoint tracks: 4+ output files (winner_analysis.json, 3× selected_videos.json, cluster_analytics.json if cluster mode)
+- Recovery: Automatic from corrupt checkpoints (delete + re-run)
+- Logging: Simple skip messages (clean logs)
+- Metrics: Tracked in logs only, not checkpoint (focus on skip logic)
+- Testing: Test suite documents 5 key scenarios
 
 ---
 
@@ -712,7 +718,7 @@ else:
 | Stage | Skip Logic | Grade | Time on Resume | Notes |
 |-------|-----------|-------|----------------|-------|
 | **Stage 0** | None (idempotent) | B | 1 sec | Harmless but could check config.json |
-| **Stage 1** | ❌ **NONE** | F | ❌ **45 min** | **CRITICAL BUG** - Re-scrapes all videos |
+| **Stage 1** | External check (checkpoint) | **A+** | **0 sec** | ✅ **Fixed (2025-10-24)** - Checkpoint pattern |
 | **Stage 2** | Internal checkpoint | B+ | 5 sec | Works but could be external |
 | **Stage 2.5** | Internal skip | B+ | 1 sec | Works by design |
 | **Stage 2.6** | External check | A+ | 0 sec | ✅ Perfect implementation |
@@ -723,11 +729,13 @@ else:
 | **Stage 6** | External check | A+ | 0 sec | ✅ Perfect implementation |
 | **Stage 7** | External check | A+ | 0 sec | ✅ Perfect implementation |
 
-**Overall Grade:** C+ (Stages 4-7 excellent, Stages 1-3 need fixes)
+**Overall Grade:** B+ (Stages 1, 4-7 excellent, Stage 3 needs fix)
 
-**Total Resume Overhead (Current):** ~56 seconds + ~55 minutes waste
+**Total Resume Overhead (Before Stage 1 Fix):** ~56 seconds + ~55 minutes waste
 
-**Total Resume Overhead (Fixed):** ~16 seconds (just validation checks)
+**Total Resume Overhead (After Stage 1 Fix):** ~16 seconds + ~10 minutes (Stage 3 only)
+
+**Total Resume Overhead (After All Fixes):** ~13 seconds (just validation checks)
 
 ---
 
@@ -740,7 +748,7 @@ else:
 | Stage | Time | Cost | Avoidable? |
 |-------|------|------|------------|
 | Stage 0 | 1 sec | $0 | No (idempotent) |
-| Stage 1 | ❌ 45 min | ❌ $0.80 | ✅ **YES** (Bug #1) |
+| Stage 1 | ✅ 0 sec | ✅ $0 | No (✅ **Fixed 2025-10-24**) |
 | Stage 2 | 5 sec | $0 | No (works correctly) |
 | Stage 2.5 | 1 sec | $0 | No (works correctly) |
 | Stage 2.6 | 0 sec | $0 | No (works correctly) |
@@ -761,7 +769,7 @@ else:
 | Stage | Time | Cost | Notes |
 |-------|------|------|-------|
 | Stage 0 | 1 sec | $0 | Idempotent operations |
-| Stage 1 | ✅ 0 sec | ✅ $0 | **Checks winner_analysis.json** |
+| Stage 1 | ✅ 0 sec | ✅ $0 | **Checks checkpoint + all output files** |
 | Stage 2 | 5 sec | $0 | Checkpoint validation |
 | Stage 2.5 | 1 sec | $0 | File scan |
 | Stage 2.6 | 0 sec | $0 | Taxonomy exists check |
