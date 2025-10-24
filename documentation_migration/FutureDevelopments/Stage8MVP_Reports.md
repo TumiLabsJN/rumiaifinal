@@ -288,11 +288,11 @@ Your content creators will receive 9 creative strategy reports tailored to the #
   • Formula 9: The Before-After Journey
 
 **Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example |
-|----------------|--------|------------------------|-----------|---------|
-| Hashtag (in intro text) | Config | CLI parameter `--hashtag` | String | "#nutrition" |
-| Duration Bucket ranges (3 buckets) | Stage 1 | Top 3 buckets from `winning_buckets` in winner_analysis.json | String (array) | "13-18s", "18-33s", "33-60s" |
-| Formula names (9 formulas) | Stage 7 | `pattern_name` from winning_formulas.json (3 per bucket) | String (array) | "The Question Hook Formula", etc. |
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Hashtag (in intro text) | Config | `/config/hashtag_clusters/{target}.json` → `primary_hashtag` | String | "#nutrition" | ✅ **Report 1 Header** |
+| Duration Bucket ranges (3 buckets) | Stage 1 | `/data/clients/{client}/hashtag/{target}/{mode}_{strategy}/winner_analysis.json` → `top_3_buckets` array | Array[String] | ["18-33s", "13-18s", "60-90s"] | ✅ **Report 1 Header** |
+| Formula names (9 formulas) | Stage 8 LLM (future) | For each winning bucket: `aggregate_content_classifications()` → `generate_formula_names_llm()` (LLM-generated via Section 0.5.6 - TO BE DOCUMENTED) → 3 names per bucket, 9 total | Array[String] | ["The Question Hook Formula", "The Transformation Story", ...] | ⚠️ **FUTURE WORK** (Section 0.5.6 LLM function not documented) |
 
 ---
 

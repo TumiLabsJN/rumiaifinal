@@ -1,10 +1,36 @@
-# Bug #1 Implementation Plan - Strategy 2 SIMPLIFIED (REVISED)
+# Bug #1 Implementation Plan - Strategy 2 SIMPLIFIED (SUPERSEDED)
+
+⚠️ **THIS PLAN HAS BEEN SUPERSEDED BY OPTION B**
 
 **Date**: 2025-10-23
 **Revised**: 2025-10-23 (Post-Critique)
+**Superseded**: 2025-10-23 (Replaced by Option B: Root Cause Fix)
 **Bug**: Boolean features cause TypeError in quantile computation
-**Solution**: Strategy 2 SIMPLIFIED - Treat boolean as 0/1, skip percentiles
-**Estimated Time**: ~60 minutes (revised after critique resolution)
+**Original Solution**: Strategy 2 SIMPLIFIED - Treat boolean as 0/1, skip percentiles (Stage 6 fix)
+**Chosen Solution**: **Option B - Encode booleans in Stage 4 (root cause fix)**
+
+**👉 See Bug1_OptionB_RootCauseFix.md for the actual implementation**
+
+---
+
+## Why This Plan Was Superseded
+
+After critique analysis and discussion, we identified that:
+
+1. **Option A (this plan)**: Fix symptom in Stage 6 (28 lines, technical debt)
+2. **Option B (chosen)**: Fix root cause in Stage 4 (4 lines, clean architecture)
+
+**Key insight**: "Invalidating models" just means re-running Stage 4-5 scripts (~20 minutes), which is trivial compared to accumulating technical debt.
+
+**Decision**: Option B is architecturally superior, simpler code, and takes less time overall.
+
+---
+
+## Historical Document
+
+This document is preserved for historical reference. The critique resolution decisions below were based on Option A and are no longer relevant.
+
+---
 
 ---
 
