@@ -370,9 +370,11 @@ TRANSCRIPTS:
 
             logger.info(f"Received response from Claude Sonnet ({len(response_text)} chars)")
 
-            # Step 3.3: Parse JSON response
+            # Step 3.3: Parse JSON response (handle markdown code fences)
             # Source: ContentAnalysisCHILD.md Section 2.3.2 line 234
-            raw_taxonomy = json.loads(response_text)
+            # Updated: 2025-10-25 - Use parse_llm_json() to handle markdown wrapping
+            from ml_pipeline.stage2_content_analysis.utils import parse_llm_json
+            raw_taxonomy = parse_llm_json(response_text)
 
             # Step 3.4: Validate response structure before returning
             # Source: ContentAnalysisCHILD.md Section 6.3 (Output Validation)

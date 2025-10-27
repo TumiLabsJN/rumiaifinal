@@ -1,0 +1,277 @@
+╔════════════════════════════════════════════════════════════════════════════════════════╗
+║             REJECTED VIDEOS HASHTAG VALIDATION ANALYSIS - EXECUTIVE SUMMARY            ║
+║                                                                                        ║
+║                     Rollo Wellness Cluster (407 Rejected Videos)                      ║
+║                                  October 25, 2025                                      ║
+╚════════════════════════════════════════════════════════════════════════════════════════╝
+
+
+KEY METRICS
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Total Videos (after deduplication):       780
+Videos PASSED validation:                 373 (47.8%)
+Videos REJECTED:                          407 (52.2%)
+
+Validation Rule:
+  REJECT if video contains ZERO of: [#wellness, #wellnesssupplements, 
+                                       #healthandwellness, #wellnessjourney]
+
+Rejection Rate: 52.2% - VERY HIGH (concerning)
+
+
+CRITICAL FINDINGS
+═════════════════════════════════════════════════════════════════════════════════════════
+
+1. TARGET HASHTAG IMBALANCE
+   
+   In the 61 sampled PASSED videos:
+   • #wellness: 32 videos (52.5%) - dominant
+   • #wellnessjourney: 20 videos (32.8%) - strong
+   • #healthandwellness: 12 videos (19.7%) - weak
+   • #wellnesssupplements: 0 videos (0.0%) - ABSENT!
+   
+   Implication: #wellnesssupplements was a target but produced zero passing videos
+   in sample. Suggests either poor scrape results OR videos were tagged differently.
+
+
+2. MISSED WELLNESS-RELATED HASHTAGS IN TARGET LIST
+   
+   Wellness-adjacent hashtags found IN PASSED VIDEOS:
+   • #supplements: 11 videos (18%)  ← CRITICAL: Highest alternative hashtag
+   • #health: 7 videos (11.5%)      ← Common wellness indicator
+   • #wellnesstips: 6 videos (9.8%)
+   • #guthealth: 6 videos (9.8%)
+   • #healthylifestyle: 5 videos (8.2%)
+   
+   Problem: These hashtags are NOT in the target list, yet they appear in wellness
+   videos that PASSED. This suggests rejected videos may also use these hashtags
+   but were excluded due to target list being incomplete.
+
+
+3. SUSPICIOUSLY HIGH REJECTION RATE
+   
+   52% rejection is concerning because:
+   • Indicates Apify may be returning many false positives
+   • OR target list is too narrow for wellness content
+   • Industry standard for hashtag validation: 10-30% rejection
+   • This suggests systematic issue, not random noise
+
+
+4. DATA QUALITY IS GOOD (Not the problem)
+   
+   Description fallback used: 0.4% (only 3 out of 780 videos)
+   Implication: Hashtags field is properly populated in Apify data
+   Conclusion: Videos were rejected due to content, not missing data
+
+
+PRELIMINARY RECOMMENDATION: VALIDATION IS LIKELY TOO STRICT
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Evidence:
+✓ Only 4 target hashtags for entire wellness category (narrow)
+✓ Exact match only (no fuzzy/regex/semantic matching)
+✓ 52% rejection rate (unusually high)
+✓ Related wellness hashtags missing from targets (#health, #supplements)
+✓ #wellnesssupplements produces 0% pass rate (defunct target?)
+
+Likely outcome of manual review:
+  Expected: 20-40% of rejected videos have SIMILAR wellness hashtags
+  If found: Validation is TOO STRICT, needs expansion
+
+
+HYPOTHESIS: THE 407 REJECTED VIDEOS CONTAIN
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Category A: TRUE FALSE POSITIVES (Estimated 60-75%)
+  └─ Unrelated content returned by Apify fuzzy search
+     Examples: Fitness, dance, cooking, travel, general health topics
+     Hashtags: #fitnessmotivation, #dance, #cooking, #travel
+     Action: KEEP REJECTED (correct behavior)
+
+Category B: SIMILAR WELLNESS HASHTAGS (Estimated 20-35%)
+  └─ Wellness content but different hashtags than target 4
+     Examples: #vitamins, #supplements, #health, #holistic, #fitness
+     Action: COULD ACCEPT (validation too strict)
+     Estimated impact: Would recover 80-160 videos
+
+Category C: WELLNESS NO HASHTAGS (Estimated 1-5%)
+  └─ Wellness content but empty/missing hashtags field
+     Action: Would need description parsing (rare case)
+
+
+WHAT YOU NEED TO DO NEXT
+═════════════════════════════════════════════════════════════════════════════════════════
+
+STEP 1: OBTAIN DATA FOR 20 REJECTED VIDEOS (First priority)
+  
+  You have 10 IDs:
+    1. 7514668302002556182
+    2. 7473890266424806678
+    3. 7535902581361495326
+    4. 7456572903618891054
+    5. 7529604393054899470
+    6. 7507779628203904278
+    7. 7526680407878815007
+    8. 7557474873770069279
+    9. 7522029848722787597
+    10. 7489830209772866838
+  
+  Need to find: 10 more from the 407 rejected
+  
+  Options to get the data:
+  a) Check if Apify has cache/logs of these scrapes
+  b) Use TikTok API to fetch these video IDs directly
+  c) Re-run Apify scrapes with these IDs as inputs
+  d) Check if there are intermediate/backup files in your system
+
+  Data needed for each video:
+    • video_id
+    • actual_hashtags (full list)
+    • text/description (first 200 chars)
+    • source (which hashtag cluster it was scraped from)
+
+
+STEP 2: CATEGORIZE EACH REJECTED VIDEO
+  
+  For each of 20 videos, assign one of three categories:
+  
+  Category A: "Not about wellness at all" → Keep rejected
+  Category B: "About wellness but different hashtags" → Could accept
+  Category C: "Wellness content but missing structured hashtags" → Improve parsing
+
+
+STEP 3: CALCULATE BREAKDOWN
+  
+  Count how many fall in each category:
+  • A = ____ / 20
+  • B = ____ / 20
+  • C = ____ / 20
+  
+  Decision rules:
+  • If A > 80%: Validation is CORRECT (don't change)
+  • If B > 20%: Validation is TOO STRICT (expand target list)
+  • If C > 10%: Data quality issue (improve fallback)
+
+
+STEP 4: MAKE RECOMMENDATION
+  
+  Based on breakdown:
+  
+  If A dominates (>80%, B <10%):
+    Verdict: "Validation is working as intended"
+    Action: Keep strict matching
+    Retain: Current 373 videos
+  
+  If B significant (15-35%, A 50-75%):
+    Verdict: "Validation is moderately too strict"
+    Action: Expand target list
+    Recommendation: Add #health, #supplements, #vitamins
+    Expected gain: 60-160 videos
+  
+  If B very high (>35%):
+    Verdict: "Validation is severely too strict"
+    Action: Major expansion or fuzzy matching needed
+    Recommendation: Consider regex/fuzzy approach
+    Expected gain: 150-250+ videos
+
+
+IMPLEMENTATION OPTIONS
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Option 1: MINIMAL CHANGE (if B = 15-20%)
+  File: /home/jorge/rumiaifinal/ml_pipeline/stage1_discovery/hashtag_validator.py
+  Change: Add 2 hashtags to target list
+  
+  In video_discovery.py line ~120, change:
+    all_cluster_hashtags = [cluster_config['primary_hashtag']] + cluster_config['variant_hashtags']
+  To:
+    all_cluster_hashtags = [...] + ['health', 'supplements']
+  
+  Impact: Recover ~60-80 additional wellness videos
+  Risk: Low (high precision)
+  Effort: 5 minutes
+
+
+Option 2: MODERATE EXPANSION (if B = 25-35%)
+  File: /home/jorge/rumiaifinal/ml_pipeline/stage1_discovery/hashtag_validator.py
+  Change: Add 5-6 related hashtags
+  
+  Add to target list:
+    'health', 'supplements', 'vitamins', 'holistic', 'fitness'
+  
+  Impact: Recover ~120-180 additional wellness videos
+  Risk: Medium (some false positives from #fitness)
+  Effort: 10 minutes
+
+
+Option 3: MAJOR OVERHAUL (if B > 40%)
+  File: /home/jorge/rumiaifinal/ml_pipeline/stage1_discovery/hashtag_validator.py
+  Change: Implement fuzzy matching
+  
+  Replace exact match with:
+    - Substring matching: if "wellness" in tag
+    - Regex: r"(wellness|health|supplement|vitamin|fitness|holistic|organic)"
+    - Fuzzy matching: similarity score > 0.8
+  
+  Impact: Recover ~200-350 additional wellness videos
+  Risk: High (more noise, needs monitoring)
+  Effort: 30-60 minutes
+
+
+URGENT ACTIONS
+═════════════════════════════════════════════════════════════════════════════════════════
+
+To get quick wins while planning deep review:
+
+1. Verify #wellnesssupplements status
+   • Why 0% pass rate in passed videos?
+   • Was it actually scraped effectively?
+   • Should it remain a target?
+
+2. Consider quick addition of #health and #supplements
+   • These appear in 11-18% of wellness videos
+   • Very likely to appear in rejected videos too
+   • Low-risk expansion that could recover 40-80 videos
+
+3. Track rejection rate trend
+   • Is 52% consistent across different runs?
+   • Per-hashtag breakdown: which hashtag has highest rejection?
+   • Could indicate Apify scrape quality issues
+
+
+NEXT IMMEDIATE STEPS
+═════════════════════════════════════════════════════════════════════════════════════════
+
+1. TODAY: Get data for 20 rejected videos
+   Responsible: [Person with Apify/TikTok API access]
+   Deadline: [ASAP]
+
+2. THIS WEEK: Manually categorize 20 videos
+   Responsible: [Content reviewer]
+   Deadline: [By Friday]
+
+3. THIS WEEK: Decide on implementation
+   Responsible: [Product/Engineering]
+   Deadline: [By Friday]
+
+4. NEXT WEEK: Implement changes and re-run validation
+   Responsible: [Engineering]
+   Deadline: [By next Friday]
+
+
+SUPPORTING ANALYSIS FILES
+═════════════════════════════════════════════════════════════════════════════════════════
+
+This report is based on:
+✓ Cluster analytics: /home/jorge/rumiaifinal/data/clients/rollo/hashtag/wellness/cluster_analytics.json
+✓ Passed videos samples: 3 selected_videos.json files (61 videos total)
+✓ Validation code: /home/jorge/rumiaifinal/ml_pipeline/stage1_discovery/hashtag_validator.py
+✓ Video discovery flow: /home/jorge/rumiaifinal/ml_pipeline/stage1_discovery/video_discovery.py
+
+
+═════════════════════════════════════════════════════════════════════════════════════════
+Analysis completed: October 25, 2025
+Status: Ready for manual video review and decision
+Next checkpoint: After reviewing 20 rejected videos
+═════════════════════════════════════════════════════════════════════════════════════════

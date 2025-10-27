@@ -115,10 +115,12 @@ class ResponseValidator:
             Tuple of (is_valid, parsed_data, errors)
         """
         errors = []
-        
-        # Step 1: Try to parse as JSON
+
+        # Step 1: Try to parse as JSON (handle markdown code fences)
+        # Updated: 2025-10-25 - Use parse_llm_json() to handle markdown wrapping
         try:
-            data = json.loads(response_text)
+            from ml_pipeline.stage2_content_analysis.utils import parse_llm_json
+            data = parse_llm_json(response_text)
         except json.JSONDecodeError as e:
             errors.append(f"Invalid JSON: {str(e)}")
             return False, None, errors
@@ -266,9 +268,11 @@ class ResponseValidator:
         if expected_format == 'v2':
             return cls.validate_6block_response(response_text, prompt_type)
         else:
-            # For v1, just check if it's valid JSON
+            # For v1, just check if it's valid JSON (handle markdown code fences)
+            # Updated: 2025-10-25 - Use parse_llm_json() to handle markdown wrapping
             try:
-                data = json.loads(response_text)
+                from ml_pipeline.stage2_content_analysis.utils import parse_llm_json
+                data = parse_llm_json(response_text)
                 return True, data, []
             except json.JSONDecodeError as e:
                 return False, None, [f"Invalid JSON: {str(e)}"]

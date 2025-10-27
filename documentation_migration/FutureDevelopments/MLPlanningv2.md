@@ -3597,6 +3597,7 @@ bucket_18-33s/
 - **Winning formulas**: Explicit video journey patterns with RF validation (e.g., "Hook-0 → Middle-1 → Closing-0")
 - **Temporal progression**: Track feature evolution across windows (energy builds, eye contact bookends, etc.)
 - **Error handling**: Graceful degradation - one window failure doesn't block entire analysis
+- **Schema consistency (2025-10-27 update)**: All creative reports (path-based AND feature-based) use identical 13-field schema, ensuring downstream Stage 8 PDF generation compatibility
 
 **Child Documents**:
 - LLMAnalysis7.md (complete Stage 7 architecture with dual RF integration)

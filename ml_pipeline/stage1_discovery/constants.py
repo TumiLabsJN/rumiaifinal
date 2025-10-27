@@ -134,9 +134,9 @@ MAX_RUNS_PER_HASHTAG = 5
 # Rationale: 1-5 runs provide flexibility (1=quick test, 5=maximum data)
 
 MIN_DELAY_BETWEEN_RUNS_MS = 60000   # 1 minute
-MAX_DELAY_BETWEEN_RUNS_MS = 600000  # 10 minutes
+MAX_DELAY_BETWEEN_RUNS_MS = 10800000  # 180 minutes (3 hours)
 # Source: HashtagVolumeV2.md DECISION 1, lines 335-336
-# Rationale: 1-10 minutes balances rate limiting with execution speed
+# Rationale: 1-180 minutes allows extended delays for rate limiting avoidance and test scenarios
 
 MIN_RESULTS_PER_PAGE = 100
 MAX_RESULTS_PER_PAGE = 800

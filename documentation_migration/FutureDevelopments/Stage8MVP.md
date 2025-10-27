@@ -181,7 +181,8 @@ Same workflow as single, but populate Template D with side-by-side data.
 **When to Use**:
 - Report 1 (Hashtag → Client): Aggregate across all buckets for market-level content insights
 - Report 2 (Hashtag → Creator): Aggregate per bucket for formula-specific content patterns
-- Report 3 (Competitor): Aggregate competitor's content strategy patterns
+- Report 3 (Single Competitor): Aggregate competitor's content strategy patterns
+- Report 4 Section 4 (Caption Strategy): Aggregate caption metrics (CTA type, hashtag count) for multi-competitor comparison
 
 **Input Parameters**:
 - `bucket_path` (string): Path to bucket folder containing `content_analysis/` subdirectory
@@ -199,12 +200,21 @@ Same workflow as single, but populate Template D with side-by-side data.
    - Tracks excluded count for quality reporting
 4. For each of 12 key fields, calculate frequency distributions:
    - **Core Content Fields** (6): `content_category`, `hook_strategy`, `pain_points`, `keywords`, `engagement_drivers`, `content_tactics`
-   - **Caption Strategy Fields** (6): `cta_type`, `emoji_usage`, `caption_length`, `hashtag_count`, `hashtag_strategy` (broad/niche/branded counts), `transcript_available`
+   - **Caption Strategy Fields** (3): `cta_type`, `hook_type`, `hashtag_count` (mean/min/max/median)
+   - **Caption Fields NOT USED IN REPORTS** (3): `emoji_usage`, `caption_length`, `hashtag_placement` (excluded per Report 2 design decision - low actionability for creators)
 5. Calculate effect sizes (if both top and bottom groups aggregated)
 
 **Note on `confidence` field**: Used for filtering (Step 3), NOT included in aggregated output. This ensures only reliable classifications inform reports.
 
-**Field Selection Rationale**: The 12 aggregated fields were chosen based on ContentAnalysisCHILDpt2.md Decision 2 (80/20 rule - highest value fields for actionable insights). Excluded fields: `caption_hook_type` (redundant with `hook_strategy`), `caption_cta_present` (90%+ have CTAs), `brand_mention_present`/`influencer_tag_present` (niche-specific), `hashtag_placement` (low variance).
+**Field Selection Rationale**: The 9 aggregated fields were chosen based on ContentAnalysisCHILDpt2.md Decision 2 (80/20 rule - highest value fields for actionable insights).
+
+**Excluded Caption Fields**:
+- `caption_hook_type` → Kept as `hook_type` (used in Report 2 CAPTION STRUCTURE)
+- `emoji_usage` → Excluded (low specificity: just "some" vs "many")
+- `caption_length` → Excluded (binary "short" vs "long", not actionable)
+- `hashtag_placement` → Excluded (low variance, "end" always wins)
+- `brand_mention_present` → Excluded (niche-specific, not generalizable)
+- `influencer_tag_present` → Excluded (depends on collaboration availability)
 
 **Example Implementation**:
 ```python
@@ -259,14 +269,11 @@ def aggregate_content_classifications(bucket_path, performance_group=None):
         aggregated[field] = Counter(all_values)
 
     # Aggregate caption analysis fields
+    aggregated['caption_hook_type'] = Counter([
+        c['caption_analysis']['hook_type'] for c in classifications
+    ])
     aggregated['caption_cta_type'] = Counter([
         c['caption_analysis']['cta_type'] for c in classifications
-    ])
-    aggregated['caption_emoji_usage'] = Counter([
-        c['caption_analysis']['emoji_usage'] for c in classifications
-    ])
-    aggregated['caption_length'] = Counter([
-        c['caption_analysis']['caption_length'] for c in classifications
     ])
 
     # Aggregate numeric fields (hashtag_count)
@@ -276,22 +283,6 @@ def aggregate_content_classifications(bucket_path, performance_group=None):
         'min': min(hashtag_counts),
         'max': max(hashtag_counts),
         'median': sorted(hashtag_counts)[len(hashtag_counts) // 2]
-    }
-
-    # Aggregate hashtag strategy (broad/niche/branded counts)
-    broad_counts = []
-    niche_counts = []
-    branded_counts = []
-    for c in classifications:
-        hs = c['caption_analysis'].get('hashtag_strategy', {})
-        broad_counts.append(hs.get('broad_count', 0))
-        niche_counts.append(hs.get('niche_count', 0))
-        branded_counts.append(hs.get('branded_count', 0))
-
-    aggregated['hashtag_strategy_avg'] = {
-        'avg_broad': sum(broad_counts) / len(broad_counts) if broad_counts else 0,
-        'avg_niche': sum(niche_counts) / len(niche_counts) if niche_counts else 0,
-        'avg_branded': sum(branded_counts) / len(branded_counts) if branded_counts else 0
     }
 
     # Transcript availability ratio
@@ -336,30 +327,22 @@ def aggregate_content_classifications(bucket_path, performance_group=None):
         'product_demonstration': 25,
         'text_overlay_heavy': 20
     }),
+    'caption_hook_type': Counter({
+        'question': 17,
+        'statement': 12,
+        'command': 7,
+        'teaser': 2
+    }),
     'caption_cta_type': Counter({
         'link_in_bio': 32,
         'save_post': 5,
         'comment': 3
-    }),
-    'caption_emoji_usage': Counter({
-        'some': 28,
-        'many': 8,
-        'none': 4
-    }),
-    'caption_length': Counter({
-        'short': 26,
-        'long': 14
     }),
     'hashtag_count_stats': {
         'mean': 7.2,
         'min': 3,
         'max': 12,
         'median': 7
-    },
-    'hashtag_strategy_avg': {
-        'avg_broad': 2.1,
-        'avg_niche': 4.8,
-        'avg_branded': 0.3
     },
     'transcript_available_ratio': 0.95
 }
@@ -513,24 +496,6 @@ top_3_hooks = get_top_n_from_field(
     performance_group="top"
 )
 # Returns: ["question_hook", "problem_solution", "shocking_fact"]
-
-# Report 2: BUILD & PROVE Section - Top 8 Keywords
-top_8_keywords = get_top_n_from_field(
-    bucket_path="/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s/",
-    field_name="keywords",
-    n=8,
-    performance_group="top"
-)
-# Returns: ["protein", "gut_health", "fiber", "probiotics", "metabolism", "holistic", "meal_prep", "supplements"]
-
-# Report 2: BUILD & PROVE Section - Top 5 Pain Points
-top_5_pain_points = get_top_n_from_field(
-    bucket_path="/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s/",
-    field_name="pain_points",
-    n=5,
-    performance_group="top"
-)
-# Returns: ["bloating", "low_energy", "weight_loss", "gut_health", "brain_fog"]
 
 # Report 2: BUILD & PROVE Section - Top 4 Content Tactics
 top_4_tactics = get_top_n_from_field(
@@ -737,19 +702,125 @@ When Stage 6 K-means and Stage 7 pattern identification are implemented, this fu
 
 #### 0.5.3: Hashtag Extraction
 
-**Function**: `extract_hashtag_analysis(manifest_path)`
+**Function**: `extract_hashtag_analysis(client_id, competitor_handle, mode="top", strategy="contrastive")`
 
-**Purpose**: Extract top 10 hashtags from selected videos (for competitor/handle analysis)
+**Purpose**: Extract hashtag analytics from competitor's selected videos across winning buckets
 
 **When to Use**:
 - Report 3 (Competitor): Show top hashtags competitor uses
+- Report 4 (Multi-Competitor): Compare hashtag strategies across competitors (Section 3)
 
-**Documentation**: See Stage8MVP_Reports.md Section 3, Item #2 (lines 1352-1400) for complete implementation details.
+**Input Parameters**:
+- `client_id` (string): Client identifier
+- `competitor_handle` (string): Competitor handle (e.g., "@drinkpoppi")
+- `mode` (string, optional): Analysis mode (default: "top")
+- `strategy` (string, optional): Selection strategy (default: "contrastive")
 
-**Quick Reference**:
-- **Input**: `selection_manifest.json` path
-- **Output**: Top 10 hashtags with usage percentages
-- **Source Data**: `unified_analysis/{video_id}.json` → `metadata.hashtags` array
+**Returns**:
+```python
+{
+    'total_unique_hashtags': 42,           # Count of distinct hashtags across all winning buckets
+    'avg_hashtags_per_video': 11,          # Mean hashtag count per video
+    'total_videos_analyzed': 59,           # Sum of top performers across 3 winning buckets
+    'top_10_hashtags': [                   # Top 10 by usage frequency
+        {
+            'tag': '#wellness',
+            'usage_pct': 78,                # (videos with tag / total videos) × 100%
+            'video_count': 46
+        },
+        # ... 9 more
+    ],
+    'top_5_concentration': 65              # % of total hashtag occurrences from top 5 (shows strategic focus: >70% = focused, <70% = diversified)
+}
+```
+
+**Data Source**: `selected_videos.json` from each winning bucket
+- **Path**: `/data/clients/{client}/competitors/{target}/{mode}_{strategy}/buckets/bucket_{name}/selected_videos.json`
+- **Field**: `videos[].hashtags[].name`
+- **Videos Used**: Top performers only (first `top_count` videos per bucket)
+
+**Process**:
+1. Load `winner_analysis.json` to identify 3 winning buckets
+2. For each winning bucket:
+   - Load `selected_videos.json`
+   - Extract hashtags from top performers: `videos[0:top_count].hashtags[].name`
+3. Aggregate across all 3 buckets:
+   - Count unique hashtags
+   - Calculate usage percentages
+   - Rank by frequency
+4. Calculate metrics:
+   - Total unique hashtags
+   - Average hashtags per video
+   - Top 5 concentration percentage
+
+**Example Implementation**:
+```python
+def extract_hashtag_analysis(client_id, competitor_handle, mode="top", strategy="contrastive"):
+    """Extract hashtag analytics from competitor's winning buckets."""
+    from collections import Counter
+
+    # Construct base path with dynamic discovery
+    base_path = f"/data/clients/{client_id}/competitors/{competitor_handle}/"
+
+    # Find strategy directory dynamically
+    dirs = [d for d in os.listdir(base_path) if d.startswith(f'{mode}_')]
+    strategy_dir = dirs[0]  # Use discovered directory
+
+    competitor_path = f"{base_path}/{strategy_dir}"
+
+    # Load winner_analysis to get winning buckets
+    winner_analysis = json.load(open(f"{competitor_path}/winner_analysis.json"))
+    winning_buckets = winner_analysis['top_3_buckets']
+
+    # Collect all hashtags from top performers
+    all_hashtags = []
+    total_videos = 0
+
+    for bucket in winning_buckets:
+        selected_videos_path = f"{competitor_path}/buckets/bucket_{bucket}/selected_videos.json"
+        data = json.load(open(selected_videos_path))
+
+        top_count = data['top_count']
+        total_videos += top_count
+
+        # Extract hashtags from top performers only
+        for video in data['videos'][:top_count]:
+            video_hashtags = [h['name'] for h in video['hashtags']]
+            all_hashtags.extend(video_hashtags)
+
+    # Calculate metrics
+    hashtag_counter = Counter(all_hashtags)
+    unique_count = len(hashtag_counter)
+    avg_per_video = len(all_hashtags) / total_videos if total_videos > 0 else 0
+
+    # Top 10 with usage percentages
+    top_10 = [
+        {
+            'tag': f"#{tag}",
+            'usage_pct': round((count / total_videos) * 100),
+            'video_count': count
+        }
+        for tag, count in hashtag_counter.most_common(10)
+    ]
+
+    # Top 5 concentration: % of total hashtag occurrences from top 5
+    # This measures strategic focus (high % = focused, low % = diversified)
+    total_occurrences = sum(hashtag_counter.values())
+    top_5_occurrences = sum(count for _, count in hashtag_counter.most_common(5))
+    top_5_concentration = round((top_5_occurrences / total_occurrences) * 100) if total_occurrences > 0 else 0
+
+    return {
+        'total_unique_hashtags': unique_count,
+        'avg_hashtags_per_video': round(avg_per_video),
+        'total_videos_analyzed': total_videos,
+        'top_10_hashtags': top_10,
+        'top_5_concentration': top_5_concentration
+    }
+```
+
+**Usage in Reports**:
+- **Report 3**: `Stage8MVP_Reports.md` Section 3 (lines 1276-1312)
+- **Report 4**: `Stage8MVP_Reports.md` Section 3 Hashtag Strategy Comparison (lines 2614-2668)
 
 ---
 
@@ -757,17 +828,170 @@ When Stage 6 K-means and Stage 7 pattern identification are implemented, this fu
 
 **Function**: `extract_mention_analysis(manifest_path)`
 
-**Purpose**: Extract @mentions to identify affiliate/repost partnerships
+**Purpose**: Extract @mentions to identify affiliate/repost partnerships using two-filter detection approach
 
 **When to Use**:
-- Report 3 (Competitor): Analyze competitor's content sourcing strategy (original vs reposted)
+- Report 3 (Single Competitor): Analyze competitor's content sourcing strategy (original vs reposted)
+- Report 4 (Multi-Competitor): Compare content sourcing strategies across competitors
 
-**Documentation**: See Stage8MVP_Reports.md Section 3, Item #3 (lines 1402-1505) for complete implementation details.
+**Input Parameters**:
+- `manifest_path` (string): Path to `selection_manifest.json` file
+  - Example: `/data/clients/{client}/competitors/{handle}/top_{strategy}/selection_manifest.json`
 
-**Quick Reference**:
-- **Input**: `selection_manifest.json` path
-- **Output**: Top 10 @mentions, repost rate percentage
-- **Source Data**: `unified_analysis/{video_id}.json` → `metadata.description` (extract via regex)
+**Output Format**:
+```python
+{
+    'top_10_mentions': [
+        {'handle': '@fitnessguru123', 'mention_count': 54, 'percentage': 18.0},
+        {'handle': '@healthcoach_jane', 'mention_count': 36, 'percentage': 12.0},
+        # ... up to 10 handles
+    ],
+    'total_unique_mentions': 47,
+    'videos_with_mentions': 82,
+    'mention_rate': 93.2,
+    'videos_with_repost_indicators': 37,
+    'repost_rate': 42.0  # ← KEY FIELD for reports
+}
+```
+
+**Source Data**: `selected_videos.json` → `videos[].text` (caption text)
+
+**Two-Filter Repost Detection Logic**:
+
+1. **Filter 1 (Primary): @Mention Presence**
+   - If caption contains ANY @mention → classify as reposted/affiliate
+   - Rationale: Brands mentioning other handles = affiliate/partnership content
+   - Regex: `re.search(r'@\w+', caption)`
+
+2. **Filter 2 (Backup): Keyword Indicators**
+   - If no @mention but contains explicit repost keywords
+   - Keywords: ['repost', 'via', 'credit', 'by', 'from']
+   - Catches edge cases where @ is missing but attribution is explicit
+
+**Process**:
+1. Load `selection_manifest.json` to get selected video IDs
+2. Extract all video IDs from `videos_by_bucket` (top + bottom performers across all 3 winning buckets)
+3. For each video ID, load caption from `selected_videos.json` → `videos[].text`
+4. Extract @mentions using regex: `re.findall(r'@(\w+)', caption)`
+5. Apply two-filter detection:
+   - Check Filter 1: Has @mentions?
+   - If no, check Filter 2: Has repost keywords?
+6. Aggregate @mention frequency counter across all selected videos
+7. Calculate top 10 most-mentioned handles
+8. Calculate repost rate: `(videos_with_reposts / total_videos) × 100%`
+
+**Example Implementation**:
+```python
+import re
+from collections import Counter
+import json
+
+def extract_mention_analysis(manifest_path):
+    """
+    Extract @mention analysis with two-filter repost detection.
+
+    Args:
+        manifest_path: Path to selection_manifest.json
+
+    Returns:
+        Dict with top_10_mentions, total_unique_mentions, repost_rate, etc.
+    """
+    # Load manifest to get selected video IDs
+    with open(manifest_path, 'r') as f:
+        manifest = json.load(f)
+
+    selected_video_ids = []
+    for bucket, videos in manifest['videos_by_bucket'].items():
+        selected_video_ids.extend(videos.get('top_performers', []))
+        selected_video_ids.extend(videos.get('bottom_performers', []))
+
+    # Load selected_videos.json to get captions
+    bucket_path = manifest_path.replace('/selection_manifest.json', '/buckets')
+
+    mention_counter = Counter()
+    videos_with_mentions = 0
+    videos_with_reposts = 0
+    repost_indicators = ['repost', 'via', 'credit', 'by', 'from']
+
+    for video_id in selected_video_ids:
+        # Find video caption from selected_videos.json in any bucket
+        caption = None
+        for bucket in manifest['selected_buckets']:
+            selected_videos_path = f"{bucket_path}/bucket_{bucket}/selected_videos.json"
+            try:
+                with open(selected_videos_path, 'r') as f:
+                    selected_data = json.load(f)
+                    for video in selected_data['videos']:
+                        if video['id'] == video_id:
+                            caption = video.get('text', '')
+                            break
+                if caption:
+                    break
+            except FileNotFoundError:
+                continue
+
+        if not caption:
+            continue
+
+        # Extract @mentions using regex (TikTok handle format)
+        mentions = re.findall(r'@(\w+)', caption)
+
+        if mentions:
+            videos_with_mentions += 1
+            mention_counter.update(mentions)
+
+        # TWO-FILTER REPOST DETECTION
+        is_repost = False
+
+        # Filter 1 (Primary): @mention presence
+        if mentions:
+            is_repost = True
+
+        # Filter 2 (Backup): Keyword indicators
+        else:
+            caption_lower = caption.lower()
+            if any(indicator in caption_lower for indicator in repost_indicators):
+                is_repost = True
+
+        if is_repost:
+            videos_with_reposts += 1
+
+    # Calculate stats
+    top_10_mentions = mention_counter.most_common(10)
+    total_videos = len(selected_video_ids)
+
+    return {
+        'top_10_mentions': [
+            {
+                'handle': f"@{handle}",
+                'mention_count': count,
+                'percentage': round((count / total_videos) * 100, 1)
+            }
+            for handle, count in top_10_mentions
+        ],
+        'total_unique_mentions': len(mention_counter),
+        'videos_with_mentions': videos_with_mentions,
+        'mention_rate': round((videos_with_mentions / total_videos) * 100, 1),
+        'videos_with_repost_indicators': videos_with_reposts,
+        'repost_rate': round((videos_with_reposts / total_videos) * 100, 1)
+    }
+```
+
+**Usage Example**:
+```python
+# For Report 3 (Single Competitor)
+manifest_path = "/data/clients/test_run/competitors/drinkpoppi/top_contrastive/selection_manifest.json"
+results = extract_mention_analysis(manifest_path)
+
+print(f"Repost Rate: {results['repost_rate']}%")
+print(f"Total Unique @Mentions: {results['total_unique_mentions']}")
+print(f"Top Affiliate: {results['top_10_mentions'][0]['handle']} ({results['top_10_mentions'][0]['percentage']}%)")
+
+# Output:
+# Repost Rate: 42.0%
+# Total Unique @Mentions: 47
+# Top Affiliate: @fitnessguru123 (18.0%)
+```
 
 ---
 
@@ -2444,14 +2668,6 @@ for bucket in buckets:
 
 ---
 
-### Section 1: Designer Templates (8 days)
-
-| # | Task | Owner | Effort | Notes |
-|---|------|-------|--------|-------|
-| 1.1 | Design Template A (Content Creator) | Designer | 2 days | 2-page, mobile-optimized, includes 2 QR code placeholders |
-| 1.2 | Design Template B (Client Executive) | Designer | 2 days | 3-page, intelligence dashboard |
-| 1.3 | Design Template C (Single Competitor) | Designer | 2 days | 3-page, benchmarking vs client |
-| 1.4 | Design Template D (Comparison) | Designer | 2 days | 4-page, side-by-side multi-competitor |
 
 **Template A Requirements** (from Issue 1 resolution - see Stage8MVP_Reports.md):
 - Include 2 QR code placeholders (~1" x 1" each):
@@ -2470,18 +2686,6 @@ for bucket in buckets:
 
 ---
 
-### Section 2: Branding Package (3 days)
-
-| # | Task | Owner | Effort | Notes |
-|---|------|-------|--------|-------|
-| 2.1 | Create visual identity system | Designer | 1 day | Colors, fonts, spacing, grids |
-| 2.2 | Create chart templates | Designer | 1 day | Bar charts, star ratings, timelines |
-| 2.3 | Create icon library + assets | Designer | 1 day | Logos, dividers, backgrounds |
-
-**Deliverables**:
-- Brand style guide (PDF)
-- Chart template library (editable files)
-- Asset package (PNG/SVG files)
 
 ---
 
@@ -2565,6 +2769,207 @@ def get_visual_direction(avg_eye_contact_rate: float, avg_face_size: float) -> s
 **Data Source**:
 - Temporal windows data: `{video_id}_temporal_windows_updated.json` → `temporal_windows.hook`
 - Validated with real data from 5 sample videos (eye_contact range: 0.0-0.90, face_size range: 0.0-0.44)
+
+---
+
+#### 0.5.8: Bucket-Scoped Cluster Metrics (The Proof Section)
+
+**Function**: `calculate_proof_metrics_bucket_scoped(bucket_path, bucket_name, formula_cluster_id)`
+
+**Purpose**: Calculate performance comparison metrics for "The Proof" section with bucket-scoping - ensures videos are filtered by BOTH cluster membership AND bucket duration
+
+**When to Use**:
+- Report 2 (Hashtag → Creator): "The Proof" section showing top cluster vs bottom cluster performance
+- When you need to compare videos using a pattern vs not using it WITHIN a specific duration bucket
+
+**Why Bucket-Scoping Matters**:
+- Report 2 has 9 PDFs (3 buckets × 3 formulas)
+- Each PDF is for ONE specific duration (e.g., "18-33s")
+- "The Proof" should compare 18-33s videos using pattern vs 18-33s videos NOT using pattern
+- Without bucket-scoping, metrics would mix all durations (9s, 18s, 33s, 60s), making comparison invalid for the specific duration
+
+**Input Parameters**:
+- `bucket_path` (string): Path to bucket folder
+  - Example: `/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s/`
+- `bucket_name` (string): Duration bucket name
+  - Example: `"18-33s"`, `"60-90s"`
+  - Must match a bucket in `selection_manifest.json`
+- `formula_cluster_id` (int): Winning cluster ID from Stage 7
+  - Example: 0, 1, or 2 (from K-means clustering)
+
+**Process**:
+1. Load Stage 6 K-means cluster assignments to identify videos in winning cluster
+2. Load `selection_manifest.json` to get top_performers for THIS BUCKET
+3. Filter videos by: (1) cluster membership AND (2) bucket's top_performers
+4. Calculate avg views and avg engagement for top cluster (bucket-scoped)
+5. Calculate avg views and avg engagement for bottom cluster (bucket-scoped)
+6. Calculate multipliers and percentage increases
+
+**Example Implementation**:
+```python
+import json
+
+def calculate_proof_metrics_bucket_scoped(bucket_path, bucket_name, formula_cluster_id):
+    """
+    Calculate The Proof metrics with bucket-scoped cluster filtering.
+
+    Returns performance comparison for videos in THIS BUCKET ONLY,
+    comparing those using the pattern (winning cluster) vs not using it.
+    """
+    # Step 1: Load K-means cluster assignments
+    kmeans_path = f"{bucket_path}/ml_analysis/hook_kmeans_analysis.json"
+    with open(kmeans_path, 'r') as f:
+        kmeans_data = json.load(f)
+
+    # Get video IDs in winning cluster
+    winning_cluster_video_ids = [
+        v['video_id']
+        for cluster in kmeans_data['clusters']
+        if cluster['cluster_id'] == formula_cluster_id
+        for v in cluster['videos']
+    ]
+
+    # Get video IDs NOT in winning cluster
+    other_cluster_video_ids = [
+        v['video_id']
+        for cluster in kmeans_data['clusters']
+        if cluster['cluster_id'] != formula_cluster_id
+        for v in cluster['videos']
+    ]
+
+    # Step 2: Load selection manifest for THIS BUCKET
+    manifest_path = f"{bucket_path}/../../selection_manifest.json"
+    with open(manifest_path, 'r') as f:
+        manifest = json.load(f)
+
+    # Get top performer IDs for THIS BUCKET ONLY (bucket-scoping!)
+    bucket_top_performer_ids = manifest['videos_by_bucket'][bucket_name]['top_performers']
+
+    # Step 3: Load selected videos
+    selected_path = f"{bucket_path}/selected_videos.json"
+    with open(selected_path, 'r') as f:
+        selected_data = json.load(f)
+
+    # Step 4: Filter for top cluster (bucket-scoped)
+    # Videos must be: (1) in winning cluster AND (2) in this bucket's top performers
+    top_cluster_videos = [
+        v for v in selected_data['videos']
+        if v['id'] in winning_cluster_video_ids
+        and v['id'] in bucket_top_performer_ids
+    ]
+
+    # Step 5: Filter for bottom cluster (bucket-scoped)
+    # Videos must be: (1) NOT in winning cluster AND (2) in this bucket's top performers
+    bottom_cluster_videos = [
+        v for v in selected_data['videos']
+        if v['id'] in other_cluster_video_ids
+        and v['id'] in bucket_top_performer_ids
+    ]
+
+    # Step 6: Calculate averages
+    top_avg_views = sum(v['playCount'] for v in top_cluster_videos) / len(top_cluster_videos)
+    bottom_avg_views = sum(v['playCount'] for v in bottom_cluster_videos) / len(bottom_cluster_videos)
+
+    # Step 7: Calculate engagement (using calculate_engagement_metrics from Section 0.5.5)
+    top_engagement_rates = []
+    for v in top_cluster_videos:
+        metadata = {
+            'views': v['playCount'],
+            'likes': v['diggCount'],
+            'comments': v['commentCount'],
+            'shares': v['shareCount'],
+            'saves': v['collectCount']
+        }
+        metrics = calculate_engagement_metrics(metadata)
+        top_engagement_rates.append(metrics['engagement_rate'])
+
+    top_avg_engagement = sum(top_engagement_rates) / len(top_engagement_rates)
+
+    bottom_engagement_rates = []
+    for v in bottom_cluster_videos:
+        metadata = {
+            'views': v['playCount'],
+            'likes': v['diggCount'],
+            'comments': v['commentCount'],
+            'shares': v['shareCount'],
+            'saves': v['collectCount']
+        }
+        metrics = calculate_engagement_metrics(metadata)
+        bottom_engagement_rates.append(metrics['engagement_rate'])
+
+    bottom_avg_engagement = sum(bottom_engagement_rates) / len(bottom_engagement_rates)
+
+    # Step 8: Calculate multipliers
+    return {
+        'top_cluster': {
+            'avg_views': top_avg_views,
+            'avg_engagement': top_avg_engagement,
+            'video_count': len(top_cluster_videos)
+        },
+        'bottom_cluster': {
+            'avg_views': bottom_avg_views,
+            'avg_engagement': bottom_avg_engagement,
+            'video_count': len(bottom_cluster_videos)
+        },
+        'multipliers': {
+            'view_multiplier': round(top_avg_views / bottom_avg_views, 1),
+            'engagement_multiplier': round(top_avg_engagement / bottom_avg_engagement, 1),
+            'view_pct_increase': round(((top_avg_views - bottom_avg_views) / bottom_avg_views) * 100),
+            'engagement_pct_increase': round(((top_avg_engagement - bottom_avg_engagement) / bottom_avg_engagement) * 100)
+        }
+    }
+```
+
+**Output Format**:
+```python
+{
+    'top_cluster': {
+        'avg_views': 620000,
+        'avg_engagement': 1.2,
+        'video_count': 25  # Only 18-33s videos using pattern
+    },
+    'bottom_cluster': {
+        'avg_views': 380000,
+        'avg_engagement': 0.8,
+        'video_count': 15  # Only 18-33s videos NOT using pattern
+    },
+    'multipliers': {
+        'view_multiplier': 1.6,
+        'engagement_multiplier': 1.5,
+        'view_pct_increase': 63,
+        'engagement_pct_increase': 50
+    }
+}
+```
+
+**Usage Example**:
+```python
+# For Report 2 covering 18-33s bucket, Formula 1
+bucket_path = "/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s"
+bucket_name = "18-33s"
+formula_cluster_id = 0  # From winning_formulas.json
+
+metrics = calculate_proof_metrics_bucket_scoped(bucket_path, bucket_name, formula_cluster_id)
+
+# Results are ONLY for 18-33s videos
+print(f"Top cluster (18-33s using pattern): {metrics['top_cluster']['avg_views']:,} views")
+print(f"Bottom cluster (18-33s NOT using pattern): {metrics['bottom_cluster']['avg_views']:,} views")
+print(f"Multiplier: {metrics['multipliers']['view_multiplier']}x more views")
+```
+
+**Validation Status**: ⚠️ **AWAITING STAGE 6 + STAGE 7** (K-means clustering + winning formulas)
+
+**Key Features**:
+- ✅ Bucket-scoped (only videos from specified duration)
+- ✅ Cluster-based (pattern users vs non-pattern users)
+- ✅ Apples-to-apples comparison (same duration, different pattern usage)
+- ✅ Uses real engagement metrics (Section 0.5.5)
+
+**Dependencies**:
+- Stage 6: `hook_kmeans_analysis.json` (cluster assignments)
+- Stage 7: `winning_formulas.json` (winning cluster ID)
+- Stage 2: `selected_videos.json` (video metadata)
+- Stage 1: `selection_manifest.json` (bucket-scoped top performers)
 
 ---
 
@@ -2894,155 +3299,8 @@ python extract_competitor_data.py --client acme --competitors rival_brand,compet
 
 ---
 
-## Total MVP Effort: ~17 days
 
-| Section | Tasks | Effort |
-|---------|-------|--------|
-| Section 0: Template Structures | 4 tasks | 0 days (Tasks 0.1, 0.2 ✅ COMPLETE, 0.3, 0.4 remaining) |
-| Section 1: Designer Templates | 4 tasks | 8 days (includes QR code placeholders in Template A) |
-| Section 2: Branding Package | 3 tasks | 3 days |
-| Section 3: Data Extraction Scripts (Google Sheets) | 3 tasks | 3.25 days (includes QR code generation) |
-| Section 4: Documentation | 2 tasks | 1 day |
-| Section 5: Testing | 2 tasks | 0.5 days |
-| **TOTAL** | **18 tasks** | **15.75 days (~3 weeks)** (2 tasks complete, 16 remaining) |
 
-**Scope Changes from Issue Resolutions**:
-- Task 0.2 ✅ COMPLETE: Hashtag → Creator template (Stage8MVP_Reports.md Section 2)
-- Task 3.1 updated: +0.25 days for QR code generation (Issue 1: Visual Examples)
-- Template A updated: Includes 2 QR code placeholders per report
-
-**Parallelizable**: Designer work (Sections 1-2: 11 days) + Development work (Section 3: 3.25 days) can run simultaneously after Section 0 complete
-
-**Critical Path**:
-1. Section 0 (0.75 days remaining: Tasks 0.3, 0.4) → BLOCKS everything
-2. Section 1-2 (11 days) designer work in parallel with Section 3 (3 days) dev work
-3. Section 4-5 (1.5 days) sequential after above
-
-**Actual Calendar Time**: ~2.5 weeks (if parallelized) to ~3.5 weeks (if sequential)
-
----
-
-## Phased Approach Recommendation
-
-### Phase 1 (NOW): Designer Template MVP
-**Timeline**: 3.5 weeks
-**Effort**: 16.75 days development (1.25 days template structures + 3 days scripts + 11 days designer + 1.5 days docs/testing)
-**Use for**: Onboarding (5 hashtags, 5-7 competitors)
-**Manual time investment**: ~25 hours total onboarding + ~2 hrs/month ongoing
-
-**Why start here**:
-- Get to production 10x faster
-- Validate report content and design with real clients
-- Learn what clients actually want before automating
-
----
-
-### Phase 2 (IF NEEDED): Partial Automation
-**Trigger**: Clients request weekly reports OR 5+ active clients
-**Timeline**: 2 weeks
-**Focus**: Automate ONLY the most repetitive part (Creator PDFs - 9 per hashtag)
-
-**What to automate**:
-- Creator report generation (Template A) - saves ~3 hours per hashtag
-- Keep client + competitor reports manual (less frequent)
-
-**Development**: ~10 days
-**Savings**: ~15 hours/month (if running 5 hashtag analyses/month)
-
----
-
-### Phase 3 (SCALE): Full Automation
-**Trigger**: 10+ active clients OR 20+ hours/month manual work
-**Timeline**: 8 weeks
-**Scope**: Implement full Stage8Planning.md
-
-**What to automate**:
-- All 4 report types (creator, client, single competitor, comparison)
-- Full PDF generation engine
-- Batch processing, error handling, version control
-
-**Development**: ~50 days (original automated MVP)
-**Savings**: All manual work eliminated
-
----
-
-## Required Resources
-
-### Software Licenses
-- **Adobe InDesign** (~$30/month) OR **Canva Pro** (~$13/month) OR **Figma** (free tier OK)
-- **Python 3.8+** (free)
-- ✅ **Google Workspace** (REQUIRED - for Google Sheets API access)
-
-### Skills Needed
-- **Designer**: Adobe InDesign/Canva proficiency, brand identity design
-- **Developer**: Python, JSON parsing, basic data transformation
-- **You**: Willingness to spend ~25 hours on manual work during onboarding
-
-### Time Commitment
-- **Upfront**: 3 weeks (designer + dev work in parallel)
-- **Onboarding**: ~25 hours manual work across 5 hashtags + 7 competitors
-- **Ongoing**: ~30 min every 2 weeks (biweekly client reports)
-
----
-
-## Success Criteria
-
-### MVP Complete When:
-1. ✅ All 4 designer templates finalized and tested
-2. ✅ All 3 extraction scripts working on real Stage 1-7 data
-3. ✅ 1 sample PDF generated for each template type
-4. ✅ Documentation complete (extraction + template guides)
-5. ✅ Mobile rendering validated for Template A (creator reports)
-
-### Production-Ready When:
-1. ✅ 5 hashtag analyses completed (45 creator PDFs + 5 client PDFs generated)
-2. ✅ 5 single competitor reports generated
-3. ✅ 2 comparison reports generated
-4. ✅ Client feedback collected and templates iterated
-5. ✅ Team trained on extraction + population workflow
-
----
-
-## Next Steps
-
-### Immediate Actions (Week 1)
-1. ✅ **COMPLETE Section 0 first** - Create 2 remaining template structures (0.3, 0.4) before anything else
-2. ✅ Select design software (InDesign vs Canva vs Figma)
-3. ✅ Hire/assign designer
-4. ⏸️ **WAIT for Section 0** - Designer cannot start until all template structures complete
-5. ⏸️ **WAIT for Section 0** - Developer can start Section 3 after Section 0 complete
-
-### Week 2
-1. ✅ Designer completes Templates A + B
-2. ✅ Developer completes scripts 3.1 + 3.2
-3. ✅ Test extraction scripts on real data
-4. ✅ Generate first sample PDFs (creator + client)
-
-### Week 3
-1. ✅ Designer completes Templates C + D
-2. ✅ Developer completes script 3.3
-3. ✅ Generate sample PDFs (competitor single + comparison)
-4. ✅ Write documentation (extraction + population guides)
-5. ✅ Final testing and validation
-
-### Week 4+ (Production Use)
-1. ✅ Run first onboarding hashtag analysis → generate 9 creator + 1 client PDFs
-2. ✅ Collect client feedback
-3. ✅ Iterate on templates if needed
-4. ✅ Continue onboarding (remaining 4 hashtags + 7 competitors)
-
----
-
-## Open Questions for Decision
-
-1. ✅ **Output Format** - RESOLVED: Google Sheets (easiest to review/edit)
-2. **Design Software**: Adobe InDesign, Canva Pro, or Figma? (Affects designer workflow and license cost)
-3. **Template D Priority**: Should we defer Comparison Report template to Phase 2? (Only needed 2 times during onboarding vs 5 times for single competitor)
-4. **Quality Assurance**: Who will review PDFs before sending to clients? (Peer review vs self-review)
-
-**Recommendation**: Answer questions 2-4 before starting development to avoid rework.
-
----
 
 ## Appendix: File Structure
 

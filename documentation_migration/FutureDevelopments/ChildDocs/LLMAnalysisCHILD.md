@@ -1045,28 +1045,34 @@ def generate_feature_based_reports(
         used_features: Set of features already used in path-based reports (to avoid duplication)
 
     Returns:
-        List of feature-based report dictionaries matching Phase 2 schema:
+        List of feature-based report dictionaries matching Phase 2 schema (13 fields, identical to path-based):
         [
             {
                 "report_id": 3,
                 "type": "feature_based",
+                "path": null,
                 "frequency": null,
                 "percentage": null,
                 "confidence_level": "moderate",
-                "formula_name": "The Eye Contact & Engagement Strategy",
-                "strategy_description": "Maintain high and consistent eye contact throughout video journey",
-                "key_features": [
-                    "eye_contact_rate: 0.88 (RF rank #1, importance 0.35, gap 0.43)",
-                    "eye_contact_consistency: 0.12 std dev (RF rank #6, importance 0.08)"
+                "formula_name": "The Visual Storytelling Formula",
+                "structure": null,
+                "temporal_progressions": [
+                    {
+                        "feature": "scene_count",
+                        "progression": "Dynamic visual elements throughout video",
+                        "insight": "Visual variety maintains attention in short-form content"
+                    }
                 ],
-                "rf_validation": {
-                    "insight": "Leverages #1 and #6 most predictive features across entire video"
+                "rf_cross_window_validation": {
+                    "video_level_features_matched": [],
+                    "alignment_insight": "Visual engagement features align with top RF predictors"
                 },
-                "when_to_use": "Universal strategy applicable when cluster paths are fragmented. Focus on proven principles.",
-                "creator_recommendations": [
-                    "PRIORITY: Maintain 85-90% eye contact throughout video (RF #1 predictor)",
-                    "Keep eye contact variance low (<0.15 std dev) across all windows",
-                    "Use direct-to-camera framing in hook and closing windows"
+                "strategy_description": "Visual engagement formula emphasizing dynamic scene transitions and visual variety.",
+                "when_to_use": "Product demonstrations, educational content, transformation videos, visual tutorials.",
+                "step_by_step_template": [
+                    "Hook: Use multiple visual angles or dynamic elements to create immediate visual interest",
+                    "Middle: Maintain visual variety with strategic scene transitions",
+                    "Closing: Return to primary visual focus while maintaining dynamic elements"
                 ]
             }
         ]
@@ -1244,7 +1250,7 @@ def generate_feature_based_reports(rf_features: list[dict], kmeans_data: dict, n
     """Generate fallback reports when <3 cluster paths meet 10% threshold."""
 ```
 
-Creates 3 category-based reports (visual, audio, behavioral) when insufficient cluster paths exist. Returns JSON reports with top 3 features per category and strategy templates.
+Creates 1-3 feature-based reports (visual, audio, behavioral) when insufficient cluster paths exist. Returns JSON reports with **full 13-field schema** matching path-based reports (schema consistency for Stage 8). Python-generated content includes formula names, temporal progressions, RF validation, and step-by-step templates.
 
 #### 2.2.9 Phase 1 Parallel Orchestration
 
@@ -2862,7 +2868,9 @@ CONFIDENCE_HIGH_THRESHOLD = 15.0  # 15-20%
 
 **File**: `ml_analysis/llm/winning_formulas.json` (~10-15KB)
 
-**Schema Changes (2025-10-17 - Gaps #2, #3, #5 improvements)**:
+**Schema Changes**:
+
+**2025-10-17** - Gaps #2, #3, #5 improvements:
 
 | Field | Before (2025-10-16) | After (2025-10-17) | Improvement |
 |-------|---------------------|---------------------|-------------|
@@ -2871,6 +2879,11 @@ CONFIDENCE_HIGH_THRESHOLD = 15.0  # 15-20%
 | `creative_reports[].confidence_level` | Not present | **Required field**: "very_high" \| "high" \| "moderate" | Gap #2: Shows pattern strength |
 | `creative_reports[].path`, `.frequency`, `.percentage` | Always required | **Nullable** (null for feature_based reports) | Gap #4: Supports fallback scenarios |
 | `supplementary_insights` | Not present | **NEW section** with `universal_principles` + `cross_window_patterns` | Gap #3: Coverage safety net for all creators |
+
+**2025-10-27** - Schema consistency bug fix:
+- **Feature-based reports now use full 13-field schema** (previously used simplified 5-field schema)
+- All reports (path-based AND feature-based) now have identical structure
+- Ensures downstream Stage 8 PDF generation compatibility
 
 **Key Scenarios** (Gap #1, #4):
 - **Scenario A** (3+ paths ≥10%): 3 path-based reports

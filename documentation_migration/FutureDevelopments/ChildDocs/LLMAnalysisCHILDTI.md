@@ -277,15 +277,17 @@ class Stage7Output:
         "total_unique_paths": int,         # Number of unique cluster paths
         "paths_above_threshold": int,      # Paths meeting 10% threshold
         "creative_reports": [              # ALWAYS 3 reports
+            # CRITICAL: ALL reports (path-based AND feature-based) MUST have identical 13-field schema
+            # This ensures downstream compatibility for Stage 8 PDF generation and analytics
             {
                 "report_id": int,          # 1, 2, 3
                 "type": str,               # "path_based" or "feature_based"
                 "path": list[int] | None,  # Cluster IDs per window (null for feature_based)
                 "frequency": int | None,   # Video count (null for feature_based)
-                "percentage": float,       # Frequency / total_videos * 100
-                "confidence_level": str,   # "very_high" | "high" | "moderate"
-                "formula_name": str,       # LLM-generated
-                "structure": dict,         # Hook/middle/closing cluster names
+                "percentage": float | None,  # Frequency / total_videos * 100 (null for feature_based)
+                "confidence_level": str,   # "very_high" | "high" | "moderate" (always "moderate" for feature_based)
+                "formula_name": str,       # LLM-generated or Python-generated
+                "structure": dict | None,  # Hook/middle/closing cluster names (null for feature_based)
                 "temporal_progressions": list[dict],  # Feature evolution across windows
                 "rf_cross_window_validation": dict,   # Validation against video-level RF patterns
                 "strategy_description": str,
@@ -1665,224 +1667,176 @@ def _estimate_prevalence_from_gap(feature: dict) -> float:
 **CRITICAL DESIGN DECISION**: Python generates COMPLETE reports (not LLM) to prevent hallucination in fallback scenarios. Rationale:
 - Zero hallucination risk: All text is Python-generated from data-driven templates
 - Deterministic output: Same RF features always produce same reports (testable, reproducible)
-- Hashtag specificity from DATA: Uses actual top_performer_avg from that hashtag's RF model
+- Hashtag specificity from DATA: Uses actual top_performer_avg from that hashtag's RF model (when available)
 - Feature-based reports are universal by design: Fallback guidance when paths are fragmented
+
+**SCHEMA REQUIREMENT**: Reports MUST match Section 3.3.2 (Phase 2 Output Schema) - 13 fields identical to path-based reports. This ensures schema consistency for downstream Stage 8 PDF generation and analytics.
 
 **Function Signature**:
 ```python
 def generate_feature_based_reports(
-    rf_video_data: dict,
-    num_reports: int,
-    used_features: set = None
-) -> list[dict]
+    rf_features: List[dict],
+    kmeans_data: dict,
+    num_reports: int = 3
+) -> List[dict]
 ```
 
 **Parameters**:
-- `rf_video_data`: Video-level RF feature importance data from Stage 6
-- `num_reports`: Number of feature-based reports to generate (1-3)
-- `used_features`: Set of features already used in path-based reports (avoid duplication)
+- `rf_features`: List of RF feature dicts from `rf_video_data['feature_importance']` (Stage 6 video-level analysis)
+- `kmeans_data`: K-Means cluster data (not used in current implementation, reserved for future enhancements)
+- `num_reports`: Number of feature-based reports to generate (1-3, default 3)
 
-**Feature Grouping Categories**:
-1. Eye Contact & Engagement: `eye_contact_rate`, `eye_contact_consistency`, `gaze_direction`
-2. Energy & Pacing: `energy_level`, `hook_to_middle_energy_delta`, `middle_to_closing_energy_contrast`
-3. Speech & Density: `word_count`, `speech_coverage`, `word_density`, `pause_frequency`
-4. Visual Variety: `scene_count`, `object_count`, `overlay_unique_count`, `scene_transition_count`
+**Feature Grouping Categories** (updated Oct 2025):
+1. **Visual Engagement**: `eye_contact_rate`, `close_ratio`, `scene_changes`, `text_overlay_ratio`, `scene_count`, `object_count`, `overlay_unique_count`
+2. **Audio/Speech**: `word_count`, `speech_coverage`, `energy_level`, `pitch_scatter_ratio`
+3. **Behavioral/Emotional**: `joy_ratio`, `surprise_ratio`, `hand_gestures`, `gesture_count`, `emotion_consistency`, `emotional_valence`
 
-**Complete Algorithm** (with helper functions):
+**Complete Algorithm** (actual implementation from `stage7_preprocessing.py` lines 609-777):
+
+**NOTE**: Full 13-field schema shown only for Report #1. Reports #2 and #3 follow identical structure with different formula names and feature categories.
 
 ```python
 def generate_feature_based_reports(
-    rf_video_data: dict,
-    num_reports: int,
-    used_features: set = None
-) -> list[dict]:
-    """Generate feature-based reports when insufficient paths meet 10% threshold."""
-    if used_features is None:
-        used_features = set()
+    rf_features: List[dict],
+    kmeans_data: dict,
+    num_reports: int = 3
+) -> List[dict]:
+    """
+    Generate complete fallback reports when <3 paths meet 10% threshold.
 
-    # Step 1: Define feature groupings
-    feature_groups = {
-        'Eye Contact & Engagement': ['eye_contact_rate', 'eye_contact_consistency', 'gaze_direction'],
-        'Energy & Pacing': ['energy_level', 'hook_to_middle_energy_delta', 'middle_to_closing_energy_contrast', 'energy_variance'],
-        'Speech & Density': ['word_count', 'speech_coverage', 'word_density', 'pause_frequency'],
-        'Visual Variety': ['scene_count', 'object_count', 'overlay_unique_count', 'scene_transition_count']
-    }
+    SCHEMA: Matches TI Section 3.3.2 - 13 fields identical to path-based reports.
+    """
+    # Feature categories (visual, audio, behavioral)
+    visual_features = ['eye_contact_rate', 'close_ratio', 'scene_changes', 'text_overlay_ratio',
+                       'scene_count', 'object_count', 'overlay_unique_count']
+    audio_features = ['word_count', 'speech_coverage', 'energy_level', 'pitch_scatter_ratio']
+    behavioral_features = ['joy_ratio', 'surprise_ratio', 'hand_gestures', 'gesture_count',
+                          'emotion_consistency', 'emotional_valence']
 
-    # Step 2: Get top features by importance (excluding already used)
-    available_features = [
-        f for f in rf_video_data['feature_importance']
-        if f['feature'] not in used_features
-    ]
-    available_features.sort(key=lambda x: x['importance'], reverse=True)
-
-    # Step 3: Generate reports
     reports = []
-    report_id_start = 4 - num_reports  # If 1 report: #3; if 2: #2 and #3
 
-    for i in range(num_reports):
-        # Select feature group (rotate through groups)
-        group_names = list(feature_groups.keys())
-        group_name = group_names[i % len(group_names)]
-        group_features = feature_groups[group_name]
-
-        # Find top features from this group
-        group_top_features = [
-            f for f in available_features
-            if f['feature'] in group_features
-        ][:2]  # Top 2 features from group
-
-        if len(group_top_features) < 1:
-            # Fallback: use next available features
-            group_top_features = available_features[:2]
-
-        # Mark features as used
-        for f in group_top_features:
-            used_features.add(f['feature'])
-
-        # Step 4: Generate report using data-driven templates
-        report = {
-            'report_id': report_id_start + i + 1,
+    # Report 1: Visual Engagement
+    if num_reports >= 1:
+        visual_rf = [f for f in rf_features if f['feature'] in visual_features]
+        reports.append({
+            'report_id': 1,
             'type': 'feature_based',
+            'path': None,
             'frequency': None,
             'percentage': None,
             'confidence_level': 'moderate',
-            'formula_name': f"The {group_name} Strategy",
-            'strategy_description': _generate_strategy_description(group_name, group_top_features),
-            'key_features': [_format_key_feature(f) for f in group_top_features],
-            'rf_validation': {'insight': _generate_rf_insight(group_top_features)},
-            'when_to_use': 'Universal strategy applicable when cluster paths are fragmented. Focus on proven principles.',
-            'creator_recommendations': _generate_recommendations(group_top_features)
-        }
+            'formula_name': 'The Visual Storytelling Formula',
+            'structure': None,
+            'temporal_progressions': [
+                {
+                    'feature': visual_rf[0]['feature'] if len(visual_rf) > 0 else 'scene_count',
+                    'progression': 'Dynamic visual elements throughout video',
+                    'insight': 'Visual variety maintains attention in short-form content'
+                },
+                {
+                    'feature': visual_rf[1]['feature'] if len(visual_rf) > 1 else 'overlay_unique_count',
+                    'progression': 'Strategic visual enhancements for key moments',
+                    'insight': 'Visual cues reinforce messaging and aid retention'
+                }
+            ],
+            'rf_cross_window_validation': {
+                'video_level_features_matched': [f['feature'] for f in visual_rf[:3]],
+                'alignment_insight': f"Visual engagement features align with top {len(visual_rf)} RF predictors"
+            },
+            'strategy_description': (
+                f"High visual engagement formula leveraging {', '.join([f['feature'] for f in visual_rf[:3]])} "
+                f"to maintain viewer attention through dynamic visual storytelling elements."
+            ) if len(visual_rf) > 0 else "Visual engagement formula emphasizing dynamic scene transitions.",
+            'when_to_use': 'Product demonstrations, educational content, transformation videos, visual tutorials.',
+            'step_by_step_template': [
+                'Hook: Use multiple visual angles or dynamic elements to create immediate visual interest',
+                'Middle: Maintain visual variety with strategic scene transitions',
+                'Closing: Return to primary visual focus while maintaining dynamic elements'
+            ]
+        })
 
-        reports.append(report)
+    # Report 2: Audio/Speech (identical 13-field structure, different formula_name and categories)
+    # Report 3: Behavioral/Emotional (identical 13-field structure, different formula_name and categories)
+    # ... (implementation omitted for brevity - see stage7_preprocessing.py lines 697-775)
 
     return reports
-
-
-# Helper functions
-def _generate_strategy_description(group_name: str, features: list[dict]) -> str:
-    """Generate strategy description using data-driven templates."""
-    if not features:
-        return 'Universal best practices for video performance'
-
-    primary_feature = features[0]
-    top_avg = primary_feature.get('top_performer_avg', 0)
-
-    # Fill template based on group type and actual data
-    if group_name == 'Eye Contact & Engagement':
-        level = 'high and consistent' if top_avg >= 0.80 else 'moderate' if top_avg >= 0.60 else 'selective'
-        return f'Maintain {level} eye contact throughout video journey'
-    elif group_name == 'Energy & Pacing':
-        direction = 'Build' if top_avg > 0 else 'Maintain consistent'
-        return f'{direction} energy progressively from hook to closing'
-    elif group_name == 'Speech & Density':
-        style = 'dense' if top_avg >= 50 else 'clear and paced'
-        return f'Optimize speech density for {style} information delivery'
-    elif group_name == 'Visual Variety':
-        level = 'diverse' if top_avg >= 5 else 'varied' if top_avg >= 3 else 'focused'
-        return f'Use {level} visual elements and scene transitions'
-
-    return 'Universal best practices for video performance'
-
-
-def _format_key_feature(feature: dict) -> str:
-    """Format feature for key_features array."""
-    return (
-        f"{feature['feature']}: {feature['top_performer_avg']:.2f} "
-        f"(RF rank #{feature['rank']}, importance {feature['importance']:.2f}, "
-        f"gap {feature['gap']:.2f})"
-    )
-
-
-def _generate_rf_insight(features: list[dict]) -> str:
-    """Generate RF validation insight."""
-    ranks = [f['rank'] for f in features]
-    rank_str = ' and '.join([f'#{r}' for r in ranks])
-    return f"Leverages {rank_str} most predictive features across entire video"
-
-
-def _generate_recommendations(features: list[dict]) -> list[str]:
-    """Generate creator recommendations based on features."""
-    recommendations = []
-
-    for i, feature in enumerate(features):
-        priority = "PRIORITY: " if i == 0 else ""
-        target = feature['top_performer_avg']
-
-        # Format recommendation based on feature type
-        if 'rate' in feature['feature'] or 'percentage' in feature['feature']:
-            rec = f"{priority}Maintain {target:.0%} {feature['feature'].replace('_', ' ')} throughout video (RF #{feature['rank']} predictor)"
-        elif 'count' in feature['feature']:
-            rec = f"{priority}Target {target:.0f} {feature['feature'].replace('_', ' ')} (RF #{feature['rank']} predictor)"
-        elif 'delta' in feature['feature']:
-            rec = f"{priority}Achieve {target:+.2f} {feature['feature'].replace('_', ' ')} (RF #{feature['rank']} predictor)"
-        elif 'consistency' in feature['feature'] or 'variance' in feature['feature']:
-            rec = f"Keep {feature['feature'].replace('_', ' ')} low (≤{target:.2f} std dev)"
-        else:
-            rec = f"Target {feature['feature'].replace('_', ' ')}: {target:.2f}"
-
-        recommendations.append(rec)
-
-    return recommendations
 ```
 
-**Return Value Example** (Scenario C: 1 path ≥10%, need 2 feature-based):
+**Return Value Example** (Scenario B: 2 paths ≥10%, need 1 feature-based report):
 
 ```python
 [
     {
-        "report_id": 2,
-        "type": "feature_based",
-        "frequency": None,
-        "percentage": None,
-        "confidence_level": "moderate",
-        "formula_name": "The Eye Contact & Engagement Strategy",
-        "strategy_description": "Maintain high and consistent eye contact throughout video journey",
-        "key_features": [
-            "eye_contact_rate: 0.88 (RF rank #1, importance 0.35, gap 0.43)",
-            "eye_contact_consistency: 0.12 std dev (RF rank #6, importance 0.08, gap 0.15)"
-        ],
-        "rf_validation": {
-            "insight": "Leverages #1 and #6 most predictive features across entire video"
-        },
-        "when_to_use": "Universal strategy applicable when cluster paths are fragmented. Focus on proven principles.",
-        "creator_recommendations": [
-            "PRIORITY: Maintain 88% eye contact rate throughout video (RF #1 predictor)",
-            "Keep eye contact consistency low (≤0.12 std dev)"
-        ]
-    },
-    {
         "report_id": 3,
         "type": "feature_based",
-        ...
+        "path": null,
+        "frequency": null,
+        "percentage": null,
+        "confidence_level": "moderate",
+        "formula_name": "The Visual Storytelling Formula",
+        "structure": null,
+        "temporal_progressions": [
+            {
+                "feature": "scene_count",
+                "progression": "Dynamic visual elements throughout video",
+                "insight": "Visual variety maintains attention in short-form content"
+            },
+            {
+                "feature": "overlay_unique_count",
+                "progression": "Strategic visual enhancements for key moments",
+                "insight": "Visual cues reinforce messaging and aid retention"
+            }
+        ],
+        "rf_cross_window_validation": {
+            "video_level_features_matched": [],
+            "alignment_insight": "Visual engagement features align with top 0 RF predictors for sustained attention"
+        },
+        "strategy_description": "Visual engagement formula emphasizing dynamic scene transitions and visual variety.",
+        "when_to_use": "Product demonstrations, educational content, transformation videos, before/after content.",
+        "step_by_step_template": [
+            "Hook: Use multiple visual angles or dynamic elements to create immediate visual interest",
+            "Middle: Maintain visual variety with strategic scene transitions and visual enhancements",
+            "Closing: Return to primary visual focus while maintaining dynamic elements"
+        ]
     }
 ]
 ```
+
+**IMPLEMENTATION NOTE (Oct 2025 - Bug Fix)**:
+- **Old Schema** (DEPRECATED as of Oct 2025): 5 fields (`report_id`, `type`, `category`, `top_features`, `strategy_template`)
+- **New Schema** (CURRENT): 13 fields matching Section 3.3.2 (identical to path-based reports)
+- **Breaking Change**: Field names changed (`category` → `formula_name`, `strategy_template` → `strategy_description`)
+- **Rationale**: Ensures schema consistency for downstream Stage 8 PDF generation and analytics
+- **Files Updated**:
+  - `stage7_preprocessing.py` (lines 609-777)
+  - `test_feature_based_reports.py` (schema expectations updated)
+  - `test_phase2_preprocessing.py` (schema expectations updated)
 
 **Critical Edge Cases**:
 
 | Scenario | Handling | Rationale |
 |----------|----------|-----------|
-| **<1 feature in group** | Fallback to next available features | Graceful degradation |
-| **num_reports=3** | Generate all 3 (Scenario D - high fragmentation) | Coverage safety net |
-| **All features used** | Reuse features (allow duplication) | Ensure output completeness |
+| **<1 feature in group** | Use fallback generic values (e.g., 'scene_count') | Graceful degradation ensures output completeness |
+| **num_reports=3** | Generate all 3 reports (Scenario D - high fragmentation) | Coverage safety net |
+| **Empty rf_features** | Use generic formula names and empty feature lists | Self-documenting fallback, prevents crashes |
 
 **Validation Rules**:
 - Input: Validate `num_reports` is 1-3
-- Output: Validate each report has all required schema fields
+- Output: Validate each report has all 13 required schema fields (Section 3.3.2)
+- Schema Consistency: ALL reports (path-based AND feature-based) MUST have identical structure
 
 **Dependencies**:
-- Stage 6: RF video-level analysis with feature importance
+- Stage 6: RF video-level analysis with `feature_importance` array
 
 **Usage in Phase 2**:
 ```python
-# Scenario C: Only 1 path above 10%
+# Called from build_phase2_prompt() in stage7_prompts.py line 355
 feature_based_reports = generate_feature_based_reports(
-    rf_video_data,
-    num_reports=2,
-    used_features={'word_count'}  # Avoid duplication with path report
+    rf_features=rf_video_data.get('feature_importance', []),
+    kmeans_data={},  # Not used in current implementation
+    num_reports=num_feature_based
 )
-# LLM copies these JSON blocks as-is into creative_reports array
+# Reports are embedded in LLM prompt and copied verbatim into creative_reports array
 ```
 
 ---
@@ -6768,7 +6722,67 @@ All 14 functions from TI Section 4 have been successfully implemented with full 
 
 ### 11.4 Implementation Log Entries
 
-*(This section starts EMPTY. Entries are added during Phase 4: Implementation)*
+---
+
+**Change #I001: [MAJOR] - Schema Standardization: generate_feature_based_reports() Output**
+
+**Date**: 2025-10-27
+
+**Component**: generate_feature_based_reports() (Section 4.9)
+
+**Category**: Bug Fix / Schema Compliance
+
+**Description**:
+Updated `generate_feature_based_reports()` to output full 13-field schema matching Section 3.3.2 (Phase 2 Output Schema). Previous implementation used simplified 5-field schema that caused inconsistency between path-based and feature-based reports.
+
+**Changes Made**:
+1. **Schema Fields Added** (8 new fields):
+   - `path`: None (for feature-based)
+   - `frequency`: None (for feature-based)
+   - `percentage`: None (for feature-based)
+   - `confidence_level`: "moderate" (always for feature-based)
+   - `structure`: None (for feature-based)
+   - `temporal_progressions`: List[dict] with feature progressions
+   - `rf_cross_window_validation`: Dict with video-level features
+   - `step_by_step_template`: List[str] with actionable guidance
+
+2. **Schema Fields Renamed** (2 fields):
+   - `category` → `formula_name`
+   - `strategy_template` → `strategy_description`
+
+3. **Schema Fields Removed** (1 field):
+   - `top_features` (not in TI Section 3.3.2 specification)
+
+**Files Modified**:
+- `stage7_preprocessing.py` (lines 609-777): Complete rewrite of function
+- `test_feature_based_reports.py`: Updated schema expectations
+- `test_phase2_preprocessing.py`: Updated schema expectations
+
+**Rationale**:
+- Ensures schema consistency for downstream Stage 8 PDF generation
+- Eliminates need for conditional logic in consumers
+- Matches LLM-generated report schema exactly
+- Enables reliable analytics queries on all reports
+
+**Backward Compatibility**: BREAKING CHANGE
+- Old 5-field schema deprecated
+- Consumers parsing `category` or `strategy_template` fields will break
+- Migration required for any code depending on old schema
+
+**Testing**:
+- ✅ Re-ran Stage 7 for bucket_18-33s (Scenario B)
+- ✅ Verified Report #3 has all 13 fields
+- ✅ Confirmed schema matches LLM-generated reports
+- ✅ Updated tests pass with new expectations
+
+**Downstream Impact**: Stage 8 PDF generation now safe to implement
+
+**TI Sections Updated**:
+- Section 3.3.2: Added clarification about schema consistency requirement
+- Section 4.9: Complete rewrite with actual 13-field implementation
+- Section 11.3.1: This log entry
+
+---
 
 **Instructions for Implementation Phase**:
 1. When making changes during implementation, document them using the format from Section 11.1
@@ -6776,54 +6790,6 @@ All 14 functions from TI Section 4 have been successfully implemented with full 
 3. Populate all fields in the template (do not leave placeholders)
 4. Update TI document sections if changes affect specifications
 5. Link related changes (e.g., "See Change #I005 for related schema update")
-
-**Example Entry** (for reference - remove before implementation):
-
-```markdown
----
-
-**Change #I001: [MINOR] - Added null check for optional hashtag parameter**
-
-**Date**: 2025-02-15 10:30
-
-**Component**: analyze_window_with_retry() (Section 4.2)
-
-**TI Reference**: Section 4.2 (analyze_window_with_retry function)
-
-**Original TI Specification**:
-```python
-def analyze_window_with_retry(bucket_path: str, window_type: str, bucket: str,
-                              hashtag: str | None, max_attempts: int = 3) -> dict:
-    # ... (no null check specified)
-```
-
-**Implemented Code**:
-```python
-def analyze_window_with_retry(bucket_path: str, window_type: str, bucket: str,
-                              hashtag: str | None, max_attempts: int = 3) -> dict:
-    # Defensive check: ensure hashtag is None or non-empty string
-    if hashtag is not None and not hashtag.strip():
-        hashtag = None  # Treat empty string as None
-    # ... rest of function
-```
-
-**Reason for Change**:
-During testing, discovered that empty string hashtags ("") were being passed from upstream stages. TI specification allows `str | None` but doesn't handle empty string edge case. Added defensive check to normalize empty strings to None.
-
-**Impact Analysis**:
-- [ ] TI Updates Needed: Section 4.2 (add note about empty string handling)
-- [ ] HLD Updates Needed: None (behavior compatible with spec)
-- [ ] Foundation Updates Needed: No
-
-**Code Reference**:
-- File: `stages/stage7_llm_analysis.py:1542-1545`
-- Commit: abc123def
-
-**Testing Impact**:
-- [ ] Unit tests affected: test_analyze_window_with_retry.py
-- [ ] Integration tests affected: None
-- [ ] New tests required: Yes (added test_empty_hashtag_normalization)
-```
 
 ---
 

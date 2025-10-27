@@ -1,0 +1,264 @@
+REJECTED VIDEOS ANALYSIS - IMPLEMENTATION CHECKLIST
+════════════════════════════════════════════════════════════════════════════════════════
+
+DELIVERABLES RECEIVED
+════════════════════════════════════════════════════════════════════════════════════════
+
+Documentation Files:
+[✓] REJECTED_VIDEOS_ANALYSIS_SUMMARY.txt (13 KB)
+    - Executive summary with all key findings
+    - Three-category hypothesis explained
+    - Implementation options with effort/risk levels
+    
+[✓] MANUAL_REVIEW_FRAMEWORK.md (12 KB)
+    - Detailed framework for categorizing 20 videos
+    - Complete examples for each category (A/B/C)
+    - Review form template
+    - Decision matrix based on Category B percentage
+    
+[✓] README_REJECTED_VIDEOS_ANALYSIS.md (9.7 KB)
+    - Quick-start guide
+    - Timeline and next steps
+    - Links to supporting data files
+
+
+DATA ANALYSIS COMPLETE
+════════════════════════════════════════════════════════════════════════════════════════
+
+Analysis Conducted:
+[✓] Examined 780 total videos (post-deduplication)
+[✓] Analyzed 373 PASSED videos (47.8%)
+[✓] Identified 407 REJECTED videos (52.2%)
+[✓] Sampled 61 passed videos for hashtag patterns
+[✓] Identified 30+ related wellness hashtags NOT in target list
+[✓] Calculated distribution of target hashtags
+[✓] Analyzed Apify data quality (description fallback rate: 0.4%)
+[✓] Identified #wellnesssupplements produces 0% pass rate (red flag)
+[✓] Created three-category hypothesis (A/B/C framework)
+
+
+NEXT PHASE: MANUAL VIDEO REVIEW
+════════════════════════════════════════════════════════════════════════════════════════
+
+Phase 1: Obtain Video Data (1-2 hours)
+[ ] Locate first 10 rejected video IDs (provided):
+    - 7514668302002556182, 7473890266424806678, 7535902581361495326
+    - 7456572903618891054, 7529604393054899470, 7507779628203904278
+    - 7526680407878815007, 7557474873770069279, 7522029848722787597
+    - 7489830209772866838
+
+[ ] Find 10 additional rejected video IDs from the 407
+    Options:
+    - Query Apify cache/logs
+    - Use TikTok API to fetch by ID
+    - Check for intermediate export files
+    - Re-run Apify scrapes with rejected IDs
+
+[ ] For each 20 videos, extract:
+    [ ] Video ID
+    [ ] Full hashtag list (from Apify data)
+    [ ] Video description/caption (first 200 chars)
+    [ ] Source hashtag (which cluster it was scraped from)
+    [ ] Engagement metrics (optional: views, likes, shares)
+
+Phase 2: Categorize Videos (1-2 hours)
+[ ] Use MANUAL_REVIEW_FRAMEWORK.md as guide
+[ ] For each video, answer: Is this A, B, or C?
+    [ ] Category A: Not about wellness at all
+        (Fitness, dance, cooking, travel, memes, etc.)
+        
+    [ ] Category B: About wellness but different hashtags
+        (Uses #health, #vitamins, #supplements, etc. instead of targets)
+        
+    [ ] Category C: Wellness content but no hashtags
+        (Empty hashtags field, would need description parsing)
+
+[ ] Track hashtags for Category B videos
+    (These are the alternative hashtags you're losing)
+
+Phase 3: Analyze Results (30 minutes)
+[ ] Count results:
+    Category A: _____ / 20 videos = _____ %
+    Category B: _____ / 20 videos = _____ %
+    Category C: _____ / 20 videos = _____ %
+    TOTAL:        20 videos = 100 %
+
+[ ] List top 5 alternative hashtags from Category B videos
+
+Phase 4: Apply Decision Matrix (30 minutes)
+[ ] If Category B < 10% AND A > 80%:
+    Verdict: VALIDATION IS CORRECT
+    Action: No changes needed
+    Keep: Current 373 videos
+
+[ ] If Category B = 15-30% AND A = 50-75%:
+    Verdict: MODERATELY TOO STRICT
+    Action: Expand target list
+    Recommendation: Add #health, #supplements, #vitamins
+    Expected gain: 60-160 videos
+
+[ ] If Category B = 35-50% AND A = 40-60%:
+    Verdict: SEVERELY TOO STRICT
+    Action: Major expansion or fuzzy matching
+    Recommendation: Regex/fuzzy approach or big list expansion
+    Expected gain: 200+ videos
+
+[ ] If Category C > 10%:
+    Verdict: DATA QUALITY ISSUE
+    Action: Improve description-based fallback
+    Priority: Secondary (after hashtag list)
+
+
+IMPLEMENTATION (if needed)
+════════════════════════════════════════════════════════════════════════════════════════
+
+Only proceed if Category B > 15%
+
+Option 1: Add 2 Hashtags (Recommended first step)
+[ ] File: /home/jorge/rumiaifinal/ml_pipeline/stage1_discovery/video_discovery.py
+[ ] Line: ~120-125
+[ ] Change: Add ['health', 'supplements'] to target list
+[ ] Expected: Recover 80-120 videos
+[ ] Risk: LOW
+[ ] Time: 5 minutes
+
+Option 2: Moderate Expansion (if B > 25%)
+[ ] File: /home/jorge/rumiaifinal/ml_pipeline/stage1_discovery/video_discovery.py
+[ ] Line: ~120-125
+[ ] Change: Add ['health', 'supplements', 'vitamins', 'holistic'] to target list
+[ ] Expected: Recover 120-180 videos
+[ ] Risk: MEDIUM
+[ ] Time: 15 minutes
+
+Option 3: Major Overhaul (if B > 40%)
+[ ] File: /home/jorge/rumiaifinal/ml_pipeline/stage1_discovery/hashtag_validator.py
+[ ] Function: _find_matching_hashtags() (line 223)
+[ ] Change: Implement fuzzy/regex matching instead of exact match
+[ ] Expected: Recover 200-350 videos
+[ ] Risk: HIGH
+[ ] Time: 45-60 minutes
+[ ] Include: Monitoring and quality assurance
+
+
+POST-IMPLEMENTATION
+════════════════════════════════════════════════════════════════════════════════════════
+
+[ ] Re-run validation on 780 videos with new settings
+[ ] Compare metrics:
+    - How many previously rejected are now accepted?
+    - How many false positives were added?
+    - Overall quality maintained?
+
+[ ] Spot check new acceptances (sample 10-20 videos)
+    - Are they actually wellness-related?
+    - Do they match your expectations?
+
+[ ] Update documentation:
+    - Document which option was chosen
+    - Record new validation metrics
+    - Note any issues encountered
+
+[ ] Monitor for issues:
+    - Track false positive rate
+    - Get feedback from content team
+    - Be ready to adjust if needed
+
+
+QUICK REFERENCE TABLES
+════════════════════════════════════════════════════════════════════════════════════════
+
+20 REJECTED VIDEO IDs TO REVIEW:
+(First 10 provided, need to find 10 more)
+
+#  Video ID              Hashtags  Description Source Category Notes
+1  7514668302002556182   [____]    [____]      [___]  [_]
+2  7473890266424806678   [____]    [____]      [___]  [_]
+3  7535902581361495326   [____]    [____]      [___]  [_]
+4  7456572903618891054   [____]    [____]      [___]  [_]
+5  7529604393054899470   [____]    [____]      [___]  [_]
+6  7507779628203904278   [____]    [____]      [___]  [_]
+7  7526680407878815007   [____]    [____]      [___]  [_]
+8  7557474873770069279   [____]    [____]      [___]  [_]
+9  7522029848722787597   [____]    [____]      [___]  [_]
+10 7489830209772866838   [____]    [____]      [___]  [_]
+11 [FIND THIS]           [____]    [____]      [___]  [_]
+12 [FIND THIS]           [____]    [____]      [___]  [_]
+13 [FIND THIS]           [____]    [____]      [___]  [_]
+14 [FIND THIS]           [____]    [____]      [___]  [_]
+15 [FIND THIS]           [____]    [____]      [___]  [_]
+16 [FIND THIS]           [____]    [____]      [___]  [_]
+17 [FIND THIS]           [____]    [____]      [___]  [_]
+18 [FIND THIS]           [____]    [____]      [___]  [_]
+19 [FIND THIS]           [____]    [____]      [___]  [_]
+20 [FIND THIS]           [____]    [____]      [___]  [_]
+
+
+SUMMARY RESULTS:
+════════════════════════════════════════════════════════════════════════════════════════
+
+After reviewing 20 videos:
+
+Category A (True False Positives):     ____ / 20 = _____%
+Category B (Similar Wellness Tags):    ____ / 20 = _____%
+Category C (No Hashtags):              ____ / 20 = _____%
+
+Top 5 alternative hashtags found (in Category B):
+1. #_____________ (appears in __ videos)
+2. #_____________ (appears in __ videos)
+3. #_____________ (appears in __ videos)
+4. #_____________ (appears in __ videos)
+5. #_____________ (appears in __ videos)
+
+FINAL VERDICT: [Check one]
+[ ] Validation is CORRECT - no changes needed
+[ ] Moderately TOO STRICT - add 2-5 hashtags
+[ ] Severely TOO STRICT - major overhaul needed
+[ ] Data quality issue - improve fallback parsing
+
+RECOMMENDED ACTION:
+_________________________________________________________________
+_________________________________________________________________
+
+EXPECTED IMPACT:
+- New videos to accept: ____________
+- False positives to add: __________
+- Implementation time: ____________
+- Risk level: [LOW / MEDIUM / HIGH]
+
+
+TIMELINE
+════════════════════════════════════════════════════════════════════════════════════════
+
+Proposed Schedule:
+Day 1:     Obtain video data for 20 rejected videos
+Day 2-3:   Categorize all 20 videos
+Day 4:     Compile results and apply decision matrix
+Day 5:     Get approval for implementation
+Week 2:    Implement changes and re-run validation
+Week 2:    Test and spot check results
+Week 3:    Monitor and iterate if needed
+
+
+RESOURCES & REFERENCES
+════════════════════════════════════════════════════════════════════════════════════════
+
+Key Files:
+- Analytics: /home/jorge/rumiaifinal/data/clients/rollo/hashtag/wellness/cluster_analytics.json
+- Code: /home/jorge/rumiaifinal/ml_pipeline/stage1_discovery/hashtag_validator.py
+- Config: /home/jorge/rumiaifinal/ml_pipeline/stage1_discovery/video_discovery.py
+- Data: /home/jorge/rumiaifinal/data/clients/rollo/hashtags/wellness/top_contrastive/buckets/*/selected_videos.json
+
+Documentation:
+- Start here: README_REJECTED_VIDEOS_ANALYSIS.md
+- Executive summary: REJECTED_VIDEOS_ANALYSIS_SUMMARY.txt
+- Detailed guide: MANUAL_REVIEW_FRAMEWORK.md
+
+Contact:
+For analysis questions, refer to the three documentation files above.
+
+
+════════════════════════════════════════════════════════════════════════════════════════
+Analysis Status: COMPLETE - Ready for manual video review
+Next Checkpoint: After categorizing 20 rejected videos
+Estimated Timeline: 3-5 days to complete full review and implement changes
+════════════════════════════════════════════════════════════════════════════════════════

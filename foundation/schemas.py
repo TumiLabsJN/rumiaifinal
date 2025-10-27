@@ -26,6 +26,26 @@ class Config(BaseModel):
     auto_confirm: bool
     run_date: str  # ISO 8601 format
 
+    @field_validator("client_id")
+    @classmethod
+    def normalize_client_id(cls, v: str) -> str:
+        """
+        Normalize client_id to lowercase for filesystem path consistency.
+
+        This ensures config.client_id matches sanitized paths used throughout
+        the pipeline (Stage 0-7). Prevents case-sensitivity bugs on different
+        filesystems (macOS/Windows are case-insensitive, Linux is case-sensitive).
+
+        Examples:
+            "Rollo" → "rollo"
+            "ACME_CORP" → "acme_corp"
+            "test_client" → "test_client"
+
+        Source: Foundation implementation bug fix - ensures consistency with
+        sanitize_client_id() function used in path operations.
+        """
+        return v.lower()
+
     @field_validator("target")
     @classmethod
     def validate_target_format(cls, v: str, info) -> str:

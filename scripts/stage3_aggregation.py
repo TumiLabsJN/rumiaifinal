@@ -601,7 +601,44 @@ def aggregate_features(bucket_path: str) -> Tuple[Path, Path]:
     logger.info(f"Stage 3 complete - Duration: {summary['duration_seconds']}s")
     logger.info(f"Summary saved to: {summary_path}")
 
-    # ===== 6. Return Paths =====
+    # ===== 6. Write Checkpoint (for orchestrator skip logic) =====
+    # Source: Stage 4-7 checkpoint pattern in rumiai_ml_batch.py
+    # Checkpoint enables Stage 3 skip logic (resume without re-aggregating)
+    checkpoint_dir = bucket_path / "checkpoints"
+    checkpoint_dir.mkdir(exist_ok=True)
+    checkpoint_path = checkpoint_dir / "stage_3_checkpoint.json"
+
+    checkpoint = {
+        "stage": "feature_aggregation",
+        "status": "completed",
+        "total_videos": len(df),
+        "output_files": [OUTPUT_CSV, SUMMARY_JSON],
+        "completion_time": datetime.now(timezone.utc).isoformat(),
+        "videos_processed": summary['videos_processed'],
+        "videos_skipped": summary['videos_skipped'],
+        "bucket": bucket,
+        "duration_seconds": summary['duration_seconds'],
+        "feature_count": len(df.columns)  # Add for orchestrator summary reporting
+    }
+
+    # Write checkpoint with graceful degradation
+    # Philosophy: Checkpoint is performance optimization, CSV is source of truth
+    # If checkpoint write fails, Stage 3 outputs are still valid
+    try:
+        with open(checkpoint_path, 'w') as f:
+            json.dump(checkpoint, f, indent=2)
+        logger.info(f"Checkpoint written: {checkpoint_path}")
+    except Exception as e:
+        logger.warning(f"Checkpoint write failed: {e}")
+        logger.warning(
+            "Stage 3 outputs ARE VALID (CSV and summary created successfully). "
+            "Pipeline will continue using these outputs. "
+            "NOTE: Stage 3 will re-run on next pipeline execution (checkpoint missing for skip logic)."
+        )
+        # Don't raise - graceful degradation allows pipeline to continue
+        # CSV is the source of truth; checkpoint is only for performance optimization
+
+    # ===== 7. Return Paths =====
     return output_path, summary_path
 
 

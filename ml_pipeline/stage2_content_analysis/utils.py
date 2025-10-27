@@ -6,11 +6,58 @@ Source: ContentAnalysisCHILDTI.md Section 8.2
 
 import json
 import os
+import re
 import logging
 from typing import Any, Dict
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+
+def parse_llm_json(response_text: str) -> Dict[str, Any]:
+    """
+    Parse JSON from LLM response, handling markdown code fences.
+
+    LLM APIs (Claude, GPT, etc.) often return JSON wrapped in markdown code fences.
+    This utility strips those fences before parsing to prevent JSONDecodeError.
+
+    Handles:
+    - ```json { ... } ```  (common Claude format)
+    - ``` { ... } ```       (generic markdown)
+    - { ... }               (raw JSON - pass through)
+
+    Args:
+        response_text: Raw text from LLM API response
+
+    Returns:
+        dict: Parsed JSON object
+
+    Raises:
+        json.JSONDecodeError: If text is not valid JSON after cleaning
+
+    Examples:
+        >>> response = '```json\\n{"key": "value"}\\n```'
+        >>> data = parse_llm_json(response)
+        >>> print(data)
+        {'key': 'value'}
+
+        >>> response = '{"key": "value"}'
+        >>> data = parse_llm_json(response)
+        >>> print(data)
+        {'key': 'value'}
+    """
+    text = response_text.strip()
+
+    # Strip markdown code fences if present
+    if text.startswith("```"):
+        # Remove opening fence (```json or ```)
+        text = re.sub(r'^```(?:json)?\s*', '', text)
+        # Remove closing fence
+        text = re.sub(r'\s*```$', '', text)
+        text = text.strip()
+
+    # Parse and return JSON
+    return json.loads(text)
 
 
 def load_json(file_path: str) -> Dict[str, Any]:

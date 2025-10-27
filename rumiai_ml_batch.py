@@ -972,6 +972,38 @@ def main():
 
             bucket_path = analysis_base / f"buckets/bucket_{bucket_name}"
 
+            # Check if Stage 3 already complete for this bucket
+            checkpoint_path = bucket_path / "checkpoints" / "stage_3_checkpoint.json"
+            if checkpoint_path.exists():
+                logger.info(f"Bucket {bucket_name}: Stage 3 already complete (checkpoint exists)")
+                print(f"✓ Bucket {bucket_name}: Aggregation already complete (skipping)")
+
+                try:
+                    # Load checkpoint for summary reporting
+                    with open(checkpoint_path) as f:
+                        checkpoint = json.load(f)
+
+                    # Validate checkpoint has required fields
+                    if checkpoint.get("status") != "completed":
+                        logger.warning(f"Bucket {bucket_name}: Stage 3 checkpoint status != completed. Re-running.")
+                        checkpoint_path.unlink()  # Delete invalid checkpoint
+                    else:
+                        stage3_summaries[bucket_name] = {
+                            "videos_processed": checkpoint.get("videos_processed", 0),
+                            "videos_skipped": checkpoint.get("videos_skipped", 0),
+                            "output_csv": {
+                                "columns": checkpoint.get("feature_count", "unknown")
+                            },
+                            "duration_seconds": checkpoint.get("duration_seconds", 0)
+                        }
+                        continue  # Skip to next bucket
+
+                except (json.JSONDecodeError, KeyError) as e:
+                    logger.warning(f"Bucket {bucket_name}: Invalid checkpoint ({e}). Re-running Stage 3.")
+                    if checkpoint_path.exists():
+                        checkpoint_path.unlink()
+                    # Fall through to run Stage 3
+
             try:
                 # Validate bucket structure exists (from Stage 2.5)
                 insights_dir = bucket_path / "analysis" / "insights"
@@ -1119,18 +1151,48 @@ def main():
 
             try:
                 # Validate Stage 3 completed successfully
+                # Checkpoint = performance optimization, CSV = source of truth
+                # Fallback to CSV validation if checkpoint missing
                 stage3_checkpoint = bucket_path / "checkpoints" / "stage_3_checkpoint.json"
-                if not stage3_checkpoint.exists():
-                    logger.error(f"Bucket {bucket_name}: Stage 3 checkpoint missing")
+                aggregated_csv = bucket_path / "ml_analysis" / "aggregated_features.csv"
+
+                if stage3_checkpoint.exists():
+                    # Primary path: checkpoint exists
+                    with open(stage3_checkpoint) as f:
+                        stage3_status = json.load(f)
+
+                    if stage3_status.get("status") != "completed":
+                        logger.error(f"Bucket {bucket_name}: Stage 3 status={stage3_status.get('status')}")
+                        print(f"✗ Bucket {bucket_name}: Stage 3 incomplete (skipping)")
+                        continue
+
+                    logger.info(f"Bucket {bucket_name}: Stage 3 validated via checkpoint")
+
+                elif aggregated_csv.exists():
+                    # Fallback path: checkpoint missing but CSV exists
+                    # This happens if checkpoint write failed but Stage 3 outputs are valid
+                    logger.warning(
+                        f"Bucket {bucket_name}: Stage 3 checkpoint missing, "
+                        f"validating via CSV existence as fallback"
+                    )
+
+                    # Basic validation: CSV exists and is non-empty
+                    csv_size = aggregated_csv.stat().st_size
+                    if csv_size > 0:
+                        logger.info(
+                            f"Bucket {bucket_name}: Stage 3 CSV validated "
+                            f"({csv_size} bytes) - proceeding with Stage 4"
+                        )
+                        print(f"⚠️  Bucket {bucket_name}: Using Stage 3 CSV (checkpoint missing, skip logic disabled)")
+                    else:
+                        logger.error(f"Bucket {bucket_name}: Stage 3 CSV is empty")
+                        print(f"✗ Bucket {bucket_name}: Stage 3 CSV invalid (skipping)")
+                        continue
+
+                else:
+                    # Both missing: Stage 3 truly failed or didn't run
+                    logger.error(f"Bucket {bucket_name}: Stage 3 checkpoint AND CSV missing")
                     print(f"✗ Bucket {bucket_name}: Stage 3 not complete (skipping)")
-                    continue
-
-                with open(stage3_checkpoint) as f:
-                    stage3_status = json.load(f)
-
-                if stage3_status.get("status") != "completed":
-                    logger.error(f"Bucket {bucket_name}: Stage 3 status={stage3_status.get('status')}")
-                    print(f"✗ Bucket {bucket_name}: Stage 3 incomplete (skipping)")
                     continue
 
                 # Check if Stage 4 already complete for this bucket

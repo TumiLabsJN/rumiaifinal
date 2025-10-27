@@ -132,7 +132,26 @@ def run_cluster_scraping(
                 delay_seconds = delay_ms / 1000
                 print(f"    Waiting {delay_seconds / 60:.0f} min before next scrape...", flush=True)
                 logger.debug(f"Delaying {delay_seconds}s before next scrape")
-                time.sleep(delay_seconds)
+
+                # Use chunked sleep to handle system suspend/resume gracefully
+                # Sleep in 60-second intervals to avoid hanging indefinitely if system suspends
+                start_time = time.time()
+                end_time = start_time + delay_seconds
+                elapsed_minutes = 0
+
+                while time.time() < end_time:
+                    remaining = end_time - time.time()
+                    if remaining > 0:
+                        # Sleep in 60-second chunks (or remaining time if less)
+                        time.sleep(min(60, remaining))
+
+                        # Log progress every 10 minutes for long delays
+                        new_elapsed = int((time.time() - start_time) / 60)
+                        if new_elapsed >= elapsed_minutes + 10:
+                            elapsed_minutes = new_elapsed
+                            remaining_minutes = int((end_time - time.time()) / 60)
+                            if remaining_minutes > 0:
+                                logger.debug(f"Still waiting... {remaining_minutes} min remaining")
 
     # Log summary
     print()  # Blank line after all scrapes

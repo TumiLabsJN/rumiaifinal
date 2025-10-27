@@ -1,0 +1,15 @@
+{
+  "cluster_id": "wellness_test3",
+  "description": "Wellness cluster for Test 3 - Extended 180-minute scrape delays to avoid rate limiting",
+  "primary_hashtag": "#wellness",
+  "variant_hashtags": [
+    "#wellnesssupplements",
+    "#healthandwellness",
+    "#wellnessjourney"
+  ],
+  "scrape_config": {
+    "runs_per_hashtag": 2,
+    "delay_between_runs_ms": 10800000,
+    "results_per_page": 600
+  }
+}
