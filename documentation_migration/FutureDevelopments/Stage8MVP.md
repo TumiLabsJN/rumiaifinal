@@ -20,12 +20,13 @@
 3. **Handle/Single Competitor → Client** template structure (benchmarking sections, comparison layout)
 4. **Handle/Multiple Competitor → Client** template structure (side-by-side comparison structure)
 
-**Phase 2: Data Extraction Scripts** (can happen in parallel with designer - 3 days):
-1. `extract_creator_data.py` - Stage 7 JSON → 9 formatted creator reports (Google Sheets)
-2. `extract_client_data.py` - Stages 1,6,7 → 1 client executive dashboard (Google Sheets)
-3. `extract_competitor_data.py` - Competitor analysis → benchmarking data (Google Sheets)
+**Phase 2: Data Extraction Scripts** (can happen in parallel with designer - 3.25 days):
+1. `extract_creator_data.py` - Stage 7 JSON → 3 formatted creator reports (Excel file with 3 tabs)
+2. `extract_client_data.py` - Stages 1,6,7 → 1 client executive dashboard (Excel file)
+3. `extract_competitor_data.py` - Single competitor analysis → benchmarking data (Excel file)
+4. `extract_multi_competitor_data.py` - Multi-competitor (2-5) → market intelligence (Excel file)
 
-**Output Format**: ✅ **Google Sheets** (easiest to review/edit before populating templates)
+**Output Format**: ✅ **Excel files (.xlsx)** - Simple, offline, no authentication required
 
 ### What DESIGNER BUILDS (Creative Work - 11 days)
 
@@ -49,21 +50,21 @@
 
 ## Workflow Per Report Type
 
-### Hashtag Analysis → Content Creators (9 PDFs)
+### Hashtag Analysis → Content Creators (3 PDFs)
 
 **Frequency**: Onboarding (~5 times), then rarely needed
 
 | Step | Who | Time | Details |
 |------|-----|------|---------|
 | 1. Run pipeline Stages 1-7 | Automated | Auto | Existing ML pipeline |
-| 2. Extract data + QR codes | Script | 30 sec | `python extract_creator_data.py --hashtag nutrition` → Google Sheet (with real engagement metrics) + 18 QR PNGs |
-| 3. Review data | You | 15 min | Open Google Sheet, verify accuracy, edit if needed |
-| 4. Populate Template A (x9) | You | ~3 hrs | Copy-paste from Sheet + insert 2 QR code images per report (~20 min each) |
+| 2. Extract data + QR codes | Script | 30 sec | `python extract_creator_data.py --hashtag nutrition` → Excel file (3 tabs, 1 per formula) + 6 QR PNGs |
+| 3. Review data | You | 15 min | Open Excel, verify accuracy, edit if needed |
+| 4. Populate Template A (x3) | You | ~1 hr | Copy-paste from Excel + insert 2 QR code images per report (~20 min each) |
 | 5. Export PDFs | You | 5 min | Save as PDF from InDesign/Canva |
 
-**Total Manual Time per Hashtag**: ~3.5 hours (for 9 creator PDFs, includes QR code insertion)
+**Total Manual Time per Hashtag**: ~1.5 hours (for 3 creator PDFs, includes QR code insertion)
 
-**Onboarding Total**: ~17.5 hours across 5 hashtags
+**Onboarding Total**: ~7.5 hours across 5 hashtags
 
 ---
 
@@ -521,6 +522,116 @@ get_top_n_from_field("/path/to/empty/bucket", "keywords", n=3)
 **Relationship to Base Function**:
 - **Base**: `aggregate_content_classifications()` → Returns full dataset (all fields, all counts)
 - **Wrapper**: `get_top_n_from_field()` → Returns specific field, top N only, formatted for reports
+
+---
+
+#### 0.5.1.2: Taxonomy Description Lookup
+
+**Function**: `get_descriptions_from_taxonomy(category_names: list[str], taxonomy_type: str) -> list[str]`
+
+**Purpose**: Look up human-readable descriptions for classification categories from Stage 2.6 taxonomy
+
+**Why This Exists**:
+- Stage 2.7 returns category names in snake_case (e.g., `"recipe_tutorial"`)
+- Reports need human-readable descriptions (e.g., `"Step-by-step cooking instructions"`)
+- Stage 2.6 maintains the taxonomy with descriptions for each category
+- This function provides the lookup/mapping layer
+
+**Prerequisites**:
+- Stage 2.6 must create taxonomy JSON files with category descriptions
+- Taxonomy files should be stored at: `/config/taxonomies/{taxonomy_type}.json`
+
+**Input Parameters**:
+- `category_names` (list[str]): List of category names from Stage 2.7
+  - Example: `["recipe_tutorial", "wellness_practice", "supplement_review"]`
+- `taxonomy_type` (string): Type of taxonomy to lookup
+  - Valid values: `"content_category"`, `"hook_strategy"`, `"engagement_drivers"`, `"content_tactics"`, `"pain_points"`
+
+**Returns**:
+- Array of human-readable descriptions matching the input order
+- Example: `["Step-by-step cooking instructions", "Daily health routines and habits", "Product recommendations and reviews"]`
+
+**Taxonomy File Format**:
+```json
+{
+  "recipe_tutorial": {
+    "name": "Recipe Tutorial",
+    "description": "Step-by-step cooking instructions"
+  },
+  "wellness_practice": {
+    "name": "Wellness Practice",
+    "description": "Daily health routines and habits"
+  },
+  "supplement_review": {
+    "name": "Supplement Review",
+    "description": "Product recommendations and reviews"
+  }
+}
+```
+
+**Example Implementation**:
+```python
+import json
+from typing import List
+
+def get_descriptions_from_taxonomy(category_names: List[str], taxonomy_type: str) -> List[str]:
+    """
+    Look up descriptions from taxonomy files.
+
+    Args:
+        category_names: List of snake_case category names
+        taxonomy_type: Type of taxonomy (e.g., "content_category")
+
+    Returns:
+        List of human-readable descriptions
+    """
+    # Load taxonomy file
+    taxonomy_path = f"/config/taxonomies/{taxonomy_type}.json"
+
+    try:
+        with open(taxonomy_path) as f:
+            taxonomy = json.load(f)
+    except FileNotFoundError:
+        # Fallback: Convert snake_case to Title Case if taxonomy not found
+        return [name.replace("_", " ").title() for name in category_names]
+
+    # Look up descriptions
+    descriptions = []
+    for name in category_names:
+        if name in taxonomy:
+            descriptions.append(taxonomy[name]["description"])
+        else:
+            # Fallback for missing entries
+            descriptions.append(name.replace("_", " ").title())
+
+    return descriptions
+```
+
+**Example Usage**:
+```python
+# Get content category descriptions
+categories = ["recipe_tutorial", "wellness_practice", "supplement_review"]
+descriptions = get_descriptions_from_taxonomy(categories, "content_category")
+# Returns: ["Step-by-step cooking instructions", "Daily health routines...", "Product recommendations..."]
+
+# Get hook strategy descriptions
+hooks = ["question_hook", "problem_solution", "direct_statement"]
+descriptions = get_descriptions_from_taxonomy(hooks, "hook_strategy")
+# Returns: ["Opens with engaging question", "Identifies pain point...", "Bold claim or fact"]
+```
+
+**Used in**:
+- Report 1 → Page 3 → Section 1 (Content category descriptions)
+- Report 2 → Multiple sections (Hook strategy descriptions, etc.)
+- Report 3 → Page 3 → Section 1 (Content category descriptions)
+- Report 3 → Page 3 → Section 2 (Hook strategy descriptions)
+
+**Error Handling**:
+- If taxonomy file doesn't exist → Fallback to title-cased snake_case conversion
+- If category not in taxonomy → Fallback to title-cased snake_case conversion
+- Always returns a list matching input length
+
+**Note**: This function depends on Stage 2.6 taxonomy creation. Until Stage 2.6 is implemented, the fallback behavior (title-casing snake_case) will be used.
 
 ---
 
@@ -2668,6 +2779,189 @@ for bucket in buckets:
 
 ---
 
+##### Function 0.5.6.1: `calculate_avg_views_per_bucket()`
+
+**Function**: `calculate_avg_views_per_bucket(bucket_path: str, performance_group: str = "top") -> int`
+
+**Purpose**: Calculate average playCount for videos in a single bucket and performance group. This is the base function used across Reports 1, 2, and 3 for per-bucket view metrics.
+
+**Type**: 🆕 New base function
+
+**Relationship to Function 1 (0.5.6)**:
+- **This function (0.5.6.1)**: Returns average views for ONE specific bucket
+- **Function 1 (0.5.6)**: Calls this function 3 times (once per winning bucket) and calculates weighted average
+
+**When to Use**:
+- Report 1 (Hashtag → Client): Performance by Duration (Field #2), Creator Profile Priorities (Field #2)
+- Report 2 (Hashtag → Creator): The Proof section (Fields #1, #4)
+- Report 3 (Single Competitor): Performance metrics per bucket
+
+**Input Parameters**:
+- `bucket_path` (str): Absolute path to bucket folder
+  - Example: `/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s/`
+- `performance_group` (str, optional): Filter by performance tier (default: "top")
+  - Valid values: `"top"`, `"bottom"`, or `None` (all videos)
+  - Most reports use `"top"` to show top performer averages
+
+**Process**:
+1. Load `{bucket_path}/selected_videos.json`
+2. Extract `top_count` or `bottom_count` based on `performance_group`
+3. Extract first N videos from `videos` array (pre-sorted by playCount DESC)
+   - Top performers: `videos[0:top_count]`
+   - Bottom performers: `videos[top_count:top_count+bottom_count]`
+4. Calculate average: `sum(playCount) / count`
+5. Return as integer
+
+**Example Implementation**:
+```python
+def calculate_avg_views_per_bucket(bucket_path: str, performance_group: str = "top") -> int:
+    """
+    Calculate average playCount for videos in a single bucket.
+
+    Args:
+        bucket_path: Absolute path to bucket folder
+        performance_group: "top", "bottom", or None (default: "top")
+
+    Returns:
+        int: Average playCount across selected videos
+
+    Example:
+        >>> calculate_avg_views_per_bucket(
+        ...     "/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s/",
+        ...     performance_group="top"
+        ... )
+        1900000  # 1.9M average views
+    """
+    import json
+
+    # Load selected videos
+    with open(f"{bucket_path}/selected_videos.json") as f:
+        data = json.load(f)
+
+    # Determine which videos to include
+    if performance_group == "top":
+        count = data["top_count"]
+        videos = data["videos"][:count]  # First N = top performers
+    elif performance_group == "bottom":
+        top_count = data["top_count"]
+        bottom_count = data["bottom_count"]
+        videos = data["videos"][top_count:top_count + bottom_count]  # Next M = bottom performers
+    elif performance_group is None:
+        # All videos
+        videos = data["videos"]
+    else:
+        raise ValueError(f"Invalid performance_group: {performance_group}. Must be 'top', 'bottom', or None")
+
+    if not videos:
+        return 0  # No videos in this group
+
+    # Calculate average
+    total_views = sum(v["playCount"] for v in videos)
+    avg_views = int(total_views / len(videos))
+
+    return avg_views
+```
+
+**Output Format**:
+```python
+# Integer (raw view count)
+1900000  # Display as "1.9M" in reports using K/M suffix formatter
+```
+
+**Usage Examples**:
+
+```python
+# Report 1: Performance by Duration - Avg views for 18-33s bucket
+avg_views_18_33 = calculate_avg_views_per_bucket(
+    bucket_path="/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s/",
+    performance_group="top"
+)
+# Returns: 1900000 (display as "1.9M")
+
+# Report 2: The Proof - Top cluster average views
+top_cluster_avg = calculate_avg_views_per_bucket(
+    bucket_path="/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_13-18s/",
+    performance_group="top"
+)
+# Returns: 2100000 (display as "2.1M")
+
+# Report 2: The Proof - Bottom cluster average views (for comparison)
+bottom_cluster_avg = calculate_avg_views_per_bucket(
+    bucket_path="/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_13-18s/",
+    performance_group="bottom"
+)
+# Returns: 980000 (display as "980K")
+```
+
+**Data Source**:
+```json
+// From {bucket_path}/selected_videos.json
+{
+  "bucket": "18-33s",
+  "strategy": "contrastive",
+  "video_count": 100,
+  "selected_count": 42,
+  "top_count": 33,
+  "bottom_count": 9,
+  "videos": [
+    // Sorted by playCount DESC
+    {"id": "7540717847325003039", "playCount": 6700000, ...},  // Top performer #1
+    {"id": "7539....", "playCount": 3200000, ...},             // Top performer #2
+    // ... 31 more top performers
+    {"id": "7522....", "playCount": 150000, ...},              // Bottom performer #1
+    // ... 8 more bottom performers
+  ]
+}
+```
+
+**Verified Data Example**:
+Using actual data from `/data/clients/test_competitor/competitors/drinkpoppi/top_contrastive/buckets/bucket_3-9s/`:
+- Top count: 33 videos
+- First video playCount: 6,700,000
+- Calculation produces realistic averages matching Report 1 field examples
+
+**Used In Reports**:
+
+| Report | Section | Field | Line Reference |
+|--------|---------|-------|----------------|
+| Report 1 | Performance by Duration | Avg views per winning bucket (3 rows) | Stage8MVP_Reports.md:172 |
+| Report 1 | Creator Profile Priorities | Avg views per winning bucket | Stage8MVP_Reports.md:199 |
+| Report 2 | The Proof | Top cluster avg views | Stage8MVP_Reports.md:596 |
+| Report 2 | The Proof | Bottom cluster avg views | Stage8MVP_Reports.md:598 |
+
+**Error Handling**:
+```python
+# Invalid performance_group
+calculate_avg_views_per_bucket(bucket_path, performance_group="invalid")
+# Raises: ValueError("Invalid performance_group: invalid. Must be 'top', 'bottom', or None")
+
+# Empty performance group (no videos)
+calculate_avg_views_per_bucket(bucket_path_with_no_bottom_performers, performance_group="bottom")
+# Returns: 0
+```
+
+**Integration with Function 1 (calculate_competitor_avg_views)**:
+```python
+# Function 1 (0.5.6) uses this function internally:
+def calculate_competitor_avg_views(client_id, competitor_handle):
+    # ... discover buckets ...
+
+    bucket_stats = []
+    for bucket in winning_buckets:
+        bucket_path = f"{competitor_path}/buckets/bucket_{bucket}"
+
+        # Calls this function (0.5.6.1)
+        bucket_avg = calculate_avg_views_per_bucket(bucket_path, "top")
+
+        bucket_stats.append({"avg_views": bucket_avg, "video_count": top_count})
+
+    # Calculate weighted average across buckets
+    weighted_avg = calculate_weighted_average(bucket_stats)
+    return weighted_avg
+```
+
+---
+
 
 **Template A Requirements** (from Issue 1 resolution - see Stage8MVP_Reports.md):
 - Include 2 QR code placeholders (~1" x 1" each):
@@ -2973,28 +3267,1694 @@ print(f"Multiplier: {metrics['multipliers']['view_multiplier']}x more views")
 
 ---
 
+### Section 0.6: Report-Specific Inline Calculations
+
+**Purpose**: Document calculation logic that is specific to individual report templates and doesn't require reusable functions. These calculations should be implemented directly in the corresponding extraction script.
+
+**Organization**: Organized by report template for easy developer reference.
+
+**Key Distinction**:
+- **Section 0.5 (Functions)**: Reusable functions used across multiple reports
+- **Section 0.6 (Inline Calculations)**: Single-use calculations specific to one report
+
+**Developer Workflow**:
+1. Read report field definitions in `Stage8MVP_Reports.md`
+2. Check Section 0.5 for reusable functions (if field references a function)
+3. Check Section 0.6 for report-specific inline calculations (if field is "calculated")
+4. Implement in corresponding extraction script
+
+---
+
+#### 0.6.1: Report 1 (Hashtag → Client) Inline Calculations
+
+**Extraction Script**: `extract_client_data.py`
+
+**Report**: Hashtag → Client (Executive Report)
+
+**Total**: 7 inline calculations covering 8 fields
+
+**Dependencies**: This section uses functions documented in Section 0.5:
+- `calculate_avg_views_per_bucket()` (0.5.6.1)
+- `calculate_engagement_metrics()` (0.5.5)
+
+---
+
+##### Calculation 1: Array Length Summation
+
+**Fields Using This**:
+- Top Performers Count (Report 1, Header Section, Line 77)
+- Bottom Performers Count (Report 1, Header Section, Line 78)
+
+**Purpose**: Count total videos selected across all winning buckets for display in report header
+
+**Input Data**:
+```json
+// {analysis_path}/selection_manifest.json
+{
+  "videos_by_bucket": {
+    "18-33s": {
+      "top_performers": ["7540717...", "7539...", ...],    // 33 videos
+      "bottom_performers": ["7522...", "7521...", ...]     // 9 videos
+    },
+    "13-18s": {
+      "top_performers": ["7545...", ...],                  // 28 videos
+      "bottom_performers": ["7520...", ...]                // 7 videos
+    },
+    "60-90s": {
+      "top_performers": ["7548...", ...],                  // 27 videos
+      "bottom_performers": ["7519...", ...]                // 7 videos
+    }
+  }
+}
+```
+
+**Implementation**:
+```python
+# extract_client_data.py - Report 1 Header Section
+def calculate_performer_counts(analysis_path):
+    """
+    Sum array lengths across all buckets in selection manifest.
+
+    Args:
+        analysis_path: Path to analysis directory (e.g., .../top_contrastive/)
+
+    Returns:
+        dict: {
+            "top_performers_count": int,
+            "bottom_performers_count": int
+        }
+    """
+    import json
+
+    with open(f"{analysis_path}/selection_manifest.json") as f:
+        manifest = json.load(f)
+
+    videos_by_bucket = manifest["videos_by_bucket"]
+
+    # Sum all top_performers array lengths
+    top_count = sum(
+        len(bucket_data["top_performers"])
+        for bucket_data in videos_by_bucket.values()
+    )
+
+    # Sum all bottom_performers array lengths
+    bottom_count = sum(
+        len(bucket_data["bottom_performers"])
+        for bucket_data in videos_by_bucket.values()
+    )
+
+    return {
+        "top_performers_count": top_count,      # Example: 88
+        "bottom_performers_count": bottom_count  # Example: 23
+    }
+```
+
+**Output**:
+```python
+{
+    "top_performers_count": 88,
+    "bottom_performers_count": 23
+}
+```
+
+**Complexity**: Simple (5-10 lines)
+
+**Data Source**: `selection_manifest.json → videos_by_bucket`
+
+---
+
+##### Calculation 2: Bucket Distribution Percentages
+
+**Field Using This**: % per bucket (all 8 rows) (Report 1, Duration Distribution, Line 147)
+
+**Purpose**: Calculate what percentage of scraped videos fall in each duration bucket to show market distribution
+
+**Input Data**:
+```json
+// {analysis_path}/winner_analysis.json
+{
+  "bucket_distribution": {
+    "0-3s": 146,
+    "3-9s": 219,
+    "9-13s": 274,
+    "13-18s": 402,
+    "18-33s": 511,
+    "33-60s": 219,
+    "60-90s": 37,
+    "90-120s": 18
+  }
+}
+```
+
+**Implementation**:
+```python
+# extract_client_data.py - Report 1 Duration Distribution Section
+def calculate_bucket_distribution_percentages(analysis_path):
+    """
+    Calculate percentage of videos in each duration bucket.
+
+    Args:
+        analysis_path: Path to analysis directory
+
+    Returns:
+        dict: Bucket name → percentage (rounded to integer)
+    """
+    import json
+
+    with open(f"{analysis_path}/winner_analysis.json") as f:
+        data = json.load(f)
+
+    bucket_distribution = data["bucket_distribution"]
+    total_videos = sum(bucket_distribution.values())
+
+    # Calculate percentage for each bucket, rounded to integer
+    bucket_percentages = {
+        bucket: round((count / total_videos) * 100)
+        for bucket, count in bucket_distribution.items()
+    }
+
+    return bucket_percentages
+    # Example: {
+    #   "0-3s": 8,
+    #   "3-9s": 12,
+    #   "9-13s": 15,
+    #   "13-18s": 22,
+    #   "18-33s": 28,
+    #   "33-60s": 12,
+    #   "60-90s": 2,
+    #   "90-120s": 1
+    # }
+```
+
+**Output**: Dict[str, int] mapping bucket name to percentage
+
+**Complexity**: Simple (8-12 lines)
+
+**Data Source**: `winner_analysis.json → bucket_distribution`
+
+---
+
+##### Calculation 3: Key Insight Percentage
+
+**Field Using This**: Key Insight % (Report 1, Duration Distribution, Line 148)
+
+**Purpose**: Calculate combined percentage for highest-volume buckets to create market insight statement
+
+**Input Data**: Uses output from Calculation 2 (bucket_percentages)
+
+**Implementation**:
+```python
+# extract_client_data.py - Report 1 Duration Distribution Section
+def calculate_key_insight_percentage(bucket_percentages, top_buckets=["13-18s", "18-33s"]):
+    """
+    Sum percentages for key duration ranges to create insight.
+
+    Args:
+        bucket_percentages: Output from calculate_bucket_distribution_percentages()
+        top_buckets: List of bucket names to sum (default: 13-18s and 18-33s)
+
+    Returns:
+        int: Combined percentage
+    """
+    key_insight_pct = sum(bucket_percentages[bucket] for bucket in top_buckets)
+
+    return key_insight_pct
+    # Example: 22 + 28 = 50
+    # Used in report as: "50% of #nutrition content is 13-33s"
+```
+
+**Output**: Integer (percentage)
+
+**Complexity**: Simple (1-3 lines)
+
+**Dependencies**: Calculation 2
+
+**Note**: The example hardcodes 13-18s and 18-33s as typical high-volume buckets. In production, you might dynamically identify the top 2 consecutive buckets from the distribution.
+
+---
+
+##### Calculation 4: Star Rating Assignment
+
+**Field Using This**: Star ratings (3 rows) (Report 1, Performance by Duration, Line 174)
+
+**Purpose**: Rank winning buckets by performance metrics and assign 5/4/3 star visual ratings
+
+**Ranking Criteria**:
+1. Primary: Average engagement rate (higher is better)
+2. Secondary: Average views (higher is better)
+
+**Input Data**: Requires calling documented functions from Section 0.5
+
+**Implementation**:
+```python
+# extract_client_data.py - Report 1 Performance by Duration Section
+def assign_star_ratings(analysis_path, winning_buckets):
+    """
+    Sort winning buckets by performance and assign star ratings.
+
+    Args:
+        analysis_path: Path to analysis directory
+        winning_buckets: List of winning bucket names from winner_analysis.json
+
+    Returns:
+        dict: {
+            "star_ratings": ["⭐⭐⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐"],
+            "sorted_buckets": [
+                {"bucket": "18-33s", "avg_views": 1900000, "avg_engagement": 1.4},
+                {"bucket": "13-18s", "avg_views": 2100000, "avg_engagement": 1.2},
+                {"bucket": "60-90s", "avg_views": 980000, "avg_engagement": 1.3}
+            ]
+        }
+    """
+    import json
+
+    # Step 1: Collect performance metrics for each winning bucket
+    buckets_with_metrics = []
+
+    for bucket_name in winning_buckets:
+        bucket_path = f"{analysis_path}/buckets/bucket_{bucket_name}"
+
+        # Calculate avg views using documented function (Section 0.5.6.1)
+        avg_views = calculate_avg_views_per_bucket(bucket_path, "top")
+
+        # Calculate avg engagement
+        # Load top performer videos from selected_videos.json
+        with open(f"{bucket_path}/selected_videos.json") as f:
+            data = json.load(f)
+
+        top_count = data["top_count"]
+        top_videos = data["videos"][:top_count]
+
+        # Calculate engagement rate for each video
+        engagement_rates = []
+        for video in top_videos:
+            video_id = video["id"]
+
+            # Load metadata from unified_analysis
+            unified_path = f"{bucket_path}/analysis/insights/{video_id}_temporal_windows_updated.json"
+            with open(unified_path) as f:
+                video_data = json.load(f)
+
+            # Use documented function (Section 0.5.5)
+            # Note: calculate_engagement_metrics() expects metadata with playCount, diggCount, etc.
+            # The metadata is in the video object from selected_videos.json
+            engagement = calculate_engagement_metrics({
+                "views": video["playCount"],
+                "likes": video["diggCount"],
+                "comments": video["commentCount"],
+                "shares": video["shareCount"],
+                "saves": video["collectCount"]
+            })
+            engagement_rates.append(engagement["engagement_rate"])
+
+        avg_engagement = sum(engagement_rates) / len(engagement_rates)
+
+        buckets_with_metrics.append({
+            "bucket": bucket_name,
+            "avg_views": avg_views,
+            "avg_engagement": avg_engagement
+        })
+
+    # Step 2: Sort by engagement (primary), then views (secondary)
+    buckets_with_metrics.sort(
+        key=lambda x: (x["avg_engagement"], x["avg_views"]),
+        reverse=True
+    )
+
+    # Step 3: Assign star ratings based on rank
+    star_map = {
+        0: "⭐⭐⭐⭐⭐",  # Rank 1 (highest engagement + views)
+        1: "⭐⭐⭐⭐",    # Rank 2
+        2: "⭐⭐⭐"      # Rank 3
+    }
+
+    star_ratings = [star_map[i] for i in range(len(buckets_with_metrics))]
+
+    return {
+        "star_ratings": star_ratings,
+        "sorted_buckets": buckets_with_metrics  # Return for use in other calculations
+    }
+```
+
+**Output**:
+```python
+{
+    "star_ratings": ["⭐⭐⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐"],
+    "sorted_buckets": [
+        {"bucket": "18-33s", "avg_views": 1900000, "avg_engagement": 1.4},
+        {"bucket": "13-18s", "avg_views": 2100000, "avg_engagement": 1.2},
+        {"bucket": "60-90s", "avg_views": 980000, "avg_engagement": 1.3}
+    ]
+}
+```
+
+**Complexity**: Medium (30-40 lines)
+
+**Dependencies**:
+- `calculate_avg_views_per_bucket()` (Section 0.5.6.1)
+- `calculate_engagement_metrics()` (Section 0.5.5)
+
+**Data Sources**:
+- `selected_videos.json` (video IDs and metadata)
+- `winner_analysis.json` (winning buckets)
+
+---
+
+##### Calculation 5: Top Bucket Label
+
+**Field Using This**: Top bucket label (Report 1, Performance by Duration, Line 175)
+
+**Purpose**: Add "← BEST" visual label to highest-performing bucket
+
+**Input Data**: Uses `sorted_buckets` from Calculation 4
+
+**Implementation**:
+```python
+# extract_client_data.py - Report 1 Performance by Duration Section
+def assign_best_labels(sorted_buckets):
+    """
+    Assign "← BEST" label to top-ranked bucket, empty strings to others.
+
+    Args:
+        sorted_buckets: Output from assign_star_ratings()["sorted_buckets"]
+
+    Returns:
+        list: ["← BEST", "", ""]
+    """
+    best_labels = [
+        "← BEST" if i == 0 else ""
+        for i in range(len(sorted_buckets))
+    ]
+
+    return best_labels
+    # Example: ["← BEST", "", ""]
+```
+
+**Output**: Array[String] with 3 label strings
+
+**Complexity**: Simple (3-5 lines)
+
+**Dependencies**: Calculation 4 (sorted_buckets)
+
+---
+
+##### Calculation 6: Coverage Percentage
+
+**Field Using This**: Coverage percentage (Report 1, Performance by Duration, Line 176)
+
+**Purpose**: Calculate what percentage of top 100 videos fall in the 3 winning buckets
+
+**Input Data**:
+```json
+// {analysis_path}/winner_analysis.json
+{
+  "top_3_buckets": ["18-33s", "13-18s", "60-90s"],
+  "top_100_distribution": {
+    "0-3s": 2,
+    "3-9s": 5,
+    "9-13s": 8,
+    "13-18s": 12,
+    "18-33s": 43,
+    "33-60s": 18,
+    "60-90s": 11,
+    "90-120s": 1
+  }
+}
+```
+
+**Implementation**:
+```python
+# extract_client_data.py - Report 1 Performance by Duration Section
+def calculate_coverage_percentage(analysis_path):
+    """
+    Calculate percentage of top 100 videos in winning buckets.
+
+    Args:
+        analysis_path: Path to analysis directory
+
+    Returns:
+        float: Coverage percentage with 1 decimal place
+    """
+    import json
+
+    with open(f"{analysis_path}/winner_analysis.json") as f:
+        data = json.load(f)
+
+    top_3_buckets = data["top_3_buckets"]
+    distribution = data["top_100_distribution"]
+
+    # Sum video counts in winning buckets
+    winning_count = sum(distribution[bucket] for bucket in top_3_buckets)
+
+    # Sum all video counts
+    total_count = sum(distribution.values())
+
+    # Calculate percentage with 1 decimal place
+    coverage_pct = round((winning_count / total_count) * 100, 1)
+
+    return coverage_pct
+    # Example: 75.9
+    # Used in report as: "These 3 durations represent 75.9% of top-performing content"
+```
+
+**Output**: Float (percentage with 1 decimal place)
+
+**Complexity**: Simple (8-12 lines)
+
+**Data Source**: `winner_analysis.json → top_3_buckets, top_100_distribution`
+
+---
+
+##### Calculation 7: Performance Label Assignment
+
+**Field Using This**: Performance labels (Report 1, Creator Profile Priorities, Line 200)
+
+**Purpose**: Map bucket rankings to descriptive labels for creator hiring guidance
+
+**Label Meanings**:
+- Rank 1 (5 stars): "highest performance"
+- Rank 2 (4 stars): "strong performance + volume"
+- Rank 3 (3 stars): "proven success"
+
+**Input Data**: Uses `sorted_buckets` from Calculation 4
+
+**Implementation**:
+```python
+# extract_client_data.py - Report 1 Creator Profile Priorities Section
+def assign_performance_labels(sorted_buckets):
+    """
+    Map bucket rankings to descriptive performance labels.
+
+    Args:
+        sorted_buckets: Output from assign_star_ratings()["sorted_buckets"]
+
+    Returns:
+        list: Performance label strings for each bucket
+    """
+    label_map = {
+        0: "highest performance",
+        1: "strong performance + volume",
+        2: "proven success"
+    }
+
+    performance_labels = [
+        label_map[i] for i in range(len(sorted_buckets))
+    ]
+
+    return performance_labels
+    # Example: ["highest performance", "strong performance + volume", "proven success"]
+```
+
+**Output**: Array[String] with 3 descriptive labels
+
+**Complexity**: Simple (8-10 lines)
+
+**Dependencies**: Calculation 4 (sorted_buckets)
+
+**Usage in Report**: Labels are displayed alongside bucket names in Creator Profile Priorities:
+```
+• 18-33s Creators (highest performance: 1.9M avg views)
+• 13-18s Creators (strong performance + volume: 2.1M avg views)
+• 60-90s Creators (proven success: 980K avg views)
+```
+
+---
+
+**Report 1 Calculation Summary**:
+
+| Calculation | Fields | Complexity | Lines of Code | Dependencies |
+|-------------|--------|-----------|---------------|--------------|
+| 1. Array Length Summation | 2 | Simple | ~10 | None |
+| 2. Bucket Distribution % | 1 | Simple | ~12 | None |
+| 3. Key Insight % | 1 | Simple | ~3 | Calc 2 |
+| 4. Star Rating Assignment | 1 | Medium | ~40 | Functions 0.5.6.1, 0.5.5 |
+| 5. Top Bucket Label | 1 | Simple | ~5 | Calc 4 |
+| 6. Coverage Percentage | 1 | Simple | ~12 | None |
+| 7. Performance Labels | 1 | Simple | ~10 | Calc 4 |
+| **Total** | **8 fields** | | **~92 lines** | |
+
+**Implementation Notes**:
+- All calculations should be implemented in `extract_client_data.py`
+- Calculation 4 is the most complex and should be implemented first (other calculations depend on it)
+- Test with actual data from `/data/clients/test_hashtag/` or `/data/clients/test_final/`
+
+---
+
+#### 0.6.2: Report 2 (Hashtag → Creator) Inline Calculations
+
+**Extraction Script**: `extract_creator_data.py`
+
+**Report**: Hashtag → Creator (Content Creator Report)
+
+**Total**: 8 inline calculations covering 19 field instances
+
+**Dependencies**: This section uses functions documented in Section 0.5:
+- `calculate_proof_metrics_bucket_scoped()` (0.5.8)
+- `aggregate_content_classifications()` (0.5.1)
+- `get_top_n_from_field()` (0.5.1.1)
+
+---
+
+##### Calculation 1: Performance Multipliers (The Proof Section)
+
+**Fields Using This**:
+- View multiplier (Report 2, The Proof, Line 611)
+- Engagement multiplier (Report 2, The Proof, Line 612)
+
+**Purpose**: Calculate how much better top cluster performs vs bottom cluster using ratio format
+
+**Input Data**: Uses output from `calculate_proof_metrics_bucket_scoped()` (Section 0.5.8)
+
+**Implementation**:
+```python
+# extract_creator_data.py - Report 2 The Proof Section
+def calculate_performance_multipliers(proof_metrics):
+    """
+    Calculate view and engagement multipliers for The Proof section.
+
+    Args:
+        proof_metrics: Output from calculate_proof_metrics_bucket_scoped()
+            {
+                "top_cluster": {"avg_views": 620000, "avg_engagement": 1.2},
+                "bottom_cluster": {"avg_views": 380000, "avg_engagement": 0.8}
+            }
+
+    Returns:
+        dict: {
+            "view_multiplier": "1.6x",
+            "engagement_multiplier": "1.5x"
+        }
+    """
+    top = proof_metrics["top_cluster"]
+    bottom = proof_metrics["bottom_cluster"]
+
+    # Calculate multipliers
+    view_multiplier = top["avg_views"] / bottom["avg_views"]
+    engagement_multiplier = top["avg_engagement"] / bottom["avg_engagement"]
+
+    # Format as ratio with 1 decimal + 'x' suffix
+    return {
+        "view_multiplier": f"{view_multiplier:.1f}x",
+        "engagement_multiplier": f"{engagement_multiplier:.1f}x"
+    }
+    # Example: {"view_multiplier": "1.6x", "engagement_multiplier": "1.5x"}
+```
+
+**Output**:
+```python
+{
+    "view_multiplier": "1.6x",      # Format: "{ratio:.1f}x"
+    "engagement_multiplier": "1.5x"
+}
+```
+
+**Complexity**: Simple (5 lines)
+
+---
+
+##### Calculation 2: Performance Percentage Increases (The Proof Section)
+
+**Fields Using This**:
+- View percentage increase (Report 2, The Proof, Line 613)
+- Engagement percentage increase (Report 2, The Proof, Line 614)
+
+**Purpose**: Calculate percentage improvement from bottom to top cluster for marketing impact
+
+**Input Data**: Uses output from `calculate_proof_metrics_bucket_scoped()` (Section 0.5.8)
+
+**Implementation**:
+```python
+# extract_creator_data.py - Report 2 The Proof Section
+def calculate_percentage_increases(proof_metrics):
+    """
+    Calculate percentage increases for The Proof section.
+
+    Args:
+        proof_metrics: Output from calculate_proof_metrics_bucket_scoped()
+
+    Returns:
+        dict: {
+            "view_pct_increase": 63,
+            "engagement_pct_increase": 50
+        }
+    """
+    top = proof_metrics["top_cluster"]
+    bottom = proof_metrics["bottom_cluster"]
+
+    # Calculate percentage increases: ((top - bottom) / bottom) × 100%
+    view_pct = ((top["avg_views"] - bottom["avg_views"]) / bottom["avg_views"]) * 100
+    engagement_pct = ((top["avg_engagement"] - bottom["avg_engagement"]) / bottom["avg_engagement"]) * 100
+
+    # Round to nearest integer
+    return {
+        "view_pct_increase": round(view_pct),
+        "engagement_pct_increase": round(engagement_pct)
+    }
+    # Example: {"view_pct_increase": 63, "engagement_pct_increase": 50}
+```
+
+**Output**:
+```python
+{
+    "view_pct_increase": 63,          # Integer percentage
+    "engagement_pct_increase": 50
+}
+```
+
+**Complexity**: Simple (5 lines)
+
+---
+
+##### Calculation 3: Timing Ranges (Pattern Summary Section)
+
+**Field Using This**: Timing ranges (all 3 steps) (Report 2, Pattern Summary, Line 666)
+
+**Purpose**: Calculate second-by-second timing ranges for Hook/Middle/Closing based on bucket duration
+
+**Input Data**: Bucket name (e.g., "18-33s")
+
+**Implementation**:
+```python
+# extract_creator_data.py - Report 2 Pattern Summary Section
+def calculate_timing_ranges(bucket_name):
+    """
+    Calculate timing ranges for 3-step pattern based on bucket duration.
+
+    Hook: Always 0-3s (fixed)
+    Middle: 3s to (duration - 3s)
+    Closing: Last 3s
+
+    Args:
+        bucket_name: Duration bucket (e.g., "18-33s", "13-18s")
+
+    Returns:
+        list: [hook_range, middle_range, closing_range]
+    """
+    # Parse bucket duration (use lower bound for calculation)
+    # Example: "18-33s" → 18 seconds
+    lower_bound = int(bucket_name.split("-")[0].replace("s", ""))
+
+    # Hook: Always 0-3s
+    hook_range = "0-3s"
+
+    # Middle: 3s to (duration - 3s)
+    middle_end = lower_bound - 3
+    middle_range = f"3-{middle_end}s"
+
+    # Closing: Last 3s
+    closing_start = lower_bound - 3
+    closing_range = f"{closing_start}-{lower_bound}s"
+
+    return [hook_range, middle_range, closing_range]
+    # Example for "18-33s": ["0-3s", "3-15s", "15-18s"]
+```
+
+**Example Outputs**:
+```python
+calculate_timing_ranges("18-33s")  # → ["0-3s", "3-15s", "15-18s"]
+calculate_timing_ranges("13-18s")  # → ["0-3s", "3-10s", "10-13s"]
+calculate_timing_ranges("60-90s")  # → ["0-3s", "3-57s", "57-60s"]
+```
+
+**Complexity**: Simple (8 lines)
+
+**Note**: Uses lower bound of bucket range for consistency (18s from "18-33s")
+
+---
+
+##### Calculation 4: snake_case to Title Case Formatter
+
+**Field Using This**: Engagement Drivers (Top 3) (Report 2, Video Category Selection, Line 704)
+
+**Purpose**: Convert snake_case category names to human-readable Title Case for display
+
+**Input Data**: Array of snake_case strings from `get_top_n_from_field()`
+
+**Implementation**:
+```python
+# extract_creator_data.py - Report 2 Video Category Selection
+def format_to_title_case(snake_case_items):
+    """
+    Convert snake_case to Title Case for display.
+
+    Args:
+        snake_case_items: List of snake_case strings
+
+    Returns:
+        list: Title Case strings
+    """
+    return [
+        item.replace("_", " ").title()
+        for item in snake_case_items
+    ]
+    # Example: ["before_after_reveal"] → ["Before After Reveal"]
+```
+
+**Example Usage**:
+```python
+# Get snake_case engagement drivers from function
+drivers = get_top_n_from_field(bucket_path, "engagement_drivers", n=3, "top")
+# Returns: ["personal_testimony", "before_after_reveal", "product_demonstration"]
+
+# Format for display
+display_drivers = format_to_title_case(drivers)
+# Returns: ["Personal Testimony", "Before After Reveal", "Product Demonstration"]
+
+# Note: For better formatting, you might want custom mappings:
+# "before_after_reveal" → "Before/After Reveal" (with slash)
+```
+
+**Advanced Implementation** (with custom mappings):
+```python
+def format_to_title_case(snake_case_items):
+    """Convert snake_case to Title Case with custom mappings."""
+    custom_mappings = {
+        "before_after_reveal": "Before/After Reveal",
+        "direct_to_camera": "Direct-to-Camera"
+        # Add more as needed
+    }
+
+    formatted = []
+    for item in snake_case_items:
+        if item in custom_mappings:
+            formatted.append(custom_mappings[item])
+        else:
+            formatted.append(item.replace("_", " ").title())
+
+    return formatted
+```
+
+**Output**: Array of Title Case strings
+
+**Complexity**: Simple (2-5 lines)
+
+---
+
+##### Calculation 5: CTA Example Phrase Generator
+
+**Field Using This**: CTA Example Phrase (Report 2, Pattern Execution, Line 809)
+
+**Purpose**: Map CTA type to example phrase for creator guidance
+
+**Input Data**: Most common CTA type from `aggregate_content_classifications()`
+
+**Implementation**:
+```python
+# extract_creator_data.py - Report 2 Pattern Execution Blueprint
+def generate_cta_example(cta_type):
+    """
+    Generate example CTA phrase based on most common type.
+
+    Args:
+        cta_type: Most common CTA from aggregation (e.g., "link_in_bio")
+
+    Returns:
+        str: Example phrase
+    """
+    cta_phrases = {
+        "link_in_bio": "Link in bio!",
+        "save_post": "Save this for later!",
+        "comment": "Comment your thoughts!",
+        "follow": "Follow for more!",
+        "share": "Share with a friend!",
+        "tag_friend": "Tag someone who needs this!",
+        "none": "Watch until the end!"
+    }
+
+    return cta_phrases.get(cta_type, "Link in bio!")
+    # Default to "Link in bio!" if type not found
+```
+
+**Example Usage**:
+```python
+# Get most common CTA type
+aggregated = aggregate_content_classifications(bucket_path, "top")
+cta_counter = aggregated["caption_cta_type"]
+most_common_cta = cta_counter.most_common(1)[0][0]  # e.g., "link_in_bio"
+
+# Generate example phrase
+example = generate_cta_example(most_common_cta)
+# Returns: "Link in bio!"
+```
+
+**Output**: String (example phrase)
+
+**Complexity**: Simple (dictionary lookup)
+
+---
+
+##### Calculation 5: Calculate original content percentage
+
+**Purpose**: Calculate percentage of original content (inverse of repost rate)
+
+**Used in**: Report 3 → Page 3 → Section 5 (Content Sourcing Strategy)
+- **Field**: Original content %
+
+**Input**:
+- `repost_rate` (float): From `extract_mention_analysis()` → `repost_rate`
+
+**Calculation**:
+```python
+def calculate_original_content_percentage(repost_rate: float) -> int:
+    """
+    Calculate original content percentage.
+
+    Args:
+        repost_rate: Percentage of reposted/affiliate content (0-100)
+
+    Returns:
+        Integer percentage of original content (0-100)
+    """
+    return 100 - int(repost_rate)
+```
+
+**Example**:
+```python
+>>> repost_rate = 42.0
+>>> calculate_original_content_percentage(repost_rate)
+58  # 100 - 42 = 58% original content
+
+>>> repost_rate = 15.5
+>>> calculate_original_content_percentage(repost_rate)
+84  # 100 - 15 = 84% original content (rounded down)
+```
+
+**Display in Report**:
+```
+Original Content: 58% (no affiliate mentions)
+Reposted/Affiliate Content: 42% (contains @mentions or repost indicators)
+```
+
+**Note**: This is a simple inverse calculation. The `repost_rate` from `extract_mention_analysis()` represents videos with @mentions or repost indicators, so `100 - repost_rate` gives the percentage of original content.
+
+---
+
+##### Calculation 6: Hook/CTA Percentage Extraction (Caption Structure Section)
+
+**Fields Using This**: 12 fields (Report 2, Caption Structure, Lines 847-858)
+- Hook Type 1-3 + percentages (6 fields)
+- CTA Type 1-3 + percentages (6 fields)
+
+**Purpose**: Extract Top 3 items with percentages from Counter objects for caption strategy display
+
+**Input Data**: Uses output from `aggregate_content_classifications()` (Section 0.5.1)
+
+**Implementation**:
+```python
+# extract_creator_data.py - Report 2 Caption Structure Section
+def extract_top_3_with_percentages(counter_obj, total_videos):
+    """
+    Extract Top 3 items from Counter with percentages.
+
+    Args:
+        counter_obj: Counter object from aggregate_content_classifications()
+        total_videos: Total video count for percentage calculation
+
+    Returns:
+        list: [
+            {"name": "question", "percentage": 45},
+            {"name": "statement", "percentage": 32},
+            {"name": "command", "percentage": 18}
+        ]
+    """
+    top_3 = []
+
+    for item, count in counter_obj.most_common(3):
+        percentage = round((count / total_videos) * 100)
+        top_3.append({
+            "name": item,
+            "percentage": percentage
+        })
+
+    return top_3
+```
+
+**Example Usage**:
+```python
+# Get aggregated data
+aggregated = aggregate_content_classifications(bucket_path, "top")
+total = aggregated["total_videos"]
+
+# Extract hook types with percentages
+hook_counter = aggregated["caption_hook_type"]
+top_hooks = extract_top_3_with_percentages(hook_counter, total)
+# Returns: [
+#     {"name": "question", "percentage": 45},
+#     {"name": "statement", "percentage": 32},
+#     {"name": "command", "percentage": 18}
+# ]
+
+# Extract CTA types with percentages
+cta_counter = aggregated["caption_cta_type"]
+top_ctas = extract_top_3_with_percentages(cta_counter, total)
+# Returns: [
+#     {"name": "link_in_bio", "percentage": 67},
+#     {"name": "save_post", "percentage": 21},
+#     {"name": "comment", "percentage": 9}
+# ]
+
+# Access individual fields for report
+hook_type_1 = top_hooks[0]["name"]        # "question"
+hook_pct_1 = top_hooks[0]["percentage"]   # 45
+cta_type_1 = top_ctas[0]["name"]          # "link_in_bio"
+cta_pct_1 = top_ctas[0]["percentage"]     # 67
+```
+
+**Output**:
+```python
+[
+    {"name": str, "percentage": int},
+    {"name": str, "percentage": int},
+    {"name": str, "percentage": int}
+]
+```
+
+**Complexity**: Simple (8 lines)
+
+**Note**: This calculation handles 12 separate fields in the report (6 hook + 6 CTA)
+
+---
+
+**Report 2 Calculation Summary**:
+
+| Calculation | Fields | Complexity | Lines of Code | Dependencies |
+|-------------|--------|-----------|---------------|--------------|
+| 1. Performance Multipliers | 2 | Simple | ~8 | Function 0.5.8 |
+| 2. Percentage Increases | 2 | Simple | ~8 | Function 0.5.8 |
+| 3. Timing Ranges | 1 | Simple | ~12 | None |
+| 4. snake_case to Title Case | 1 | Simple | ~5 | None |
+| 5. CTA Example Generator | 1 | Simple | ~12 (dictionary) | Function 0.5.1 |
+| 6. Top 3 with Percentages | 12 | Simple | ~10 | Function 0.5.1 |
+| **Total** | **19 field instances** | | **~55 lines** | |
+
+**Implementation Notes**:
+- All calculations should be implemented in `extract_creator_data.py`
+- Calculations 1-2 depend on `calculate_proof_metrics_bucket_scoped()` output
+- Calculation 6 handles 12 fields but uses same function for both hook and CTA types
+- Test with actual data from `/data/clients/test_final/hashtags/`
+
+---
+
+#### 0.6.3: Report 3 (Single Competitor → Client) Inline Calculations
+
+**Extraction Script**: `extract_competitor_data.py`
+
+**Report**: Single Competitor → Client (Deep Dive Report)
+
+**Total**: 5 inline calculations covering 6 fields
+
+**Dependencies**: This section uses functions documented in Section 0.5:
+- `calculate_competitor_bucket_avg_views()` (0.5.6.2)
+- `calculate_competitor_bucket_avg_engagement()` (0.5.6.3)
+- `calculate_bucket_distribution()` (0.5.6.1)
+
+---
+
+##### Calculation 1: `rank_competitor_top_buckets()`
+
+**Purpose**: Rank a single competitor's top 3 buckets by performance and assign star ratings
+
+**Used in**: Report 3 → Page 2 → Section 2 (Performance by Duration)
+- **Field 5**: Star ratings (3 rows)
+- **Field 6**: Sweet spot bucket
+
+**Input Parameters**:
+- `client_id` (string): Client identifier (e.g., "test_competitor")
+- `competitor_handle` (string): Competitor handle with @ symbol (e.g., "@drinkpoppi")
+
+**Process**:
+1. Get competitor's `top_3_buckets` from `winner_analysis.json`
+2. For each bucket:
+   - Get avg views using `calculate_competitor_bucket_avg_views()`
+   - Get avg engagement using `calculate_competitor_bucket_avg_engagement()`
+   - Calculate composite score: `(normalized_views * 100) + engagement`
+3. Sort buckets by composite score (DESC)
+4. Assign star ratings: Rank 1 = ⭐⭐⭐⭐⭐, Rank 2 = ⭐⭐⭐⭐, Rank 3 = ⭐⭐⭐⭐
+
+**Returns**: List of dicts with bucket rankings
+
+**Example Output**:
+```python
+[
+    {
+        "bucket": "18-33s",
+        "rank": 1,
+        "avg_views": 620000,
+        "avg_engagement": 1.5,
+        "composite_score": 101.5,
+        "stars": "⭐⭐⭐⭐⭐",
+        "is_sweet_spot": True
+    },
+    {
+        "bucket": "13-18s",
+        "rank": 2,
+        "avg_views": 580000,
+        "avg_engagement": 1.3,
+        "composite_score": 95.0,
+        "stars": "⭐⭐⭐⭐",
+        "is_sweet_spot": False
+    },
+    {
+        "bucket": "33-60s",
+        "rank": 3,
+        "avg_views": 490000,
+        "avg_engagement": 1.4,
+        "composite_score": 81.4,
+        "stars": "⭐⭐⭐⭐",
+        "is_sweet_spot": False
+    }
+]
+```
+
+**Implementation**:
+```python
+def rank_competitor_top_buckets(client_id: str, competitor_handle: str) -> list[dict]:
+    """
+    Rank competitor's top 3 buckets by performance.
+
+    Args:
+        client_id: Client identifier
+        competitor_handle: Competitor handle with @ symbol
+
+    Returns:
+        List of dicts with rankings, sorted by performance DESC
+    """
+    import json
+    import os
+
+    # Discover analysis directory
+    competitor_dir = competitor_handle.lstrip('@')
+    base_path = f"/data/clients/{client_id}/competitors/{competitor_dir}"
+    analysis_dirs = [d for d in os.listdir(base_path) if d.startswith('top_')]
+
+    if not analysis_dirs:
+        raise FileNotFoundError(f"No analysis directory found for {competitor_handle}")
+
+    analysis_dir = analysis_dirs[0]
+    competitor_path = f"{base_path}/{analysis_dir}"
+
+    # Load top 3 buckets
+    with open(f"{competitor_path}/winner_analysis.json") as f:
+        winner_data = json.load(f)
+    top_3_buckets = winner_data["top_3_buckets"]
+
+    # Collect performance data for each bucket
+    bucket_data = []
+    for bucket in top_3_buckets:
+        avg_views = calculate_competitor_bucket_avg_views(client_id, competitor_handle, bucket)
+        avg_engagement = calculate_competitor_bucket_avg_engagement(client_id, competitor_handle, bucket)
+
+        bucket_data.append({
+            "bucket": bucket,
+            "avg_views": avg_views,
+            "avg_engagement": avg_engagement
+        })
+
+    # Normalize views and calculate composite scores
+    max_views = max(b["avg_views"] for b in bucket_data)
+
+    for bucket in bucket_data:
+        normalized_views = (bucket["avg_views"] / max_views) * 100
+        composite_score = normalized_views + bucket["avg_engagement"]
+        bucket["composite_score"] = composite_score
+
+    # Sort by composite score (DESC)
+    bucket_data.sort(key=lambda b: b["composite_score"], reverse=True)
+
+    # Assign ranks and star ratings
+    star_map = {1: "⭐⭐⭐⭐⭐", 2: "⭐⭐⭐⭐", 3: "⭐⭐⭐⭐"}
+
+    for idx, bucket in enumerate(bucket_data, start=1):
+        bucket["rank"] = idx
+        bucket["stars"] = star_map[idx]
+        bucket["is_sweet_spot"] = (idx == 1)
+
+    return bucket_data
+```
+
+**Report Usage**:
+- **Star ratings (Field 5)**: Use `stars` field for each bucket
+- **Sweet spot (Field 6)**: Get bucket where `is_sweet_spot == True`
+
+---
+
+##### Calculation 2: `calculate_top_3_coverage()`
+
+**Purpose**: Calculate what % of competitor's content is in their top 3 performing buckets
+
+**Used in**: Report 3 → Page 2 → Section 2 (Performance by Duration)
+- **Field 7**: Coverage percentage
+
+**Input**:
+- `bucket_percentages` (dict): Output from `calculate_bucket_distribution()`
+- `top_3_buckets` (list): From `winner_analysis.json` → `top_3_buckets`
+
+**Calculation**:
+```python
+def calculate_top_3_coverage(bucket_percentages: dict, top_3_buckets: list[str]) -> int:
+    """
+    Sum percentages of top 3 buckets.
+
+    Args:
+        bucket_percentages: Dict from calculate_bucket_distribution()
+        top_3_buckets: List of 3 bucket names
+
+    Returns:
+        Integer percentage (e.g., 72)
+    """
+    return sum(bucket_percentages[bucket] for bucket in top_3_buckets)
+```
+
+**Example**:
+```python
+>>> bucket_pct = {"0-3s": 8, "3-9s": 36, "9-13s": 18, "18-33s": 15, ...}
+>>> top_3 = ["3-9s", "9-13s", "18-33s"]
+>>> calculate_top_3_coverage(bucket_pct, top_3)
+69  # 36 + 18 + 15 = 69%
+```
+
+**Note**: This is a simple helper calculation (one-liner). Could be done inline without a dedicated function, but documented here for completeness and developer clarity.
+
+---
+
+##### Calculation 3: Format engagement driver descriptions
+
+**Purpose**: Convert engagement driver names from snake_case to human-readable descriptions
+
+**Used in**: Report 3 → Page 3 → Section 1 (Content DNA)
+- **Field 5**: Engagement driver descriptions
+
+**Input**:
+- `engagement_drivers` (list): List of engagement driver names in snake_case from Stage 2.7
+  - Example: `["before_after_reveal", "specific_metrics", "personal_testimony", "expert_credentials"]`
+
+**Process**:
+1. Convert snake_case to Title Case: `before_after_reveal` → `Before After Reveal`
+2. Add contextual description based on known patterns
+
+**Mapping Table**:
+```python
+ENGAGEMENT_DRIVER_DESCRIPTIONS = {
+    "before_after_reveal": "Visual transformations",
+    "specific_metrics": '"Lost 15 lbs in 30 days"',
+    "personal_testimony": '"This worked for me..."',
+    "expert_credentials": '"Registered nutritionist here..."',
+    "product_demonstration": "Showing product in use",
+    "social_proof": "User reviews and testimonials",
+    "urgency_scarcity": "Limited time offers",
+    "emotional_appeal": "Tugging at heartstrings",
+    # Add more as Stage 2.7 taxonomy expands
+}
+```
+
+**Implementation**:
+```python
+def format_engagement_driver_description(driver: str) -> str:
+    """
+    Get human-readable description for engagement driver.
+
+    Args:
+        driver: Snake_case driver name (e.g., "before_after_reveal")
+
+    Returns:
+        Human-readable description (e.g., "Visual transformations")
+    """
+    # Fallback: Convert to title case if not in mapping
+    return ENGAGEMENT_DRIVER_DESCRIPTIONS.get(
+        driver,
+        driver.replace("_", " ").title()
+    )
+```
+
+**Example**:
+```python
+>>> drivers = ["before_after_reveal", "specific_metrics", "personal_testimony"]
+>>> [format_engagement_driver_description(d) for d in drivers]
+["Visual transformations", '"Lost 15 lbs in 30 days"', '"This worked for me..."']
+```
+
+**Note**: Descriptions should be concise (2-6 words) and provide context about what the driver means in practice.
+
+---
+
+##### Calculation 4: Determine hashtag strategy type
+
+**Purpose**: Classify competitor's hashtag strategy as "Diversified" or "Focused" based on unique hashtag count
+
+**Used in**: Report 3 → Page 3 → Section 3 (Hashtag Strategy)
+- **Field**: Strategy type
+
+**Input**:
+- `total_unique_hashtags` (int): From `extract_hashtag_analysis()` → `total_unique_hashtags`
+
+**Logic**:
+```python
+def determine_hashtag_strategy_type(total_unique_hashtags: int) -> str:
+    """
+    Classify hashtag strategy based on diversity.
+
+    Args:
+        total_unique_hashtags: Count of distinct hashtags used
+
+    Returns:
+        "Diversified" if > 20, else "Focused"
+    """
+    return "Diversified" if total_unique_hashtags > 20 else "Focused"
+```
+
+**Threshold Rationale**:
+- **≤ 20 hashtags** = "Focused" strategy
+  - Competitor concentrates on core hashtags
+  - Consistent messaging across content
+  - Example: Brand focuses on 10-15 key hashtags
+
+- **> 20 hashtags** = "Diversified" strategy
+  - Competitor uses varied hashtags across content
+  - Broader topic coverage
+  - Example: Brand uses 30+ hashtags to reach different audiences
+
+**Example**:
+```python
+>>> total = 28
+>>> determine_hashtag_strategy_type(total)
+"Diversified"  # 28 > 20
+
+>>> total = 15
+>>> determine_hashtag_strategy_type(total)
+"Focused"  # 15 <= 20
+```
+
+**Display in Report**:
+```
+Strategy Type: Diversified (28 hashtags across content)
+```
+
+**Note**: This is a simple threshold-based classification. The threshold of 20 is based on typical TikTok hashtag usage patterns where most accounts use 10-15 core hashtags, while diversified strategies employ 25-40+ hashtags.
+
+---
+
+#### 0.6.4: Report 4 (Multi-Competitor → Client) Inline Calculations
+
+**Extraction Script**: `extract_multi_competitor_data.py`
+
+**Status**: To be documented
+
+---
+
 ### Section 3: Data Extraction Scripts (3.25 days)
 
 | # | Task | Owner | Effort | Notes |
 |---|------|-------|--------|-------|
-| 3.1 | Build `extract_creator_data.py` + QR generation | Developer | 1.25 days | Stage 7 → 9 creator datasets + 18 QR code images |
-| 3.2 | Build `extract_client_data.py` | Developer | 1 day | Stages 1,6,7 → client dashboard data (Google Sheets) |
-| 3.3 | Build `extract_competitor_data.py` | Developer | 1 day | Competitor analysis → benchmarking data (Google Sheets) |
+| 3.1 | Build `extract_creator_data.py` + QR generation | Developer | 1.25 days | Report 2: Hashtag → Creator (3 formulas + 6 QR codes) |
+| 3.2 | Build `extract_client_data.py` | Developer | 1 day | Report 1: Hashtag → Client (no QR codes) |
+| 3.3 | Build `extract_competitor_data.py` + QR generation | Developer | 0.5 days | Report 3: Single Competitor → Client (1 QR code) |
+| 3.4 | Build `extract_multi_competitor_data.py` + QR generation | Developer | 0.5 days | Report 4: Multi-Competitor → Client (1 QR code per competitor) |
 
-**QR Code Addition** (from Issue 1 resolution):
-- Task 3.1 now includes QR code generation (+0.25 days effort)
-- Generates 2 QR codes per formula (18 total per hashtag: 9 formulas × 2 codes)
-- Maps Stage 2 video URLs (top/bottom cluster) to Stage 7 formulas
-- Uses Python `qrcode` library to generate PNG files
-- Output: `{hashtag}_{bucket}_{formula}_top.png` and `_bottom.png`
+**Total Effort**: 3.25 days (unchanged - Task 3.3 split into two 0.5-day tasks)
+
+**QR Code Generation Summary**:
+- **Report 1**: No QR codes (executive dashboard only)
+- **Report 2**: 6 QR codes per hashtag (2 per formula: top/bottom performer × 3 formulas)
+- **Report 3**: 1 QR code per competitor (top performer video example)
+- **Report 4**: 1 QR code per competitor (varies: 2-5 competitors = 2-5 QR codes)
+- **Implementation**: Python `qrcode` library (free, BSD license)
+- **Tracking**: Direct TikTok URLs (no tracking service, simplest for MVP)
+- **Format**: PNG images, ~5KB each, 1" × 1" size for PDF templates
 
 **Script Requirements**:
-- **Input**: JSON files from Stages 1, 6, 7 (existing outputs)
-- **Output**: ✅ **Google Sheets** with clearly labeled sections and data fields
-- **Google Sheets API**: Use `gspread` or `google-sheets-python-api` for sheet creation
-- **Sheet Structure**: One sheet per report type, with formatted headers and data rows
+- **Input**: JSON files from Stages 1, 6, 7 (existing RumiAI ML pipeline outputs)
+- **Output**: ✅ **Excel files (.xlsx)** with clearly labeled sections and data fields
+- **Excel Library**: Use `pandas` + `openpyxl` for Excel generation
+- **Sheet Structure**: Single tab per report, two-column format (Field Name | Value)
 - **Error handling**: Clear error messages if JSON missing/malformed
 - **CLI interface**: Simple command-line invocation
+
+**Data Validation** (Decision: Alternative A - Minimal Validation):
+- **Success/Failure only**: Scripts print completion status and output paths
+- **No automatic checks**: No validation of data quality, ranges, or completeness
+- **Manual review**: User opens Excel to verify accuracy (10-15 min per report)
+- **Rationale**: Simplest for MVP, avoids complexity, user review step already planned in workflow
+
+**Console Output Pattern**:
+```bash
+$ python extract_creator_data.py --client acme --hashtag nutrition
+
+Running extraction for hashtag: #nutrition
+Processing 3 winning buckets...
+Generating 6 QR codes...
+
+✓ Extraction complete
+  Excel: /data/clients/acme/hashtags/nutrition/top_contrastive/nutrition_creator_data.xlsx
+  QR codes: 6 generated in qr_codes/
+```
+
+**Error Handling** (will cause script to exit with error):
+- Missing JSON files (e.g., `winner_analysis.json` not found)
+- Malformed JSON (cannot parse)
+- File write permissions (cannot create Excel or QR codes)
+- Missing required fields in JSON (e.g., `top_3_buckets` array empty)
+
+---
+
+#### 3.0: CLI Design & Script Architecture
+
+**Decision**: ✅ **Script-Based Architecture (Alternative A)**
+
+**Rationale**:
+1. **Clarity for MVP**: Explicit script names make it immediately clear which report type you're generating, reducing errors during manual onboarding workflow
+2. **Matches mental model**: 4 distinct report types (different audiences, structures) → 4 distinct scripts
+3. **Code reuse via imports**: Shared functions live in Section 0.5/0.6, imported by all scripts
+4. **Future-proof**: New report types = new scripts, without touching existing ones
+5. **Documentation clarity**: Onboarding workflow tables can reference named scripts
+
+**Architecture**:
+
+```
+Stage 8 Extraction Scripts (NEW - Post-processing layer)
+├── extract_client_data.py          → Report 1: Hashtag → Client
+├── extract_creator_data.py         → Report 2: Hashtag → Creator
+├── extract_competitor_data.py      → Report 3: Single Competitor
+├── extract_multi_competitor_data.py → Report 4: Multi-Competitor
+└── report_utils.py                 → Shared functions from Section 0.5/0.6
+
+RumiAI ML Pipeline (EXISTING - Unchanged)
+└── rumiai_runner.py / rumiai_ml_batch.py → Stages 1-7 analysis
+```
+
+**Important**: Stage 8 extraction scripts are **separate** from the RumiAI ML pipeline CLI. They consume RumiAI's JSON outputs but do not modify the ML pipeline architecture.
+
+---
+
+**Script Mapping Table**:
+
+| Script Name | Report Type | Template Ref | CLI Example | Output |
+|-------------|-------------|--------------|-------------|--------|
+| `extract_client_data.py` | Report 1: Hashtag → Client | Stage8MVP_Reports.md §1 | `python extract_client_data.py --client acme --hashtag nutrition` | Excel file (1 tab: all pages) |
+| `extract_creator_data.py` | Report 2: Hashtag → Creator | Stage8MVP_Reports.md §2 | `python extract_creator_data.py --client acme --hashtag nutrition` | Excel file (3 tabs: 1 per formula) + 6 QR codes |
+| `extract_competitor_data.py` | Report 3: Single Competitor | Stage8MVP_Reports.md §3 | `python extract_competitor_data.py --client acme --competitor drinkpoppi` | Excel file (1 tab: all pages) |
+| `extract_multi_competitor_data.py` | Report 4: Multi-Competitor | Stage8MVP_Reports.md §4 | `python extract_multi_competitor_data.py --client acme --competitors drinkpoppi,vitalproteins,nike` | Excel file (1 tab: all pages) |
+
+---
+
+**Shared Functions Architecture**:
+
+All scripts import from `report_utils.py` module containing Section 0.5/0.6 functions:
+
+**Section 0.5 Functions** (Qualitative Data Processing):
+- `aggregate_content_classifications()` - Aggregate Stage 2.7 classifications
+- `get_top_n_from_field()` - Extract Top N items from aggregated data
+- `select_qr_code_videos()` - Select top/bottom videos for QR codes
+- `extract_hashtag_analysis()` - Extract hashtag patterns across buckets
+- `extract_mention_analysis()` - Extract @mention patterns for content sourcing
+- `calculate_engagement_metrics()` - Calculate real engagement rates from metadata
+- `get_visual_direction()` - Categorize visual framing (close-up, medium, wide)
+- `calculate_proof_metrics_bucket_scoped()` - Compare cluster performance within bucket
+
+**Section 0.6 Functions** (Inline Calculations):
+- Avg views per bucket formatting (K/M suffix)
+- Star ratings (5★ to 3★ based on engagement + views)
+- Coverage percentage (top 3 buckets as % of total)
+- Market leader identification (composite score)
+- Bucket distribution percentages
+- High-volume bucket markers (>20% threshold)
+- And ~20 other inline calculations
+
+**Scripts are thin orchestration layers** that:
+1. Parse CLI arguments
+2. Build file paths from arguments (e.g., `/data/clients/{client}/hashtags/{hashtag}/...`)
+3. Call shared functions in correct order for specific report structure
+4. Format output following Stage8MVP_Reports.md template specifications
+5. Write to Google Sheets with appropriate tabs/sections
+6. Save output URL reference file
+
+---
+
+**Common CLI Parameters**:
+
+**Required for all scripts**:
+```bash
+--client <client_id>       # Example: acme, rippleos
+```
+
+**Hashtag scripts only** (Reports 1 & 2):
+```bash
+--hashtag <target>         # Example: nutrition, vitamin
+--mode <mode>              # Optional, default: top (options: top, recent)
+--strategy <strategy>      # Optional, default: contrastive (options: contrastive, engagement)
+```
+
+**Competitor scripts only** (Reports 3 & 4):
+```bash
+# Report 3 (single):
+--competitor <handle>      # Example: drinkpoppi (no @ symbol)
+
+# Report 4 (multi):
+--competitors <list>       # Example: drinkpoppi,vitalproteins,nike (comma-separated, 2-5 competitors)
+```
+
+---
+
+**Workflow Example**:
+
+```bash
+# Step 1: Run RumiAI ML Pipeline (existing system - Stages 1-7)
+python rumiai_runner.py --client acme --hashtag nutrition --stages 1-7
+
+# Outputs JSON files:
+# - /data/clients/acme/hashtags/nutrition/top_contrastive/winner_analysis.json
+# - /data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s/selected_videos.json
+# - /data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s/ml_analysis/kmeans_analysis.json
+# - /data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s/ml_analysis/llm/winning_formulas.json
+# - etc.
+
+# Step 2: Extract Report Data (new Stage 8 system)
+python extract_client_data.py --client acme --hashtag nutrition
+
+# Reads JSON files from Step 1
+# Calls Section 0.5/0.6 functions
+# Outputs: nutrition_client_data.xlsx
+```
+
+---
+
+#### 3.0.1: Output Format & Designer Workflow
+
+**Decision**: ✅ **Excel Files with Single-Tab Structure (Alternative B)**
+
+**Rationale**:
+1. **Simplicity for MVP**: No Google API setup, no authentication, no external dependencies
+2. **Bug minimization**: Script generates files from scratch (no template dependencies that can break)
+3. **Offline workflow**: Designer can work without internet connection
+4. **Familiar tooling**: Most designers already have Excel/LibreOffice
+5. **Implementation speed**: ~15 lines of code vs ~50 for template-based approach
+
+**Architecture**: Scripts generate Excel files from scratch (no pre-existing template files)
+
+---
+
+**Excel File Structure**:
+
+**Single tab per report** with two-column format:
+
+```
+Column A: Field Name (UPPERCASE_WITH_UNDERSCORES)
+Column B: Value (extracted data)
+```
+
+**Section dividers** for page/section organization:
+
+```
+| Field Name                     | Value                    |
+|================================|==========================|
+| PAGE_1_SCALE_OF_ANALYSIS       |                          |
+|================================|==========================|
+|                                |                          |
+| HASHTAG                        | #nutrition               |
+| ANALYSIS_PERIOD                | Past 2-3 months          |
+| TOTAL_VIDEOS                   | 1826                     |
+| BUCKET_1_NAME                  | 18-33s                   |
+| BUCKET_1_PCT                   | 43                       |
+| BUCKET_2_NAME                  | 13-18s                   |
+| BUCKET_2_PCT                   | 12                       |
+| BUCKET_3_NAME                  | 60-90s                   |
+| BUCKET_3_PCT                   | 11                       |
+| TOP_PERFORMERS_COUNT           | 88                       |
+| BOTTOM_PERFORMERS_COUNT        | 23                       |
+|                                |                          |
+|================================|==========================|
+| PAGE_2_HASHTAG_INTELLIGENCE    |                          |
+|================================|==========================|
+|                                |                          |
+| BUCKET_0_3S_PCT                | 8                        |
+| BUCKET_3_9S_PCT                | 12                       |
+| BUCKET_9_13S_PCT               | 15                       |
+| ...                            | ...                      |
+```
+
+**Formatting**:
+- **Plain text only** (no colors, bold, borders for MVP simplicity)
+- **Empty rows** between sections for visual separation
+- **Section headers** in Field Name column with equals signs
+
+**Field Naming Convention**: `UPPERCASE_WITH_UNDERSCORES`
+- **Why**: Easy to spot as placeholders when designer manually searches in PDF templates
+- **Examples**: `HASHTAG`, `TOTAL_VIDEOS`, `BUCKET_1_NAME`, `AVG_VIEWS_BUCKET_1`
+- **Multi-item fields**: Use numbered suffixes (e.g., `KEYWORD_1`, `KEYWORD_2`, `KEYWORD_3`)
+
+---
+
+**Multi-Value Field Structure** (Decision: Alternative A - Flat List with Numbered Suffixes):
+
+All fields are single-cell values in Column B. Multi-value fields (lists, arrays) use numbered suffixes.
+
+**Rationale**:
+1. **Simplest implementation**: Sequential row generation, no conditional logic for tables
+2. **Consistent workflow**: Designer always copies from Column B (never selects multiple cells)
+3. **No special cases**: Same two-column pattern throughout entire Excel file
+4. **Fewer bugs**: ~20 lines of code vs ~50+ for grouped/table formats
+
+**Examples**:
+
+**Top 3 Keywords** (3 rows):
+```
+| KEYWORD_1         | #guthealth           |
+| KEYWORD_2         | #protein             |
+| KEYWORD_3         | #antiinflammatory    |
+```
+
+**Top 3 Winning Buckets with Performance Data** (12 rows):
+```
+| BUCKET_1_NAME     | 18-33s               |
+| BUCKET_1_PCT      | 43                   |
+| BUCKET_1_AVG_VIEWS| 490K                 |
+| BUCKET_1_AVG_ENG  | 1.4                  |
+|                   |                      |
+| BUCKET_2_NAME     | 13-18s               |
+| BUCKET_2_PCT      | 12                   |
+| BUCKET_2_AVG_VIEWS| 520K                 |
+| BUCKET_2_AVG_ENG  | 1.2                  |
+|                   |                      |
+| BUCKET_3_NAME     | 60-90s               |
+| BUCKET_3_PCT      | 11                   |
+| BUCKET_3_AVG_VIEWS| 310K                 |
+| BUCKET_3_AVG_ENG  | 1.3                  |
+```
+
+**Top 5 Pain Points** (5 rows):
+```
+| PAIN_POINT_1      | Bloating             |
+| PAIN_POINT_2      | Low Energy           |
+| PAIN_POINT_3      | Weight Loss          |
+| PAIN_POINT_4      | Gut Health           |
+| PAIN_POINT_5      | Brain Fog            |
+```
+
+**Pattern**:
+- Single items: `FIELD_NAME | value`
+- Lists of N items: `FIELD_NAME_1 | value1`, `FIELD_NAME_2 | value2`, ..., `FIELD_NAME_N | valueN`
+- Complex objects (e.g., buckets with multiple properties): `BUCKET_1_PROPERTY`, `BUCKET_2_PROPERTY`, etc.
+- Empty rows between major groups for visual separation (optional)
+
+**Section Header Granularity**:
+
+**Page-level dividers** (required):
+```
+|================================|==========================|
+| PAGE_1_SCALE_OF_ANALYSIS       |                          |
+|================================|==========================|
+```
+
+**Subsection dividers** (optional, use sparingly ~5-8 per report):
+```
+| --- Header Section ---         |                          |
+| --- Top Keywords ---           |                          |
+| --- Winning Buckets ---        |                          |
+```
+
+**Guidelines**:
+- Use page dividers for every PDF page break
+- Use subsection dividers only for major conceptual groups (not every field cluster)
+- Keep subsection labels short and descriptive
+- Add empty row after subsection divider before first field
+
+---
+
+**Designer Workflow** (Manual Population - No Automation for MVP):
+
+1. **Run extraction script** to generate populated Excel file
+   ```bash
+   python extract_client_data.py --client acme --hashtag nutrition
+   # Output: /data/clients/acme/hashtags/nutrition/top_contrastive/nutrition_client_data.xlsx
+   ```
+
+2. **Review data in Excel** (10-15 min)
+   - Check for missing values
+   - Verify numbers make sense
+   - Edit if needed (Excel is editable)
+
+3. **Open PDF template** (InDesign, Illustrator, Figma, etc.)
+
+4. **Manual copy-paste workflow**:
+   - Locate field in template (e.g., page shows "{{HASHTAG}} Analysis")
+   - Find field in Excel (search for `HASHTAG` in Column A)
+   - Copy value from Column B (`#nutrition`)
+   - Paste into template, replacing `{{HASHTAG}}`
+   - Repeat for all fields
+
+5. **Export PDF** when complete
+
+**Time estimate** (from Stage8MVP.md workflow tables):
+- Review Excel: 10-15 min
+- Populate template: 20 min (Report 1) to 3 hrs (Report 2 - 9 formulas)
+- Export PDF: 2-5 min
+
+---
+
+**Report-Specific Output Files**:
+
+| Report Type | Output File Name | Structure |
+|-------------|------------------|-----------|
+| Report 1: Hashtag → Client | `{hashtag}_client_data.xlsx` | Single tab: ~50 fields across 3 pages |
+| Report 2: Hashtag → Creator | `{hashtag}_creator_data.xlsx` | 3 tabs (1 per winning bucket formula): ~40 fields per tab across 2 pages |
+| Report 3: Single Competitor | `{competitor}_analysis_data.xlsx` | Single tab: ~60 fields across 3 pages |
+| Report 4: Multi-Competitor | `multi_competitor_{N}comp_data.xlsx` | Single tab: ~80+ fields across 4 pages (varies by N competitors) |
+
+**Note**: Report 2 uses **3 tabs in one Excel file** (one per winning bucket formula), making it easy for designer to navigate between the 3 creator PDF templates.
+
+---
+
+**Implementation Libraries**:
+
+```python
+# Required packages
+import pandas as pd  # DataFrame manipulation
+import openpyxl      # Excel file writing (pandas dependency)
+
+# Basic implementation pattern
+data = {
+    'Field Name': ['HASHTAG', 'TOTAL_VIDEOS', 'BUCKET_1_NAME', ...],
+    'Value': ['#nutrition', 1826, '18-33s', ...]
+}
+df = pd.DataFrame(data)
+df.to_excel('nutrition_client_data.xlsx', sheet_name='Report_Data', index=False)
+```
+
+**No external dependencies**: Both `pandas` and `openpyxl` are standard Python data science libraries, already used in RumiAI pipeline.
+
+---
+
+**Why Not Google Sheets?** (Comparison)
+
+| Aspect | Google Sheets | Excel (Chosen) |
+|--------|---------------|----------------|
+| Setup | Requires Google API credentials, OAuth flow | No setup - just write file |
+| Script complexity | ~50 lines (auth + API calls) | ~15 lines (pandas.to_excel) |
+| Designer access | Needs Google account, share links | Opens file directly |
+| Review/Edit | Online, any device | Desktop app |
+| Dependencies | `gspread` or `google-api-python-client` | `pandas` + `openpyxl` (already installed) |
+| Bugs | API rate limits, auth token expiry | None |
+
+**Decision**: Excel is simpler, more reliable, and faster to implement for MVP.
 
 ---
 
@@ -3073,10 +5033,45 @@ python extract_creator_data.py --client acme --hashtag nutrition --mode top --st
 **Output**: Google Sheet created with URL logged to console and saved to:
 `/data/clients/acme/hashtags/nutrition/top_engagement/extracted_creator_reports_sheet_url.txt`
 
-**Google Sheet Structure**:
-- **Sheet Name**: "nutrition_creator_reports"
-- **9 tabs**: One per formula (Formula_1_18-33s, Formula_2_18-33s, ..., Formula_9_60-90s)
-- **Each tab structure**: Sections as rows with labeled headers (Pattern Name, The Proof, Contrastive Analysis, etc.)
+**Excel Structure**:
+- **File Name**: `nutrition_creator_data.xlsx`
+- **3 tabs**: One per winning bucket formula (Formula_18-33s, Formula_13-18s, Formula_60-90s)
+- **Each tab structure**: Two-column format (Field Name | Value) with ~40 fields across 2 pages
+
+**QR Code Generation**:
+- **6 QR codes total** per hashtag (2 per formula: top + bottom performer)
+- **Output directory**: `qr_codes/` subfolder (keeps images separate from Excel)
+- **File naming**: `{hashtag}_{bucket}_top.png`, `{hashtag}_{bucket}_bottom.png`
+- **Example**: `nutrition_18-33s_top.png`, `nutrition_18-33s_bottom.png`, ...
+- **Video selection**: Highest view count from top_performers (top QR) and bottom_performers (bottom QR)
+- **URL source**: `selected_videos.json` → `webVideoUrl` field
+- **QR encoding**: Direct TikTok URLs (no tracking, simplest for MVP)
+- **Library**: Python `qrcode[pil]` (free, BSD license)
+
+**Output Location**:
+```
+/data/clients/acme/hashtags/nutrition/top_contrastive/
+├── nutrition_creator_data.xlsx
+└── qr_codes/
+    ├── nutrition_18-33s_top.png
+    ├── nutrition_18-33s_bottom.png
+    ├── nutrition_13-18s_top.png
+    ├── nutrition_13-18s_bottom.png
+    ├── nutrition_60-90s_top.png
+    └── nutrition_60-90s_bottom.png
+```
+
+**Excel includes QR metadata per formula tab**:
+```
+| QR_CODE_TOP_FILE       | nutrition_18-33s_top.png           |
+| QR_CODE_TOP_URL        | https://www.tiktok.com/@user/...   |
+| QR_CODE_TOP_VIEWS      | 620K                               |
+| QR_CODE_BOTTOM_FILE    | nutrition_18-33s_bottom.png        |
+| QR_CODE_BOTTOM_URL     | https://www.tiktok.com/@user/...   |
+| QR_CODE_BOTTOM_VIEWS   | 95K                                |
+```
+
+**Designer workflow**: Open Excel tab → See QR filenames → Open `qr_codes/` folder → Drag 2 QR images into PDF template
 
 ---
 
@@ -3136,19 +5131,20 @@ python extract_client_data.py --client acme --hashtag nutrition --mode top --str
 
 #### 3.3: `extract_competitor_data.py`
 
-**Purpose**: Extract competitor benchmarking data for single or comparison reports
+**Purpose**: Extract single competitor deep dive analysis data (Report 3: Single Competitor → Client)
 
-**Engagement Metrics**: Uses `calculate_engagement_metrics()` (Section 0.5.5) to calculate real engagement rates from Apify metadata for both competitor and client videos
+**Report Type**: Report 3 from Stage8MVP_Reports.md Section 3
+
+**Engagement Metrics**: Uses `calculate_engagement_metrics()` (Section 0.5.5) to calculate real engagement rates from Apify metadata
 
 **Input**:
-- Competitor Stage 7 `winning_formulas.json`
-- Competitor Stage 6 ML analysis JSONs
 - Competitor Stage 1 `winner_analysis.json` (bucket distribution)
-- Competitor Stage 2 metadata (`views`, `likes`, `comments`, `shares`, `saves`) for engagement calculation
-- Competitor metadata (handle, posting frequency, top hashtags)
-- Client baseline data (for benchmarking)
+- Competitor Stage 2 `selected_videos.json` (video metadata including `views`, `likes`, `comments`, `shares`, `saves`, hashtags, @mentions)
+- Competitor Stage 2.7 `content_analysis` (content categories, hook strategies, pain points, keywords)
+- Competitor Stage 6 ML analysis JSONs
+- Competitor Stage 7 `winning_formulas.json`
 
-**Output Format (Single Competitor)**:
+**Output Format**:
 ```
 === COMPETITOR OVERVIEW ===
 Competitor Handle: [@rival_brand]
@@ -3202,70 +5198,146 @@ Client Top Hashtags:
 
 Insight: [Competitor diversifies hashtags more, client over-indexes on #nutrition]
 
---- OPPORTUNITIES ---
-Gap 1: [Competitor dominates 18-33s bucket - client should invest here]
-Gap 2: [Competitor uses shock hooks effectively - client lacks this pattern]
-Gap 3: [Competitor hashtag diversification strategy outperforms client focus]
 ```
 
-**Output Format (Comparison Report - Multi-Competitor)**:
-```
-=== MULTI-COMPETITOR COMPARISON ===
-Client Baseline: [@acme_nutrition]
-Competitors Analyzed: [@rival_brand, @competitor2, @competitor3]
-
---- PERFORMANCE LEADERBOARD ---
-Rank 1: [@rival_brand] - [450K avg views, 6.2% engagement]
-Rank 2: [@competitor2] - [410K avg views, 5.8% engagement]
-Rank 3: [@acme_nutrition] - [320K avg views, 4.8% engagement] ← CLIENT
-Rank 4: [@competitor3] - [280K avg views, 4.1% engagement]
-
---- BUCKET STRATEGY COMPARISON ---
-                    | Client  | Rival   | Comp2   | Comp3   |
---------------------|---------|---------|---------|---------|
-Top Bucket          | 13-18s  | 18-33s  | 18-33s  | 13-18s  |
-% in Top Bucket     | 28%     | 35%     | 40%     | 25%     |
-Top Bucket Avg Views| 520K    | 480K    | 510K    | 390K    |
-
-Insight: [Rival and Comp2 dominate 18-33s with high volume - client should shift focus]
-
---- CREATIVE FORMULA COMPARISON ---
-Best Performer Overall: [@rival_brand - The Ingredient Shock Hook (8.1% engagement)]
-Client Best Formula: [The Question Hook Formula (5.2% engagement)]
-Gap: [Client's best formula underperforms market leader by 2.9 percentage points]
-
---- HASHTAG STRATEGY COMPARISON ---
-Most Diverse: [@rival_brand (uses 12 hashtags regularly)]
-Least Diverse: [@acme_nutrition (uses 5 hashtags regularly)]
-Recommendation: [Expand hashtag portfolio to reach broader audience]
-
---- KEY TAKEAWAYS ---
-1. [Client ranks 3rd out of 4 in performance - 41% gap vs leader]
-2. [Shift content focus to 18-33s bucket (where top 2 competitors dominate)]
-3. [Adopt shock hook formula similar to @rival_brand's approach]
-4. [Diversify hashtag strategy - currently too narrow]
-```
+**For detailed report template structure and dynamic field mappings, see:**
+→ `Stage8MVP_Reports.md` Section "3. Handle/Single Competitor → Client (Deep Dive Report)"
 
 **CLI Usage**:
 ```bash
-# Single competitor
-python extract_competitor_data.py --client acme --competitor rival_brand
-
-# Comparison (multiple competitors)
-python extract_competitor_data.py --client acme --competitors rival_brand,competitor2,competitor3
+python extract_competitor_data.py --client acme --competitor drinkpoppi
 ```
 
-**Output**: Google Sheets created with URLs logged to console and saved to:
-- Single: `/data/clients/acme/competitors/rival_brand/top_engagement/extracted_competitor_sheet_url.txt`
-- Comparison: `/data/clients/acme/competitors/comparison_sheet_url_2025-01-28.txt`
+**Excel Structure**:
+- **File Name**: `drinkpoppi_analysis_data.xlsx`
+- **1 tab**: Single tab with all pages/sections (two-column format)
+- **Structure**: ~60 fields across 3 pages matching Stage8MVP_Reports.md Section 3
 
-**Google Sheet Structure (Single)**:
-- **Sheet Name**: "rival_brand_vs_acme"
-- **1 tab**: Single sheet with sections as rows (Competitor Overview, Performance Benchmarking, Creative Patterns, Hashtag Strategy, Opportunities)
+**QR Code Generation**:
+- **1 QR code** (competitor's top performing video)
+- **Output directory**: `qr_codes/` subfolder
+- **File naming**: `{competitor}_top.png`
+- **Example**: `drinkpoppi_top.png`
+- **Video selection**: Highest view count from competitor's winning bucket top_performers
+- **URL source**: `selected_videos.json` → `webVideoUrl` field
+- **QR encoding**: Direct TikTok URL (no tracking)
 
-**Google Sheet Structure (Comparison)**:
-- **Sheet Name**: "acme_competitor_comparison"
-- **1 tab**: Single sheet with comparison tables (Performance Leaderboard, Bucket Strategy Comparison, Formula Comparison, Hashtag Strategy, Key Takeaways)
+**Output Location**:
+```
+/data/clients/acme/competitors/drinkpoppi/
+├── drinkpoppi_analysis_data.xlsx
+└── qr_codes/
+    └── drinkpoppi_top.png
+```
+
+**Excel includes QR metadata**:
+```
+| QR_CODE_FILE          | drinkpoppi_top.png                 |
+| QR_CODE_URL           | https://www.tiktok.com/@user/...   |
+| QR_CODE_VIEWS         | 820K                               |
+| QR_CODE_ENGAGEMENT    | 1.5                                |
+| QR_CODE_DURATION      | 45s                                |
+| QR_CODE_BUCKET        | 33-60s                             |
+```
+
+---
+
+#### 3.4: `extract_multi_competitor_data.py`
+
+**Purpose**: Extract multi-competitor market intelligence data (Report 4: Multi-Competitor → Client)
+
+**Report Type**: Report 4 from Stage8MVP_Reports.md Section 4
+
+**Scope**: Pure market intelligence (no client comparison) - analyzes 2-5 competitors
+
+**Engagement Metrics**: Uses `calculate_engagement_metrics()` (Section 0.5.5) to calculate real engagement rates from Apify metadata
+
+**Input** (per competitor):
+- Competitor Stage 1 `winner_analysis.json` (bucket distribution)
+- Competitor Stage 2 `selected_videos.json` (video metadata including `views`, `likes`, `comments`, `shares`, `saves`, hashtags, @mentions)
+- Competitor Stage 2.7 `content_analysis` (content categories, hook strategies, pain points, keywords)
+- Competitor Stage 6 ML analysis JSONs
+- Competitor Stage 7 `winning_formulas.json`
+
+**Output Format**:
+
+Google Sheet with 4 tabs containing data for multi-competitor market intelligence:
+
+**Tab 1: Page_1_Market_Overview**
+- Performance Rankings table (all competitors sorted by composite score)
+- Market leader identification
+- Analysis scope per competitor
+
+**Tab 2: Page_2_Content_Strategy**
+- Bucket distribution matrix (8 buckets × N competitors)
+- Performance by duration matrix (winning buckets × N competitors)
+- Posting frequency comparison
+- Market patterns per bucket
+
+**Tab 3: Page_3_Creative_Intelligence**
+- Content DNA (top 2 content categories per bucket per competitor)
+- Execution Playbook (top 2 hook strategies, CTAs, pain points, keywords per bucket)
+- Hashtag strategy comparison
+- Caption strategy comparison
+- Content sourcing strategy
+
+**Tab 4: Page_4_Visual_Examples**
+- QR codes (1 per competitor - top performing video)
+- Video stats (views, engagement, duration, formula name)
+- Key pattern elements per video
+
+**For detailed report template structure and dynamic field mappings, see:**
+→ `Stage8MVP_Reports.md` Section "4. Handle/Multiple Competitor → Client (Market Intelligence Report)"
+
+**CLI Usage**:
+```bash
+python extract_multi_competitor_data.py --client acme --competitors drinkpoppi,vitalproteins,nike
+```
+
+**Excel Structure**:
+- **File Name**: `multi_competitor_3comp_data.xlsx`
+- **1 tab**: Single tab with all pages/sections (two-column format)
+- **Structure**: ~80+ fields across 4 pages (varies by number of competitors)
+
+**QR Code Generation**:
+- **1 QR code per competitor** (varies: 2-5 competitors = 2-5 QR codes)
+- **Output directory**: `qr_codes/` subfolder
+- **File naming**: `{competitor}_top.png`
+- **Example**: `drinkpoppi_top.png`, `vitalproteins_top.png`, `nike_top.png`
+- **Video selection**: Highest view count from each competitor's winning bucket top_performers
+- **URL source**: `selected_videos.json` → `webVideoUrl` field per competitor
+- **QR encoding**: Direct TikTok URLs (no tracking)
+
+**Output Location**:
+```
+/data/clients/acme/competitors/
+├── multi_competitor_3comp_data.xlsx
+└── qr_codes/
+    ├── drinkpoppi_top.png
+    ├── vitalproteins_top.png
+    └── nike_top.png
+```
+
+**Excel includes QR metadata per competitor**:
+```
+| COMPETITOR_1_NAME            | @drinkpoppi                        |
+| COMPETITOR_1_QR_FILE         | drinkpoppi_top.png                 |
+| COMPETITOR_1_QR_URL          | https://www.tiktok.com/@user/...   |
+| COMPETITOR_1_QR_VIEWS        | 820K                               |
+| COMPETITOR_1_QR_ENGAGEMENT   | 1.5                                |
+|                              |                                    |
+| COMPETITOR_2_NAME            | @vitalproteins                     |
+| COMPETITOR_2_QR_FILE         | vitalproteins_top.png              |
+| COMPETITOR_2_QR_URL          | https://www.tiktok.com/@user/...   |
+| COMPETITOR_2_QR_VIEWS        | 720K                               |
+| COMPETITOR_2_QR_ENGAGEMENT   | 1.4                                |
+|                              |                                    |
+| COMPETITOR_3_NAME            | @nike                              |
+| COMPETITOR_3_QR_FILE         | nike_top.png                       |
+| COMPETITOR_3_QR_URL          | https://www.tiktok.com/@user/...   |
+| COMPETITOR_3_QR_VIEWS        | 650K                               |
+| COMPETITOR_3_QR_ENGAGEMENT   | 1.3                                |
+```
 
 ---
 

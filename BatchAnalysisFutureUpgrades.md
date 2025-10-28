@@ -15,9 +15,10 @@ _right now its only for top 3 winning_
 #### Reporting Tables - Full Bucket Data Obtention
 Currently you report top 3 buckets of videos and engagement rating because you do not collect data on the "losing" buckets.
 
-You could collect this data to have richer tables. 
+You could collect this data to have richer tables in Reporting
 
-#### Stage 8 (perhaps)
+#### Specific Analysis of CREATED content
+_not sure if stage 8_
 Analysis of the non-reposted content, and the structure of that content 
 
 #### Content Analysis 
@@ -36,5 +37,9 @@ Option 2: Study hashtag classifications per segment and via Python, cross refere
 
 Pros: No need to mess with LLM Prompt and Stage 7. This seems doable...
 ```
+#### Content Analysis Qualitative CTA 
+ContentAnalysisCHILDTI.md → Update prompt to include CTA
+
+
 
 ## P2

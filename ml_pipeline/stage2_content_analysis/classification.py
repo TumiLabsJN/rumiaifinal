@@ -26,6 +26,95 @@ from .cost_tracking import log_estimated_cost, log_actual_cost
 
 logger = logging.getLogger(__name__)
 
+# Module-level stats for tracking extraction behavior
+_extraction_stats = {"clean_responses": 0, "cleaned_responses": 0, "total": 0}
+
+
+def extract_json(response_text: str, video_id: str = None) -> Dict[str, Any]:
+    """
+    Extract JSON from API response that may contain extra content.
+
+    Handles:
+    - Markdown code fences (```json ... ```)
+    - Extra text before/after JSON
+    - Whitespace issues
+
+    Args:
+        response_text: Raw text from API response
+        video_id: Optional video ID for debug logging
+
+    Returns:
+        dict: Parsed JSON object
+
+    Raises:
+        ValueError: If no valid JSON found or JSON is malformed
+    """
+    original_text = response_text
+    text = response_text.strip()
+
+    # Step 1: Strip markdown code fences
+    if text.startswith('```'):
+        # Handle ```json or just ```
+        text = text[3:].lstrip()
+        if text.startswith('json'):
+            text = text[4:].lstrip()
+
+    if text.endswith('```'):
+        text = text[:-3].rstrip()
+
+    text = text.strip()
+
+    # Step 2: Find JSON boundaries
+    first_brace = text.find('{')
+    last_brace = text.rfind('}')
+
+    if first_brace == -1 or last_brace == -1:
+        # Log the failure case for debugging
+        logger.error(
+            f"No JSON braces found in response for {video_id}. "
+            f"Response preview: {original_text[:200]}..."
+        )
+        raise ValueError("No valid JSON braces found in response")
+
+    if last_brace <= first_brace:
+        logger.error(
+            f"Invalid brace order for {video_id}: first={first_brace}, last={last_brace}"
+        )
+        raise ValueError("Invalid JSON brace positions")
+
+    # Step 3: Extract JSON block
+    json_text = text[first_brace:last_brace + 1]
+
+    # Step 4: Attempt to parse
+    try:
+        parsed = json.loads(json_text)
+
+        # Track extraction stats
+        _extraction_stats["total"] += 1
+        if len(json_text) < len(text):
+            _extraction_stats["cleaned_responses"] += 1
+            # Log if we extracted extra content (for monitoring)
+            extra_before = text[:first_brace].strip()
+            extra_after = text[last_brace + 1:].strip()
+            if extra_before or extra_after:
+                logger.debug(
+                    f"Extracted JSON for {video_id}, removed extra content. "
+                    f"Before: {len(extra_before)} chars, After: {len(extra_after)} chars"
+                )
+        else:
+            _extraction_stats["clean_responses"] += 1
+
+        return parsed
+
+    except json.JSONDecodeError as e:
+        # JSON extraction found braces but content is malformed
+        # Log more context for debugging
+        logger.error(
+            f"Extracted text is not valid JSON for {video_id}: {str(e)}. "
+            f"Extracted: {json_text[:300]}..."
+        )
+        raise ValueError(f"Extracted text is not valid JSON: {str(e)}")
+
 
 def classify_video_llm(
     video_id: str,
@@ -289,8 +378,18 @@ Your classifications feed Stage 7 contrastive analysis - accuracy is critical.
             # Source: ContentAnalysisCHILDTI.md Section 4.6.4
             log_actual_cost(response, "haiku", start_time)
 
-            # Step 2.2: Parse response
-            classification = json.loads(response.content[0].text)
+            # Step 2.2: Parse response with robust extraction
+            response_text = response.content[0].text
+
+            # Optional debug logging (only if DEBUG level enabled)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    f"Raw API response for {video_id} ({len(response_text)} chars): "
+                    f"{response_text[:500]}..."
+                )
+
+            # Extract and parse JSON (handles markdown fences and extra content)
+            classification = extract_json(response_text, video_id)
 
             # Step 2.3: Validate output schema before returning
             validate_classification_output(classification)
@@ -469,7 +568,14 @@ def classify_all_videos_sequential(
             failed_ids.append(video_id)
             logger.error(f"❌ Failed {i+1}/{len(remaining_videos)}: {video_id} - {str(e)}")
 
-    # Step 3: Return results
+    # Step 3: Log extraction stats
+    if _extraction_stats["total"] > 0:
+        logger.info(
+            f"📊 Extraction stats: {_extraction_stats['cleaned_responses']}/{_extraction_stats['total']} "
+            f"responses needed cleaning ({_extraction_stats['cleaned_responses'] / _extraction_stats['total'] * 100:.1f}%)"
+        )
+
+    # Step 4: Return results
     total_completed = completed + (len(checkpoint["completed"]) if checkpoint else 0)
     return {
         "completed": total_completed,
@@ -556,7 +662,14 @@ def classify_all_videos_parallel(
                 failed_ids.append(video_id)
                 logger.error(f"❌ Failed classification: {video_id} - {str(e)}")
 
-    # Step 4: Return results
+    # Step 4: Log extraction stats
+    if _extraction_stats["total"] > 0:
+        logger.info(
+            f"📊 Extraction stats: {_extraction_stats['cleaned_responses']}/{_extraction_stats['total']} "
+            f"responses needed cleaning ({_extraction_stats['cleaned_responses'] / _extraction_stats['total'] * 100:.1f}%)"
+        )
+
+    # Step 5: Return results
     total_completed = completed + (len(checkpoint["completed"]) if checkpoint else 0)
     return {
         "completed": total_completed,

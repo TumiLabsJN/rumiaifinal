@@ -49,11 +49,13 @@ This context fundamentally changes bug classification. We must distinguish betwe
 
 **Buckets Analyzed**: 3 (bucket_13-18s, bucket_18-33s, bucket_60-90s)
 
+**Bugs Fixed**:
+1. ✅ **Bug #1**: Percentage calculation error (HIGH) - **FIXED 2025-10-27**
+2. ✅ **Bug #4**: Unit ambiguity in recommendations (LOW) - **FIXED 2025-10-28**
+3. ✅ **Bug #6**: Invalid gap values producing impossible negatives (MEDIUM) - **FIXED (date TBD)**
+
 **Confirmed Bugs Requiring Fixes**:
-1. 🔴 **Bug #1**: Percentage calculation error (HIGH)
-2. 🟡 **Bug #6**: Invalid gap values producing impossible negatives (MEDIUM)
-3. 🟡 **Bug #2**: Missing cross-window patterns (MEDIUM)
-4. 🟠 **Bug #4**: Unit ambiguity in recommendations (LOW)
+1. 🟡 **Bug #2**: Missing cross-window patterns (MEDIUM)
 
 **Data Characteristics (Expected Behavior)**:
 1. ✅ **Issue #5**: 100% path fragmentation → **CORRECT** for trending hashtag + low sample
@@ -61,10 +63,11 @@ This context fundamentally changes bug classification. We must distinguish betwe
 
 ---
 
-## 🔴 BUG #1: Percentage Calculation Error
+## ✅ BUG #1: Percentage Calculation Error (FIXED)
 **Severity**: HIGH
-**Status**: CONFIRMED
+**Status**: ✅ **FIXED** (2025-10-27)
 **Lines Affected**: `winning_formulas.json:15, 74`
+**Fix Applied**: See `S7B1Fix.md` for implementation details
 
 ### Issue Description
 Cluster path percentages are mathematically incorrect, using wrong denominator for frequency calculations.
@@ -195,6 +198,26 @@ CRITICAL: Percentage Calculation
 - DO NOT recalculate percentages - use provided percentage values EXACTLY
 """
 ```
+
+### ✅ Fix Summary (Applied 2025-10-27)
+
+**Root Cause Confirmed**: Line 439 used `len(cluster_paths)` which counted unique paths (27) instead of actual videos (47)
+
+**Fix Implemented**: Modified `extract_cluster_paths()` to return tuple `(cluster_paths, total_videos_analyzed)`
+
+**Code Changes**:
+- `stage7_llm_analysis.py:596` - Updated function signature to return tuple
+- `stage7_llm_analysis.py:670` - Return both cluster_paths and total_videos_analyzed
+- `stage7_llm_analysis.py:428` - Updated caller to unpack tuple
+
+**Verification Results**:
+| Bucket | Before | After | K-Means Total | Status |
+|--------|--------|-------|---------------|--------|
+| 13-18s | 13 ❌ | 22 ✅ | 22 | FIXED |
+| 18-33s | 27 ❌ | 47 ✅ | 47 | FIXED |
+| 60-90s | 32 ❌ | 35 ✅ | 35 | FIXED |
+
+**Details**: See `S7B1.md` for investigation log and `S7B1Fix.md` for implementation details.
 
 ---
 
@@ -506,10 +529,11 @@ if len(synthesis['creative_reports']) < 3:
 
 ---
 
-## 🟠 BUG #4: Unit Ambiguity in Step-by-Step Templates
+## ✅ BUG #4: Unit Ambiguity in Step-by-Step Templates (FIXED)
 **Severity**: LOW
-**Status**: CONFIRMED
+**Status**: ✅ **FIXED** (2025-10-28)
 **Lines Affected**: `winning_formulas.json:54, 56-59, 113-118`
+**Fix Applied**: See `S7B4.md` for implementation details
 
 ### Issue Description
 Numeric recommendations use normalized values [0, 1] without specifying units, making them unactionable for creators.
@@ -542,7 +566,32 @@ Numeric recommendations use normalized values [0, 1] without specifying units, m
 # Stage 7 receives normalized values but doesn't denormalize
 ```
 
-### Impact Assessment
+### Fix Summary (2025-10-28)
+
+**Implementation**: Denormalization layer added to Stage 7 Phase 1 prompt building
+**Files Modified**:
+- `ml_pipeline/stage7_llm_analysis/stage7_prompts.py` (+230 lines)
+- `ml_pipeline/stage7_llm_analysis/stage7_llm_analysis.py` (1 line)
+
+**Solution**: Load MinMaxScalers from Stage 4, reverse log1p + MinMaxScaler transformations, format with units
+
+**Before Fix**:
+```json
+"step_by_step_template": [
+  "Hook: minimal cuts (0.03 scene_count), extended scene duration (0.97)"
+]
+```
+
+**After Fix**:
+```json
+"step_by_step_template": [
+  "Hook: minimal cuts (1 scene), extended scene duration (2.8 seconds)"
+]
+```
+
+**Verification**: Tested with bucket_18-33s/hook - centroids show raw values with units (2 scenes, 8 people, 2.8 sec)
+
+### Impact Assessment (Pre-Fix)
 1. **Low Actionability**: Creators can't implement "shortest_scene: 0.97" without knowing units
 2. **Support Burden**: Users will request clarification ("What does 0.58 mean?")
 3. **Reduced Adoption**: Ambiguous recommendations reduce trust in system
@@ -1040,16 +1089,21 @@ assert top_avg >= 0 and bottom_avg >= 0, f"Averages must be non-negative: top={t
 
 ## Priority & Effort Estimation (Revised)
 
+### Bugs Fixed
+
+| Bug | Severity | Impact | Time Spent | Status | Buckets Affected |
+|-----|----------|--------|------------|--------|------------------|
+| #1: Percentage Calculation | HIGH | Scenario + confidence errors | ~30 mins | ✅ **FIXED** 2025-10-27 | ALL 3 |
+
 ### Confirmed Bugs Requiring Fixes
 
 | Bug | Severity | Impact | Effort | Priority | Buckets Affected |
 |-----|----------|--------|--------|----------|------------------|
-| #1: Percentage Calculation | HIGH | Scenario + confidence errors | 2-4 hours | P0 (Immediate) | 18-33s |
 | #6: Invalid Gap Values | MEDIUM | Impossible negative values | 2-4 hours | P1 (Next Sprint) | 13-18s |
 | #2: Missing Cross-Window | MEDIUM | Missing temporal insights | 8-16 hours | P1 (Next Sprint) | ALL 3 |
 | #4: Unit Ambiguity | LOW | User confusion | 6-8 hours | P2 (Backlog) | 18-33s |
 
-**Total Estimated Effort for Bug Fixes**: 18-32 hours (1 sprint)
+**Total Estimated Effort for Remaining Bugs**: 16-28 hours (1 sprint)
 
 ### Data Characteristics (Enhancements, Not Bugs)
 
