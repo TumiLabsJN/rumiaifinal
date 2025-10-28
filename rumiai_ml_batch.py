@@ -364,30 +364,31 @@ def validate_stage7_outputs(bucket_path: str, bucket: str) -> None:
             assert 'clusters' in data, f"{window}_analysis.json missing 'clusters' field"
             assert len(data['clusters']) == 3, f"{window}_analysis.json must have exactly 3 clusters"
 
-    # Validate Phase 2 synthesis output
-    synthesis_file = os.path.join(llm_output_dir, "synthesis.json")
-    assert os.path.exists(synthesis_file), \
-        "Stage 7 Phase 2 output missing: synthesis.json"
+    # Validate Phase 2 winning_formulas output
+    winning_formulas_file = os.path.join(llm_output_dir, "winning_formulas.json")
+    assert os.path.exists(winning_formulas_file), \
+        "Stage 7 Phase 2 output missing: winning_formulas.json"
 
-    with open(synthesis_file, 'r') as f:
-        synthesis = json.load(f)
-        assert 'winning_formulas' in synthesis, "synthesis.json missing 'winning_formulas'"
-        assert 'scenario' in synthesis, "synthesis.json missing 'scenario' field"
+    with open(winning_formulas_file, 'r') as f:
+        winning_formulas = json.load(f)
+        assert 'creative_reports' in winning_formulas, "winning_formulas.json missing 'creative_reports'"
+        assert 'bucket' in winning_formulas, "winning_formulas.json missing 'bucket' field"
+        # Note: 'scenario' field removed - scenario is internal logic only, not saved to output
 
     # Validate complete analysis (combined output)
-    complete_file = os.path.join(llm_output_dir, "complete_analysis.json")
+    complete_file = os.path.join(llm_output_dir, f"complete_analysis_{bucket}.json")
     assert os.path.exists(complete_file), \
-        "Stage 7 complete analysis output missing: complete_analysis.json"
+        f"Stage 7 complete analysis output missing: complete_analysis_{bucket}.json"
 
     with open(complete_file, 'r') as f:
         complete = json.load(f)
         assert 'phase1_window_analyses' in complete
-        assert 'phase2_synthesis' in complete
+        assert 'phase2_winning_formulas' in complete
         assert 'bucket' in complete
         assert complete['bucket'] == bucket
 
     logger = logging.getLogger(__name__)
-    logger.info(f"✓ Stage 7 outputs validated for bucket {bucket} (Phase 1: {len(window_types)} windows, Phase 2: synthesis, Complete: 1 file)")
+    logger.info(f"✓ Stage 7 outputs validated for bucket {bucket} (Phase 1: {len(window_types)} windows, Phase 2: winning_formulas, Complete: 1 file)")
 
 
 def handle_stage7_error(error: Exception, bucket_path: str) -> None:
@@ -462,15 +463,14 @@ def cleanup_stage7_partial_outputs(bucket_path: str) -> None:
 
     # List of output files to clean up (all Phase 1 + Phase 2 outputs)
     partial_files = [
-        "synthesis.json",
-        "complete_analysis.json",
+        "winning_formulas.json",
         ".phase1_status.json"
     ]
 
-    # Add window-specific files (variable count based on bucket)
+    # Add all *_analysis.json files (includes window analyses and complete_analysis_{bucket}.json)
     try:
         for filename in os.listdir(llm_output_dir):
-            if filename.endswith("_analysis.json") and filename != "complete_analysis.json":
+            if filename.endswith("_analysis.json"):
                 partial_files.append(filename)
     except Exception:
         pass
@@ -1718,10 +1718,10 @@ def main():
             try:
                 # Check if Stage 7 outputs already exist
                 llm_output_dir = bucket_path / "ml_analysis/llm"
-                complete_analysis_file = llm_output_dir / "complete_analysis.json"
+                complete_analysis_file = llm_output_dir / f"complete_analysis_{bucket_name}.json"
 
                 if complete_analysis_file.exists():
-                    logger.info(f"Bucket {bucket_name}: Stage 7 already complete (complete_analysis.json found)")
+                    logger.info(f"Bucket {bucket_name}: Stage 7 already complete (complete_analysis_{bucket_name}.json found)")
                     print(f"✓ Bucket {bucket_name}: LLM analysis already complete (skipping)")
 
                     # Count existing output files for summary
