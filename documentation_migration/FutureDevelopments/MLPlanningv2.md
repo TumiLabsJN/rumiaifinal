@@ -1503,25 +1503,111 @@ for feature in BASE_FEATURES:
 
 ### 3.2: Bucket-Specific Feature Counts
 
-**Output Feature Counts by Bucket** (Actual RumiAI values):
+**Output Feature Counts by Bucket**:
 
-| Bucket | Middle Segments | Middle Type | Total Windows | Base Features × Windows | Metadata | **Total Features** |
-|--------|-----------------|-------------|---------------|-------------------------|----------|-------------------|
-| 0-3s | 0 (null) | N/A | 1 (hook only) | 21 × 1 = 21 | 3 | **24** |
-| 3-9s | 0 (null) | N/A | 2 | 21 × 2 = 42 | 3 | **45** |
-| 9-13s | 3 | Aggregated | 3 | 21 × 3 = 63 | 3 | **66** |
-| 13-18s | 3 | Aggregated | 3 | 21 × 3 = 63 | 3 | **66** |
-| 18-33s | 4 | Separate | 6 | 21 × 6 = 126 | 3 | **129** |
-| 33-60s | 5 | Separate | 7 | 21 × 7 = 147 | 3 | **150** |
-| 60-90s | 5 | Separate | 7 | 21 × 7 = 147 | 3 | **150** |
-| 90-120s | 5 | Separate | 7 | 21 × 7 = 147 | 3 | **150** |
+Stage 3 produces bucket-specific feature counts defined in `config/bucket_definitions.py::get_stage3_expected_feature_count()`. This function serves as the **single source of truth** for Stage 3 output schema.
 
-**Note**:
-- **Base features**: 21 features per window (see Section 3.1 for complete list)
+**Column Composition** (all buckets):
+- **Base Features**: 21 features × N windows (N = 1-7 depending on bucket)
 - **Metadata**: 3 fields (video_id, create_time, gender)
-- **Middle Type**: "Aggregated" means middle segments combined into single middle_aggregate window (see Section 3.1.1)
+- **Cross-Window Features**: 0-5 derived features (see Section 3.3.1)
+  - 0-3s: 0 features (single window)
+  - 3-9s: 3 features (consistency, variance, progression)
+  - 9-13s+: 5 features (adds energy deltas)
+- **Label**: 1 field (is_top_performer) for ML training target
 
-### 3.3: Create Aggregated CSV
+**Formula**: `Total = (21 × window_count) + 3 + cross_window_features + 1`
+
+**Examples**:
+- **0-3s**: (21×1) + 3 + 0 + 1 = **25 features**
+- **3-9s**: (21×2) + 3 + 3 + 1 = **49 features**
+- **18-33s**: (21×6) + 3 + 5 + 1 = **135 features**
+- **33-60s**: (21×7) + 3 + 5 + 1 = **156 features**
+
+**For complete bucket definitions**: See `config/bucket_definitions.py`
+
+**Critical Pipeline Contract**: Stage 4 validates input using `get_stage3_expected_feature_count(bucket)` to ensure schema consistency. Cross-window features and is_top_performer label must exist for all downstream stages.
+
+### 3.3.1: Cross-Window Feature Generation
+
+**Purpose**: Derive features that capture relationships between temporal windows (e.g., energy progression, pacing consistency)
+
+**Bucket-Specific Output**:
+- **0-3s**: 0 features (single window, no comparisons possible)
+- **3-9s**: 3 features (consistency, variance, progression)
+- **9-13s+**: 5 features (adds energy deltas between sections)
+
+**Features Created** (bucket-dependent):
+
+| Feature | Buckets | Formula | Purpose |
+|---------|---------|---------|---------|
+| `xwin_eye_contact_consistency` | 3-9s+ | `std(eye_contact_rate across all windows)` | Gaze stability |
+| `xwin_word_density_std` | 3-9s+ | `std(word_count across all windows)` | Pacing variability |
+| `xwin_energy_progression_slope` | 3-9s+ | `polyfit(window_index, energy_level, 1)[0]` | Energy trend |
+| `xwin_hook_to_middle_energy` | 9-13s+ | `mean(middle_energy) - hook_energy` | Hook→Middle shift |
+| `xwin_middle_to_closing_energy` | 9-13s+ | `closing_energy - mean(middle_energy)` | Middle→Closing shift |
+
+**Why xwin_ Prefix?**: Prevents collision with window-specific features (`hook_*`, `middle_*`, `closing_*`)
+
+**Example for Bucket 18-33s** (5 cross-window features):
+```python
+# After extracting base temporal features (126 features)
+# Add cross-window features
+
+xwin_features = {}
+
+# 1. Energy deltas (requires middle segments)
+middle_energy_cols = [f'middle_{i}_energy_level' for i in range(1, 5)]
+xwin_features['xwin_hook_to_middle_energy'] = df[middle_energy_cols].mean(axis=1) - df['hook_energy_level']
+xwin_features['xwin_middle_to_closing_energy'] = df['closing_energy_level'] - df[middle_energy_cols].mean(axis=1)
+
+# 2. Consistency metrics (all windows)
+eye_contact_cols = ['hook_eye_contact_rate'] + [f'middle_{i}_eye_contact_rate' for i in range(1, 5)] + ['closing_eye_contact_rate']
+xwin_features['xwin_eye_contact_consistency'] = df[eye_contact_cols].std(axis=1)
+
+# 3. Variance metrics
+word_count_cols = ['hook_word_count'] + [f'middle_{i}_word_count' for i in range(1, 5)] + ['closing_word_count']
+xwin_features['xwin_word_density_std'] = df[word_count_cols].std(axis=1)
+
+# 4. Progression slope
+energy_cols = ['hook_energy_level'] + [f'middle_{i}_energy_level' for i in range(1, 5)] + ['closing_energy_level']
+xwin_features['xwin_energy_progression_slope'] = df[energy_cols].apply(
+    lambda row: np.polyfit(range(len(row)), row.values, 1)[0], axis=1
+)
+```
+
+**Why This Matters**: These features enable ML models to detect temporal patterns (energy builds, consistency maintenance) that predict virality across video sections.
+
+### 3.3.2: Target Label Assignment
+
+**Purpose**: Add `is_top_performer` binary label for ML training
+
+**Strategy-Dependent Behavior**:
+
+**Contrastive Mode** (--strategy contrastive):
+- Reads `selected_videos.json` from Stage 1
+- Top 80% videos = 1 (high performers)
+- Bottom 20% videos = 0 (low performers)
+
+**Top Mode** (--strategy top):
+- All videos = 1 (no contrastive comparison)
+
+**Example**:
+```python
+# Load Stage 1 selection metadata
+with open(f'{bucket_path}/selected_videos.json') as f:
+    selection_data = json.load(f)
+
+# Map video IDs to labels
+performer_map = {v['video_id']: (1 if v['is_top'] else 0) for v in selection_data['videos']}
+
+# Assign to dataframe
+df['is_top_performer'] = df['video_id'].map(performer_map)
+```
+
+**Fallback**: If `selected_videos.json` missing, uses index-based labeling (first 80% = top performers)
+
+### 3.4: Create Aggregated CSV
 ```python
 import pandas as pd
 
@@ -1529,12 +1615,12 @@ df = pd.DataFrame(aggregated_rows)
 df.to_csv("ml_analysis/aggregated_features.csv", index=False)
 
 # Example output shape for bucket 18-33s with N=100 videos
-# Shape: (100 videos, 129 features)
+# Shape: (100 videos, 135 features)
 ```
 
 **Output**: `ml_analysis/aggregated_features.csv`
-- Shape: **(N videos, 24-150 features)** depending on bucket (see table in Section 3.2)
-- Example columns for **bucket 18-33s** (129 features total):
+- Shape: **(N videos, 25-156 features)** depending on bucket (includes cross-window features + label, see Section 3.2)
+- Example columns for **bucket 18-33s** (135 features total):
   - Metadata: `video_id`, `create_time`, `gender` (3 features)
   - Hook: `hook_scene_count`, `hook_eye_contact_rate`, `hook_word_count`, ... (21 features)
   - Middle 1: `middle_1_scene_count`, `middle_1_eye_contact_rate`, ... (21 features)
@@ -1542,11 +1628,15 @@ df.to_csv("ml_analysis/aggregated_features.csv", index=False)
   - Middle 3: `middle_3_scene_count`, `middle_3_eye_contact_rate`, ... (21 features)
   - Middle 4: `middle_4_scene_count`, `middle_4_eye_contact_rate`, ... (21 features)
   - Closing: `closing_scene_count`, `closing_energy_level`, ... (21 features)
-- Example columns for **bucket 9-13s** (66 features total):
+  - Cross-Window: `xwin_hook_to_middle_energy`, `xwin_eye_contact_consistency`, ... (5 features)
+  - Label: `is_top_performer` (1 feature)
+- Example columns for **bucket 9-13s** (72 features total):
   - Metadata: `video_id`, `create_time`, `gender` (3 features)
   - Hook: `hook_scene_count`, `hook_eye_contact_rate`, ... (21 features)
   - Middle Aggregate: `middle_aggregate_scene_count`, `middle_aggregate_eye_contact_rate`, ... (21 features)
   - Closing: `closing_scene_count`, `closing_energy_level`, ... (21 features)
+  - Cross-Window: `xwin_hook_to_middle_energy`, `xwin_eye_contact_consistency`, ... (5 features)
+  - Label: `is_top_performer` (1 feature)
 
 **Collinearity Prevention**:
 ```python
@@ -1566,13 +1656,13 @@ total_scene_count = hook_scene_count + middle_1_scene_count + ... + closing_scen
 
 ---
 
-## Stage 3.4: Review CSV Generation
+## Stage 3.5: Review CSV Generation
 
 **Purpose**: Generate video_review.csv for manual outlier investigation in Excel
 
-**Why Separate from Stage 3.1-3.3?**:
-- Stage 3.1-3.3 generates `aggregated_features.csv` (ML training input, ~65-215 columns)
-- Stage 3.4 generates `video_review.csv` (human review, same features + url column)
+**Why Separate from Stage 3.1-3.4?**:
+- Stage 3.1-3.4 generates `aggregated_features.csv` (ML training input, ~25-156 columns)
+- Stage 3.5 generates `video_review.csv` (human review, same features + url column)
 - Review CSV is OPTIONAL - deleting it doesn't impact ML pipeline
 
 **Input**:
@@ -1589,7 +1679,7 @@ total_scene_count = hook_scene_count + middle_1_scene_count + ... + closing_scen
 **Output**:
 - `bucket_{duration}/validation/video_review.csv`
 - Row count: N videos (same as aggregated_features.csv, minus videos with missing url)
-- Column count: ~67-217 columns (video_id + url + duration + all temporal features)
+- Column count: ~28-159 columns (video_id + url + duration + all temporal features + cross-window + label)
 
 **User Workflow**:
 1. Open video_review.csv in Excel
@@ -1630,7 +1720,8 @@ calculated_metadata = {
 
 **Purpose**: Transform aggregated features into three distinct formats for dual Random Forest + window-level K-Means architecture
 
-**Input**: `ml_analysis/aggregated_features.csv` (bucket-specific feature count: ~65-215 features)
+**Input**: `ml_analysis/aggregated_features.csv` from Stage 3 (includes xwin_* features + is_top_performer label, see Sections 3.3.1-3.3.2)
+- **Schema**: Reference `config.bucket_definitions.get_stage3_expected_feature_count(bucket)` for bucket-specific counts
 
 **Output Count** (varies by bucket): Reference `config.bucket_definitions.get_stage4_output_count(bucket)` for counts
 - **Formula**: `1 + 3N` files (N = window count)
@@ -1641,6 +1732,11 @@ calculated_metadata = {
 1. **Video-Level RF** (cross-window patterns)
 2. **Window-Level RF** (within-window validation)
 3. **Window-Level K-Means** (creative strategies per window)
+
+**Stage 3 → Stage 4 Contract**:
+- **Cross-window features (xwin_*)**: Created in Stage 3, validated and passed through unchanged in Stage 4
+- **Target label (is_top_performer)**: Created in Stage 3, used as-is for ML training
+- Stage 4 validates these fields exist, then applies transformations (encoding, scaling) to other features only
 
 **Process**:
 
@@ -1679,13 +1775,15 @@ df_rf_video['is_business_hours'] = ((df_rf_video['hour'] >= 9) & (df_rf_video['h
 # - middle_2_*, middle_3_*, middle_4_*
 # - closing_scene_count, closing_eye_contact_rate, closing_word_count
 
-# ===== 4. Add Target Variable (Contrastive Strategy Only) =====
-# For contrastive: Label top 80% as 1, bottom 20% as 0
-df_rf_video['is_top_performer'] = (df_rf_video.index < int(N * 0.8)).astype(int)
+# ===== 4. Cross-Window Features =====
+# Already exist from Stage 3 (xwin_* prefix) - validate presence, pass through unchanged
+# Expected: 0-5 features depending on bucket (see Section 3.3.1)
 
-# For top strategy: No target variable (descriptive analysis only)
+# ===== 5. Target Variable =====
+# Already exists from Stage 3 (is_top_performer) - validate presence, use as-is
+# Fallback: Create if missing (legacy compatibility)
 
-# ===== 5. Save Transformed Features =====
+# ===== 6. Save Transformed Features =====
 df_rf_video.to_csv("ml_analysis/rf_transformed.csv", index=False)
 
 # Output shape: (N videos, ~190 features) = 185 original + 5 temporal features
@@ -1738,6 +1836,8 @@ for window_type in ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'clo
 - `ml_analysis/closing_rf_transformed.csv` (100 videos, 22 features)
 
 **What It Captures**: Within-window feature importance - which features define a "strong hook" vs "weak hook", etc.
+
+**Note**: Window-level RF uses only 21 base features per window. Cross-window features (xwin_*) are excluded as they span multiple windows and are only used by Video-Level RF.
 
 ---
 
@@ -2305,7 +2405,9 @@ bucket_18-33s/
 **Input**:
 - Trained models (90 models total from Stage 5)
 - Transformed features (from Stage 4)
-- `ml_analysis/aggregated_features.csv` (raw features for distribution analysis)
+- `ml_analysis/aggregated_features.csv` (includes xwin features + is_top_performer from **Stage 3 Section 3.3.1-3.3.2**)
+
+**S7B2 Note**: Cross-window features (xwin_*) are available in aggregated_features.csv for distribution analysis. These features (created in **Stage 3 Section 3.3.1**) enable Stage 6 to compute distribution percentiles for temporal patterns across video sections.
 
 **Process**:
 
@@ -2321,7 +2423,8 @@ rf_analysis = {
     "bucket": bucket,
     "hashtag": hashtag,
     "video_count": N,
-    "input_features": 178,  # Video-Level RF: 129 temporal + 18 derived + 1 target (from Stage 4)
+    "input_features": 147,  # Video-Level RF: 135 Stage 3 features + 12 Stage 4 transformations (S7B2 Fix)
+                            # Includes xwin features from Stage 3, passed through Stage 4
 
     "feature_importance": [
         {
@@ -2349,7 +2452,31 @@ rf_analysis = {
                 }
             }
         },
-        # ... top 10 features (each with distribution data)
+        {
+            "feature": "xwin_energy_progression_slope",  # Cross-window feature from Stage 3 Section 3.3.1
+            "importance": 0.15,
+            "top_performer_avg": 0.12,
+            "bottom_performer_avg": -0.05,
+            "gap": 0.17,
+
+            "distribution": {
+                "thresholds": {
+                    "high": 0.08,
+                    "low": -0.02
+                },
+                "top_performers": {
+                    "high_percentage": 0.65,    # 65% show positive energy build
+                    "medium_percentage": 0.25,
+                    "low_percentage": 0.10
+                },
+                "bottom_performers": {
+                    "high_percentage": 0.15,
+                    "medium_percentage": 0.30,
+                    "low_percentage": 0.55      # 55% show negative/flat energy
+                }
+            }
+        },
+        # ... remaining features in top 10
     ],
 
     "videos": [
@@ -2421,7 +2548,9 @@ for feature_data in feature_importance_list[:10]:
 
 **Output**: `ml_analysis/rf_video_analysis.json` (~30KB)
 
-**What It Contains**: Cross-window feature importance with pattern type labels (cross_window vs single_window)
+**What It Contains**: Feature importance rankings including cross-window features (xwin_*, 0-5 features from **Stage 3 Section 3.3.1**) with pattern type labels
+
+**S7B2 Note**: Cross-window features (xwin_hook_to_middle_energy, xwin_middle_to_closing_energy, xwin_eye_contact_consistency, xwin_word_density_std, xwin_energy_progression_slope) are created in **Stage 3 Section 3.3.1**, passed through Stage 4, and analyzed here for distribution patterns.
 
 ---
 
@@ -2516,6 +2645,8 @@ for window_type in BUCKET_WINDOWS[bucket]:
 
 **What It Contains**: Top 10 features per window with importance scores, top/bottom averages, and gaps
 
+**Note**: Window-level RF analysis uses only 21 base features per window (excludes xwin features from **Stage 3 Section 3.3.1**). Cross-window features (xwin_*) only appear in Section 6.1 Video-Level RF analysis since they span multiple windows.
+
 ---
 
 ### 6.3: Window-Level K-Means Analysis JSONs
@@ -2598,6 +2729,8 @@ for window_type in BUCKET_WINDOWS[bucket]:
 - No complex pre-processing - LLM can identify defining features directly
 - Example: "Cluster 0: high eye_contact_rate (0.87), low word_count (14.2)"
 
+**Note**: K-Means analysis uses only 21 base features per window (excludes xwin features from **Stage 3 Section 3.3.1**). Cross-window features (xwin_*) only appear in Video-Level RF (Section 6.1) since they require multiple windows to compute.
+
 ---
 
 ### 6.3.1: Special Case - middle_aggregate Window (Buckets 9-13s, 13-18s)
@@ -2640,7 +2773,7 @@ For short-duration buckets (9-13s, 13-18s), middle segments are aggregated into 
 
 | JSON Type | Count | Size Each | Total Size | LLM Consumer |
 |-----------|-------|-----------|------------|--------------|
-| **Video-Level RF** | 1 | ~30KB | ~30KB | Stage 7 Phase 2 (cross-window patterns) |
+| **Video-Level RF** | 1 | ~30KB | ~30KB | Stage 7 Phase 2 (xwin features from Stage 3 Section 3.3.1) |
 | **Window-Level RF** | 6 | ~5KB | ~30KB | Stage 7 Phase 1 (feature validation) |
 | **Window-Level K-Means** | 6 | ~5KB | ~30KB | Stage 7 Phase 1 (cluster insights) |
 | **TOTAL** | **13 files** | — | **~95KB** | — |

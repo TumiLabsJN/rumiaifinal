@@ -1073,6 +1073,42 @@ Example: "Consistent energy in closing: Maintain variance ≤0.001 (avg 0.001) -
 2. If `gap < 0.10` OR `distribution == null` → Use Format B
 3. Otherwise → Use Format C
 
+**✅ CRITIQUE C2 FIX - Python Calculates Format Selection** (2025-10-29):
+
+**Issue**: Original design required LLM to perform arithmetic and choose format, creating math error risk.
+
+**Solution**: Python performs calculation and passes format instruction to LLM.
+
+**Implementation**:
+```python
+# In generate_universal_principles() - Python decides format
+if dist:
+    top_high_pct = dist['top_performers']['high_percentage'] * 100
+    bottom_high_pct = dist['bottom_performers']['high_percentage'] * 100
+    gap = feature_data.get('gap', 0)
+
+    # Python chooses format (deterministic)
+    if top_high_pct - bottom_high_pct > 10:
+        format_type = 'A'
+    elif gap < 0.10 or dist is None:
+        format_type = 'B'
+    else:
+        format_type = 'C'
+
+principles.append({
+    'feature': feature_data['feature'],
+    'format_type': format_type,  # ← Python's decision
+    # ... other fields
+})
+
+# In build_phase2_prompt() - Tell LLM which format to use
+prompt += f"**Feature {i}** (Use Format {principle['format_type']})\n"
+```
+
+**Impact**: Eliminates LLM arithmetic errors, simplifies prompt complexity.
+
+---
+
 **✅ L4 FIX - Handling Null Distribution**:
 
 Some features may have `distribution: null` (derived features without distribution data).
@@ -1364,6 +1400,112 @@ If LLM-based approach fails validation:
 
 ---
 
+## ✅ CRITIQUE C6 FIX - Production Monitoring Strategy (2025-10-29)
+
+**Issue**: Original rollback plan mentioned options but lacked concrete triggers, metrics, or automated rollback logic.
+
+**Solution**: Comprehensive monitoring plan with defined thresholds and automated safeguards.
+
+### Metrics to Track
+
+1. **Retry Rate**
+   - Metric: `retry_count / total_phase2_calls`
+   - Alert threshold: >10%
+   - Critical threshold: >20% (auto-rollback)
+   - Measurement: Per-bucket, per-client, system-wide
+
+2. **Validation Failure Rate**
+   - Metric: `validation_failures / total_phase2_calls`
+   - Alert threshold: >5%
+   - Critical threshold: >15%
+   - Measurement: By validation rule (which checks are failing)
+
+3. **API Cost**
+   - Metric: `actual_cost / expected_cost`
+   - Alert threshold: >1.5× expected
+   - Critical threshold: >2× expected
+   - Measurement: Per-bucket, per-client, daily aggregate
+
+4. **Processing Time**
+   - Metric: `phase2_duration_seconds`
+   - Alert threshold: >60s (expected ~20-30s)
+   - Critical threshold: >120s
+   - Measurement: P50, P95, P99 percentiles
+
+### Monitoring Implementation
+
+**Logging Requirements**:
+```python
+# In run_phase2_synthesis()
+logger.info(f"Phase 2 attempt {attempt}/{MAX_RETRIES+1}: started")
+logger.info(f"Phase 2 validation: {'passed' if valid else 'failed'}")
+logger.info(f"Phase 2 cost: ${cost:.3f} (retries: {retry_count})")
+logger.info(f"Phase 2 duration: {duration:.1f}s")
+
+# Metrics for monitoring system
+metrics.increment('stage7.phase2.attempts', tags=['bucket', 'client'])
+metrics.increment('stage7.phase2.validation_failures', tags=['rule_type'])
+metrics.histogram('stage7.phase2.cost', cost, tags=['bucket'])
+metrics.histogram('stage7.phase2.duration', duration, tags=['bucket'])
+```
+
+### Rollback Triggers
+
+**Automatic Rollback** (no human intervention):
+- Retry rate >20% for 10 consecutive buckets
+- Average cost >2× expected for 5 consecutive clients
+- P95 processing time >120s for 1 hour
+
+**Manual Rollback** (alert sent to team):
+- Retry rate 10-20% sustained for 1 hour
+- Validation failures >5% by specific rule
+- Cost 1.5-2× expected sustained for 1 day
+
+### Rollback Procedure
+
+**Step 1: Detect Issue** (automated)
+```python
+if retry_rate > 0.20 and consecutive_high_retry_buckets >= 10:
+    logger.critical("AUTO-ROLLBACK TRIGGERED: Retry rate exceeded threshold")
+    feature_flag.set('stage7_llm_transformation', False)
+    alert_team("Stage 7 auto-rollback triggered - retry rate >20%")
+```
+
+**Step 2: Revert to Previous Version**
+- Feature flag toggles to fallback behavior
+- Option A: Use previous version of functions (keep old code path)
+- Option B: Use Python-only formatting (if implemented as fallback)
+- Option C: Return to raw data temporarily (emergency only)
+
+**Step 3: Root Cause Analysis** (manual)
+- Export failed prompt examples
+- Check which validation rules are failing
+- Review LLM output samples
+- Determine if issue is prompt, data, or LLM API
+
+**Step 4: Fix and Redeploy**
+- Address root cause
+- Test on 10 representative buckets
+- Gradual rollout with monitoring
+
+### Gradual Rollout Strategy
+
+**Phase 1: Canary** (first 48 hours)
+- Enable for 10% of clients (randomly selected)
+- Monitor metrics closely
+- Rollback if any critical threshold hit
+
+**Phase 2: Staged** (days 3-7)
+- 25% → 50% → 75% over 5 days
+- Each stage: monitor for 24h before increasing
+
+**Phase 3: Full** (day 8+)
+- 100% of clients
+- Continue monitoring for 2 weeks
+- Document lessons learned
+
+---
+
 ## Related Documentation
 
 - **MLPlanningv2.md** (lines 3248-3262): Expected supplementary insights format
@@ -1572,6 +1714,43 @@ def validate_supplementary_insights_schema(synthesis: dict, rf_video_data: dict)
                         f"universal_principles[{i}] contains snake_case pattern(s): {suspicious_matches}. "
                         f"This may be a raw feature name. Use plain English only."
                     )
+
+        # ✅ CRITIQUE C3 FIX - Whitelist Validation Enhancement (2025-10-29)
+        # Additional check: Enforce EXACT translations from dictionary (stricter than cross-reference)
+
+        ALLOWED_TRANSLATIONS = {
+            'hook_energy_max': 'High energy delivery in opening',
+            'closing_pitch_scatter_ratio': 'Dynamic vocal pitch variation in closing',
+            'hook_longest_scene': 'Extended opening scene duration',
+            'xwin_eye_contact_consistency': 'Consistent eye contact throughout video',
+            'xwin_middle_to_closing_energy': 'Energy build from middle to closing',
+            # ... (complete translation dictionary)
+        }
+
+        # For each feature in input, verify output uses EXACT translation
+        for feature_name in input_features:
+            expected_translation = ALLOWED_TRANSLATIONS.get(feature_name)
+            if expected_translation:
+                # Check if ANY principle uses this feature
+                feature_found = False
+                for i, principle in enumerate(principles):
+                    if not isinstance(principle, str):
+                        continue
+
+                    if expected_translation.lower() in principle.lower():
+                        feature_found = True
+                        break
+
+                    # If raw feature appears instead of translation, error
+                    if feature_name.lower() in principle.lower():
+                        errors.append(
+                            f"universal_principles[{i}] contains raw feature '{feature_name}' "
+                            f"instead of exact translation '{expected_translation}'. "
+                            f"Must use exact phrases from translation dictionary."
+                        )
+
+        # This whitelist approach is STRICTER than the cross-reference check above
+        # Cross-reference catches raw names, whitelist ensures EXACT translations used
 
         # Check 5: At least some percentage mentions
         percentage_count = sum(1 for p in principles if isinstance(p, str) and ('%' in p or 'percentage' in p.lower()))
@@ -1909,4 +2088,700 @@ All 3 concerns have been investigated:
 
 ---
 
-**Status**: ✅ Verification Complete - Awaiting Approval to Implement
+---
+
+## 🔄 STRATEGY CHANGE: Python-Only Approach for supplementary_insights (2025-10-29)
+
+### Decision Summary
+
+After thorough critique and discussion, **we are pivoting from LLM transformation to Python-only formatting** for `supplementary_insights`.
+
+**Rationale**:
+1. **Task is mechanical, not creative**: Formatting percentages is deterministic, unlike creative_reports which genuinely needs LLM synthesis
+2. **Cost savings**: $0/year vs $6,552/year for LLM approach
+3. **Reliability**: 100% deterministic vs 95% with LLM retries
+4. **Simplicity**: No breaking changes, no complex validation
+5. **Feature structure**: Only 26 base features (compositional pattern reduces maintenance)
+
+### What Changes
+
+| Component | Original LLM Plan | New Python Plan |
+|-----------|------------------|-----------------|
+| **universal_principles** | Python generates `List[dict]` → LLM transforms → `List[str]` | Python generates `List[str]` directly |
+| **cross_window_patterns** | Python generates `List[dict]` → LLM transforms → `List[str]` | Python generates `List[str]` directly (template-based) |
+| **Breaking changes** | YES (`List[str]` → `List[dict]` → `List[str]`) | NO (keep `List[str]`) |
+| **Validation** | 3 complex validation functions + retry logic | Simple string format checks |
+| **Files modified** | 7 files | 2-3 files |
+| **Implementation time** | 8+ hours | 3 hours |
+| **Monthly cost** | $546 | $0 |
+
+---
+
+### Implementation Strategy: Python-Only Approach
+
+#### **Component 1: Feature Name Translation (Compositional Dictionary)**
+
+**26 base features + 5 window prefixes = 31 total entries**
+
+```python
+# config/feature_translations.py
+
+BASE_FEATURE_TRANSLATIONS = {
+    # Energy/Performance (4)
+    'energy_max': 'high energy delivery',
+    'energy_level': 'energy intensity',
+    'energy_variance': 'consistent energy',
+    'emotional_valence': 'emotional tone',
+
+    # Visual Composition (4)
+    'average_face_size': 'close-up framing',
+    'person_count': 'number of people visible',
+    'object_count': 'visual elements present',
+    'overlay_unique_count': 'text overlay elements',
+
+    # Eye Contact & Gaze (3)
+    'eye_contact_rate': 'direct eye contact',
+    'eye_contact_consistency': 'consistent eye contact',
+    'gaze_variance': 'consistent gaze direction',
+
+    # Audio/Speech (4)
+    'pitch_scatter_ratio': 'dynamic vocal pitch variation',
+    'word_count': 'script length',
+    'speech_coverage': 'verbal content',
+    'word_density_std': 'varied pacing of verbal content',
+
+    # Scene/Pacing (4)
+    'scene_count': 'number of scene cuts',
+    'scene_duration_variance': 'varied scene pacing',
+    'longest_scene': 'extended scene duration',
+    'shortest_scene': 'rapid scene cuts',
+
+    # Movement (1)
+    'gesture_count': 'hand gestures',
+
+    # Temporal/Progression (3)
+    'energy_progression_slope': 'energy trajectory',
+    'middle_to_closing_energy': 'energy build from middle to closing',
+    'middle_to_closing_delta': 'change from middle to closing',
+
+    # Metadata (3)
+    'hour': 'posting time',
+    'day_of_week': 'posting day',
+    'dominant_emotion_id': 'primary emotion displayed',
+}
+
+WINDOW_TRANSLATIONS = {
+    'hook': 'in opening',
+    'closing': 'in closing',
+    'xwin': 'throughout video',
+    'middle_aggregate': 'across middle segments',
+}
+
+def translate_feature_name(feature: str) -> str:
+    """Compositional translation: [window] + [base_feature]"""
+    # Parse window prefix and base feature
+    # Combine using translations
+    # Returns: "High energy delivery in opening"
+```
+
+**Maintenance**: 1 minute per new base feature (rare)
+
+---
+
+#### **Component 2: Value Interpretation (Full Semantic Dictionaries)** ✅ **APPROACH C SELECTED**
+
+**Key Decision**: Define semantic interpretations for all 26 base features
+
+**Rationale**: While percentages are useful, semantic descriptions (e.g., "close-up" vs "wide shot") are more actionable for creators than numeric values.
+
+**Challenge**: We need to define what numeric ranges mean semantically for each feature type.
+
+**Examples of the problem**:
+- `average_face_size = 0.0446` → Is this "close-up", "medium shot", or "wide shot"?
+- `eye_contact_consistency = 0.14` → Is this "consistent", "moderate", or "scattered"?
+- `energy_level = 0.057` → Is this "high energy", "moderate", or "low"?
+
+**Solution**: Create semantic interpretation dictionaries for all 26 features.
+
+```python
+# config/semantic_interpretations.py
+
+SEMANTIC_INTERPRETATIONS = {
+    'average_face_size': {
+        'metric_type': 'ratio',  # 0.0-1.0 scale (% of frame)
+        'direction': 'higher_is_closer',  # Higher value = closer to camera
+        'unit': 'proportion of frame',
+        'ranges': [
+            (0.0, 0.05, 'wide shot', 'face occupies small portion of frame'),
+            (0.05, 0.15, 'medium shot', 'face occupies moderate portion'),
+            (0.15, 0.50, 'close-up', 'face fills significant portion of frame'),
+            (0.50, 1.0, 'extreme close-up', 'face dominates entire frame')
+        ]
+    },
+
+    'eye_contact_consistency': {
+        'metric_type': 'variance',  # Standard deviation
+        'direction': 'lower_is_better',  # Lower variance = more consistent
+        'unit': 'variance',
+        'ranges': [
+            (0.0, 0.10, 'very consistent', 'maintains steady eye contact throughout'),
+            (0.10, 0.20, 'moderately consistent', 'occasional variance in gaze'),
+            (0.20, 0.40, 'inconsistent', 'significant gaze variance'),
+            (0.40, 1.0, 'scattered', 'highly variable eye contact')
+        ]
+    },
+
+    'energy_level': {
+        'metric_type': 'continuous',  # 0.0-1.0 normalized scale
+        'direction': 'higher_is_more',
+        'unit': 'normalized energy',
+        'ranges': [
+            (0.0, 0.03, 'low energy', 'calm, subdued delivery'),
+            (0.03, 0.07, 'moderate energy', 'balanced, natural delivery'),
+            (0.07, 0.12, 'high energy', 'animated, dynamic delivery'),
+            (0.12, 1.0, 'very high energy', 'intense, highly animated')
+        ]
+    },
+
+    # ========================================
+    # CATEGORY 1: VISUAL COMPOSITION (4 features) ✅ FINALIZED
+    # ========================================
+
+    'average_face_size': {
+        'metric_type': 'ratio',
+        'direction': 'higher_is_closer',
+        'unit': 'proportion of frame occupied by face',
+        'data_range': (0.034, 0.142),
+        'ranges': [
+            (0.0, 0.06, 'wide shot', 'face occupies <6% of frame'),
+            (0.06, 0.10, 'medium shot', 'face occupies 6-10% of frame'),
+            (0.10, 0.20, 'close-up', 'face occupies 10-20% of frame'),
+            (0.20, 1.0, 'extreme close-up', 'face occupies >20% of frame')
+        ],
+        'notes': 'Methodology: Domain expertise (cinematography standards) + data range. Top performers avg 0.058 (wide shot), bottom avg 0.084 (medium shot). Thresholds based on standard shot classifications adjusted for observed data.'
+    },
+
+    'person_count': {
+        'metric_type': 'count',
+        'direction': 'neutral',
+        'unit': 'number of people visible in frame',
+        'data_range': (1.0, 5.0),
+        'ranges': [
+            (0, 1.5, 'solo', 'single person on screen'),
+            (1.5, 2.5, 'duo', 'two people visible'),
+            (2.5, 5.0, 'small group', '3-5 people visible'),
+            (5.0, 100, 'large group', 'more than 5 people')
+        ],
+        'notes': 'Methodology: Semantic categories (culturally obvious). Top performers avg 3.6 (small group). Count-based with logical thresholds for solo/duo/group distinction.'
+    },
+
+    'object_count': {
+        'metric_type': 'count',
+        'direction': 'neutral',
+        'unit': 'number of detected objects/props',
+        'data_range': (2.28, 7.68),
+        'ranges': [
+            (0, 3.0, 'minimal objects', 'very few objects/props visible'),
+            (3.0, 6.0, 'moderate objects', 'balanced visual elements'),
+            (6.0, 10.0, 'many objects', 'rich visual environment'),
+            (10.0, 100, 'cluttered', 'visually dense/busy composition')
+        ],
+        'notes': 'Methodology: Data range estimation. YOLO object detection counts. Top performers avg 6.24 (many objects). Thresholds approximate quartiles but could be refined.'
+    },
+
+    'overlay_unique_count': {
+        'metric_type': 'count',
+        'direction': 'neutral',
+        'unit': 'number of unique text overlay elements',
+        'data_range': (1.0, 5.08),
+        'ranges': [
+            (0, 0.5, 'no text', 'no text overlays present'),
+            (0.5, 2.5, 'minimal text', '1-2 text elements'),
+            (2.5, 4.5, 'moderate text', '3-4 text elements'),
+            (4.5, 20, 'heavy text', '5+ text elements')
+        ],
+        'notes': 'Methodology: Data range estimation. OCR-detected text overlays. Top performers avg 2.83 (moderate text), bottom avg 5.08 (heavy text). Suggests less text may perform better.'
+    },
+
+    # ========================================
+    # REMAINING CATEGORIES (22 features) - TODO
+    # ========================================
+    # CATEGORY 2: Energy/Performance (4 features)
+    # CATEGORY 3: Audio/Speech (4 features)
+    # CATEGORY 4: Eye Contact/Gaze (3 features)
+    # CATEGORY 5: Scene/Pacing (4 features)
+    # CATEGORY 6: Movement/Temporal/Metadata (7 features)
+}
+
+def interpret_value(feature: str, value: float) -> tuple[str, str]:
+    """
+    Convert numeric value to semantic label and description.
+
+    Returns:
+        tuple[str, str]: (label, description)
+        Example: ('close-up', 'face fills significant portion of frame')
+    """
+    if feature not in SEMANTIC_INTERPRETATIONS:
+        return ('unknown', f'value: {value:.2f}')
+
+    interp = SEMANTIC_INTERPRETATIONS[feature]
+
+    # Find matching range
+    for min_val, max_val, label, description in interp['ranges']:
+        if min_val <= value < max_val:
+            return (label, description)
+
+    # Edge case: value at max boundary
+    if value >= interp['ranges'][-1][1]:
+        return (interp['ranges'][-1][2], interp['ranges'][-1][3])
+
+    return ('unknown', f'value: {value:.2f}')
+
+
+def format_universal_principle(feature_data: dict) -> str:
+    """
+    Format using semantic interpretations + percentages.
+
+    Output: "Close-up framing in opening: 72% of top performers use close-ups vs 15% use medium shots"
+    """
+    feature = feature_data['feature']
+    base_feature = extract_base_feature(feature)  # Remove window prefix
+
+    translated = translate_feature_name(feature)
+    dist = feature_data.get('distribution')
+
+    if dist:
+        top_pct = dist['top_performers']['high_percentage'] * 100
+        bottom_pct = dist['bottom_performers']['high_percentage'] * 100
+
+        # Interpret what "high" means semantically
+        threshold_high = dist['thresholds']['high']
+        label_high, desc_high = interpret_value(base_feature, threshold_high)
+
+        # Interpret top/bottom averages
+        top_avg = feature_data['top_performer_avg']
+        bottom_avg = feature_data['bottom_performer_avg']
+        label_top, _ = interpret_value(base_feature, top_avg)
+        label_bottom, _ = interpret_value(base_feature, bottom_avg)
+
+        return (
+            f"{translated}: {top_pct:.0f}% of top performers use {label_top} "
+            f"vs {bottom_pct:.0f}% of bottom (avg: {label_bottom})"
+        )
+    else:
+        # Fallback when no distribution
+        top_avg = feature_data['top_performer_avg']
+        bottom_avg = feature_data['bottom_performer_avg']
+        label_top, _ = interpret_value(base_feature, top_avg)
+        label_bottom, _ = interpret_value(base_feature, bottom_avg)
+
+        return (
+            f"{translated}: Top performers use {label_top} (avg {top_avg:.2f}) "
+            f"vs bottom use {label_bottom} (avg {bottom_avg:.2f})"
+        )
+
+# Example outputs:
+# "Face size in opening: 72% of top performers use wide shots vs 15% of bottom (avg: medium shot)"
+# "Eye contact consistency in opening: 68% of top performers maintain very consistent contact vs 29% of bottom (avg: moderately consistent)"
+# "Energy level in closing: 75% of top performers deliver high energy vs 20% of bottom (avg: moderate energy)"
+```
+
+**Why This Approach**:
+- ✅ **Most descriptive**: Uses videography/creator terminology ("close-up", "wide shot")
+- ✅ **Actionable**: Creators know exactly what to aim for
+- ✅ **Professional**: Matches industry language
+- ✅ **Comprehensive**: All 26 features get semantic labels
+
+**Trade-offs Accepted**:
+- 🟡 **8-12 hours research**: Need to define ranges for all 26 features
+- 🟡 **Subjective**: Thresholds require domain expertise and judgment
+- 🟡 **Maintenance**: New features need semantic definitions
+- 🟡 **Validation**: Need to verify ranges match reality using production data
+
+---
+
+##### **Research Guide: How to Define Semantic Ranges**
+
+**Step 1: Examine Production Data for Each Feature**
+
+```bash
+# For each feature, find actual value ranges in production data
+find /home/jorge/rumiaifinal/data -name "rf_video_analysis.json" -exec jq -r \
+  '.feature_importance[] | select(.feature | contains("average_face_size")) |
+  "\(.feature)|\(.top_performer_avg)|\(.bottom_performer_avg)|\(.distribution.thresholds.high)|\(.distribution.thresholds.low)"' {} \;
+
+# Output example:
+# hook_average_face_size|0.058|0.084|0.065|0.045
+# closing_average_face_size|0.057|0.117|0.068|0.040
+```
+
+**Step 2: Determine Metric Type**
+
+| Type | Description | Example Features |
+|------|-------------|------------------|
+| **ratio** | 0.0-1.0 scale, represents proportion | average_face_size (% of frame) |
+| **variance** | Standard deviation, lower = more consistent | energy_variance, gaze_variance |
+| **count** | Discrete integers | word_count, person_count, scene_count |
+| **continuous** | Normalized scale, higher = more | energy_level, pitch_scatter_ratio |
+| **duration** | Seconds/time | longest_scene, shortest_scene |
+
+**Step 3: Determine Direction**
+
+| Direction | Meaning | Example |
+|-----------|---------|---------|
+| `higher_is_more` | Higher value = more of trait | energy_level, word_count |
+| `lower_is_better` | Lower value = better (variance) | energy_variance, gaze_variance |
+| `higher_is_closer` | Higher value = closer proximity | average_face_size |
+| `neutral` | No clear better/worse | hour, day_of_week |
+
+**Step 4: Define Semantic Ranges (Data-Driven)**
+
+Use **quartile analysis** from production data:
+
+```python
+# Example: average_face_size analysis
+# Production data shows:
+# - Top performers: avg=0.058, range=[0.02, 0.15]
+# - Bottom performers: avg=0.084, range=[0.04, 0.20]
+
+# Define ranges based on data distribution:
+# P0-P25 (0.0-0.05): wide shot (small face)
+# P25-P50 (0.05-0.10): medium shot
+# P50-P75 (0.10-0.20): close-up
+# P75-P100 (0.20-1.0): extreme close-up
+```
+
+**Step 5: Validate with Domain Expertise**
+
+Cross-reference with industry standards:
+- **Videography**: Cinematography textbooks for shot types
+- **Audio Engineering**: Standard practices for vocal variation, energy levels
+- **Content Creation**: TikTok/creator best practices
+
+---
+
+##### **26 Features to Define (Organized by Category)**
+
+**Category 1: Visual Composition (4 features)** [~2 hours research]
+
+| Feature | Current Range (from data) | Semantic Labels Needed | Priority |
+|---------|---------------------------|------------------------|----------|
+| `average_face_size` | 0.02-0.20 | wide shot, medium shot, close-up, extreme close-up | High |
+| `person_count` | 1-5 | solo, duo, small group, large group | High |
+| `object_count` | 0-20 | minimal, few objects, moderate, cluttered | Medium |
+| `overlay_unique_count` | 0-10 | none, minimal text, moderate, heavy text | Medium |
+
+**Research approach**:
+- average_face_size: Use cinematography shot classifications
+- person_count: Straightforward (1=solo, 2=duo, 3-4=small group, 5+=large group)
+- object_count: Use visual complexity research
+- overlay_unique_count: Count-based (0=none, 1-2=minimal, 3-5=moderate, 6+=heavy)
+
+---
+
+**Category 2: Energy/Performance (4 features)** [~2 hours research]
+
+| Feature | Current Range | Semantic Labels Needed | Priority |
+|---------|---------------|------------------------|----------|
+| `energy_max` | 0.03-0.15 | low, moderate, high, very high | High |
+| `energy_level` | 0.02-0.12 | calm, balanced, animated, intense | High |
+| `energy_variance` | 0.0-0.05 | very consistent, consistent, variable | Medium |
+| `emotional_valence` | -1.0 to 1.0 | negative, neutral, positive, very positive | Medium |
+
+**Research approach**:
+- energy_max/level: Reference FEAT documentation for calibrated ranges
+- energy_variance: Use standard deviation interpretation (low=consistent)
+- emotional_valence: Already semantic (-1 to 1 scale, map to labels)
+
+---
+
+**Category 3: Audio/Speech (4 features)** [~2 hours research]
+
+| Feature | Current Range | Semantic Labels Needed | Priority |
+|---------|---------------|------------------------|----------|
+| `pitch_scatter_ratio` | 0.5-0.9 | monotone, moderate variation, dynamic, highly dynamic | High |
+| `word_count` | 0-60 | silent, brief, moderate, verbose | High |
+| `speech_coverage` | 0.0-1.0 | silent, sparse speech, balanced, continuous speech | Medium |
+| `word_density_std` | 0.0-0.5 | steady pacing, variable pacing, highly variable | Low |
+
+**Research approach**:
+- pitch_scatter_ratio: Audio engineering standards for vocal dynamics
+- word_count: TikTok average (30-40 words/30sec video)
+- speech_coverage: % of video with speech (0=silent, 1=talking entire time)
+
+---
+
+**Category 4: Eye Contact/Gaze (3 features)** [~1.5 hours research]
+
+| Feature | Current Range | Semantic Labels Needed | Priority |
+|---------|---------------|------------------------|----------|
+| `eye_contact_rate` | 0.0-1.0 | no contact, occasional, frequent, constant | High |
+| `eye_contact_consistency` | 0.0-0.5 | very consistent, consistent, variable, scattered | High |
+| `gaze_variance` | 0.0-0.3 | steady gaze, moderate variance, wandering | Medium |
+
+**Research approach**:
+- eye_contact_rate: % of frames with eye contact (straightforward percentages)
+- eye_contact_consistency: Variance measure (lower=more consistent)
+- gaze_variance: Similar to consistency
+
+---
+
+**Category 5: Scene/Pacing (4 features)** [~2 hours research]
+
+| Feature | Current Range | Semantic Labels Needed | Priority |
+|---------|---------------|------------------------|----------|
+| `scene_count` | 1-30 | static, few cuts, moderate cuts, rapid cuts | High |
+| `scene_duration_variance` | 0.0-2.0 | consistent pacing, varied pacing, chaotic | Medium |
+| `longest_scene` | 1.0-10.0s | quick cuts only, mixed, extended scenes | Medium |
+| `shortest_scene` | 0.1-2.0s | flash cuts, brief cuts, standard cuts | Low |
+
+**Research approach**:
+- scene_count: Cuts per video (normalize by duration: cuts/second)
+- Duration variance: Standard deviation of scene lengths
+- longest/shortest: Absolute values in seconds
+
+---
+
+**Category 6: Movement/Temporal/Metadata (7 features)** [~2 hours research]
+
+| Feature | Current Range | Semantic Labels Needed | Priority |
+|---------|---------------|------------------------|----------|
+| `gesture_count` | 0-50 | still, minimal gestures, moderate, highly animated | Medium |
+| `energy_progression_slope` | -0.2 to 0.2 | declining energy, steady, building energy | Medium |
+| `middle_to_closing_energy` | -0.1 to 0.1 | drops, maintains, builds | Medium |
+| `middle_to_closing_delta` | varies | (depends on feature) | Low |
+| `hour` | 0-23 | early morning, morning, afternoon, evening, night | Low |
+| `day_of_week` | 0-6 | Monday, Tuesday, ... Sunday | Low |
+| `dominant_emotion_id` | 0-7 | (FEAT emotion IDs) | Low |
+
+**Research approach**:
+- gesture_count: Gestures per second, reference body language research
+- energy_progression_slope: Positive=building, negative=declining
+- hour/day_of_week: Straightforward mapping
+- dominant_emotion_id: Map to FEAT emotion labels
+
+---
+
+##### **Data-Driven Range Definition Process**
+
+**For each feature, execute this workflow**:
+
+1. **Extract value distribution**:
+```bash
+find data -name "rf_video_analysis.json" -exec jq -r \
+  '.feature_importance[] | select(.feature=="hook_energy_level") |
+  .top_performer_avg, .bottom_performer_avg' {} \; | sort -n
+```
+
+2. **Calculate quartiles**:
+```python
+import numpy as np
+values = [0.02, 0.03, 0.05, 0.06, 0.08, 0.10, 0.12]  # From production data
+q25, q50, q75 = np.percentile(values, [25, 50, 75])
+# Define ranges: [min, q25), [q25, q50), [q50, q75), [q75, max]
+```
+
+3. **Apply domain labels**:
+```python
+# Example: energy_level
+# q25=0.03, q50=0.06, q75=0.09
+ranges = [
+    (0.0, 0.03, 'low energy', 'calm delivery'),
+    (0.03, 0.06, 'moderate energy', 'balanced delivery'),
+    (0.06, 0.09, 'high energy', 'animated delivery'),
+    (0.09, 1.0, 'very high energy', 'intense delivery')
+]
+```
+
+4. **Validate with test data**:
+```python
+# Check if ranges make sense
+test_values = [0.025, 0.055, 0.075, 0.11]
+for val in test_values:
+    label, desc = interpret_value('energy_level', val)
+    print(f"{val:.3f} → {label}")
+# Output should match intuition
+```
+
+5. **Document in semantic_interpretations.py**
+
+---
+
+##### **Template for Documenting Each Feature**
+
+```python
+'feature_name': {
+    'metric_type': 'ratio|variance|count|continuous|duration',
+    'direction': 'higher_is_more|lower_is_better|higher_is_closer|neutral',
+    'unit': 'descriptive unit (e.g., "proportion of frame", "variance", "count")',
+    'data_range': (min_observed, max_observed),  # From production data
+    'ranges': [
+        (min1, max1, 'semantic_label_1', 'creator-friendly description'),
+        (min2, max2, 'semantic_label_2', 'creator-friendly description'),
+        (min3, max3, 'semantic_label_3', 'creator-friendly description'),
+        (min4, max4, 'semantic_label_4', 'creator-friendly description'),
+    ],
+    'notes': 'Any special considerations or context'
+},
+```
+
+**Example: Complete definition**
+```python
+'average_face_size': {
+    'metric_type': 'ratio',
+    'direction': 'higher_is_closer',
+    'unit': 'proportion of frame occupied by face',
+    'data_range': (0.02, 0.20),  # From production analysis
+    'ranges': [
+        (0.0, 0.05, 'wide shot', 'face occupies <5% of frame, shows full body/environment'),
+        (0.05, 0.15, 'medium shot', 'face occupies 5-15% of frame, upper body visible'),
+        (0.15, 0.50, 'close-up', 'face occupies 15-50% of frame, fills significant portion'),
+        (0.50, 1.0, 'extreme close-up', 'face occupies >50% of frame, dominates screen')
+    ],
+    'notes': 'Based on standard cinematography shot classifications. Thresholds calibrated from top performer data (avg=0.058, mostly wide/medium shots).'
+},
+```
+
+---
+
+#### **Component 3: cross_window_patterns (Template-Based)**
+
+**Approach**: Simple template-based formatting (no LLM)
+
+```python
+def format_cross_window_pattern(pattern_data: dict) -> str:
+    """
+    Template-based formatting for temporal progressions.
+
+    Deterministic, no LLM needed.
+    """
+    feature = translate_feature_name(pattern_data['feature'])
+    direction = pattern_data['direction']
+    top_avg = pattern_data['top_avg']
+    bottom_avg = pattern_data['bottom_avg']
+
+    # Template based on direction
+    if direction == 'increase':
+        return (
+            f"{feature}: Top performers show upward trend "
+            f"({bottom_avg:.2f} → {top_avg:.2f})"
+        )
+    elif direction == 'decrease':
+        return (
+            f"{feature}: Top performers maintain lower variance "
+            f"({top_avg:.2f}) vs bottom ({bottom_avg:.2f}) for consistency"
+        )
+    else:
+        return f"{feature}: Top performers average {top_avg:.2f} vs bottom {bottom_avg:.2f}"
+
+# Example output:
+# "Consistent eye contact throughout video: Top performers maintain lower variance (0.14) vs bottom (0.22) for consistency"
+```
+
+**Alternative Considered**: Use LLM just for cross_window_patterns
+- **Cost**: $0.02 per call (vs $0 for templates)
+- **Benefit**: Slightly more natural phrasing
+- **Decision**: Templates sufficient, save the $0.02
+
+---
+
+### Updated Implementation Checklist (Approach C)
+
+**Phase 1: Research & Define Semantic Ranges** [8-12 hours]
+- [ ] **Category 1: Visual Composition** (4 features) [~2 hours]
+  - [ ] Define ranges for `average_face_size` (wide shot, medium, close-up, extreme close-up)
+  - [ ] Define ranges for `person_count` (solo, duo, small group, large group)
+  - [ ] Define ranges for `object_count` (minimal, few, moderate, cluttered)
+  - [ ] Define ranges for `overlay_unique_count` (none, minimal, moderate, heavy)
+- [ ] **Category 2: Energy/Performance** (4 features) [~2 hours]
+  - [ ] Define ranges for `energy_max` (low, moderate, high, very high)
+  - [ ] Define ranges for `energy_level` (calm, balanced, animated, intense)
+  - [ ] Define ranges for `energy_variance` (very consistent, consistent, variable)
+  - [ ] Define ranges for `emotional_valence` (negative, neutral, positive, very positive)
+- [ ] **Category 3: Audio/Speech** (4 features) [~2 hours]
+  - [ ] Define ranges for `pitch_scatter_ratio` (monotone, moderate, dynamic, highly dynamic)
+  - [ ] Define ranges for `word_count` (silent, brief, moderate, verbose)
+  - [ ] Define ranges for `speech_coverage` (silent, sparse, balanced, continuous)
+  - [ ] Define ranges for `word_density_std` (steady, variable, highly variable)
+- [ ] **Category 4: Eye Contact/Gaze** (3 features) [~1.5 hours]
+  - [ ] Define ranges for `eye_contact_rate` (none, occasional, frequent, constant)
+  - [ ] Define ranges for `eye_contact_consistency` (very consistent, consistent, variable, scattered)
+  - [ ] Define ranges for `gaze_variance` (steady, moderate, wandering)
+- [ ] **Category 5: Scene/Pacing** (4 features) [~2 hours]
+  - [ ] Define ranges for `scene_count` (static, few cuts, moderate, rapid)
+  - [ ] Define ranges for `scene_duration_variance` (consistent, varied, chaotic)
+  - [ ] Define ranges for `longest_scene` (quick cuts, mixed, extended)
+  - [ ] Define ranges for `shortest_scene` (flash, brief, standard)
+- [ ] **Category 6: Movement/Temporal/Metadata** (7 features) [~2 hours]
+  - [ ] Define ranges for `gesture_count` (still, minimal, moderate, highly animated)
+  - [ ] Define ranges for `energy_progression_slope` (declining, steady, building)
+  - [ ] Define ranges for `middle_to_closing_energy` (drops, maintains, builds)
+  - [ ] Define ranges for `middle_to_closing_delta` (varies by feature)
+  - [ ] Define mappings for `hour` (early morning, morning, afternoon, evening, night)
+  - [ ] Define mappings for `day_of_week` (Monday-Sunday)
+  - [ ] Define mappings for `dominant_emotion_id` (FEAT emotion labels)
+
+**Phase 2: Backend Implementation** [3-4 hours]
+- [ ] Create `config/feature_translations.py` with 31 compositional entries
+- [ ] Create `config/semantic_interpretations.py` with all 26 feature definitions
+- [ ] Implement `interpret_value()` function with range lookup logic
+- [ ] Implement `extract_base_feature()` helper (removes window prefix)
+- [ ] Update `generate_universal_principles()` in `stage7_preprocessing.py`
+  - [ ] Add gap filtering (threshold: 0.05)
+  - [ ] Use compositional translation for feature names
+  - [ ] Use semantic interpretation for value labels
+  - [ ] Format: "X% of top use {semantic_label} vs Y% of bottom (avg: {semantic_label})"
+  - [ ] Return `List[str]` (NO breaking change)
+- [ ] Update `generate_cross_window_patterns()` in `stage7_preprocessing.py`
+  - [ ] Use template-based formatting with semantic labels
+  - [ ] Return `List[str]` (NO breaking change)
+
+**Phase 3: Testing** [2-3 hours]
+- [ ] Create test suite for semantic interpretations
+  - [ ] Test boundary conditions for all 26 features
+  - [ ] Test edge cases (min/max values, boundary overlap)
+  - [ ] Test missing features (fallback behavior)
+- [ ] Update existing test cases for new output format
+  - [ ] Update `test_phase2_preprocessing.py` (2-3 test cases)
+  - [ ] Verify semantic labels appear in output
+  - [ ] Verify no raw numeric values in final strings
+- [ ] Add integration tests with real production data
+  - [ ] Validate ranges match actual data distributions
+  - [ ] Check for any values falling outside defined ranges
+
+**Phase 4: Validation & Integration** [1-2 hours]
+- [ ] Validate semantic ranges against real production data
+  - [ ] Run quartile analysis on all features
+  - [ ] Verify semantic labels match data distribution
+  - [ ] Adjust ranges if needed based on data
+- [ ] Run Stage 7 on test bucket with semantic interpretations
+- [ ] Manual quality review of output (creator-friendliness)
+- [ ] Compare against current raw output (improvement verification)
+
+**Total Effort**: **14-21 hours** (8-12 research + 6-9 implementation/testing)
+
+**Files Modified**: 5 files
+- `config/feature_translations.py` (NEW)
+- `config/semantic_interpretations.py` (NEW)
+- `stage7_preprocessing.py` (UPDATE)
+- `test_phase2_preprocessing.py` (UPDATE)
+- `test_semantic_interpretations.py` (NEW)
+
+**Cost**: $0/month (vs $546/month for LLM approach)
+
+---
+
+### What We ARE Doing (Approach C)
+
+1. ✅ **Python-only for supplementary_insights** (no LLM)
+2. ✅ **Keeping return types** (`List[str]` stays `List[str]` - no breaking changes)
+3. ✅ **Creating full semantic interpretation dictionaries** (26 features × 4-5 ranges each)
+4. ✅ **Using compositional feature name translation** (31 entries: 26 base + 5 windows)
+5. ✅ **Combining percentages + semantic labels** ("72% use close-ups vs 15% use medium shots")
+6. ❌ **NOT modifying stage7_prompts.py** (no LLM prompt changes)
+7. ❌ **NOT modifying stage7_llm_analysis.py** (no validation changes)
+8. ❌ **NOT adding retry logic** (deterministic = no failures)
+
+---
+
+**Status**: ✅ Strategy Pivot Complete - Python-Only Approach for supplementary_insights

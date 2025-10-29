@@ -25,6 +25,8 @@ This document provides the complete technical implementation for Stage 3: Featur
 |-----------|-------------|----------------------|-------|
 | validate_dependencies() | 2.3.1 | ✅ Complete | Lines 67-103 |
 | extract_features() | 2.3.2 | ✅ Complete | Lines 106-225, includes middle aggregation |
+| compute_cross_window_features() | 2.3.2b | ✅ Complete | Lines XXX-YYY (S7B2 Fix) |
+| add_is_top_performer_label() | 2.3.3b | ✅ Complete | Lines ZZZ-AAA (S7B2 Fix) |
 | validate_input() | 6.1 | ✅ Complete | Lines 228-288 |
 | process_bucket() | 2.3.3 | ✅ Complete | Lines 291-371 |
 | validate_output() | 6.3 | ✅ Complete | Lines 374-410 |
@@ -107,10 +109,36 @@ MIN_FEATURES = ['shortest_scene']
 MAX_FEATURES = ['longest_scene']
 CATEGORICAL_FEATURES = ['dominant_emotion_id', 'has_captions']
 
-# Expected feature counts (for validation)
+# **NEW (S7B2 Fix): Cross-window feature configuration**
+CROSS_WINDOW_FEATURES_0_3S = []  # No cross-window features (single window)
+
+CROSS_WINDOW_FEATURES_3_9S = [
+    'xwin_eye_contact_consistency',      # std(eye_contact_rate across windows)
+    'xwin_word_density_std',             # std(word_count across windows)
+    'xwin_energy_progression_slope'      # polyfit slope of energy progression
+]
+
+CROSS_WINDOW_FEATURES_9_13S_PLUS = [
+    'xwin_hook_to_middle_energy',        # mean(middle_energy) - hook_energy
+    'xwin_middle_to_closing_energy',     # closing_energy - mean(middle_energy)
+    'xwin_eye_contact_consistency',      # std(eye_contact_rate across windows)
+    'xwin_word_density_std',             # std(word_count across windows)
+    'xwin_energy_progression_slope'      # polyfit slope of energy progression
+]
+
+# Label column
+LABEL_COLUMN = 'is_top_performer'  # Binary target: 1 = top performer, 0 = bottom performer
+
+# Expected feature counts (for validation) - S7B2 UPDATE: includes cross-window + label
 EXPECTED_FEATURE_COUNTS = {
-    '0-3s': 24, '3-9s': 45, '9-13s': 66, '13-18s': 66,
-    '18-33s': 129, '33-60s': 150, '60-90s': 150, '90-120s': 150
+    '0-3s': 25,   # 21 × 1 window + 3 metadata + 0 cross-window + 1 label
+    '3-9s': 49,   # 21 × 2 windows + 3 metadata + 3 cross-window + 1 label
+    '9-13s': 72,  # 21 × 3 windows + 3 metadata + 5 cross-window + 1 label
+    '13-18s': 72, # 21 × 3 windows + 3 metadata + 5 cross-window + 1 label
+    '18-33s': 135, # 21 × 6 windows + 3 metadata + 5 cross-window + 1 label
+    '33-60s': 156, # 21 × 7 windows + 3 metadata + 5 cross-window + 1 label
+    '60-90s': 156,
+    '90-120s': 156
 }
 ```
 
@@ -218,12 +246,105 @@ if bucket != '0-3s':
         video_features[f'closing_{feature}'] = windows['closing'].get(feature)
 ```
 
-**Column Naming Convention**:
+**Cross-Window Feature Generation** (lines YYY-ZZZ) - **NEW (S7B2 Fix)**:
+```python
+# Compute cross-window features from base temporal features
+xwin_features = compute_cross_window_features(video_features, bucket)
+video_features.update(xwin_features)
+
+return video_features
+```
+
+**Integration Point**: Calls `compute_cross_window_features()` (Section 3.2b) after all base features extracted
+
+**Column Naming Convention** (S7B2 UPDATE):
 - Hook: `hook_scene_count`, `hook_word_count`, ...
 - Middle (aggregated): `middle_aggregate_scene_count`, ...
 - Middle (separate): `middle_1_scene_count`, `middle_2_scene_count`, ...
 - Closing: `closing_scene_count`, `closing_word_count`, ...
+- **Cross-window**: `xwin_hook_to_middle_energy`, `xwin_eye_contact_consistency`, ... (0-5 features, bucket-dependent)
 - Metadata: `video_id`, `create_time`, `gender`
+- **Label**: `is_top_performer` (1 column)
+
+### 3.2b compute_cross_window_features()
+
+**Purpose**: Compute derived cross-window features from base temporal features
+
+**Implementation** (lines XXX-YYY) - **NEW (S7B2 Fix)**:
+
+**Function Signature**:
+```python
+def compute_cross_window_features(video_features: dict, bucket: str) -> dict:
+    """
+    Compute cross-window derived features.
+
+    Args:
+        video_features: Dictionary with base temporal features
+        bucket: Bucket name for bucket-specific logic
+
+    Returns:
+        dict: Cross-window features (0-5 features depending on bucket)
+    """
+```
+
+**Key Implementation Logic**:
+
+**Bucket 0-3s** (0 features):
+```python
+if bucket == '0-3s':
+    return {}  # No cross-window features
+```
+
+**Bucket 3-9s** (3 features):
+```python
+elif bucket == '3-9s':
+    # Extract hook + closing values
+    energy_vals = [video_features['hook_energy_level'],
+                   video_features['closing_energy_level']]
+    eye_contact_vals = [video_features['hook_eye_contact_rate'],
+                        video_features['closing_eye_contact_rate']]
+    word_count_vals = [video_features['hook_word_count'],
+                       video_features['closing_word_count']]
+
+    # Compute consistency and progression
+    xwin_features['xwin_eye_contact_consistency'] = np.std(eye_contact_vals)
+    xwin_features['xwin_word_density_std'] = np.std(word_count_vals)
+    xwin_features['xwin_energy_progression_slope'] = np.polyfit([0, 1], energy_vals, 1)[0]
+```
+
+**Bucket 9-13s+** (5 features):
+```python
+else:
+    # 1-2. Energy deltas
+    hook_energy = video_features['hook_energy_level']
+    closing_energy = video_features['closing_energy_level']
+
+    # Calculate middle energy average
+    if bucket in ['9-13s', '13-18s']:
+        middle_energy_avg = video_features['middle_aggregate_energy_level']
+    else:
+        middle_count = BUCKET_MIDDLE_SEGMENTS[bucket]
+        middle_energy_vals = [video_features[f'middle_{i}_energy_level']
+                              for i in range(1, middle_count + 1)]
+        middle_energy_avg = np.mean(middle_energy_vals)
+
+    xwin_features['xwin_hook_to_middle_energy'] = middle_energy_avg - hook_energy
+    xwin_features['xwin_middle_to_closing_energy'] = closing_energy - middle_energy_avg
+
+    # 3-5. Consistency, variance, progression across ALL windows
+    all_energy_vals = collect_all_window_values(video_features, 'energy_level', bucket)
+    all_eye_contact_vals = collect_all_window_values(video_features, 'eye_contact_rate', bucket)
+    all_word_count_vals = collect_all_window_values(video_features, 'word_count', bucket)
+
+    xwin_features['xwin_eye_contact_consistency'] = np.std(all_eye_contact_vals)
+    xwin_features['xwin_word_density_std'] = np.std(all_word_count_vals)
+    xwin_features['xwin_energy_progression_slope'] = np.polyfit(range(len(all_energy_vals)),
+                                                                  all_energy_vals, 1)[0]
+```
+
+**Null Handling**: Returns `None` for any feature where input values are missing
+
+**Integration Point**: Called from `extract_features()` after base feature extraction (after line 224)
 
 ### 3.3 process_bucket()
 
@@ -263,6 +384,73 @@ if video_id in seen_video_ids:
     continue
 seen_video_ids.add(video_id)
 ```
+
+**Label Assignment** (lines AAA-BBB) - **NEW (S7B2 Fix)**:
+```python
+# Add is_top_performer label after DataFrame creation
+df = pd.DataFrame(aggregated_data)
+df = add_is_top_performer_label(df, bucket_path, strategy)
+
+return df, skipped_reasons
+```
+
+**Integration Point**: Calls `add_is_top_performer_label()` (Section 3.3b) after DataFrame creation
+
+### 3.3b add_is_top_performer_label()
+
+**Purpose**: Assign binary target label for ML training
+
+**Implementation** (lines ZZZ-AAA) - **NEW (S7B2 Fix)**:
+
+**Function Signature**:
+```python
+def add_is_top_performer_label(df: pd.DataFrame, bucket_path: Path, strategy: str) -> pd.DataFrame:
+    """
+    Add is_top_performer label from Stage 1 selection metadata.
+
+    Args:
+        df: Aggregated features DataFrame
+        bucket_path: Path to bucket directory
+        strategy: "contrastive" or "top" mode
+
+    Returns:
+        DataFrame with is_top_performer column added
+    """
+```
+
+**Key Implementation Logic**:
+
+**Primary Path** (selected_videos.json exists):
+```python
+selected_videos_path = bucket_path / "selected_videos.json"
+
+if selected_videos_path.exists():
+    with open(selected_videos_path) as f:
+        selection_data = json.load(f)
+
+    # Build video_id → label mapping
+    performer_map = {v['video_id']: (1 if v['is_top'] else 0)
+                     for v in selection_data['videos']}
+
+    # Map to DataFrame
+    df['is_top_performer'] = df['video_id'].map(performer_map)
+```
+
+**Fallback Path** (selected_videos.json missing):
+```python
+else:
+    logger.warning("selected_videos.json missing - using fallback labeling")
+
+    if strategy == "contrastive":
+        # Index-based: first 80% = 1, last 20% = 0
+        top_count = int(len(df) * 0.8)
+        df['is_top_performer'] = (df.index < top_count).astype(int)
+    else:
+        # "top" strategy: all = 1
+        df['is_top_performer'] = 1
+```
+
+**Integration Point**: Called from `process_bucket()` after DataFrame creation (after line 365)
 
 ### 3.4 validate_output()
 
@@ -442,13 +630,15 @@ def test_bucket_33_60s():
     # Verify
     df = pd.read_csv(csv_path)
     assert len(df) == 1  # 1 video
-    assert len(df.columns) == 150  # 21 × 7 windows + 3 metadata
+    assert len(df.columns) == 156  # 21 × 7 windows + 3 metadata + 5 cross-window + 1 label [UPDATED]
 
     # Check column naming
     assert 'hook_scene_count' in df.columns
     assert 'middle_1_scene_count' in df.columns
     assert 'middle_5_scene_count' in df.columns
     assert 'closing_scene_count' in df.columns
+    assert 'xwin_hook_to_middle_energy' in df.columns  # NEW
+    assert 'is_top_performer' in df.columns  # NEW
     assert 'video_id' in df.columns
     assert 'create_time' in df.columns
     assert 'gender' in df.columns
@@ -467,11 +657,16 @@ def test_bucket_9_13s_aggregation():
     # Verify
     df = pd.read_csv(csv_path)
     assert len(df) == 1
-    assert len(df.columns) == 66  # 21 × 3 windows + 3 metadata
+    assert len(df.columns) == 72  # 21 × 3 windows + 3 metadata + 5 cross-window + 1 label [UPDATED]
 
     # Check aggregation columns
     assert 'middle_aggregate_scene_count' in df.columns
     assert 'middle_1_scene_count' not in df.columns  # Should NOT exist
+
+    # NEW: Check cross-window and label columns
+    assert 'xwin_hook_to_middle_energy' in df.columns
+    assert 'xwin_eye_contact_consistency' in df.columns
+    assert 'is_top_performer' in df.columns
 
     # Verify aggregation strategies
     # SUM: scene_count should be sum of all middle segments
@@ -513,7 +708,8 @@ python3 scripts/stage3_aggregation.py \
   --bucket-path="test_stage3/bucket_33-60s"
 
 # Result: ✅ SUCCESS
-# - 150 columns created
+# - 156 columns created (was 150) [UPDATED]
+# - Includes 5 xwin_* features + is_top_performer label [NEW]
 # - 1 row processed
 # - 0 errors
 # - Duration: 0.01s
@@ -531,7 +727,8 @@ python3 scripts/stage3_aggregation.py \
   --bucket-path="test_stage3/bucket_9-13s"
 
 # Result: ✅ SUCCESS
-# - 66 columns created (with middle_aggregate_*)
+# - 72 columns created (was 66, with middle_aggregate_*) [UPDATED]
+# - Includes 5 xwin_* features + is_top_performer label [NEW]
 # - 1 row processed
 # - 0 errors
 # - Duration: 0.01s
@@ -544,6 +741,12 @@ head -1 aggregated_features.csv | tr ',' '\n' | wc -l
 
 # Check column names (middle aggregation)
 head -1 aggregated_features.csv | tr ',' '\n' | grep middle
+
+# Check cross-window features present
+head -1 aggregated_features.csv | tr ',' '\n' | grep "^xwin_"
+
+# Check label column present
+head -1 aggregated_features.csv | tr ',' '\n' | grep "is_top_performer"
 
 # Check summary JSON
 cat aggregation_summary.json | jq .
@@ -758,6 +961,12 @@ def load_json_parallel(json_files):
 - **File to update**: Lines 44-49 (SUM_FEATURES, MIN_FEATURES, etc.)
 - **Reason**: Feature semantics change (e.g., scene_count becomes MIN instead of SUM)
 
+**Scenario 4: Cross-window feature formulas change**
+- **File to update**: `compute_cross_window_features()` function logic
+- **Reason**: New cross-window patterns discovered (e.g., different slope calculation)
+- **Impact**: Feature values change, may require Stage 4-7 updates if feature names change
+- **Source**: Moved from Stage 4 in S7B2 bug fix (2025-10-28)
+
 ### 9.2 Code Comments
 
 **Key sections with inline comments**:
@@ -781,7 +990,7 @@ def load_json_parallel(json_files):
 ### 10.2 Limitations
 
 1. **No duration validation**: Trusts Stage 2.5 organized videos into correct buckets (doesn't re-check duration ranges)
-2. **No cross-reference with selected_videos.json**: Doesn't validate that aggregated videos match Stage 1 selection
+2. **Partial cross-reference with selected_videos.json**: Uses it for is_top_performer labeling but doesn't validate all aggregated videos exist in selection (uses fallback if missing)
 3. **Single-threaded**: No parallelization within bucket (but can run multiple buckets in parallel)
 4. **No schema evolution handling**: If RumiAI adds/removes features, Stage 3 breaks (requires code update)
 
@@ -820,6 +1029,7 @@ See HLD Section 9 (Future Enhancements) for planned improvements:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-01-17 | Claude Code | Initial TI document creation after implementation |
+| 1.1 | 2025-10-28 | Claude Code | S7B2 Fix: Added cross-window features + is_top_performer label (moved from Stage 4) |
 
 ---
 
@@ -828,7 +1038,7 @@ See HLD Section 9 (Future Enhancements) for planned improvements:
 ```bash
 $ python3 scripts/stage3_aggregation.py --help
 
-usage: stage3_aggregation.py [-h] --bucket-path BUCKET_PATH
+usage: stage3_aggregation.py [-h] --bucket-path BUCKET_PATH --strategy {contrastive,top}
 
 Stage 3: Feature Aggregation - Transform temporal window JSONs to CSV
 
@@ -837,15 +1047,20 @@ optional arguments:
   --bucket-path BUCKET_PATH
                         Path to bucket directory (e.g., data/clients/test_run/
                         hashtags/fitness/top_contrastive/buckets/bucket_18-33s)
+  --strategy {contrastive,top}
+                        Analysis mode: 'contrastive' (top 80% vs bottom 20%) or
+                        'top' (top performers only)
 
 Examples:
-  # Process single bucket
-  python3 scripts/stage3_aggregation.py --bucket-path="data/clients/test_run/hashtags/fitness/top_contrastive/buckets/bucket_18-33s"
+  # Process single bucket with contrastive strategy
+  python3 scripts/stage3_aggregation.py \
+    --bucket-path="data/clients/test_run/hashtags/fitness/top_contrastive/buckets/bucket_18-33s" \
+    --strategy="contrastive"
 
   # Parallel processing (3 buckets simultaneously)
-  python3 scripts/stage3_aggregation.py --bucket-path="...bucket_18-33s" &
-  python3 scripts/stage3_aggregation.py --bucket-path="...bucket_33-60s" &
-  python3 scripts/stage3_aggregation.py --bucket-path="...bucket_60-90s" &
+  python3 scripts/stage3_aggregation.py --bucket-path="...bucket_18-33s" --strategy="contrastive" &
+  python3 scripts/stage3_aggregation.py --bucket-path="...bucket_33-60s" --strategy="contrastive" &
+  python3 scripts/stage3_aggregation.py --bucket-path="...bucket_60-90s" --strategy="contrastive" &
 ```
 
 ---
@@ -865,10 +1080,10 @@ Examples:
 
 ## Appendix C: Sample Output Files
 
-### Sample aggregated_features.csv (first 3 columns)
+### Sample aggregated_features.csv (first columns + cross-window + label)
 ```csv
-video_id,hook_average_face_size,hook_overlay_unique_count,...
-238506412723073,0.2073,0,...
+video_id,hook_average_face_size,hook_overlay_unique_count,...,xwin_hook_to_middle_energy,xwin_eye_contact_consistency,is_top_performer
+238506412723073,0.2073,0,...,0.0012,0.036,1
 ```
 
 ### Sample aggregation_summary.json
@@ -885,8 +1100,8 @@ video_id,hook_average_face_size,hook_overlay_unique_count,...
   "output_csv": {
     "path": "aggregated_features.csv",
     "rows": 1,
-    "columns": 150,
-    "column_names": ["video_id", "hook_average_face_size", ...]
+    "columns": 156,
+    "column_names": ["video_id", "hook_average_face_size", ..., "xwin_hook_to_middle_energy", "is_top_performer"]
   },
   "stage_version": "3.0.0"
 }

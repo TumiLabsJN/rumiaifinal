@@ -324,6 +324,138 @@ class Stage7Output:
 
 ---
 
+### 2.3 Idempotency & Resume Behavior
+
+Stage 7 is **idempotent** and supports **checkpoint-based resume** to optimize cost and reliability.
+
+**Source**: `rumiai_ml_batch.py:1719-1736` (bucket-level), `stage7_llm_analysis.py:146-195` (Phase 1 window-level)
+
+#### 2.3.1 Bucket-Level Idempotency
+
+**Check**: If `complete_analysis_{bucket}.json` exists in `ml_analysis/llm/`
+
+**Action**: Skip Stage 7 entirely for that bucket (no API calls made)
+
+**Rationale**: Cost savings - avoid re-processing already completed buckets
+
+**Implementation**:
+```python
+# rumiai_ml_batch.py lines 1719-1736
+complete_analysis_path = os.path.join(bucket_path, f'ml_analysis/llm/complete_analysis_{bucket}.json')
+if os.path.exists(complete_analysis_path):
+    logger.info(f"✓ Stage 7 already complete for bucket {bucket} (found complete_analysis_{bucket}.json)")
+    logger.info(f"  Skipping Stage 7 (idempotent - no API calls needed)")
+    return  # Skip this bucket, continue to next
+```
+
+**User Experience**:
+- Batch processing interrupted? Re-run same command - completed buckets skip instantly
+- Debugging single bucket? Delete `complete_analysis_{bucket}.json` to force re-run
+- No manual tracking needed - filesystem is source of truth
+
+---
+
+#### 2.3.2 Phase 1 Window-Level Resume
+
+**Check**: If `.phase1_status.json` exists in `ml_analysis/llm/`
+
+**Action**: Resume from checkpoint - skip completed windows, re-run incomplete/failed windows
+
+**Rationale**: Fault tolerance - don't lose progress from partial Phase 1 completion (each window costs ~$0.15 in API calls)
+
+**Status File Schema**:
+```json
+{
+  "total_windows": 6,
+  "completed_windows": ["hook", "middle_1", "middle_2"],
+  "failed_windows": [{"window": "middle_3", "error": "timeout", "timestamp": "2025-01-28T10:05:23Z"}],
+  "phase1_complete": false,
+  "started_at": "2025-01-28T10:00:00Z",
+  "last_updated": "2025-01-28T10:05:23Z"
+}
+```
+
+**Resume Logic**:
+1. Load `.phase1_status.json` if exists
+2. Skip windows in `completed_windows` (load analysis from `{window}_analysis.json`)
+3. Re-run windows NOT in `completed_windows`
+4. Continue from last checkpoint seamlessly
+5. Mark `phase1_complete: true` when all windows succeed
+6. Proceed to Phase 2
+
+**Implementation**:
+```python
+# stage7_llm_analysis.py lines 146-195
+status_file = os.path.join(bucket_path, 'ml_analysis/llm/.phase1_status.json')
+
+if os.path.exists(status_file):
+    with open(status_file) as f:
+        status = json.load(f)
+    completed = set(status['completed_windows'])
+    logger.info(f"Resuming Phase 1: {len(completed)}/{len(window_types)} windows already completed")
+else:
+    status = {
+        'total_windows': len(window_types),
+        'completed_windows': [],
+        'failed_windows': [],
+        'phase1_complete': False,
+        'started_at': datetime.utcnow().isoformat()
+    }
+    completed = set()
+
+# Skip already completed windows
+for window_type in window_types:
+    if window_type in completed:
+        output_path = os.path.join(bucket_path, f'ml_analysis/llm/{window_type}_analysis.json')
+        with open(output_path) as f:
+            window_analyses[window_type] = json.load(f)
+        logger.info(f"  ⏭ {window_type} already completed (skipping)")
+        continue
+
+    # Run analysis for incomplete window...
+```
+
+**User Experience**:
+- Phase 1 crashes mid-execution? Re-run - completed windows skip, failed windows retry
+- Only pay for windows that failed (cost recovery)
+- Status file shows exactly what completed and what failed
+
+**Status File Lifecycle**:
+- Created: At Phase 1 start (if doesn't exist)
+- Updated: After each window completes or fails
+- Read: At Phase 1 start (resume check)
+- Preserved: After Phase 2 completes (useful for debugging)
+- Not cleaned up: Stays in `ml_analysis/llm/` for audit trail
+
+**Edge Case - Corrupt Status File**:
+If `.phase1_status.json` exists but is malformed (invalid JSON):
+- Log warning about corruption
+- Treat as if status file doesn't exist (fresh Phase 1 run)
+- Overwrite corrupt file with new status
+- Verify window JSON files still exist before skipping
+
+---
+
+#### 2.3.3 Phase 2 Synthesis (No Resume)
+
+Phase 2 is **atomic** - no checkpoint/resume capability.
+
+**Rationale**:
+- Phase 2 is a single LLM API call (~60-90 seconds, ~$0.30)
+- Cost of re-running entire Phase 2 is acceptable (vs complexity of checkpointing mid-synthesis)
+- Phase 1 resume already provides 95% of cost recovery value
+
+**Behavior on Phase 2 Failure**:
+- Delete `winning_formulas.json` (if partially written)
+- Delete `complete_analysis_{bucket}.json` (if exists)
+- Preserve Phase 1 outputs (`.phase1_status.json` stays marked `phase1_complete: true`)
+- Preserve all `{window}_analysis.json` files
+- User re-runs Stage 7: Phase 1 skips (all windows complete), Phase 2 retries
+
+**Implementation**: See Section 6.5 (Error Recovery) for Phase 2 failure cleanup logic
+
+---
+
 ## Section 3: Data Schemas
 
 ### 3.0 Stage 6 Input Schema Reference
@@ -551,6 +683,34 @@ Phase1StatusSchema = {
 # NOT consumed by Stage 8
 ```
 
+**File Counting Exclusion Note**:
+
+The `.phase1_status.json` file is **excluded from output file counts** when reporting Stage 7 completion metrics.
+
+**Rationale**:
+- It's an internal tracking file, not a deliverable output consumed by Stage 8
+- Hidden file convention (starts with `.`) indicates system/internal file
+- Should not be counted alongside user-facing deliverables (`{window}_analysis.json`, `winning_formulas.json`, etc.)
+- Keeps metrics focused on actual analysis outputs, not infrastructure files
+
+**Production Implementation**: `rumiai_ml_batch.py:1758-1761`
+
+```python
+# Count JSON files (excluding .phase1_status.json - internal file)
+json_files = [f for f in os.listdir(llm_output_dir)
+              if f.endswith('.json') and not f.startswith('.')]
+logger.info(f"✓ Stage 7 complete: Generated {len(json_files)} output files")
+```
+
+**Expected File Counts** (excluding `.phase1_status.json`):
+- **0-3s bucket**: 2 files (`hook_analysis.json`, `bucket_summary_0-3s.json`)
+- **Multi-window buckets**: 8-9 files
+  - 6-7 window analyses (`{window}_analysis.json`)
+  - 1 winning formulas (`winning_formulas.json`)
+  - 1 complete analysis (`complete_analysis_{bucket}.json`)
+
+---
+
 #### 3.3.2 Phase 1 Window Analysis JSON
 
 **Files**: `ml_analysis/llm/{window}_analysis.json` (6-7 files per bucket, ~2-3KB each)
@@ -644,6 +804,26 @@ WinningFormulasSchema = {
 # Critical: All reports have confidence_level in ["very_high", "high", "moderate"]
 # Critical: supplementary_insights section present
 ```
+
+**Field Removal Note - `scenario` Field**:
+
+The `scenario` field (A/B/C/D classification based on path frequency thresholds) is computed internally during Phase 2 but is **NOT saved** to `winning_formulas.json`.
+
+**Rationale**:
+- Scenario is an internal routing mechanism for LLM prompt generation logic
+- Output should focus on creative insights, not internal classification mechanics
+- Downstream consumers (Stage 8) don't need scenario information
+- Keeps JSON schema clean and focused on actionable creative reports
+
+**Production Implementation**: `run_phase2_synthesis()` lines 438-450, `rumiai_ml_batch.py:376`
+
+**Scenarios (Internal Only)**:
+- **Scenario A**: 3+ paths ≥10% threshold → Generate 3 path-based reports
+- **Scenario B**: 2 paths ≥10% threshold → Generate 2 path-based + 1 feature-based report
+- **Scenario C**: 1 path ≥10% threshold → Generate 1 path-based + 2 feature-based reports
+- **Scenario D**: 0 paths ≥10% threshold → Generate 3 feature-based reports (high fragmentation)
+
+---
 
 #### 3.3.4 Complete Analysis JSON
 
@@ -833,105 +1013,94 @@ def identify_high_contrast_features(kmeans_data: dict, threshold: float = 0.20) 
   ```python
   {
       'clusters': [
-          {'cluster_id': 0, 'centroid': {'eye_contact': 0.87, 'word_count': 14, ...}},
-          {'cluster_id': 1, 'centroid': {'eye_contact': 0.42, 'word_count': 52, ...}},
-          {'cluster_id': 2, 'centroid': {'eye_contact': 0.55, 'word_count': 35, ...}}
+          {'cluster_id': 0, 'size': 35, 'centroid': {'eye_contact_rate': 0.87, 'word_count': 14, ...}},
+          {'cluster_id': 1, 'size': 42, 'centroid': {'eye_contact_rate': 0.42, 'word_count': 52, ...}},
+          {'cluster_id': 2, 'size': 23, 'centroid': {'eye_contact_rate': 0.55, 'word_count': 35, ...}}
       ]
   }
   ```
-- `threshold` (float): Minimum contrast difference (default: 0.20)
+- `threshold` (float): Minimum normalized range to qualify as high-contrast (default: 0.20 = 20% of feature range)
 
 **Returns**:
-- dict: High-contrast features per cluster
+- dict: High-contrast feature names by cluster (simplified format)
   ```python
   {
-      'clusters': [
-          {
-              'cluster_id': 0,
-              'all_features': {...},  # Keep for context
-              'high_contrast_features': [
-                  {
-                      'feature': 'word_count',
-                      'value': 14,
-                      'max_contrast': 38,  # vs Cluster 1's 52
-                      'contrasts': {'vs Cluster 1': 38, 'vs Cluster 2': 21}
-                  }
-              ]
-          }
-      ]
+      0: ['word_count', 'scene_changes', 'text_overlay_ratio'],  # Features where Cluster 0 has extreme values
+      1: ['eye_contact_rate', 'energy_level', 'hand_gestures'],
+      2: ['emotion_joy_ratio', 'speech_coverage']
   }
   ```
+
+  **Note**: Returns only feature NAMES (not metadata). Features assigned to clusters with min/max values.
 
 **Pseudocode**:
 ```python
 def identify_high_contrast_features(kmeans_data: dict, threshold: float = 0.20) -> dict:
     """
-    Pre-filter features with high numerical contrast between clusters.
+    Pre-filter features with high normalized range between clusters.
 
-    Python does mechanical filtering (≥0.20 difference), LLM does semantic selection
-    (strategic coherence, RF importance weighting).
+    Uses NORMALIZED RANGE calculation: (max - min) / max
+    This accounts for feature scale (word_count in 10s, eye_contact in 0-1 range).
 
     DESIGN DECISION: 0.20 threshold chosen because:
-    - Domain grounding: 0.20 = 20 percentage points OR 20 words difference = perceptually noticeable
+    - Normalized interpretation: 0.20 = 20% relative variance (scale-independent)
     - Tested on pilot data: 0.20 typically filters 21 features → 8-12 high-contrast features
     - Balances specificity: Not too strict (0.30 = only 3-5 features) nor too lenient (0.10 = 15+ features)
     - LLM-friendly output: 8-12 features is scannable, 21 features overwhelms prompt
     """
+    # Validate
+    if 'clusters' not in kmeans_data:
+        raise ValueError("kmeans_data missing 'clusters' key")
+
     clusters = kmeans_data['clusters']
-    all_features = list(clusters[0]['centroid'].keys())
 
-    result = {'clusters': []}
+    if len(clusters) != 3:
+        raise ValueError(f"Expected 3 clusters, got {len(clusters)}")
 
+    # Extract centroids
+    centroids = []
     for cluster in clusters:
-        cluster_id = cluster['cluster_id']
-        centroid = cluster['centroid']
+        if 'centroid' not in cluster or 'cluster_id' not in cluster:
+            raise ValueError("Cluster missing 'centroid' or 'cluster_id'")
+        centroids.append(cluster['centroid'])
 
-        high_contrast = []
+    # Get all feature names
+    feature_names = list(centroids[0].keys())
 
-        for feature in all_features:
-            this_value = centroid[feature]
+    # Initialize result: {cluster_id: [feature_names]}
+    high_contrast_by_cluster = {0: [], 1: [], 2: []}
 
-            # Get values in other clusters
-            other_values = [
-                c['centroid'][feature]
-                for c in clusters
-                if c['cluster_id'] != cluster_id
-            ]
+    for feature in feature_names:
+        # Get values across all 3 clusters
+        values = [centroid[feature] for centroid in centroids]
 
-            # Calculate contrasts
-            contrasts = {
-                f"vs Cluster {c['cluster_id']}": abs(this_value - c['centroid'][feature])
-                for c in clusters
-                if c['cluster_id'] != cluster_id
-            }
+        # Calculate range
+        min_val = min(values)
+        max_val = max(values)
+        value_range = max_val - min_val
 
-            max_diff = max(abs(this_value - ov) for ov in other_values)
+        # Normalize by max value (avoid division by zero)
+        if max_val > 0:
+            normalized_range = value_range / max_val
+        else:
+            normalized_range = 0.0
 
-            if max_diff >= threshold:
-                high_contrast.append({
-                    'feature': feature,
-                    'value': this_value,
-                    'max_contrast': max_diff,
-                    'contrasts': contrasts
-                })
+        # Check if feature meets threshold
+        if normalized_range >= threshold:
+            # Assign feature to clusters with EXTREME values (min or max)
+            for cluster_id, value in enumerate(values):
+                if value == min_val or value == max_val:
+                    high_contrast_by_cluster[cluster_id].append(feature)
 
-        # Sort by max_contrast (highest first)
-        high_contrast.sort(key=lambda x: x['max_contrast'], reverse=True)
-
-        result['clusters'].append({
-            'cluster_id': cluster_id,
-            'all_features': centroid,  # Keep for context
-            'high_contrast_features': high_contrast
-        })
-
-    return result
+    return high_contrast_by_cluster
 ```
 
 **Edge Cases**:
-1. **Single cluster**: Return empty `high_contrast_features` (no other clusters to compare against)
-2. **All features below threshold**: Return empty `high_contrast_features` array (all clusters similar)
-3. **Missing centroid data**: Raise `ValueError("Cluster missing centroid data")`
-4. **Feature exists in some clusters but not others**: Skip feature, log warning
+1. **Not exactly 3 clusters**: Raise `ValueError(f"Expected 3 clusters, got {len(clusters)}")`
+2. **All features below threshold**: Return `{0: [], 1: [], 2: []}` (all clusters similar, no differentiation)
+3. **Missing centroid data**: Raise `ValueError("Cluster missing 'centroid' or 'cluster_id'")`
+4. **max_val = 0 for a feature**: `normalized_range = 0.0` (division by zero avoided)
+5. **Feature has same value in all clusters**: `normalized_range = 0.0` (no contrast, excluded)
 5. **Threshold = 0.0**: All features returned (useful for debugging)
 
 **Validation Rules**:
@@ -1004,844 +1173,166 @@ Output:
 
 ### 4.3 compute_rf_alignment()
 
-**Purpose**: Identify which cluster features align with RF top performer patterns (provides validation score like "3/5 RF validated")
+**Purpose**: Validate that cluster-defining features appear in RF's top important features (prevents LLM from focusing on unimportant features)
 
-**When Called**: Before Phase 1 prompt generation, for each cluster
+**When Called**: Before Phase 1 prompt generation, for each cluster (after high-contrast feature identification)
 
 **Source**: Stage7PromptCritique.md Issue #4 (lines 799-946), Alternative B decision
 
 **Function Signature**:
 ```python
-def compute_rf_alignment(cluster_centroid: dict, rf_features: list, threshold: float = 0.15) -> dict
+def compute_rf_alignment(cluster_features: List[str], rf_features: List[dict], tolerance: float = 0.15) -> dict
 ```
 
 **Parameters**:
-- `cluster_centroid` (dict): K-Means cluster centroid values
+- `cluster_features` (List[str]): Feature names defining this cluster (from `identify_high_contrast_features()`)
   ```python
-  {'eye_contact_rate': 0.87, 'word_count': 14, 'energy_level': 0.55, ...}
+  ['eye_contact_rate', 'word_count', 'scene_changes']
   ```
-- `rf_features` (list): Window-level RF feature importance list (from Stage 6)
+- `rf_features` (List[dict]): Window-level RF feature importance list (from Stage 6)
   ```python
   [
-      {'feature': 'eye_contact_rate', 'importance': 0.35, 'rank': 1, 'top_performer_avg': 0.88, ...},
-      {'feature': 'energy_level', 'importance': 0.22, 'rank': 2, 'top_performer_avg': 0.53, ...},
+      {'feature': 'eye_contact_rate', 'importance': 0.35, 'rank': 1, ...},
+      {'feature': 'word_count', 'importance': 0.22, 'rank': 2, ...},
+      {'feature': 'energy_level', 'importance': 0.18, 'rank': 3, ...},
+      {'feature': 'scene_changes', 'importance': 0.12, 'rank': 4, ...},  # Below 0.15 threshold
       ...
   ]
   ```
-- `threshold` (float): Alignment tolerance (default: 0.15 = within 15%)
+- `tolerance` (float): Minimum RF importance threshold (default: 0.15 = 15% importance)
 
 **Returns**:
-- dict: Aligned features and score
+- dict: RF alignment result
   ```python
   {
-      'aligned_features': [
-          {
-              'feature': 'eye_contact_rate',
-              'cluster_value': 0.87,
-              'top_avg': 0.88,
-              'rf_rank': 1,
-              'rf_importance': 0.35,
-              'alignment': 'matches',  # diff <0.10
-              'formatted': "eye_contact_rate: Cluster value 0.87 matches top avg 0.88 (RF rank #1, importance 0.35)"
-          }
-      ],
-      'alignment_count': 2,
-      'alignment_score': '2/5'  # 2 of top 5 RF features aligned
+      'alignment_score': 0.67,  # 67% of top RF features present in cluster
+      'matched_features': ['eye_contact_rate', 'word_count'],  # Cluster features that are top RF features
+      'top_rf_features': ['eye_contact_rate', 'word_count', 'energy_level'],  # RF features with importance ≥0.15
+      'alignment_ratio': '2/3',  # "2 of 3 cluster features are top RF predictors"
+      'insight': "Strong RF alignment: 2/3 cluster features match top predictors"
   }
   ```
 
 **Pseudocode**:
 ```python
-def compute_rf_alignment(cluster_centroid: dict, rf_features: list, threshold: float = 0.15) -> dict:
+def compute_rf_alignment(cluster_features: List[str], rf_features: List[dict], tolerance: float = 0.15) -> dict:
     """
-    Identify which cluster features align with RF top performers.
+    Validate that cluster-defining features are RF-important.
 
-    A feature "aligns" if cluster centroid value is within ±0.15 (15%) of RF top_performer_avg.
+    Compares cluster feature NAMES against RF feature list (filtered by importance ≥ tolerance).
+    This is NAME-BASED validation, not value-based.
 
-    DESIGN DECISION: 0.15 (15%) threshold chosen because:
-    - Statistical tolerance: ±15% accommodates natural variance in centroids vs averages
-    - Tested on pilot data: 0.10 too strict (only 1-2 matches), 0.20 too lenient (all match)
-    - Practical interpretation: "0.87 matches 0.88" (diff 0.01) vs "0.72 differs from 0.88" (diff 0.16)
-    - Two-tier matching: <0.10 = "matches exactly", 0.10-0.15 = "close to" (nuance preserved)
+    DESIGN DECISION: 0.15 (15%) importance threshold chosen because:
+    - Statistical significance: Features with <15% importance don't meaningfully predict performance
+    - Tested on pilot data: 0.15 typically yields 3-5 "important" features (manageable set)
+    - Balances inclusivity: Not too strict (0.20 = only 2-3 features) nor too lenient (0.10 = 8-10 features)
+    - Practical interpretation: "This cluster uses important features" vs "cluster uses noise features"
     """
-    aligned_features = []
-
-    for rf_feature in rf_features[:5]:  # Check top 5 RF features
-        feature_name = rf_feature['feature']
-        top_avg = rf_feature['top_performer_avg']
-        rf_rank = rf_features.index(rf_feature) + 1
-        rf_importance = rf_feature['importance']
-
-        if feature_name in cluster_centroid:
-            cluster_value = cluster_centroid[feature_name]
-            diff = abs(cluster_value - top_avg)
-
-            if diff <= threshold:
-                alignment_type = 'matches' if diff <= 0.10 else 'close to'
-
-                aligned_features.append({
-                    'feature': feature_name,
-                    'cluster_value': cluster_value,
-                    'top_avg': top_avg,
-                    'rf_rank': rf_rank,
-                    'rf_importance': rf_importance,
-                    'alignment': alignment_type,
-                    'formatted': (
-                        f"{feature_name}: Cluster value {cluster_value:.2f} {alignment_type} "
-                        f"top avg {top_avg:.2f} (RF rank #{rf_rank}, importance {rf_importance:.2f})"
-                    )
-                })
-
-    return {
-        'aligned_features': aligned_features,
-        'alignment_count': len(aligned_features),
-        'alignment_score': f"{len(aligned_features)}/5"
-    }
-```
-
-**Edge Cases**:
-1. **No features align**: `alignment_count=0, alignment_score='0/5'` (valid case - cluster doesn't match RF patterns)
-2. **All 5 features align**: `alignment_score='5/5'` (perfect RF validation)
-3. **Feature in RF but not in centroid**: Skip feature, log warning
-4. **RF features list < 5**: Check all available features, score = `X/Y` where Y is actual count
-5. **Exact match (diff = 0.0)**: `alignment='matches'`
-
-**Validation Rules**:
-- `threshold` must be > 0.0 and ≤ 1.0
-- `rf_features` must have required keys: `feature`, `top_performer_avg`, `importance`
-- Only check top 5 RF features (by importance)
-- `cluster_centroid` values must be numeric
-
-**Example Trace**:
-
-```python
-Input:
-  cluster_centroid = {'eye_contact_rate': 0.87, 'energy_level': 0.55, 'word_count': 14}
-  rf_features = [
-      {'feature': 'eye_contact_rate', 'importance': 0.35, 'top_performer_avg': 0.88},
-      {'feature': 'energy_level', 'importance': 0.22, 'top_performer_avg': 0.53},
-      {'feature': 'word_count', 'importance': 0.18, 'top_performer_avg': 52}
-  ]
-  threshold = 0.15
-
-Execution:
-  Check top 5 RF features (only 3 available):
-
-  Feature: eye_contact_rate (RF rank #1)
-    cluster_value = 0.87
-    top_avg = 0.88
-    diff = abs(0.87 - 0.88) = 0.01
-    diff <= 0.15 → ALIGNED
-    diff <= 0.10 → alignment_type = 'matches'
-    → ADD to aligned_features
-
-  Feature: energy_level (RF rank #2)
-    cluster_value = 0.55
-    top_avg = 0.53
-    diff = abs(0.55 - 0.53) = 0.02
-    diff <= 0.15 → ALIGNED
-    diff <= 0.10 → alignment_type = 'matches'
-    → ADD to aligned_features
-
-  Feature: word_count (RF rank #3)
-    cluster_value = 14
-    top_avg = 52
-    diff = abs(14 - 52) = 38
-    diff > 0.15 → NOT ALIGNED
-    → SKIP
-
-Output:
-  {
-      'aligned_features': [
-          {
-              'feature': 'eye_contact_rate',
-              'cluster_value': 0.87,
-              'top_avg': 0.88,
-              'rf_rank': 1,
-              'rf_importance': 0.35,
-              'alignment': 'matches',
-              'formatted': "eye_contact_rate: Cluster value 0.87 matches top avg 0.88 (RF rank #1, importance 0.35)"
-          },
-          {
-              'feature': 'energy_level',
-              'cluster_value': 0.55,
-              'top_avg': 0.53,
-              'rf_rank': 2,
-              'rf_importance': 0.22,
-              'alignment': 'matches',
-              'formatted': "energy_level: Cluster value 0.55 matches top avg 0.53 (RF rank #2, importance 0.22)"
-          }
-      ],
-      'alignment_count': 2,
-      'alignment_score': '2/5'
-  }
-```
-
----
-
-### 4.4 enrich_high_contrast_features()
-
-**Purpose**: Add RF metadata (rank, importance, gap) to cluster features so LLM can format without looking up values
-
-**When Called**: After `identify_high_contrast_features()`, before Phase 1 prompt generation
-
-**Source**: Stage7PromptCritique.md Issue #8 (lines 1472-1589), Alternative C (Hybrid Approach) decision
-
-**Function Signature**:
-```python
-def enrich_high_contrast_features(high_contrast_features: list, rf_features: list) -> list
-```
-
-**Parameters**:
-- `high_contrast_features` (list): Output from `identify_high_contrast_features()`
-  ```python
-  [
-      {'feature': 'word_count', 'value': 14, 'max_contrast': 38},
-      {'feature': 'eye_contact_rate', 'value': 0.87, 'max_contrast': 0.45},
-      ...
-  ]
-  ```
-- `rf_features` (list): Window-level RF feature importance list
-  ```python
-  [
-      {'feature': 'eye_contact_rate', 'importance': 0.35, 'rank': 1, 'gap': 0.43},
-      {'feature': 'word_count', 'importance': 0.18, 'rank': 3, 'gap': 26.8},
-      ...
-  ]
-  ```
-
-**Returns**:
-- list: Enriched features with all formatting metadata
-  ```python
-  [
-      {
-          'feature': 'eye_contact_rate',
-          'cluster_value': 0.87,
-          'rf_rank': 1,
-          'rf_importance': 0.35,
-          'rf_gap': 0.43,
-          'contrast': 0.45
-      }
-  ]
-  ```
-
-**Pseudocode**:
-```python
-def enrich_high_contrast_features(high_contrast_features: list, rf_features: list) -> list:
-    """
-    Add RF metadata to high-contrast features for easy LLM formatting.
-
-    Python provides all numeric data pre-computed, LLM focuses on creative interpretation
-    ("brief hook strategy" vs generic "low value").
-
-    DESIGN DECISION: Hybrid approach (Python computes, LLM interprets) because:
-    - Prevents hallucination: LLM doesn't look up RF ranks/importance/gaps from separate data
-    - Preserves creativity: LLM still creates semantic interpretations based on enriched data
-    - Reduces cognitive load: All metadata in one place (not scattered across K-Means + RF JSONs)
-    - Format consistency: LLM applies template using pre-computed values (no arithmetic)
-    """
-    enriched = []
-
-    for hc_feature in high_contrast_features:
-        feature_name = hc_feature['feature']
-
-        # Find RF data for this feature
-        rf_data = next((rf for rf in rf_features if rf['feature'] == feature_name), None)
-
-        if rf_data:
-            enriched.append({
-                'feature': feature_name,
-                'cluster_value': hc_feature['value'],
-                'rf_rank': rf_features.index(rf_data) + 1,
-                'rf_importance': rf_data['importance'],
-                'rf_gap': rf_data['gap'],
-                'contrast': hc_feature['max_contrast']
-            })
-
-    return enriched
-```
-
-**Edge Cases**:
-1. **Feature in high-contrast but not in RF**: Skip feature (not enriched)
-2. **Empty high_contrast_features**: Return empty list
-3. **RF data missing 'gap' field**: Use default `gap=0.0`, log warning
-4. **Duplicate features**: Process first occurrence only
-
-**Validation Rules**:
-- `rf_features` must contain unique feature names
-- RF metadata fields (`importance`, `gap`) must be numeric
-- Original order from `high_contrast_features` is NOT preserved (enriched list may be shorter)
-
-**Example Trace**:
-
-```python
-Input:
-  high_contrast_features = [
-      {'feature': 'word_count', 'value': 14, 'max_contrast': 38},
-      {'feature': 'eye_contact_rate', 'value': 0.87, 'max_contrast': 0.45},
-      {'feature': 'unknown_feature', 'value': 0.5, 'max_contrast': 0.2}
-  ]
-  rf_features = [
-      {'feature': 'eye_contact_rate', 'importance': 0.35, 'gap': 0.43},
-      {'feature': 'energy_level', 'importance': 0.22, 'gap': 0.18},
-      {'feature': 'word_count', 'importance': 0.18, 'gap': 26.8}
-  ]
-
-Execution:
-  Feature: word_count
-    rf_data found: {'feature': 'word_count', 'importance': 0.18, 'gap': 26.8}
-    rf_rank = index(rf_data) + 1 = 2 + 1 = 3
-    → ADD enriched entry
-
-  Feature: eye_contact_rate
-    rf_data found: {'feature': 'eye_contact_rate', 'importance': 0.35, 'gap': 0.43}
-    rf_rank = index(rf_data) + 1 = 0 + 1 = 1
-    → ADD enriched entry
-
-  Feature: unknown_feature
-    rf_data NOT found
-    → SKIP (not in RF features)
-
-Output:
-  [
-      {
-          'feature': 'word_count',
-          'cluster_value': 14,
-          'rf_rank': 3,
-          'rf_importance': 0.18,
-          'rf_gap': 26.8,
-          'contrast': 38
-      },
-      {
-          'feature': 'eye_contact_rate',
-          'cluster_value': 0.87,
-          'rf_rank': 1,
-          'rf_importance': 0.35,
-          'rf_gap': 0.43,
-          'contrast': 0.45
-      }
-  ]
-```
-
----
-
-### 4.5 prepare_path_data_for_llm()
-
-**Purpose**: Label cluster paths by 10% threshold status, show top 10 with scenario determination
-
-**When Called**: Before Phase 2 prompt generation
-
-**Source**: Stage7PromptCritique.md Gap #1 (lines 2923-3077), Alternative C (Hybrid Approach) decision
-
-**Function Signature**:
-```python
-def prepare_path_data_for_llm(
-    cluster_paths: dict,
-    threshold_pct: float = 0.10,
-    total_videos: int = 100,
-    top_n: int = 10
-) -> dict
-```
-
-**Parameters**:
-- `cluster_paths` (dict): Mapping from path tuples to frequency counts
-  ```python
-  {(0,1,1,2,0,1): 22, (1,0,0,1,1,0): 18, (0,0,1,1,0,1): 12, ...}
-  ```
-- `threshold_pct` (float): Minimum frequency percentage (default: 0.10 = 10%)
-- `total_videos` (int): Total videos in sample (default: 100)
-- `top_n` (int): Number of top paths to show in prompt (default: 10)
-
-**Returns**:
-- dict: Labeled paths and scenario
-  ```python
-  {
-      'top_paths': [
-          ((0,1,1,2,0,1), 22, 22.0, 'ABOVE'),
-          ((1,0,0,1,1,0), 18, 18.0, 'ABOVE'),
-          ((0,0,1,1,0,1), 12, 12.0, 'ABOVE'),
-          ((1,1,0,0,1,0), 8, 8.0, 'BELOW'),
-          ...
-      ],
-      'total_unique_paths': 35,
-      'paths_above_threshold': 3,
-      'scenario': 'A',  # A=3+ paths, B=2 paths, C=1 path, D=0 paths
-      'threshold_pct': 10.0
-  }
-  ```
-
-**Pseudocode**:
-```python
-def prepare_path_data_for_llm(
-    cluster_paths: dict,
-    threshold_pct: float = 0.10,
-    total_videos: int = 100,
-    top_n: int = 10
-) -> dict:
-    """
-    Label paths by threshold status, show top N with context.
-
-    Python handles arithmetic (percentage calculation, threshold comparison),
-    LLM handles semantic synthesis (explains fragmentation, references patterns).
-
-    DESIGN DECISION: 10% threshold chosen because:
-    - Statistical grounding: 10 samples is widely accepted minimum for pattern reliability
-    - Balances quality vs coverage: Not too restrictive (15%) nor too lenient (5%)
-    - Intuitive for creators: "1 in 10 videos" is clear, actionable benchmark
-    - Aligns with confidence bands: 10-14% = moderate, 15-19% = high, 20%+ = very_high
-    - Pilot tested: 10% reliably separates proven patterns from experimental noise
-    """
-    threshold_count = int(threshold_pct * total_videos)
-
-    # Label all paths with threshold status
-    paths_with_status = []
-    for path, count in cluster_paths.items():
-        pct = (count / total_videos) * 100.0
-        status = 'ABOVE' if count >= threshold_count else 'BELOW'
-        paths_with_status.append((path, count, pct, status))
-
-    # Sort by frequency descending
-    paths_with_status.sort(key=lambda x: x[1], reverse=True)
-
-    # Count paths above threshold
-    num_above = sum(1 for p in paths_with_status if p[3] == 'ABOVE')
-
-    # Determine scenario
-    if num_above >= 3:
-        scenario = 'A'  # 3+ paths: Generate 3 path-based
-    elif num_above == 2:
-        scenario = 'B'  # 2 paths: Generate 2 path + 1 feature
-    elif num_above == 1:
-        scenario = 'C'  # 1 path: Generate 1 path + 2 feature
-    else:
-        scenario = 'D'  # 0 paths: Generate 3 feature-based
-
-    return {
-        'top_paths': paths_with_status[:top_n],
-        'total_unique_paths': len(cluster_paths),
-        'paths_above_threshold': num_above,
-        'scenario': scenario,
-        'threshold_pct': threshold_pct * 100
-    }
-```
-
-**Edge Cases**:
-1. **Exactly threshold boundary**: `count=10, threshold_count=10` → `status='ABOVE'` (inclusive)
-2. **Empty cluster_paths**: `total_unique_paths=0, scenario='D'`
-3. **All paths above threshold**: `scenario='A'` (even if 10+ paths meet threshold, generate 3 reports)
-4. **top_n > total paths**: Return all paths (no error)
-5. **total_videos = 0**: Raise `ValueError("total_videos must be > 0")`
-
-**Validation Rules**:
-- `threshold_pct` must be in range (0.0, 1.0]
-- `total_videos` must be > 0
-- `top_n` must be > 0
-- Path tuples must have same length (window count)
-
-**Example Trace**: [See Section 4 for full trace]
-
-**Scenario Determination Logic**:
-- **Scenario A** (3+ paths ≥10%): Generate 3 path-based reports
-- **Scenario B** (2 paths ≥10%): Generate 2 path-based + 1 feature-based
-- **Scenario C** (1 path ≥10%): Generate 1 path-based + 2 feature-based
-- **Scenario D** (0 paths ≥10%): Generate 3 feature-based (high fragmentation)
-
----
-
-### 4.6 classify_confidence_level()
-
-**Purpose**: Classify path frequency into confidence bands (very_high/high/moderate)
-
-**When Called**: Integrated into `prepare_path_data_for_llm()`, applied to each path
-
-**Source**: Stage7PromptCritique.md Gap #2 (lines 3093-3214), Python Computes decision
-
-**Function Signature**:
-```python
-def classify_confidence_level(frequency_pct: float, report_type: str = "path_based") -> str
-```
-
-**Parameters**:
-- `frequency_pct` (float): Frequency percentage (e.g., 22.0 for 22%)
-- `report_type` (str): "path_based" or "feature_based"
-
-**Returns**:
-- str: Confidence level ("very_high" | "high" | "moderate")
-
-**Pseudocode**:
-```python
-def classify_confidence_level(frequency_pct: float, report_type: str = "path_based") -> str:
-    """
-    Classify confidence level based on frequency percentage.
-
-    Pure arithmetic classification with clear thresholds - exactly what Python should handle.
-
-    DESIGN DECISION: Confidence bands (20%, 15%, 10%) chosen because:
-    - Statistical interpretation: 20% = "1 in 5 videos" = dominant, 15% = "1 in 6-7" = strong, 10% = "1 in 10" = proven
-    - Stage 8 PDF prioritization: very_high featured prominently, moderate secondary
-    - Future-proofing: Normalizes confidence across different sample sizes (200 videos vs 100 videos)
-    - Clear boundaries: No ambiguity (19.9% = high, not very_high)
-
-    Rules:
-        - Path-based reports:
-            - ≥20%: very_high (1 in 5 videos - dominant pattern)
-            - 15-19.9%: high (1 in 6-7 videos - strong pattern)
-            - 10-14.9%: moderate (1 in 10 videos - proven pattern)
-        - Feature-based reports: always "moderate" (not frequency-based)
-    """
-    if report_type == "feature_based":
-        return "moderate"
-
-    if frequency_pct >= 20.0:
-        return "very_high"
-    elif frequency_pct >= 15.0:
-        return "high"
-    else:  # 10.0-14.9%
-        return "moderate"
-```
-
-**Edge Cases**:
-1. **Exactly 20.0%**: Returns `"very_high"` (inclusive lower bound)
-2. **Exactly 15.0%**: Returns `"high"` (inclusive lower bound)
-3. **Below 10%**: Still returns `"moderate"` (function doesn't enforce ≥10% threshold - caller's responsibility)
-4. **Feature-based report**: Always returns `"moderate"` regardless of `frequency_pct`
-5. **Invalid report_type**: Treats as path_based (no error)
-
-**Validation Rules**:
-- `frequency_pct` should be in range [0.0, 100.0]
-- `report_type` should be "path_based" or "feature_based"
-- If `frequency_pct < 10.0` for path_based, log warning (indicates caller error)
-
-**Integration**: This function is called within `prepare_path_data_for_llm()` to add confidence level to each path's data tuple.
-
----
-
-### 4.7 generate_universal_principles()
-
-**Purpose**: Extract top 5-7 RF features as universal principles applicable to ALL videos
-
-**When Called**: Before Phase 2 prompt generation
-
-**Source**: Stage7PromptCritique.md Gap #3 (lines 3313-3388)
-
-**Function Signature**:
-```python
-def generate_universal_principles(rf_video_data: dict, top_n: int = 7) -> list[str]
-```
-
----
-
-### 4.8 generate_cross_window_patterns()
-
-**Purpose**: Extract temporal progression insights from cross-window Random Forest features (energy deltas, consistency metrics)
-
-**When Called**: Phase 2 preprocessing, before Phase 2 prompt generation
-
-**Source**: LLMAnalysisCHILD.md Section 2.2.8 (lines 878-1005)
-
-**Function Signature**:
-```python
-def generate_cross_window_patterns(rf_video_data: dict) -> list[str]
-```
-
-**Algorithm** (Complete Pseudocode):
-
-```python
-def generate_cross_window_patterns(rf_video_data: dict) -> list[str]:
-    """Extract cross-window progression patterns from video-level RF data.
-
-    Implements graceful degradation: if cross-window features exist (normal case),
-    generate insights. If missing, return informative placeholder.
-    """
-    cross_features = rf_video_data.get('feature_importance', [])
-
-    # Step 1: Filter to cross-window features by name pattern
-    CROSS_WINDOW_KEYWORDS = ['delta', 'consistency', 'contrast', 'progression', '_std']
-    cross_window_features = [
-        f for f in cross_features
-        if any(keyword in f['feature'] for keyword in CROSS_WINDOW_KEYWORDS)
+    # Filter RF features by importance tolerance
+    top_rf_features = [
+        rf['feature'] for rf in rf_features
+        if rf.get('importance', 0) >= tolerance
     ]
 
-    # Step 2: Graceful degradation if features missing
-    if not cross_window_features:
-        # Return informative placeholder
-        return [
-            "Cross-window progression analysis requires Stage 6 RF cross-window features",
-            "These features are computed in Stage 4 (FeatureTransformationCHILD.md Section 6.5)",
-            "Expected features: hook_to_middle_energy_delta, middle_to_closing_contrast, eye_contact_consistency, word_density_std, energy_progression_slope",
-            "Stage 7 will automatically use these features once Stage 4/6 pipeline is complete"
-        ]
+    # Find matches between cluster features and top RF features
+    matched_features = [
+        feature for feature in cluster_features
+        if feature in top_rf_features
+    ]
 
-    # Step 3: Sort by importance, take top 5
-    cross_window_features.sort(key=lambda x: x['importance'], reverse=True)
-    top_cross = cross_window_features[:5]
+    # Calculate alignment score
+    num_rf_features = len(top_rf_features)
 
-    # Step 4: Generate pattern insights
-    patterns = []
-    for feature in top_cross:
-        prevalence_pct = _estimate_prevalence_from_gap(feature)
-        interpretation = _interpret_cross_window_feature(feature['feature'])
-        pattern = f"{prevalence_pct:.0f}% of high-performing videos show {interpretation}"
-        patterns.append(pattern)
-
-    return patterns
-
-
-def _interpret_cross_window_feature(feature_name: str) -> str:
-    """Translate cross-window feature name to human-readable pattern."""
-    interpretations = {
-        'hook_to_middle_energy_delta': 'energy builds from hook to middle',
-        'middle_to_closing_contrast': 'strong energy peak in closing vs middle',
-        'eye_contact_consistency': 'consistent eye contact throughout (bookend pattern)',
-        'word_density_std': 'varied pacing across windows',
-        'energy_progression_slope': 'steady energy progression from start to end'
-    }
-    return interpretations.get(feature_name, feature_name.replace('_', ' '))
-
-
-def _estimate_prevalence_from_gap(feature: dict) -> float:
-    """Estimate pattern prevalence percentage from feature gap (heuristic)."""
-    gap = feature.get('gap', 0.20)
-
-    # Linear interpolation: gap 0.20 → 65%, gap 0.40 → 85%
-    if gap >= 0.40:
-        return 85.0
-    elif gap >= 0.30:
-        return 78.0
-    elif gap >= 0.20:
-        return 65.0
+    if num_rf_features == 0:
+        # No RF features meet importance threshold
+        alignment_score = 0.0
+        alignment_ratio = '0/0'
+        insight = "No RF features meet importance threshold (>=15%) - RF model may need retraining"
     else:
-        return 50.0  # Low gap = weak pattern
-```
+        # Calculate alignment: matched / total top RF features
+        alignment_score = len(matched_features) / num_rf_features
+        alignment_ratio = f"{len(matched_features)}/{num_rf_features}"
 
-**Return Values**:
+        # Generate insight based on alignment strength
+        if alignment_score >= 0.67:
+            strength = "Strong"
+        elif alignment_score >= 0.33:
+            strength = "Moderate"
+        else:
+            strength = "Weak"
 
-**Normal case (features exist)**:
-```python
-[
-    "65% of high-performing videos show energy builds from hook to middle",
-    "78% show consistent eye contact throughout (bookend pattern)",
-    "72% show strong energy peak in closing vs middle"
-]
-```
+        insight = f"{strength} RF alignment: {alignment_ratio} cluster features match top predictors"
 
-**Graceful degradation (features missing)**:
-```python
-[
-    "Cross-window progression analysis requires Stage 6 RF cross-window features",
-    "These features are computed in Stage 4 (FeatureTransformationCHILD.md Section 6.5)",
-    "Expected features: hook_to_middle_energy_delta, middle_to_closing_contrast, eye_contact_consistency, word_density_std, energy_progression_slope",
-    "Stage 7 will automatically use these features once Stage 4/6 pipeline is complete"
-]
-```
-
-**Critical Edge Cases**:
-
-| Scenario | Handling | Rationale |
-|----------|----------|-----------|
-| **No cross-window features** | Return 4-line placeholder | Self-documenting fallback prevents silent failures |
-| **Only 1 cross-window feature** | Generate 1 pattern, not error | Partial data still provides value |
-| **Feature name mismatch** | Use generic interpretation | Name pattern matching is flexible |
-| **Missing 'gap' field** | Default to 0.20 | Defensive coding |
-
-**Validation Rules**:
-- Input: Validate `rf_video_data` has `feature_importance` key
-- Output: Validate return is non-empty list of strings
-
-**Dependencies**:
-- Stage 4: Cross-window features computed (FeatureTransformationCHILD.md Section 6.5)
-- Stage 6: RF analysis includes video-level features
-
-**Design Rationale**: Graceful degradation chosen because cross-window features ARE implemented in Stage 4 (normal case will use them), but this handles edge cases where Stage 4/6 bugs don't crash Stage 7. Self-documenting fallback explains what's missing and where to find it.
-
----
-
-### 4.9 generate_feature_based_reports()
-
-**Purpose**: Generate complete fallback reports when <3 cluster paths meet 10% threshold
-
-**When Called**: Phase 2 preprocessing, in Scenarios B, C, D (when insufficient paths are statistically reliable)
-
-**Source**: LLMAnalysisCHILD.md Section 2.2.9 (lines 1008-1227)
-
-**CRITICAL DESIGN DECISION**: Python generates COMPLETE reports (not LLM) to prevent hallucination in fallback scenarios. Rationale:
-- Zero hallucination risk: All text is Python-generated from data-driven templates
-- Deterministic output: Same RF features always produce same reports (testable, reproducible)
-- Hashtag specificity from DATA: Uses actual top_performer_avg from that hashtag's RF model (when available)
-- Feature-based reports are universal by design: Fallback guidance when paths are fragmented
-
-**SCHEMA REQUIREMENT**: Reports MUST match Section 3.3.2 (Phase 2 Output Schema) - 13 fields identical to path-based reports. This ensures schema consistency for downstream Stage 8 PDF generation and analytics.
-
-**Function Signature**:
-```python
-def generate_feature_based_reports(
-    rf_features: List[dict],
-    kmeans_data: dict,
-    num_reports: int = 3
-) -> List[dict]
-```
-
-**Parameters**:
-- `rf_features`: List of RF feature dicts from `rf_video_data['feature_importance']` (Stage 6 video-level analysis)
-- `kmeans_data`: K-Means cluster data (not used in current implementation, reserved for future enhancements)
-- `num_reports`: Number of feature-based reports to generate (1-3, default 3)
-
-**Feature Grouping Categories** (updated Oct 2025):
-1. **Visual Engagement**: `eye_contact_rate`, `close_ratio`, `scene_changes`, `text_overlay_ratio`, `scene_count`, `object_count`, `overlay_unique_count`
-2. **Audio/Speech**: `word_count`, `speech_coverage`, `energy_level`, `pitch_scatter_ratio`
-3. **Behavioral/Emotional**: `joy_ratio`, `surprise_ratio`, `hand_gestures`, `gesture_count`, `emotion_consistency`, `emotional_valence`
-
-**Complete Algorithm** (actual implementation from `stage7_preprocessing.py` lines 609-777):
-
-**NOTE**: Full 13-field schema shown only for Report #1. Reports #2 and #3 follow identical structure with different formula names and feature categories.
-
-```python
-def generate_feature_based_reports(
-    rf_features: List[dict],
-    kmeans_data: dict,
-    num_reports: int = 3
-) -> List[dict]:
-    """
-    Generate complete fallback reports when <3 paths meet 10% threshold.
-
-    SCHEMA: Matches TI Section 3.3.2 - 13 fields identical to path-based reports.
-    """
-    # Feature categories (visual, audio, behavioral)
-    visual_features = ['eye_contact_rate', 'close_ratio', 'scene_changes', 'text_overlay_ratio',
-                       'scene_count', 'object_count', 'overlay_unique_count']
-    audio_features = ['word_count', 'speech_coverage', 'energy_level', 'pitch_scatter_ratio']
-    behavioral_features = ['joy_ratio', 'surprise_ratio', 'hand_gestures', 'gesture_count',
-                          'emotion_consistency', 'emotional_valence']
-
-    reports = []
-
-    # Report 1: Visual Engagement
-    if num_reports >= 1:
-        visual_rf = [f for f in rf_features if f['feature'] in visual_features]
-        reports.append({
-            'report_id': 1,
-            'type': 'feature_based',
-            'path': None,
-            'frequency': None,
-            'percentage': None,
-            'confidence_level': 'moderate',
-            'formula_name': 'The Visual Storytelling Formula',
-            'structure': None,
-            'temporal_progressions': [
-                {
-                    'feature': visual_rf[0]['feature'] if len(visual_rf) > 0 else 'scene_count',
-                    'progression': 'Dynamic visual elements throughout video',
-                    'insight': 'Visual variety maintains attention in short-form content'
-                },
-                {
-                    'feature': visual_rf[1]['feature'] if len(visual_rf) > 1 else 'overlay_unique_count',
-                    'progression': 'Strategic visual enhancements for key moments',
-                    'insight': 'Visual cues reinforce messaging and aid retention'
-                }
-            ],
-            'rf_cross_window_validation': {
-                'video_level_features_matched': [f['feature'] for f in visual_rf[:3]],
-                'alignment_insight': f"Visual engagement features align with top {len(visual_rf)} RF predictors"
-            },
-            'strategy_description': (
-                f"High visual engagement formula leveraging {', '.join([f['feature'] for f in visual_rf[:3]])} "
-                f"to maintain viewer attention through dynamic visual storytelling elements."
-            ) if len(visual_rf) > 0 else "Visual engagement formula emphasizing dynamic scene transitions.",
-            'when_to_use': 'Product demonstrations, educational content, transformation videos, visual tutorials.',
-            'step_by_step_template': [
-                'Hook: Use multiple visual angles or dynamic elements to create immediate visual interest',
-                'Middle: Maintain visual variety with strategic scene transitions',
-                'Closing: Return to primary visual focus while maintaining dynamic elements'
-            ]
-        })
-
-    # Report 2: Audio/Speech (identical 13-field structure, different formula_name and categories)
-    # Report 3: Behavioral/Emotional (identical 13-field structure, different formula_name and categories)
-    # ... (implementation omitted for brevity - see stage7_preprocessing.py lines 697-775)
-
-    return reports
-```
-
-**Return Value Example** (Scenario B: 2 paths ≥10%, need 1 feature-based report):
-
-```python
-[
-    {
-        "report_id": 3,
-        "type": "feature_based",
-        "path": null,
-        "frequency": null,
-        "percentage": null,
-        "confidence_level": "moderate",
-        "formula_name": "The Visual Storytelling Formula",
-        "structure": null,
-        "temporal_progressions": [
-            {
-                "feature": "scene_count",
-                "progression": "Dynamic visual elements throughout video",
-                "insight": "Visual variety maintains attention in short-form content"
-            },
-            {
-                "feature": "overlay_unique_count",
-                "progression": "Strategic visual enhancements for key moments",
-                "insight": "Visual cues reinforce messaging and aid retention"
-            }
-        ],
-        "rf_cross_window_validation": {
-            "video_level_features_matched": [],
-            "alignment_insight": "Visual engagement features align with top 0 RF predictors for sustained attention"
-        },
-        "strategy_description": "Visual engagement formula emphasizing dynamic scene transitions and visual variety.",
-        "when_to_use": "Product demonstrations, educational content, transformation videos, before/after content.",
-        "step_by_step_template": [
-            "Hook: Use multiple visual angles or dynamic elements to create immediate visual interest",
-            "Middle: Maintain visual variety with strategic scene transitions and visual enhancements",
-            "Closing: Return to primary visual focus while maintaining dynamic elements"
-        ]
+    return {
+        'alignment_score': alignment_score,
+        'matched_features': matched_features,
+        'top_rf_features': top_rf_features[:10],  # Limit to top 10 for display
+        'alignment_ratio': alignment_ratio,
+        'insight': insight
     }
-]
 ```
 
-**IMPLEMENTATION NOTE (Oct 2025 - Bug Fix)**:
-- **Old Schema** (DEPRECATED as of Oct 2025): 5 fields (`report_id`, `type`, `category`, `top_features`, `strategy_template`)
-- **New Schema** (CURRENT): 13 fields matching Section 3.3.2 (identical to path-based reports)
-- **Breaking Change**: Field names changed (`category` → `formula_name`, `strategy_template` → `strategy_description`)
-- **Rationale**: Ensures schema consistency for downstream Stage 8 PDF generation and analytics
-- **Files Updated**:
-  - `stage7_preprocessing.py` (lines 609-777)
-  - `test_feature_based_reports.py` (schema expectations updated)
-  - `test_phase2_preprocessing.py` (schema expectations updated)
-
-**Critical Edge Cases**:
-
-| Scenario | Handling | Rationale |
-|----------|----------|-----------|
-| **<1 feature in group** | Use fallback generic values (e.g., 'scene_count') | Graceful degradation ensures output completeness |
-| **num_reports=3** | Generate all 3 reports (Scenario D - high fragmentation) | Coverage safety net |
-| **Empty rf_features** | Use generic formula names and empty feature lists | Self-documenting fallback, prevents crashes |
+**Edge Cases**:
+1. **No RF features meet tolerance**: `num_rf_features=0, alignment_ratio='0/0', insight="No RF features meet importance threshold (>=15%)"`
+2. **All cluster features match RF**: `alignment_score=1.0, insight="Strong RF alignment: 3/3 cluster features match top predictors"`
+3. **No cluster features match RF**: `alignment_score=0.0, matched_features=[], insight="Weak RF alignment: 0/5 cluster features match top predictors"`
+4. **Empty cluster_features list**: `matched_features=[], alignment_score=0.0`
+5. **RF features missing 'importance' key**: Defaults to 0.0 (excluded from top_rf_features)
 
 **Validation Rules**:
-- Input: Validate `num_reports` is 1-3
-- Output: Validate each report has all 13 required schema fields (Section 3.3.2)
-- Schema Consistency: ALL reports (path-based AND feature-based) MUST have identical structure
+- `tolerance` must be ≥ 0.0 and ≤ 1.0
+- `rf_features` must have required keys: `feature`, `importance`
+- `cluster_features` must be list of strings (feature names)
+- Alignment score = `matched / num_rf_features` (not `matched / cluster_features`)
 
-**Dependencies**:
-- Stage 6: RF video-level analysis with `feature_importance` array
+**Example Trace**:
 
-**Usage in Phase 2**:
 ```python
-# Called from build_phase2_prompt() in stage7_prompts.py line 355
-feature_based_reports = generate_feature_based_reports(
-    rf_features=rf_video_data.get('feature_importance', []),
-    kmeans_data={},  # Not used in current implementation
-    num_reports=num_feature_based
-)
-# Reports are embedded in LLM prompt and copied verbatim into creative_reports array
+Input:
+  cluster_features = ['eye_contact_rate', 'word_count', 'scene_changes']
+  rf_features = [
+      {'feature': 'eye_contact_rate', 'importance': 0.35},
+      {'feature': 'energy_level', 'importance': 0.22},
+      {'feature': 'word_count', 'importance': 0.18},
+      {'feature': 'scene_changes', 'importance': 0.12},  # Below 0.15 threshold
+      {'feature': 'text_overlay_ratio', 'importance': 0.08}
+  ]
+  tolerance = 0.15
+
+Execution:
+  Step 1: Filter RF features by importance >= 0.15
+    top_rf_features = ['eye_contact_rate', 'energy_level', 'word_count']
+    (scene_changes excluded: 0.12 < 0.15)
+    num_rf_features = 3
+
+  Step 2: Find matches between cluster_features and top_rf_features
+    'eye_contact_rate' in top_rf_features → MATCH
+    'word_count' in top_rf_features → MATCH
+    'scene_changes' NOT in top_rf_features → NO MATCH
+
+    matched_features = ['eye_contact_rate', 'word_count']
+
+  Step 3: Calculate alignment score
+    alignment_score = 2 / 3 = 0.67 (67%)
+    alignment_ratio = '2/3'
+    0.67 >= 0.67 → strength = "Strong"
+    insight = "Strong RF alignment: 2/3 cluster features match top predictors"
+
+Output:
+  {
+      'alignment_score': 0.67,
+      'matched_features': ['eye_contact_rate', 'word_count'],
+      'top_rf_features': ['eye_contact_rate', 'energy_level', 'word_count'],
+      'alignment_ratio': '2/3',
+      'insight': "Strong RF alignment: 2/3 cluster features match top predictors"
+  }
 ```
+
+**Interpretation**: This cluster uses 2 important RF features out of 3 total important features (67% alignment = Strong). The cluster also uses 'scene_changes', but that's not an important RF predictor (importance 0.12), so it doesn't contribute to alignment.
 
 ---
 
-### 4.10 run_phase1_parallel()
+### 4.4 run_phase1_parallel()
 
 **Purpose**: Run Phase 1 analysis for all windows in parallel with status tracking and resume capability
 
@@ -1966,7 +1457,7 @@ def run_phase1_parallel(bucket_path: str, bucket: str, hashtag: str | None, wind
 
 ---
 
-### 4.11 analyze_window_with_retry()
+### 4.5 analyze_window_with_retry()
 
 **Purpose**: Analyze single window with exponential backoff retry logic
 
@@ -2059,7 +1550,7 @@ def analyze_window_with_retry(bucket_path: str, window_type: str, bucket: str,
 
 ---
 
-### 4.12 run_phase2_synthesis()
+### 4.6 run_phase2_synthesis()
 
 **Purpose**: Generate cross-window synthesis with cluster path analysis
 
@@ -2158,7 +1649,7 @@ def run_phase2_synthesis(bucket_path: str, window_analyses: dict, bucket: str, h
 
 ---
 
-### 4.13 build_phase1_prompt()
+### 4.7 build_phase1_prompt()
 
 **Purpose**: Construct Phase 1 LLM prompt with all preprocessing applied
 
@@ -2414,7 +1905,7 @@ def _format_centroid_compact(centroid: dict) -> str:
 
 ---
 
-### 4.14 build_phase2_prompt()
+### 4.8 build_phase2_prompt()
 
 **Purpose**: Construct Phase 2 synthesis prompt with cluster path analysis and scenario-specific instructions
 
@@ -2429,12 +1920,11 @@ def build_phase2_prompt(window_analyses: dict, top_paths: list, all_paths: list,
                        needs_fallback: bool) -> str
 ```
 
-**Preprocessing Steps** (calls Section 4.5-4.9 functions):
-1. Call `prepare_path_data_for_llm()` - Label paths as ✅ ABOVE / ❌ BELOW 10% threshold
-2. Call `generate_universal_principles()` - Extract top 5-7 RF features
-3. Call `generate_cross_window_patterns()` - Extract temporal progressions
-4. Call `generate_feature_based_reports()` - Generate fallback reports if needed (Scenarios B/C/D)
-5. Call `classify_confidence_level()` - Classify paths as very_high/high/moderate
+**Preprocessing Steps**:
+- No preprocessing functions called (LLM-only approach)
+- Raw data passed directly to LLM prompt
+- LLM handles path filtering, confidence classification, and scenario determination
+- **Note**: Original design included preprocessing functions (see Stage7FutureUpgrades.md), but production uses simplified LLM-only approach
 
 **Complete Prompt Template** (Full 180+ line prompt with Scenario A/B/C/D logic):
 
@@ -2444,7 +1934,7 @@ def build_phase2_prompt(window_analyses: dict, top_paths: list, all_paths: list,
                        needs_fallback: bool) -> str:
     """Build Phase 2 synthesis prompt with all Gap #1-5 improvements integrated."""
 
-    # Run Phase 2 preprocessing (Section 4.5-4.9)
+    # Note: Original design called preprocessing functions here, but production uses LLM-only approach
     total_videos = len(all_paths)
     path_data = prepare_path_data_for_llm(
         cluster_paths={tuple(p['path']): p['frequency'] for p in all_paths},
@@ -2718,34 +2208,30 @@ Generate a JSON object with the following structure:
 
 ## Section 4 Summary
 
-Section 4 documents **14 functions** implementing Stage 7's algorithmic logic:
+Section 4 documents **8 functions** implementing Stage 7's algorithmic logic:
 
-**Phase 1 Preprocessing** (functions 4.1-4.4):
+**Phase 1 Preprocessing** (functions 4.1-4.3):
 1. `detect_bimodal_pattern()` - Detect dual strategies (30% threshold)
 2. `identify_high_contrast_features()` - Filter differentiating features (0.20 threshold)
 3. `compute_rf_alignment()` - Match cluster features to RF patterns (0.15 tolerance)
-4. `enrich_high_contrast_features()` - Add RF metadata for LLM formatting
 
-**Phase 2 Preprocessing** (functions 4.5-4.9):
-5. `prepare_path_data_for_llm()` - Label paths by 10% threshold, determine scenario (A/B/C/D)
-6. `classify_confidence_level()` - Classify into very_high/high/moderate bands
-7. `generate_universal_principles()` - Extract top 5-7 RF features as universal advice
-8. `generate_cross_window_patterns()` - Extract temporal progression insights (FULL IMPLEMENTATION)
-9. `generate_feature_based_reports()` - Generate complete fallback reports (FULL IMPLEMENTATION)
+**Orchestration Functions** (functions 4.4-4.6):
+4. `run_phase1_parallel()` - Parallel execution with status tracking (FULL IMPLEMENTATION)
+5. `analyze_window_with_retry()` - Single window analysis with retry logic (FULL IMPLEMENTATION)
+6. `run_phase2_synthesis()` - Cross-window synthesis orchestration (FULL IMPLEMENTATION)
 
-**Orchestration Functions** (functions 4.10-4.12):
-10. `run_phase1_parallel()` - Parallel execution with status tracking (FULL IMPLEMENTATION)
-11. `analyze_window_with_retry()` - Single window analysis with retry logic (FULL IMPLEMENTATION)
-12. `run_phase2_synthesis()` - Cross-window synthesis orchestration (FULL IMPLEMENTATION)
-
-**Prompt Builder Functions** (functions 4.13-4.14):
-13. `build_phase1_prompt()` - Phase 1 prompt construction (FULL 150+ LINE PROMPT TEMPLATE)
-14. `build_phase2_prompt()` - Phase 2 prompt construction (FULL 180+ LINE PROMPT TEMPLATE)
+**Prompt Builder Functions** (functions 4.7-4.8):
+7. `build_phase1_prompt()` - Phase 1 prompt construction (FULL 150+ LINE PROMPT TEMPLATE)
+8. `build_phase2_prompt()` - Phase 2 prompt construction (FULL 180+ LINE PROMPT TEMPLATE)
 
 **Format Notes**:
-- Functions 4.1-4.7: Full detail with complete pseudocode (already in TI before this update)
-- Functions 4.8-4.14: Full detail with complete algorithms and prompt templates (added in this implementation)
-- All 14 functions now include complete pseudocode, edge cases, validation rules, and implementation details
+- Functions 4.1-4.3: Full detail with complete pseudocode
+- Functions 4.4-4.8: Full detail with complete algorithms and prompt templates
+- All 8 functions include complete pseudocode, edge cases, validation rules, and implementation details
+
+**Deferred Functions** (moved to Stage7FutureUpgrades.md):
+- 6 functions from original design (4.4-4.9) were not implemented and have been archived
+- See Stage7FutureUpgrades.md for details on: `enrich_high_contrast_features()`, `prepare_path_data_for_llm()`, `classify_confidence_level()`, `generate_universal_principles()`, `generate_cross_window_patterns()`, `generate_feature_based_reports()`
 
 ---
 
@@ -3191,7 +2677,7 @@ if types != expected_types[scenario]:
 **Action**: Retry Phase 2
 **Rationale**: Ensures 10% threshold fallback logic executed correctly
 
-**Source**: LLMAnalysisCHILD.md Section 4.5 (prepare_path_data_for_llm - Scenario Determination)
+**Source**: LLMAnalysisCHILD.md Section 4.5 (prepare_path_data_for_llm - Scenario Determination logic, function not implemented - see Stage7FutureUpgrades.md)
 
 ---
 
@@ -3572,7 +3058,7 @@ def validate_phase2_llm_output(response: dict, bucket: str) -> tuple[bool, str]:
 
 #### 5.2.3 Validation Integration Points
 
-**In `analyze_window_with_retry()` (Section 4.11)**:
+**In `analyze_window_with_retry()` (Section 4.5)**:
 ```python
 # After LLM API call
 response = client.messages.create(...)
@@ -3589,7 +3075,7 @@ with open(output_path, 'w') as f:
     json.dump(llm_output, f, indent=2)
 ```
 
-**In `run_phase2_synthesis()` (Section 4.12)**:
+**In `run_phase2_synthesis()` (Section 4.6)**:
 ```python
 # After Phase 2 LLM call
 response = client.messages.create(...)
@@ -3621,324 +3107,119 @@ class LLMOutputValidationError(Exception):
 
 ### 6.1 Error Classification
 
-Stage 7 errors are classified into 5 categories based on severity and retry strategy:
+Stage 7 errors are classified into **4 production categories** based on production implementation (`rumiai_ml_batch.py` lines 287-439):
 
-| Category | Examples | Retry? | Exit Code | Status File Impact |
-|----------|----------|--------|-----------|-------------------|
-| **Pre-Flight Failures** | Missing API key, Stage 6 files not found | No | 1-3 | Not created yet |
-| **Retryable API Errors** | 429 rate limiting, 503 service unavailable, timeout | Yes | 0 (auto-recover) | Updated with retry info |
-| **Fatal API Errors** | 401 unauthorized, 400 bad request | No | 4 | Status preserved for debugging |
-| **Execution Failures** | Window fails after all retries, invalid LLM output | Partial | 5 | Status preserved (resume capability) |
-| **Data Integrity Errors** | Video missing from cluster, path extraction failure | No | 6 | Status shows Phase 1 complete |
+| Category | Examples | Retry? | Exit Code | When |
+|----------|----------|--------|-----------|------|
+| **1. LLM Validation Errors** | Missing clusters key, wrong cluster count, malformed JSON | Yes (3 attempts: 0s, 2s, 4s) | 2 | After LLM API response |
+| **2. Phase 1 Execution Errors** | Window fails after retries, API timeout, file I/O error | Partial (checkpoint resume) | 2 | During Phase 1 |
+| **3. Insufficient Data** | <3 paths ≥10% threshold | Not an error (expected) | 0 (success) | Phase 2 path extraction |
+| **4. API Auth & Rate Limiting** | 401 Unauthorized (no retry), 429/503 (retry with backoff) | Conditional | 4 (auth) or 0/2 (rate limit) | During API calls |
 
----
-
-### 6.2 Pre-Flight Validation Errors
-
-**When**: Before Phase 1 execution
-**Strategy**: Fail-fast with clear user guidance
-**Retry**: None (user must fix environment)
-
-#### Error 6.2.1: Missing API Key
-
-**Detection**:
-```python
-api_key = os.environ.get("ANTHROPIC_API_KEY")
-if not api_key:
-    raise PreFlightValidationError("ANTHROPIC_API_KEY environment variable not set")
-```
-
-**Error Message**:
-```
-ANTHROPIC_API_KEY environment variable not set.
-Add to .env file: ANTHROPIC_API_KEY=sk-ant-api03-...
-```
-
-**Exit Code**: 1
-**User Action**: Set environment variable, rerun Stage 7
-**Rationale**: Better than cryptic API auth error mid-execution
+**Key Changes from Original Design**:
+- Collapsed 5 categories → 4 production categories
+- "Pre-Flight Failures" merged into "Phase 1 Execution Errors"
+- "Data Integrity Errors" removed (absorbed into Phase 1)
+- "Insufficient Data" elevated to top-level (expected scenario, not error)
+- Simplified retry logic: [0s, 2s, 4s] intervals consistently
 
 ---
 
-#### Error 6.2.2: Invalid API Key Format
+###  6.2 LLM Validation Errors
 
-**Detection**:
-```python
-if not api_key.startswith("sk-ant-"):
-    raise PreFlightValidationError("Invalid ANTHROPIC_API_KEY format")
-```
+**When**: After receiving LLM API response (Phase 1 or Phase 2)
 
-**Error Message**:
-```
-Invalid ANTHROPIC_API_KEY format. Expected: sk-ant-api03-...
-Received: [first 10 chars of provided key]
-```
+**Strategy**: Automatic retry with exponential backoff
 
-**Exit Code**: 1
-**User Action**: Check API key format, update .env file
-**Rationale**: Catch typos/invalid keys before expensive API calls
+**Source**: `rumiai_ml_batch.py:410-414`
 
----
+**Retry Logic**:
+- Attempt 1: Immediate (0s delay)
+- Attempt 2: 2s delay
+- Attempt 3: 4s delay
+- After 3 attempts: Exit with code 2
 
-#### Error 6.2.3: Stage 6 Files Missing
+**Examples**:
 
-**Detection**:
-```python
-expected_files = [...]  # 13 files for bucket 18-33s
-missing = [f for f in expected_files if not os.path.exists(f)]
-if missing:
-    raise PreFlightValidationError(f"Stage 6 incomplete: Missing {len(missing)} of {len(expected_files)} JSONs")
-```
-
-**Error Message**:
-```
-Stage 6 incomplete: Missing 7 of 13 JSONs.
-Re-run Stage 6 before Stage 7.
-Missing files:
-  - ml_analysis/hook_rf_analysis.json
-  - ml_analysis/middle_1_rf_analysis.json
-  - ml_analysis/middle_2_rf_analysis.json
-  ... (showing first 3)
-```
-
-**Exit Code**: 1
-**User Action**: Run `python run_ml_pipeline.py --stage 6 --client acme --bucket 18-33s`
-**Rationale**: Stage 7 depends on complete Stage 6 output
-
----
-
-#### Error 6.2.4: Malformed JSON
+#### Error 6.2.1: Missing 'clusters' Key in LLM Response
 
 **Detection**:
 ```python
 try:
-    json.load(open(file_path))
-except json.JSONDecodeError as e:
-    raise PreFlightValidationError(f"Malformed JSON: {file_path}")
+    analysis = json.loads(response.content[0].text)
+    if 'clusters' not in analysis:
+        raise LLMValidationError("Missing 'clusters' key in LLM response")
+except KeyError as e:
+    logger.warning(f"{window_type}: LLM validation failed - {e}")
+    # Retry with backoff
 ```
 
 **Error Message**:
 ```
-Stage 6 validation failed: hook_rf_analysis.json malformed.
-JSON parsing error: Expecting ',' delimiter: line 45 column 12 (char 892)
-Re-run Stage 6.
+hook: LLM validation failed - Missing 'clusters' key in response
+Retrying in 2s... (attempt 2/3)
 ```
 
-**Exit Code**: 1
-**User Action**: Re-run Stage 6 (likely interrupted write)
-**Rationale**: Prevents partial Phase 1 execution with corrupt data
+**Exit Code**: 2 (if all retries exhausted)
 
 ---
 
-#### Error 6.2.5: Schema Validation Failure
+#### Error 6.2.2: Wrong Cluster Count
 
 **Detection**:
 ```python
-if len(kmeans_data['clusters']) != 3:
-    raise ValidationError(f"Expected 3 clusters, got {len(kmeans_data['clusters'])}")
+if len(analysis['clusters']) != 3:
+    raise LLMValidationError(f"Expected 3 clusters, got {len(analysis['clusters'])}")
 ```
 
 **Error Message**:
 ```
-hook_kmeans_analysis.json: Expected 3 clusters, got 2.
-Stage 6 output invalid. Re-run Stage 6.
+hook: Expected 3 clusters, got 2
+Retrying in 4s... (attempt 3/3)
 ```
 
-**Exit Code**: 1
-**User Action**: Re-run Stage 6
-**Rationale**: Stage 7 assumes exactly 3 clusters per window (hard-coded)
-
-**Note**: Cluster size validation removed from Stage 7 per CrossHLDalignment2do.md Issue #16. Stage 6 is authoritative.
+**Exit Code**: 2 (if all retries exhausted)
 
 ---
 
-### 6.3 Retryable API Errors
-
-**When**: During Phase 1/2 API calls
-**Strategy**: Exponential backoff with jitter, up to 2 retries
-**Retry**: Yes (automatic)
-
-#### Error 6.3.1: Rate Limiting (429)
-
-**Detection**:
-```python
-try:
-    response = client.messages.create(...)
-except anthropic.RateLimitError as e:
-    if attempt < max_attempts:
-        backoff = calculate_backoff(attempt)
-        logger.warning(f"Rate limited. Retrying in {backoff:.1f}s...")
-        time.sleep(backoff)
-    else:
-        raise
-```
-
-**Error Message** (logged):
-```
-hook: Rate limited. Retrying in 2.1s... (attempt 1/3)
-```
-
-**Exit Code**: 0 (auto-recover) or 5 (if all retries exhausted)
-**User Action**: None (automatic recovery)
-**Backoff Schedule**: 2s, 4s, 8s (with 10% jitter)
-**Rationale**: Prevents API hammering, gives rate limit time to reset
-
----
-
-#### Error 6.3.2: Service Unavailable (503)
-
-**Detection**:
-```python
-except anthropic.APIConnectionError as e:
-    if attempt < max_attempts:
-        logger.warning(f"Anthropic API unavailable. Retrying in {backoff}s...")
-```
-
-**Error Message**:
-```
-hook: Anthropic API unavailable (503). Retrying in 4.2s... (attempt 2/3)
-```
-
-**Exit Code**: 0 (auto-recover) or 5 (if all retries exhausted)
-**User Action**: None (automatic recovery)
-**Rationale**: Transient service issues resolve within seconds to minutes
-
----
-
-#### Error 6.3.3: API Timeout
-
-**Detection**:
-```python
-response = client.messages.create(
-    ...
-    timeout=PHASE1_TIMEOUT_SECONDS  # 90s
-)
-# If no response after 90s, anthropic.APITimeoutError raised
-```
-
-**Error Message**:
-```
-hook: API call timed out after 90s. Retrying... (attempt 1/3)
-```
-
-**Exit Code**: 0 (auto-recover) or 5 (if all retries exhausted)
-**User Action**: None (automatic recovery)
-**Conservative Timeout Rationale**:
-- 90s = 2× safety margin (typical: 5-10s, 99th percentile: 30-45s)
-- Cost of premature timeout: Abort bucket after 6 hours of processing
-- If actual failure (network down), waiting 90s vs 30s doesn't matter
-
----
-
-#### Error 6.3.4: JSON Truncated (max_tokens exceeded)
+#### Error 6.2.3: Malformed JSON from LLM
 
 **Detection**:
 ```python
 try:
     analysis = json.loads(response.content[0].text)
 except json.JSONDecodeError as e:
-    if "Unexpected end" in str(e):
-        # JSON truncated - increase max_tokens
-        logger.warning(f"{window_type}: JSON truncated. Retrying with more tokens...")
-        max_tokens = int(max_tokens * 1.5)  # 50% increase
-        # Retry with increased token limit
+    logger.warning(f"{window_type}: LLM returned invalid JSON - {e}")
+    # Retry with backoff
 ```
 
 **Error Message**:
 ```
-hook: JSON truncated (max_tokens=4000 insufficient). Retrying with 6000 tokens...
+hook: LLM returned invalid JSON - Expecting ',' delimiter: line 12 column 5
+Retrying immediately... (attempt 1/3)
 ```
 
-**Exit Code**: 0 (auto-recover)
-**User Action**: None (automatic remediation)
-**Rationale**: Common edge case with automatic fix (increase token budget)
+**Exit Code**: 2 (if all retries exhausted)
+
+**Rationale**: LLM occasionally generates invalid JSON (rare, ~1-2% of responses). Automatic retry typically succeeds.
 
 ---
 
-#### Error 6.3.5: Invalid LLM JSON Response
+### 6.3 Phase 1 Execution Errors
+
+**When**: During Phase 1 window analysis
+
+**Strategy**: Checkpoint-based resume - preserve completed windows, retry failed windows
+
+**Source**: `rumiai_ml_batch.py:417-420`
+
+**Examples**:
+
+#### Error 6.3.1: Window Fails After All Retries
 
 **Detection**:
 ```python
-try:
-    analysis = json.loads(response.content[0].text)
-    validate_phase1_schema(analysis, window_type)
-except (json.JSONDecodeError, ValidationError) as e:
-    logger.warning(f"{window_type}: LLM generated invalid output. Retrying...")
-    # Count as failed attempt
-```
-
-**Error Message**:
-```
-hook: LLM generated malformed JSON. Retrying... (attempt 1/3)
-hook: Expected 3 clusters in response, got 2. Retrying... (attempt 2/3)
-```
-
-**Exit Code**: 0 (auto-recover) or 5 (if all retries exhausted)
-**User Action**: None (automatic recovery)
-**Rationale**: LLM occasionally produces malformed output; retry usually succeeds
-
----
-
-### 6.4 Fatal API Errors
-
-**When**: During Phase 1/2 API calls
-**Strategy**: Abort immediately, no retry
-**Retry**: No (permanent failure)
-
-#### Error 6.4.1: Unauthorized (401)
-
-**Detection**:
-```python
-except anthropic.AuthenticationError as e:
-    raise FatalAPIError("Invalid API key. Check ANTHROPIC_API_KEY.")
-```
-
-**Error Message**:
-```
-Invalid API key. Check ANTHROPIC_API_KEY.
-API response: 401 Unauthorized - Invalid x-api-key
-```
-
-**Exit Code**: 4
-**User Action**: Verify API key validity, update .env file
-**Status File**: Preserved for debugging
-**Rationale**: Auth error won't resolve with retry; user must fix key
-
----
-
-#### Error 6.4.2: Bad Request (400)
-
-**Detection**:
-```python
-except anthropic.BadRequestError as e:
-    raise FatalAPIError("Invalid prompt format. This is a code bug.")
-```
-
-**Error Message**:
-```
-Invalid prompt format. This is a code bug.
-API response: 400 Bad Request - messages.0.content: string too long
-Report to developer.
-```
-
-**Exit Code**: 4
-**User Action**: Report bug to development team
-**Status File**: Preserved for debugging
-**Rationale**: Bad request indicates code bug, not transient issue
-
----
-
-### 6.5 Execution Failures
-
-**When**: After exhausting all retries
-**Strategy**: Preserve partial progress, enable resume
-**Retry**: Manual (user re-runs Stage 7)
-
-#### Error 6.5.1: Window Fails After All Retries
-
-**Detection**:
-```python
-# After 3 attempts (1 initial + 2 retries)
+# After 3 retry attempts for a window
 if window_failed_attempts >= MAX_RETRY_ATTEMPTS:
     status['failed_windows'].append({
         'window': window_type,
@@ -3954,103 +3235,238 @@ hook failed after 3 attempts.
 Last error: API timeout after 90s
 
 Phase 1 incomplete. Completed 5/6 windows:
-  ✓ hook (already saved)
-  ✓ middle_1 (already saved)
-  ✓ middle_2 (already saved)
-  ✓ middle_3 (already saved)
-  ✓ middle_4 (already saved)
+  ✓ hook
+  ✓ middle_1
+  ✓ middle_2
+  ✓ middle_3
+  ✓ middle_4
   ✗ closing (failed)
 
 Re-run Stage 7 to resume from checkpoint. Only 'closing' will be retried.
-Completed windows saved: $0.15 in API costs preserved.
+Completed windows saved: $0.75 in API costs preserved.
 ```
 
-**Exit Code**: 5
-**User Action**: Re-run `python run_ml_pipeline.py --stage 7 --client acme --bucket 18-33s`
-**Status File**: Preserved with `completed_windows` list
-**Resume Logic**: On re-run, skip windows in `completed_windows` (cost optimization)
-**Rationale**: Incremental saves preserve expensive API call results
+**Exit Code**: 2 (Phase 1 failure)
+
+**User Action**: Re-run Stage 7 - it will resume from `.phase1_status.json` checkpoint
+
+**Status File Behavior**: Preserves `completed_windows` list, enables cost-efficient resume
+
+**Rationale**: Preserves expensive API call results ($0.15 per window)
 
 ---
 
-#### Error 6.5.2: Phase 2 Validation Failure
+#### Error 6.3.2: API Timeout (>90s)
 
 **Detection**:
 ```python
-if len(synthesis['creative_reports']) != 3:
-    raise ValidationError("Phase 2: Expected 3 creative reports, got {len}")
+response = client.messages.create(
+    ...
+    timeout=90  # Phase 1 timeout
+)
+# Raises anthropic.APITimeoutError if no response after 90s
 ```
 
 **Error Message**:
 ```
-Phase 2: Expected 3 creative reports, got 2.
-LLM synthesis invalid. Retrying Phase 2... (attempt 1/3)
+hook: API call timed out after 90s
+Window will be retried (attempt 2/3)
 ```
 
-**Exit Code**: 0 (retry) or 5 (if all retries exhausted)
-**User Action**: None (automatic retry) or re-run Stage 7
-**Status File**: Phase 1 marked complete, Phase 2 marked failed
-**Rationale**: Phase 2 failure doesn't invalidate Phase 1 progress
+**Exit Code**: 2 (if all retries exhausted)
+
+**Rationale**: 90s timeout = 2× safety margin. Retry logic handles transient network issues.
 
 ---
 
-### 6.6 Data Integrity Errors
-
-**When**: During cluster path extraction (Phase 2)
-**Strategy**: Abort immediately, indicate upstream corruption
-**Retry**: No (requires Stage 6 re-run)
-
-#### Error 6.6.1: Video Missing from Cluster
+#### Error 6.3.3: File I/O Error Writing Output
 
 **Detection**:
 ```python
-cluster_id = find_cluster_for_video(video_id, window_kmeans_data)
-if cluster_id is None:
-    raise DataIntegrityError(f"Video {video_id} not found in {window} clusters")
+try:
+    with open(output_path, 'w') as f:
+        json.dump(analysis, f, indent=2)
+except IOError as e:
+    logger.error(f"Failed to write {window_type}_analysis.json: {e}")
+    raise Phase1ExecutionError(f"File I/O error for {window_type}")
 ```
 
 **Error Message**:
 ```
-Data integrity error: Video video_42 not found in middle_1 clusters.
-Stage 6 outputs may be inconsistent across windows.
-
-Phase 1 complete (6 window JSONs saved).
-Phase 2 aborted (cluster path extraction failed).
-
-Re-run Stage 6 to regenerate consistent K-Means outputs.
+ERROR: Failed to write hook_analysis.json: [Errno 28] No space left on device
+Phase 1 execution error: File I/O error for hook
 ```
 
-**Exit Code**: 6
-**User Action**: Re-run Stage 6, then re-run Stage 7
-**Status File**: Shows Phase 1 complete, Phase 2 failed
-**Rationale**: Indicates Stage 6 bug (video disappeared between windows)
+**Exit Code**: 2
+
+**User Action**: Free disk space, re-run Stage 7
 
 ---
 
-#### Error 6.6.2: Incomplete Cluster Path
+### 6.4 Insufficient Data (Expected Scenario, Not an Error)
+
+**When**: Phase 2 path extraction yields <3 paths meeting 10% frequency threshold
+
+**Strategy**: Automatic fallback to feature-based reports
+
+**Source**: `rumiai_ml_batch.py:423-427`
+
+**Key Insight**: This is an **expected scenario**, not an error. System handles gracefully.
+
+---
+
+#### Scenario 6.4.1: 0-2 Paths Meet 10% Threshold
 
 **Detection**:
 ```python
-if len(path) != len(windows):
-    raise DataIntegrityError(f"Video {video_id} path incomplete: {len(path)}/{len(windows)} windows")
+paths_above_threshold = count_paths_above_threshold(cluster_paths, threshold=0.10)
+
+if paths_above_threshold < 3:
+    logger.info(f"Only {paths_above_threshold} paths ≥10% threshold")
+    logger.info("Generating feature-based fallback reports...")
+    needs_fallback = True
+```
+
+**Log Message**:
+```
+Phase 2: Path extraction complete
+Total unique paths: 47
+Paths ≥10% threshold: 2
+Scenario: B (2 path-based + 1 feature-based report)
+
+Generating fallback reports using RF features...
+```
+
+**Exit Code**: 0 (success - system handled expected scenario)
+
+**Behavior**:
+- LLM generates 3 reports total:
+  - **Scenario A** (3+ paths): 3 path-based reports
+  - **Scenario B** (2 paths): 2 path-based + 1 feature-based
+  - **Scenario C** (1 path): 1 path-based + 2 feature-based
+  - **Scenario D** (0 paths): 3 feature-based reports
+
+**Rationale**: High path fragmentation is common for:
+- Small sample sizes (<100 videos)
+- Diverse content within hashtag
+- Experimental/exploratory niches
+
+LLM generates universal RF-based guidance instead of path-specific strategies.
+
+---
+
+#### Why This Is Not an Error
+
+**Design Philosophy**: Insufficient data for path-based analysis doesn't mean Stage 7 failed. It means the content is too diverse for cluster-path patterns.
+
+**User Value**: Feature-based reports still provide actionable guidance:
+- Top RF predictors (eye_contact_rate, word_count, etc.)
+- General best practices applicable to all videos
+- Fallback when paths are fragmented
+
+**Historical Context**: Originally classified as "error" in TI, but production treats it as expected scenario. Elevated to top-level category in this rewrite to reflect production reality.
+
+---
+
+### 6.5 API Authentication & Rate Limiting
+
+**When**: During Phase 1/2 API calls
+
+**Strategy**: Conditional - auth errors abort immediately, rate limits retry with backoff
+
+**Source**: `rumiai_ml_batch.py:430-439`
+
+---
+
+#### Error 6.5.1: 401 Unauthorized (No Retry)
+
+**Detection**:
+```python
+try:
+    response = client.messages.create(...)
+except anthropic.AuthenticationError as e:
+    logger.error("Anthropic API authentication failed (401)")
+    raise FatalAPIError("Invalid API key. Check ANTHROPIC_API_KEY.")
 ```
 
 **Error Message**:
 ```
-Data integrity error: Video video_15 has incomplete path (5/6 windows).
-Missing from: closing
+FATAL ERROR: Anthropic API authentication failed (401 Unauthorized)
 
-This indicates a Stage 6 consistency bug.
-Re-run Stage 6.
+API Key: sk-ant-api03-...xxxxx (last 5 chars shown)
+
+Cause: Invalid or expired API key
+Action: Check ANTHROPIC_API_KEY in .env file
+Documentation: https://docs.anthropic.com/authentication
+
+Aborting Stage 7. No retry will be attempted.
+Exiting with code 4
 ```
 
-**Exit Code**: 6
-**User Action**: Re-run Stage 6
-**Rationale**: Critical invariant - every video must appear in every window
+**Exit Code**: 4 (fatal - authentication failure)
+
+**User Action**: Verify API key validity, update `.env` file, re-run Stage 7
+
+**Retry Strategy**: NO RETRY - auth is system-wide, all buckets would fail
+
+**Rationale**: Prevents wasting time/cost on retries that will all fail with same auth error
 
 ---
 
-### 6.7 Status File Lifecycle
+#### Error 6.5.2: 429 Rate Limit (Retry with Backoff)
+
+**Detection**:
+```python
+try:
+    response = client.messages.create(...)
+except anthropic.RateLimitError as e:
+    if attempt < max_attempts:
+        backoff = calculate_backoff(attempt)  # [0s, 2s, 4s]
+        logger.warning(f"Rate limited. Retrying in {backoff:.1f}s...")
+        time.sleep(backoff)
+    else:
+        raise
+```
+
+**Error Message**:
+```
+hook: Rate limited by Anthropic API (429)
+Retrying in 2.0s... (attempt 2/3)
+```
+
+**Exit Code**: 0 (auto-recover) or 2 (if all retries exhausted)
+
+**User Action**: None (automatic recovery)
+
+**Retry Strategy**: Exponential backoff [0s, 2s, 4s] with up to 3 attempts
+
+**Rationale**: Rate limits reset within seconds; backoff prevents API hammering
+
+---
+
+#### Error 6.5.3: 503 Service Unavailable (Retry with Backoff)
+
+**Detection**:
+```python
+except anthropic.APIConnectionError as e:
+    logger.warning(f"Anthropic API unavailable (503). Retrying in {backoff}s...")
+```
+
+**Error Message**:
+```
+hook: Anthropic API unavailable (503 Service Unavailable)
+Retrying in 4.0s... (attempt 3/3)
+```
+
+**Exit Code**: 0 (auto-recover) or 2 (if all retries exhausted)
+
+**Retry Strategy**: Same as rate limiting [0s, 2s, 4s]
+
+**Rationale**: Transient service issues typically resolve within seconds to minutes
+
+---
+
+### 6.6 Status File Lifecycle
 
 **Purpose**: Track Phase 1 completion and enable resume capability
 
@@ -4118,7 +3534,7 @@ Re-run Stage 6.
 
 ---
 
-### 6.8 Smart Retry Logic
+### 6.7 Smart Retry Logic
 
 **Source**: LLMAnalysisCHILD.md Section 6.2 (Critique Q4)
 
@@ -4214,7 +3630,7 @@ Attempt 3: Success
 
 ---
 
-### 6.9 Hashtag Handling (Non-Critical Failure)
+### 6.8 Hashtag Handling (Non-Critical Failure)
 
 **Source**: LLMAnalysisCHILD.md Section 6.2 (QA Q8.2)
 
@@ -4253,7 +3669,7 @@ def get_hashtag_from_metadata(bucket_path: str) -> str | None:
 
 ---
 
-### 6.10 Error Handling Summary Matrix
+### 6.9 Error Handling Summary Matrix
 
 | Error Category | Error Type | Detection Point | Retry Strategy | Exit Code | Status File Impact |
 |----------------|-----------|-----------------|----------------|-----------|-------------------|
@@ -4281,6 +3697,230 @@ def get_hashtag_from_metadata(bucket_path: str) -> str | None:
 - **5**: Execution failure after retries
 - **6**: Data integrity error (Stage 6 corruption)
 - **99**: Unexpected error (catch-all)
+
+---
+
+### 6.10 Bucket-Level Error Recovery
+
+**When**: Errors occur during batch processing (multiple buckets being processed)
+
+**Strategy**: For certain non-fatal errors, skip the failing bucket but continue processing remaining buckets
+
+**Source**: `rumiai_ml_batch.py:1777-1824`
+
+**Rationale**: One bucket's failure shouldn't block others. Maximize throughput in batch processing scenarios.
+
+---
+
+#### Errors That Skip Bucket (Continue Pipeline)
+
+**Error 6.11.1: FileNotFoundError - Stage 6 Outputs Missing**
+
+**Source**: `rumiai_ml_batch.py:1777-1785`
+
+**Trigger**: Stage 6 outputs missing for this specific bucket (e.g., RF/K-Means JSONs)
+
+**Action**:
+1. Log warning with bucket identifier
+2. Skip this bucket entirely
+3. Continue to next bucket in batch
+4. Pipeline completes successfully (exit code 0)
+
+**Error Message Example**:
+```
+WARNING: Stage 7 skipped for bucket 18-33s
+Reason: Stage 6 outputs not found
+Missing: ml_analysis/hook_rf_analysis.json (and 6 others)
+
+Action: Run Stage 6 for bucket 18-33s, then re-run Stage 7
+Continuing to next bucket...
+```
+
+**Exit Code**: 0 (pipeline continues, not a fatal error)
+
+**Use Case**: Batch processing where some buckets completed Stage 6, others didn't
+
+---
+
+**Error 6.11.2: Insufficient Data - Not Enough Videos**
+
+**Source**: `rumiai_ml_batch.py:1787-1795`
+
+**Trigger**: Bucket has < 50 videos (insufficient for meaningful ML analysis)
+
+**Action**:
+1. Log informational message (not a warning - expected scenario)
+2. Skip this bucket (no analysis generated)
+3. Continue to next bucket
+4. Pipeline completes successfully
+
+**Error Message Example**:
+```
+INFO: Stage 7 skipped for bucket 0-3s
+Reason: Only 12 videos in bucket (minimum: 50 required)
+
+This is expected for rare duration buckets. No action needed.
+Continuing to next bucket...
+```
+
+**Exit Code**: 0 (not an error - expected behavior)
+
+**Use Case**: Hashtags with few very short (<3s) or very long (>90s) videos
+
+---
+
+#### Errors That Abort Entire Pipeline
+
+**Error 6.11.3: AuthenticationError - API Key Invalid**
+
+**Source**: `rumiai_ml_batch.py:1797-1805`
+
+**Trigger**: Anthropic API returns 401 Unauthorized
+
+**Action**:
+1. Log fatal error
+2. Abort entire pipeline immediately
+3. Do NOT continue to next bucket
+4. Exit with code 4
+
+**Rationale**: Auth is system-wide; all buckets will fail with same error. Stop early to avoid wasting time.
+
+**Error Message Example**:
+```
+FATAL ERROR: Anthropic API authentication failed (401 Unauthorized)
+
+Bucket: 18-33s
+API Key: sk-ant-api03-...xxxxx (last 5 chars shown)
+
+Cause: Invalid or expired API key
+Action: Check ANTHROPIC_API_KEY in .env file
+Documentation: https://docs.anthropic.com/authentication
+
+Aborting pipeline. No further buckets will be processed.
+Exiting with code 4
+```
+
+**Exit Code**: 4 (fatal - authentication failure)
+
+---
+
+**Error 6.11.4: IOError / OSError - File System Issues**
+
+**Source**: `rumiai_ml_batch.py:1807-1815`
+
+**Trigger**: Permission denied, disk full, network drive disconnected
+
+**Action**:
+1. Log fatal error with system details
+2. Abort entire pipeline immediately
+3. Exit with code 4
+
+**Rationale**: System-level issues affect all buckets. Cannot proceed safely.
+
+**Error Message Example**:
+```
+FATAL ERROR: File system error during Stage 7
+
+Bucket: 18-33s
+Error: [Errno 28] No space left on device: '/data/ml_analysis/llm/hook_analysis.json'
+
+Cause: Disk full on /data partition
+Action: Free up disk space and re-run Stage 7
+Disk usage: /data 98% full (234 GB / 240 GB used)
+
+Aborting pipeline.
+Exiting with code 4
+```
+
+**Exit Code**: 4 (fatal - system error)
+
+---
+
+**Error 6.11.5: Unexpected Exception (Catch-All)**
+
+**Source**: `rumiai_ml_batch.py:1817-1824`
+
+**Trigger**: Any unexpected error not covered by specific handlers
+
+**Action**:
+1. Log full stack trace for debugging
+2. Abort entire pipeline (safer than continuing with unknown error)
+3. Exit with code 99
+
+**Rationale**: Unknown errors require investigation before retrying other buckets
+
+**Error Message Example**:
+```
+UNEXPECTED ERROR during Stage 7
+
+Bucket: 18-33s
+Error Type: AttributeError
+Error Message: 'NoneType' object has no attribute 'get'
+
+Stack Trace:
+  File "rumiai_ml_batch.py", line 1750, in process_stage7
+    result = stage7_llm_analysis.main(bucket_path, bucket)
+  File "stage7_llm_analysis.py", line 89, in main
+    window_analyses = run_phase1_parallel(bucket_path, bucket, hashtag, window_types)
+  File "stage7_llm_analysis.py", line 156, in run_phase1_parallel
+    analysis = future.result(timeout=120)
+  ... (full stack trace)
+
+This is likely a code bug. Please report to development team.
+
+Aborting pipeline.
+Exiting with code 99
+```
+
+**Exit Code**: 99 (unexpected error)
+
+---
+
+#### Bucket-Level Error Recovery Summary
+
+| Error Type | Skip Bucket? | Continue Pipeline? | Exit Code | User Action |
+|------------|--------------|-------------------|-----------|-------------|
+| **FileNotFoundError** (Stage 6 missing) | ✅ Yes | ✅ Yes | 0 | Run Stage 6 for that bucket |
+| **Insufficient Data** (<50 videos) | ✅ Yes | ✅ Yes | 0 | None (expected) |
+| **AuthenticationError** (401) | ❌ No | ❌ No | 4 | Fix API key |
+| **IOError / OSError** | ❌ No | ❌ No | 4 | Fix system issue |
+| **Unexpected Exception** | ❌ No | ❌ No | 99 | Report bug |
+
+**Design Principle**: Skip non-fatal errors (recoverable, bucket-specific), abort fatal errors (system-wide, dangerous to continue)
+
+---
+
+### 6.11 Cleanup Policy for Failed Executions
+
+**When**: Only on **catastrophic failures** (non-recoverable errors that abort Stage 7)
+
+**Purpose**: Prevent partial/corrupt outputs from being consumed by downstream Stage 8
+
+**Source**: `rumiai_ml_batch.py:450-486` (`cleanup_stage7_partial_outputs()`)
+
+**Rationale**: Stage 7 has checkpoint/resume capability - cleanup is only needed for unrecoverable failures, not for recoverable errors with pending retries.
+
+---
+
+#### Files Cleaned Up on Catastrophic Failure
+
+1. **`winning_formulas.json`** (Phase 2 output)
+   - Only if Phase 2 failed or was partially written
+   - Critical: Stage 8 depends on this file's completeness
+
+2. **`complete_analysis_{bucket}.json`** (combined output)
+   - Always deleted on failure (prevents false positive idempotency check)
+   - If this exists, Stage 7 skips the bucket on re-run
+
+3. **`.phase1_status.json`** (checkpoint file)
+   - PRESERVED if Phase 1 completed successfully
+   - Only deleted if Phase 1 was incomplete/corrupted
+
+4. **`{window}_analysis.json` files** (Phase 1 window analyses)
+   - PRESERVED - these are valuable (each costs ~$0.15 in API calls)
+   - Only deleted if explicitly marked as failed in `.phase1_status.json`
+
+**Key Principle**: Preserve expensive Phase 1 results whenever safe to do so. Only full cleanup on fatal errors where output integrity cannot be guaranteed.
 
 ---
 
@@ -6728,7 +6368,7 @@ All 14 functions from TI Section 4 have been successfully implemented with full 
 
 **Date**: 2025-10-27
 
-**Component**: generate_feature_based_reports() (Section 4.9)
+**Component**: generate_feature_based_reports() (originally Section 4.9, now deferred - see Stage7FutureUpgrades.md)
 
 **Category**: Bug Fix / Schema Compliance
 
@@ -6779,7 +6419,7 @@ Updated `generate_feature_based_reports()` to output full 13-field schema matchi
 
 **TI Sections Updated**:
 - Section 3.3.2: Added clarification about schema consistency requirement
-- Section 4.9: Complete rewrite with actual 13-field implementation
+- Section 4.9: (Now removed - function was not implemented, see Stage7FutureUpgrades.md)
 - Section 11.3.1: This log entry
 
 ---
@@ -6848,37 +6488,31 @@ Updated `generate_feature_based_reports()` to output full 13-field schema matchi
 - All orchestration functions with complete algorithms
 
 **Content Added**:
-1. Section 4.8: `generate_cross_window_patterns()` - 125 lines
-   - Extract temporal progressions from cross-window RF features
-   - Complete pseudocode with graceful degradation
-
-2. Section 4.9: `generate_feature_based_reports()` - 233 lines
-   - Generate fallback reports when <3 paths meet 10% threshold
-   - Complete algorithm with 4 helper functions
-
-3. Section 4.10: `run_phase1_parallel()` - 125 lines
+1. Section 4.4 (formerly 4.10): `run_phase1_parallel()` - 125 lines
    - Parallel execution with status tracking
    - Complete orchestration logic
 
-4. Section 4.11: `analyze_window_with_retry()` - 98 lines
+2. Section 4.5 (formerly 4.11): `analyze_window_with_retry()` - 98 lines
    - Single window analysis with exponential backoff
    - Complete retry logic
 
-5. Section 4.12: `run_phase2_synthesis()` - 106 lines
+3. Section 4.6 (formerly 4.12): `run_phase2_synthesis()` - 106 lines
    - Cross-window synthesis orchestration
    - Complete Phase 2 flow
 
-6. Section 4.13: `build_phase1_prompt()` - **FULL prompt template** (256 lines)
+4. Section 4.7 (formerly 4.13): `build_phase1_prompt()` - **FULL prompt template** (256 lines)
    - Complete 150+ line LLM prompt
    - All variable substitution logic
    - Bimodal formatting, high-contrast filtering, RF alignment
 
-7. Section 4.14: `build_phase2_prompt()` - **FULL prompt template** (302 lines)
+5. Section 4.8 (formerly 4.14): `build_phase2_prompt()` - **FULL prompt template** (302 lines)
    - Complete 180+ line LLM prompt
    - Scenario-specific instructions (A/B/C/D)
-   - Python-generated feature-based reports embedding
+   - LLM-only approach (no Python preprocessing)
 
-**Impact**: +1,243 lines, +14k tokens
+**Note**: Sections 4.8-4.9 (`generate_cross_window_patterns()` and `generate_feature_based_reports()`) were removed during Priority 2 TI update (2025-01-28) - functions not implemented, moved to Stage7FutureUpgrades.md
+
+**Impact**: Originally +1,243 lines; after removal of 6 functions: ~580 lines net reduction
 
 ---
 
@@ -7326,12 +6960,12 @@ pipenv lock  # Generates Pipfile.lock
 | **LLMAnalysisCHILD.md** | | |
 | Section 1: Context & Business Goal | Section 1: Document Metadata | ✅ Complete |
 | Section 2.1: High-Level Approach (Hybrid Two-Phase) | Section 4: Algorithmic Specifications (intro) | ✅ Complete |
-| Section 2.2: Python Preprocessing Pipeline (9 functions) | Section 4.1-4.9: Preprocessing function specifications | ✅ Complete |
+| Section 2.2: Python Preprocessing Pipeline (original 9 functions) | Section 4.1-4.3: Preprocessing function specifications (6 functions deferred to Stage7FutureUpgrades.md) | ✅ Complete |
 | Section 2.3.1: Pre-Flight Validation | Section 5.1: Pre-Flight Validation (3 layers) | ✅ Complete |
-| Section 2.3.2: Phase 1 Parallel Execution | Section 4.10: run_phase1_parallel(), Section 4.11: analyze_window_with_retry() | ✅ Complete |
-| Section 2.3.3: Phase 2 Sequential Synthesis | Section 4.12: run_phase2_synthesis() | ✅ Complete |
-| Section 2.4.1: Phase 1 Prompt Engineering | Section 4.13: build_phase1_prompt() | ✅ Complete |
-| Section 2.4.2: Phase 2 Prompt Engineering | Section 4.14: build_phase2_prompt() | ✅ Complete |
+| Section 2.3.2: Phase 1 Parallel Execution | Section 4.4: run_phase1_parallel(), Section 4.5: analyze_window_with_retry() | ✅ Complete |
+| Section 2.3.3: Phase 2 Sequential Synthesis | Section 4.6: run_phase2_synthesis() | ✅ Complete |
+| Section 2.4.1: Phase 1 Prompt Engineering | Section 4.7: build_phase1_prompt() | ✅ Complete |
+| Section 2.4.2: Phase 2 Prompt Engineering | Section 4.8: build_phase2_prompt() | ✅ Complete |
 | Section 2.5: Output File Structure | Section 8.4: Output File Specifications | ✅ Complete |
 | Section 3.1: Input Dependencies (Stage 6 outputs) | Section 2.1: StageInput contract, Section 3.0: Stage 6 Input Schema Reference | ✅ Complete |
 | Section 3.2: Output Contracts | Section 2.2: StageOutput contract, Section 3.3: Output Schemas | ✅ Complete |
@@ -7429,8 +7063,8 @@ pipenv lock  # Generates Pipfile.lock
 ```python
 IMPLEMENTATION_FILES = {
     "stages/stage7_llm_analysis.py": "Main Stage 7 implementation (entry point, orchestration)",
-    "stages/stage7_preprocessing.py": "9 preprocessing functions (Section 4.1-4.9)",
-    "stages/stage7_prompts.py": "Phase 1 & Phase 2 prompt builders (Section 4.13-4.14)",
+    "stages/stage7_preprocessing.py": "3 preprocessing functions (Section 4.1-4.3, 6 deferred)",
+    "stages/stage7_prompts.py": "Phase 1 & Phase 2 prompt builders (Section 4.7-4.8)",
     "stages/stage7_validation.py": "3-layer pre-flight validation (Section 5.1)",
     "config/llm_config.py": "LLM configuration constants (Section 9.2.1)",
     "config/preprocessing_constants.py": "Preprocessing thresholds (Section 9.2.2)",

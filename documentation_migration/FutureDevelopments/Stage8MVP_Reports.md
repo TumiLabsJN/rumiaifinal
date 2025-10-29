@@ -255,10 +255,21 @@ Caption Strategy That Works:
 
 #### Section 4: Quantitative Intelligence
 
-Pending Quantitative (BRAINSTORM)
-- Point 1
-- Point 2
-- Point 3
+**Duration Bucket 13-18s:**
+  • Formula 1: The Question Hook Formula (BRAINSTORM)
+  • Formula 2: The Fast-Paced Product Demo
+  • Formula 3: The Myth-Busting Reveal
+
+**Duration Bucket 18-33s:**
+  • Formula 4: The Transformation Story
+  • Formula 5: The Ingredient Deep-Dive
+  • Formula 6: The Side-by-Side Comparison
+
+**Duration Bucket 33-60s:**
+  • Formula 7: The Step-by-Step Tutorial
+  • Formula 8: The Expert Interview Format
+  • Formula 9: The Before-After Journey
+
 
 **Dynamic Fields**:
 | Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |

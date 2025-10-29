@@ -346,20 +346,32 @@ CheckpointSchema = {
 **Source**: FeatureTransformationCHILD.md Section 5.1
 **Produced by**: Stage 3 (Feature Aggregation)
 
-**Schema Summary Table**:
+**Column Count Source of Truth**: `config/bucket_definitions.py::get_stage3_expected_feature_count(bucket)`
 
-| Bucket | Windows | Temporal Features | Metadata | Total Columns |
-|--------|---------|-------------------|----------|---------------|
-| 0-3s | 1 (hook) | 21 × 1 = 21 | 3 | 24 |
-| 3-9s | 2 (hook, closing) | 21 × 2 = 42 | 3 | 45 |
-| 9-13s | 3 (hook, middle_agg, closing) | 21 × 3 = 63 | 3 | 66 |
-| 13-18s | 3 (hook, middle_agg, closing) | 21 × 3 = 63 | 3 | 66 |
-| **18-33s** | **6** | **21 × 6 = 126** | **3** | **129** |
-| 33-60s | 7 | 21 × 7 = 147 | 3 | 150 |
-| 60-90s | 7 | 21 × 7 = 147 | 3 | 150 |
-| 90-120s | 7 | 21 × 7 = 147 | 3 | 150 |
+**Usage in Validation** (Section 4.1):
+```python
+from config.bucket_definitions import get_stage3_expected_feature_count
 
-**Complete Schema** (bucket 18-33s example with 129 columns):
+# S7B2 Fix: Stage 4 validates input using Stage 3's source of truth function
+expected_cols = get_stage3_expected_feature_count(bucket)
+
+# Examples:
+# bucket='0-3s'   → 25  (21×1 + 3 + 0 xwin + 1 label)
+# bucket='3-9s'   → 49  (21×2 + 3 + 3 xwin + 1 label)
+# bucket='9-13s'  → 72  (21×3 + 3 + 5 xwin + 1 label)
+# bucket='18-33s' → 135 (21×6 + 3 + 5 xwin + 1 label)
+# bucket='33-60s' → 156 (21×7 + 3 + 5 xwin + 1 label)
+```
+
+**Formula Breakdown** (see config/bucket_definitions.py lines 154-200):
+- Base features: 21 per window
+- Metadata: 3 fields (video_id, create_time, gender)
+- Cross-window features (xwin_*): 0-5 (bucket-dependent, see Section 3.2.1)
+- Target label: 1 field (is_top_performer, see Section 3.2.2)
+
+**S7B2 Fix (2025-10-28)**: Column counts increased to include cross-window features and target label created in Stage 3. Stage 4 validates presence, does NOT create these features.
+
+**Complete Schema** (bucket 18-33s example with 135 columns):
 
 For brevity, showing schema structure with {window} prefix notation. Each of the 21 base features below is repeated 6 times with prefixes: `hook_`, `middle_1_`, `middle_2_`, `middle_3_`, `middle_4_`, `closing_`.
 
@@ -399,7 +411,50 @@ Aggregated FeaturesSchema_18_33s = {
 }
 ```
 
-**Field Count Verification**: 126 temporal (21 × 6 windows) + 3 metadata = **129 columns** ✓
+**Field Count Verification (S7B2)**: 126 temporal + 3 metadata + 5 xwin + 1 label = **135 columns** ✓
+
+#### 3.2.1 Cross-Window Features (S7B2 Fix - from Stage 3)
+
+**Source**: Stage 3 (MLPlanningv2.md Section 3.3.1)
+
+**Window Structure Source of Truth**: `config/bucket_definitions.BUCKET_WINDOWS`
+
+**Usage in Validation** (Section 4.1b):
+```python
+from config.bucket_definitions import get_windows
+
+# Get windows for bucket to validate cross-window features
+windows = get_windows(bucket)  # e.g., ['hook', 'middle_1', ..., 'closing'] for 18-33s
+```
+
+**Expected Features** (bucket-dependent):
+
+| Feature Name | Buckets | Type | Range | Description |
+|--------------|---------|------|-------|-------------|
+| `xwin_hook_to_middle_energy` | 9-13s+ | float | [-1, 1] | Energy delta from hook to middle avg |
+| `xwin_middle_to_closing_energy` | 9-13s+ | float | [-1, 1] | Energy delta from middle to closing |
+| `xwin_eye_contact_consistency` | 3-9s+ | float | [0, 1] | Std dev of eye contact across windows |
+| `xwin_word_density_std` | 3-9s+ | float | ≥0 | Std dev of word count across windows |
+| `xwin_energy_progression_slope` | 3-9s+ | float | [-1, 1] | Linear regression slope of energy |
+
+**Feature Count Logic** (see config/bucket_definitions.py lines 185-195):
+- 0-3s: 0 features (single window, no comparisons)
+- 3-9s: 3 features (consistency, std, slope only)
+- 9-13s+: 5 features (all)
+
+**Stage 4 Behavior**: Validates presence in Section 4.1b, passes through unchanged to output. Does NOT compute.
+
+#### 3.2.2 Target Label (S7B2 Fix - from Stage 3)
+
+**Source**: Stage 3 (MLPlanningv2.md Section 3.3.2)
+
+**Field**: `is_top_performer` (int, 0 or 1)
+
+**Values**:
+- Contrastive mode: 1 = top 80%, 0 = bottom 20%
+- Top mode: 1 = all videos (no bottom performers)
+
+**Stage 4 Behavior**: Validates presence in Section 4.1b, uses as target variable for RF models. Does NOT create (fallback exists for legacy compatibility in Section 4.2).
 
 ### 3.3 Stage 4 Output Schema: Video-Level RF
 
@@ -408,7 +463,29 @@ Aggregated FeaturesSchema_18_33s = {
 **Purpose**: Video-Level Random Forest cross-window pattern detection
 **Row Count**: N (same as input, no rows dropped)
 
-**Schema** (bucket 18-33s with ~183 columns):
+**Feature Count Calculation** (S7B2 Fix):
+```python
+from config.bucket_definitions import get_stage3_expected_feature_count
+
+# Input features from Stage 3
+stage3_features = get_stage3_expected_feature_count(bucket)  # e.g., 135 for 18-33s
+
+# Net transformations (one-hot encoding increases feature count)
+emotion_expansion = +6    # dominant_emotion_id (1) → 7 emotions, drop original: +6 net
+temporal_expansion = +4   # create_time (1) → 5 temporal, drop original: +4 net
+gender_expansion = +2     # gender (1) → 3 one-hot, drop original: +2 net
+
+total_rf_features = stage3_features + emotion_expansion + temporal_expansion + gender_expansion
+# bucket='18-33s': 135 + 6 + 4 + 2 = 147 features ✓
+```
+
+**Examples by Bucket**:
+- 0-3s: 25 + 12 = 37 features
+- 3-9s: 49 + 12 = 61 features
+- 18-33s: 135 + 12 = 147 features
+- 33-60s: 156 + 12 = 168 features
+
+**Schema** (bucket 18-33s with 147 columns):
 
 ```python
 # Source: FeatureTransformationCHILD.md Section 5.2, Section 2.3.2
@@ -417,8 +494,15 @@ VideoRFTransformedSchema = {
     # hook_average_face_size, hook_overlay_unique_count, ..., closing_emotion_consistency
     # (Complete list: 21 features × 6 windows, preserved as-is)
 
-    # ===== DERIVED FEATURES =====
-    # Note: has_captions kept as raw Boolean in temporal features (no encoding needed)
+    # ===== CROSS-WINDOW FEATURES (5 cols, from Stage 3 - S7B2 Fix) =====
+    # Passed through unchanged from input (created in Stage 3)
+    "xwin_hook_to_middle_energy": float,        # [-1,1], Energy delta hook→middle
+    "xwin_middle_to_closing_energy": float,     # [-1,1], Energy delta middle→closing
+    "xwin_eye_contact_consistency": float,      # [0,1], Std dev across windows
+    "xwin_word_density_std": float,             # [0,∞], Std dev across windows
+    "xwin_energy_progression_slope": float,     # [-1,1], Linear slope across windows
+
+    # ===== DERIVED FEATURES (Stage 4 transformations) =====
 
     # One-hot: dominant_emotion_id (7 cols)
     "joy": int,                               # {0,1}, 1 if emotion==1
@@ -441,19 +525,12 @@ VideoRFTransformedSchema = {
     "gender_female": int,                     # {0,1}, 1 if "female"
     "gender_nan": int,                        # {0,1}, 1 if null
 
-    # Cross-window features (5 cols, NEW)
-    "hook_to_middle_energy_delta": float,     # [-1,1], Absolute difference (closing - hook energy)
-    "middle_to_closing_delta": float,         # [-1,1], Absolute difference (closing - middle energy)
-    "eye_contact_consistency": float,         # [0,1], Std dev across windows
-    "word_density_std": float,                # [0,∞], Std dev across windows
-    "energy_progression_slope": float,        # [-∞,∞], Linear slope across windows
-
-    # Target variable (1 col, contrastive only)
+    # Target variable (1 col, from Stage 3 - S7B2 Fix)
     "is_top_performer": int,                  # {0,1}, 1=top 80%, 0=bottom 20%
 }
 ```
 
-**Column Count**: 126 + 7 + 5 + 3 + 5 + 1 = **147 columns** (for bucket 18-33s)
+**Column Count**: 135 (Stage 3 input) + 12 (net transformations) = **147 columns** (for bucket 18-33s)
 
 **Note**: Actual count varies by bucket (depends on window count). has_captions remains as Boolean in the 126 temporal features (6 windows × has_captions column).
 
@@ -650,8 +727,9 @@ def validate_input(df: pd.DataFrame, bucket: str, expected_count: int) -> None:
 
     Source: FeatureTransformationCHILD.md Section 2.3.1
     """
-    # 1. Check column count matches bucket expectations
-    expected_cols = get_expected_column_count(bucket)  # 129 for 18-33s
+    # 1. Check column count matches bucket expectations (S7B2 Fix)
+    from config.bucket_definitions import get_stage3_expected_feature_count
+    expected_cols = get_stage3_expected_feature_count(bucket)  # 135 for 18-33s (was 129)
     if len(df.columns) != expected_cols:
         raise ValueError(
             f"Expected {expected_cols} columns for bucket {bucket}, found {len(df.columns)}"
@@ -731,6 +809,110 @@ def validate_input(df: pd.DataFrame, bucket: str, expected_count: int) -> None:
 | Missing column | Fail-fast with error | Contract violation from Stage 3 |
 | NaN in required field | Fail-fast with error | Data corruption from Stage 3 |
 | Out-of-range value | Fail-fast with error | Bug in Stage 2 feature calculation |
+
+### 4.1b validate_xwin_features() and validate_target_label() - NEW (S7B2 Fix)
+
+**Purpose**: Validate cross-window features and is_top_performer label exist from Stage 3
+
+**Source**: PostBugFixUpdate.md (S7B2 Fix), MLPlanningv2.md Sections 3.3.1-3.3.2
+
+**Implementation** (lines 180-220 estimated, rumiai_v2/processors/feature_transformation.py):
+
+```python
+def validate_xwin_features(df: pd.DataFrame, bucket: str) -> None:
+    """
+    Validate cross-window features created in Stage 3.
+
+    Args:
+        df: Input DataFrame from aggregated_features.csv
+        bucket: Bucket name (e.g., "18-33s")
+
+    Raises:
+        ValueError: If expected xwin features missing
+
+    Source: PostBugFixUpdate.md Section "Stage 4 Changes"
+    """
+    expected_xwin = [
+        'xwin_hook_to_middle_energy',
+        'xwin_middle_to_closing_energy',
+        'xwin_eye_contact_consistency',
+        'xwin_word_density_std',
+        'xwin_energy_progression_slope'
+    ]
+
+    existing_xwin = [f for f in expected_xwin if f in df.columns]
+
+    # Bucket-specific validation (see config/bucket_definitions.py lines 185-195)
+    if bucket == '0-3s':
+        if len(existing_xwin) > 0:
+            logger.warning(f"Unexpected xwin features in 0-3s: {existing_xwin}")
+    elif bucket == '3-9s':
+        if len(existing_xwin) < 3:
+            raise ValueError(
+                f"Missing xwin features from Stage 3: expected 3, found {len(existing_xwin)}. "
+                f"See MLPlanningv2.md Section 3.3.1"
+            )
+    else:  # 9-13s+
+        if len(existing_xwin) < 5:
+            raise ValueError(
+                f"Missing xwin features from Stage 3: expected 5, found {len(existing_xwin)}. "
+                f"See MLPlanningv2.md Section 3.3.1"
+            )
+
+    logger.debug(f"✓ Cross-window validation passed: {len(existing_xwin)} features")
+
+
+def validate_target_label(df: pd.DataFrame) -> None:
+    """
+    Validate is_top_performer label exists from Stage 3.
+
+    Args:
+        df: Input DataFrame from aggregated_features.csv
+
+    Raises:
+        ValueError: If label missing or invalid values
+
+    Source: PostBugFixUpdate.md Section "Stage 4 Changes"
+    """
+    if 'is_top_performer' not in df.columns:
+        raise ValueError(
+            "Missing is_top_performer label from Stage 3. "
+            "See MLPlanningv2.md Section 3.3.2"
+        )
+
+    # Validate values are binary
+    unique_vals = df['is_top_performer'].unique()
+    if not set(unique_vals).issubset({0, 1}):
+        raise ValueError(
+            f"Invalid is_top_performer values: {unique_vals}, expected {{0, 1}}"
+        )
+
+    logger.debug("✓ Target label validation passed")
+```
+
+**Integration Point**: Called by `validate_input()` (Section 4.1) at lines ~215-217:
+
+```python
+# In validate_input() function (added at end, lines ~215-217):
+validate_xwin_features(df, bucket)  # S7B2 Fix
+validate_target_label(df)           # S7B2 Fix
+```
+
+**Error Examples**:
+- Missing xwin features in 18-33s bucket → ValueError with expected vs found count
+- Missing is_top_performer → ValueError referencing Stage 3 Section 3.3.2
+- Invalid label values (e.g., -1, 2) → ValueError with valid range
+
+**Edge Cases**:
+
+| Scenario | Handling | Rationale |
+|----------|----------|-----------|
+| 0-3s with xwin features | Warn but continue | Unexpected but not breaking |
+| 3-9s missing xwin features | Fail-fast with error | Stage 3 contract violation |
+| 9-13s+ missing xwin features | Fail-fast with error | Stage 3 contract violation |
+| is_top_performer not {0,1} | Fail-fast with error | Invalid label values |
+
+**Testing**: See Section 8.1 for unit test coverage of validation logic.
 
 ### 4.2 Function: transform_video_level_rf()
 
@@ -2066,6 +2248,65 @@ All implementation changes during Phase 4 (Implementation) should be logged here
 ### 11.4 Implementation Log Entries
 
 ```
+[2025-10-28] [HIGH] [BREAKING] S7B2 Fix - Cross-Window Feature Migration to Stage 3
+
+Type: BREAKING - Schema Change
+Severity: HIGH
+Impact: All downstream stages (4, 5, 6, 7)
+
+Summary: Migrated cross-window feature creation from Stage 4 to Stage 3. Stage 4 now validates presence instead of computing.
+
+Motivation:
+- Stage 6 needs xwin features in aggregated_features.csv for distribution analysis
+- Creating in Stage 3 ensures availability to all downstream stages
+- Stage 4 validation ensures pipeline fails fast if Stage 3 contract violated
+
+Changes Made:
+1. Section 3.2 - Updated input schema with source of truth references:
+   - Added reference to config.bucket_definitions.get_stage3_expected_feature_count()
+   - Updated column counts (25, 49, 72, 135, 156 from 24, 45, 66, 129, 150)
+   - Added Sections 3.2.1 (xwin schema) and 3.2.2 (label schema)
+
+2. Section 3.3 - Updated Video-Level RF output schema:
+   - Added feature count calculation using get_stage3_expected_feature_count()
+   - Changed from 183 to 147 features (18-33s bucket)
+   - Updated xwin feature names (added xwin_ prefix)
+   - Marked xwin features as "from Stage 3" (passed through)
+
+3. Section 4.1 - Updated validate_input():
+   - Changed to use get_stage3_expected_feature_count(bucket) (line 731-732)
+   - Removed hardcoded column counts
+
+4. Section 4.1b - Added NEW validation functions:
+   - validate_xwin_features() - validates bucket-specific xwin feature counts
+   - validate_target_label() - validates is_top_performer presence and values
+   - Integration with validate_input() at lines ~215-217
+
+5. Section 12.2 - Updated Upstream Dependencies:
+   - Added S7B2 Contract documentation
+   - Referenced config functions as source of truth
+   - Added line number references to config/bucket_definitions.py
+
+Files Modified:
+- rumiai_v2/processors/feature_transformation.py (validation logic added)
+- config/bucket_definitions.py (already had get_stage3_expected_feature_count)
+- Test fixtures updated with xwin features + is_top_performer
+
+Backward Compatibility: NONE - old Stage 3 outputs will fail Stage 4 validation
+
+Testing: All unit tests updated to include xwin features in fixtures
+
+References:
+- PostBugFixUpdate.md (complete migration guide)
+- MLPlanningv2.md Sections 3.3.1, 3.3.2 (Stage 3 feature creation)
+- config/bucket_definitions.py lines 139-200 (source of truth function)
+- Bug report: S7B2 (cross-window patterns empty in Stage 7)
+
+Review Date: 2025-10-28
+Approved By: [Pending]
+
+---
+
 [2025-01-28] [HIGH] [IMPLEMENTATION] Initial implementation of Stage 4 Feature Transformation
 - Implemented all functions from TI Sections 4.1-4.6 with ZERO deviations from specification
 - Created main transformation module: rumiai_v2/processors/feature_transformation.py (953 lines)
@@ -2149,11 +2390,16 @@ All implementation changes during Phase 4 (Implementation) should be logged here
 
 ### 12.2 Upstream Dependencies
 
-| Stage | Output | Required For | Validation |
-|-------|--------|--------------|------------|
-| **Stage 1 (Video Discovery)** | config.json | Strategy, video_count parameters | Read config.json from `{client_base}/config.json` |
-| **Stage 3 (Feature Aggregation)** | aggregated_features.csv | Input data for transformation | Check file exists: `{bucket_base}/ml_analysis/aggregated_features.csv` |
-| **Stage 3 (Feature Aggregation)** | Stage 3 checkpoint | Orchestrator validation | Check status=="completed" in `{bucket_base}/checkpoints/stage_3_checkpoint.json` |
+| Stage | Output | Required For | Validation | S7B2 Changes |
+|-------|--------|--------------|------------|--------------|
+| **Stage 1 (Video Discovery)** | config.json | Strategy, video_count parameters | Read config.json from `{client_base}/config.json` | (unchanged) |
+| **Stage 3 (Feature Aggregation)** | aggregated_features.csv | Input data + **xwin features + label** | Validate column count using `config.bucket_definitions.get_stage3_expected_feature_count(bucket)` | **+6 columns (18-33s)** |
+| **Stage 3 (Feature Aggregation)** | Stage 3 checkpoint | Orchestrator validation | Check status=="completed" in `{bucket_base}/checkpoints/stage_3_checkpoint.json` | (unchanged) |
+
+**S7B2 Contract** (2025-10-28):
+- **Stage 3 MUST create xwin features** (see config/bucket_definitions.py lines 185-195, MLPlanningv2.md Section 3.3.1)
+- **Stage 3 MUST create is_top_performer** (see config/bucket_definitions.py lines 197-198, MLPlanningv2.md Section 3.3.2)
+- **Stage 4 validates** using `get_stage3_expected_feature_count(bucket)` in Section 4.1 and Section 4.1b
 
 ### 12.3 Downstream Dependencies
 
@@ -2166,10 +2412,12 @@ All implementation changes during Phase 4 (Implementation) should be logged here
 
 ### 12.4 Configuration Dependencies
 
-| Config File | Location | Required Fields | Purpose |
-|-------------|----------|-----------------|---------|
-| bucket_definitions.py | config/bucket_definitions.py | BUCKET_WINDOWS, WINDOW_TIMESTAMPS | Window count lookup, slope timestamp lookup |
-| stage4_constants.py | config/stage4_constants.py | MINIMUM_VIDEO_COUNT, BASE_FEATURES, etc. | Transformation constants |
+| Config File | Location | Required Fields | Purpose | S7B2 Additions |
+|-------------|----------|-----------------|---------|----------------|
+| bucket_definitions.py | config/bucket_definitions.py | BUCKET_WINDOWS, get_stage3_expected_feature_count(), get_windows(), get_stage4_output_count() | Window structure, schema validation (source of truth) | **Added get_stage3_expected_feature_count()** for input validation |
+| stage4_constants.py | config/stage4_constants.py | MINIMUM_VIDEO_COUNT, BASE_FEATURES, etc. | Transformation constants | (unchanged) |
+
+**S7B2 Note**: Stage 4 now imports `get_stage3_expected_feature_count()` from config to validate input schema (Section 4.1 line 731-732).
 
 ### 12.5 Pre-Implementation Checklist
 

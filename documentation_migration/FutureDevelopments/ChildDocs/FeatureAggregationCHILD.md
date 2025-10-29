@@ -40,7 +40,7 @@ Stage 4: Feature Transformation
 ### 1.3 Success Criteria
 
 - [ ] Process 30-200 videos per bucket in under 5 minutes with < 2GB memory
-- [ ] Generate valid aggregated_features.csv with exact column count matching bucket configuration (44/65/128/149 features)
+- [ ] Generate valid aggregated_features.csv with exact column count matching bucket configuration (defined in `config/bucket_definitions.py::get_stage3_expected_feature_count()`)
 - [ ] Graceful error handling - skip bad videos with clear logging, fail only if zero valid videos remain
 - [ ] Dual output - clean ML training CSV + metadata summary JSON for debugging
 - [ ] All output schemas validated before saving (atomic write pattern prevents partial corruption)
@@ -71,7 +71,7 @@ Process Step 4: Convert aggregated list to pandas DataFrame, validate schema
 Process Step 5: Atomic write - save to temp file, then rename to final CSV
    ↓
 Output 1: bucket_{duration}/ml_analysis/aggregated_features.csv
-          Schema: (N videos, 45-150 features) - bucket-specific column count
+          Schema: (N videos, 25-156 features) - bucket-specific column count (includes cross-window + label)
           Location: Same bucket directory, ml_analysis/ subdirectory
 Output 2: bucket_{duration}/ml_analysis/aggregation_summary.json
           Schema: Metadata (timestamp, counts, skip reasons, column names)
@@ -272,6 +272,13 @@ def extract_features(temporal_windows_json: Path, bucket: str):
     gender_data = metadata.get('gender_detection', {})
     video_features['gender'] = gender_data.get('gender')
 
+    # ===== NEW (S7B2 Fix): Cross-Window Feature Generation =====
+    # Purpose: Compute derived features from relationships between temporal windows
+    # Source: PostBugFixUpdate.md (S7B2 bug fix - moved from Stage 4 to Stage 3)
+
+    xwin_features = compute_cross_window_features(video_features, bucket)
+    video_features.update(xwin_features)
+
     return video_features
 ```
 
@@ -282,6 +289,98 @@ def extract_features(temporal_windows_json: Path, bucket: str):
 | Null middle_segments in long bucket | Raise ValueError (Stage 2 bug) | Source: QA Q5 - skip video, log error |
 | Missing optional gender field | Use None (get() default) | Gender is optional - proceed without it |
 | Feature value is null | Keep null in DataFrame | Pandas handles nulls - validation in next stage |
+
+#### Step 2.3.2b: Cross-Window Feature Computation
+
+**Purpose**: Derive features that capture relationships between temporal windows (energy progression, pacing consistency)
+
+**Logic**:
+```python
+def compute_cross_window_features(video_features: dict, bucket: str) -> dict:
+    """
+    Compute cross-window derived features from base temporal features.
+
+    Source: PostBugFixUpdate.md Section "Stage 3: Cross-Window Feature Creation"
+
+    Args:
+        video_features: Dictionary with base temporal features (hook_*, middle_*, closing_*)
+        bucket: Bucket name (e.g., "18-33s") for bucket-specific logic
+
+    Returns:
+        dict: Cross-window features (0-5 features depending on bucket)
+
+    Raises:
+        None - gracefully handles missing values (returns None for that feature)
+    """
+    import numpy as np
+
+    xwin_features = {}
+
+    # Bucket-specific feature creation
+    if bucket == '0-3s':
+        # No cross-window features (single window, no comparisons possible)
+        pass
+
+    elif bucket == '3-9s':
+        # 3 features: consistency, variance, progression (no middle, so no deltas)
+        # Collect window values for hook + closing
+        energy_vals = [video_features['hook_energy_level'], video_features['closing_energy_level']]
+        eye_contact_vals = [video_features['hook_eye_contact_rate'], video_features['closing_eye_contact_rate']]
+        word_count_vals = [video_features['hook_word_count'], video_features['closing_word_count']]
+
+        # Compute features (handle None values gracefully)
+        xwin_features['xwin_eye_contact_consistency'] = np.std(eye_contact_vals) if all_valid(eye_contact_vals) else None
+        xwin_features['xwin_word_density_std'] = np.std(word_count_vals) if all_valid(word_count_vals) else None
+        xwin_features['xwin_energy_progression_slope'] = polyfit_slope(energy_vals) if all_valid(energy_vals) else None
+
+    else:
+        # 5 features for buckets 9-13s+ (has middle sections)
+        # 1-2. Energy deltas (hook→middle, middle→closing)
+        hook_energy = video_features['hook_energy_level']
+        closing_energy = video_features['closing_energy_level']
+
+        # Calculate middle energy average (handles both middle_aggregate and separate segments)
+        middle_energy_avg = calculate_middle_energy_avg(video_features, bucket)
+
+        xwin_features['xwin_hook_to_middle_energy'] = middle_energy_avg - hook_energy if all_valid([hook_energy, middle_energy_avg]) else None
+        xwin_features['xwin_middle_to_closing_energy'] = closing_energy - middle_energy_avg if all_valid([closing_energy, middle_energy_avg]) else None
+
+        # 3-5. Consistency, variance, progression (across all windows)
+        all_energy_vals = collect_all_window_values(video_features, 'energy_level', bucket)
+        all_eye_contact_vals = collect_all_window_values(video_features, 'eye_contact_rate', bucket)
+        all_word_count_vals = collect_all_window_values(video_features, 'word_count', bucket)
+
+        xwin_features['xwin_eye_contact_consistency'] = np.std(all_eye_contact_vals) if len(all_eye_contact_vals) > 1 else None
+        xwin_features['xwin_word_density_std'] = np.std(all_word_count_vals) if len(all_word_count_vals) > 1 else None
+        xwin_features['xwin_energy_progression_slope'] = polyfit_slope(all_energy_vals) if len(all_energy_vals) >= 2 else None
+
+    return xwin_features
+```
+
+**Key Implementation Details**:
+- **xwin_ prefix**: Prevents collision with window-specific features (hook_*, middle_*, closing_*)
+- **Bucket-aware logic**: 0 features (0-3s), 3 features (3-9s), 5 features (9-13s+)
+- **Graceful null handling**: Returns None for feature if any input values are None
+- **Middle aggregation support**: Handles both `middle_aggregate_*` (9-13s, 13-18s) and separate `middle_1_*`, `middle_2_*`, etc.
+- **Linear regression**: Uses `np.polyfit(x, y, 1)[0]` for energy progression slope
+
+**Feature Formulas**:
+
+| Feature | Buckets | Formula | Example |
+|---------|---------|---------|---------|
+| `xwin_eye_contact_consistency` | 3-9s+ | `std(eye_contact_rate across all windows)` | std([0.8, 0.75, 0.82]) = 0.036 |
+| `xwin_word_density_std` | 3-9s+ | `std(word_count across all windows)` | std([7, 19, 23, 16]) = 6.78 |
+| `xwin_energy_progression_slope` | 3-9s+ | `polyfit(window_index, energy_level, 1)[0]` | slope([0.01, 0.02, 0.03]) = 0.01 |
+| `xwin_hook_to_middle_energy` | 9-13s+ | `mean(middle_energy) - hook_energy` | 0.015 - 0.01 = 0.005 |
+| `xwin_middle_to_closing_energy` | 9-13s+ | `closing_energy - mean(middle_energy)` | 0.02 - 0.015 = 0.005 |
+
+**Edge Cases**:
+| Scenario | Handling | Rationale |
+|----------|----------|-----------|
+| Missing energy value in middle segment | Skip that window, compute with remaining values | Graceful degradation - some data better than no data |
+| All window values are None | Return None for that cross-window feature | Cannot compute std/slope without data |
+| Bucket 0-3s (single window) | Return empty dict (0 features) | No comparisons possible with 1 window |
+| Middle segments aggregated (9-13s, 13-18s) | Use `middle_aggregate_energy_level` for average | Consistent with base feature extraction logic |
 
 #### Step 2.3.3: Batch Processing with Error Handling
 
@@ -373,6 +472,9 @@ def process_bucket(bucket_path: Path, bucket: str):
     # Convert to DataFrame
     df = pd.DataFrame(aggregated_data)
 
+    # ===== NEW (S7B2 Fix): Add is_top_performer label =====
+    df = add_is_top_performer_label(df, bucket_path, strategy)
+
     return df, skipped_reasons
 ```
 
@@ -383,6 +485,79 @@ def process_bucket(bucket_path: Path, bucket: str):
 | All videos fail | Raise ValueError (don't create empty CSV) | No ML training possible with 0 videos |
 | Duplicate video_ids | Keep first, skip duplicates with warning | Source: QA Q11 - prevent duplicate rows |
 | 99 of 100 videos succeed | Create CSV with 99 rows (partial success) | Source: QA Q5 - allow partial success |
+
+#### Step 2.3.3b: Target Label Assignment
+
+**Purpose**: Add `is_top_performer` binary label for ML training (classification target)
+
+**Logic**:
+```python
+def add_is_top_performer_label(df: pd.DataFrame, bucket_path: Path, strategy: str) -> pd.DataFrame:
+    """
+    Assign is_top_performer label from Stage 1 selection metadata.
+
+    Source: PostBugFixUpdate.md Section "Stage 3: Label Creation"
+
+    Args:
+        df: Aggregated features DataFrame
+        bucket_path: Path to bucket directory
+        strategy: "contrastive" or "top" mode
+
+    Returns:
+        DataFrame with is_top_performer column (1 = top performer, 0 = bottom)
+
+    Raises:
+        None - uses fallback if selected_videos.json missing
+    """
+    selected_videos_path = bucket_path / "selected_videos.json"
+
+    if selected_videos_path.exists():
+        # Load Stage 1 selection metadata
+        with open(selected_videos_path) as f:
+            selection_data = json.load(f)
+
+        # Build video_id → label mapping
+        performer_map = {
+            v['video_id']: (1 if v['is_top'] else 0)
+            for v in selection_data['videos']
+        }
+
+        # Map to DataFrame
+        df['is_top_performer'] = df['video_id'].map(performer_map)
+
+        # Handle unmapped videos (shouldn't happen, but defensive)
+        if df['is_top_performer'].isnull().any():
+            logger.warning("Some videos not in selected_videos.json - using fallback")
+            df['is_top_performer'].fillna(1, inplace=True)
+
+    else:
+        # Fallback: Index-based labeling
+        logger.warning(f"selected_videos.json missing - using fallback labeling")
+
+        if strategy == "contrastive":
+            # First 80% = top performers (1), last 20% = bottom (0)
+            top_count = int(len(df) * 0.8)
+            df['is_top_performer'] = (df.index < top_count).astype(int)
+        else:
+            # "top" strategy: all videos are top performers
+            df['is_top_performer'] = 1
+
+    return df
+```
+
+**Strategy-Dependent Behavior**:
+
+| Strategy | selected_videos.json Exists | selected_videos.json Missing | Result |
+|----------|----------------------------|------------------------------|--------|
+| **contrastive** | Maps video_ids to is_top field (1=top 80%, 0=bottom 20%) | Index-based: first 80% = 1, last 20% = 0 | Binary labels for classification |
+| **top** | Maps video_ids (should all be is_top=True) | All videos = 1 | All top performers |
+
+**Edge Cases**:
+| Scenario | Handling | Rationale |
+|----------|----------|-----------|
+| selected_videos.json missing | Use fallback (index-based or all 1s) | Pipeline continues, logs warning for debugging |
+| Video in CSV but not in selected_videos.json | Fill with 1 (assume top performer) | Defensive - shouldn't happen, but prevents NaN in target |
+| Strategy="top" mode | All videos get label=1 | No contrastive comparison in top-only analysis |
 
 #### Step 2.3.4: Atomic Write Pattern
 
@@ -450,15 +625,17 @@ def save_aggregated_csv(df: pd.DataFrame, output_path: Path):
 | aggregated_features.csv | CSV | (N rows, 45-150 columns) - N = valid videos, columns = bucket-specific feature count | Stage 4 (Feature Transformation) | Assert row count > 0, column count matches expected for bucket |
 | aggregation_summary.json | JSON | Metadata: timestamp, counts, skip reasons, column names | Debugging only (NOT consumed by downstream stages) | None - optional metadata file |
 
-**Column Count by Bucket** (UPDATED - Middle Aggregation + 0-3s Hook Only):
-- 0-3s: 24 features (21 × 1 window + 3 metadata: video_id, create_time, gender)
-- 3-9s: 45 features (21 × 2 windows + 3 metadata)
-- 9-13s, 13-18s: 66 features (21 × 3 windows + 3 metadata) [CHANGED - middle segments aggregated]
-  - Structure: hook_* (21) + middle_aggregate_* (21) + closing_* (21) + metadata (3)
-  - Reason: Short middle windows (1-4s) aggregated for feature reliability
-  - Aggregation strategy: SUM for counts, AVG for ratios, MIN/MAX for extremes, MODE for categorical
-- 18-33s: 129 features (21 × 6 windows + 3 metadata)
-- 33-60s, 60-90s, 90-120s: 150 features (21 × 7 windows + 3 metadata)
+**Column Count by Bucket** (S7B2 UPDATE - Includes Cross-Window Features + Label):
+- 0-3s: 25 features (21 × 1 window + 3 metadata + 0 cross-window + 1 label)
+- 3-9s: 49 features (21 × 2 windows + 3 metadata + 3 cross-window + 1 label)
+- 9-13s, 13-18s: 72 features (21 × 3 windows + 3 metadata + 5 cross-window + 1 label)
+  - Structure: hook_* (21) + middle_aggregate_* (21) + closing_* (21) + metadata (3) + xwin_* (5) + is_top_performer (1)
+  - Middle aggregation: SUM for counts, AVG for ratios, MIN/MAX for extremes, MODE for categorical
+  - Cross-window features: energy deltas, consistency metrics, progression slope
+- 18-33s: 135 features (21 × 6 windows + 3 metadata + 5 cross-window + 1 label)
+- 33-60s, 60-90s, 90-120s: 156 features (21 × 7 windows + 3 metadata + 5 cross-window + 1 label)
+
+**Note**: Cross-window features and is_top_performer label are computed in Stage 3 (moved from Stage 4 in S7B2 bug fix). See `config/bucket_definitions.py::get_stage3_expected_feature_count()` for single source of truth.
 
 ### 3.3 Cross-Stage Dependencies
 
@@ -508,6 +685,7 @@ import logging  # standard library (logging)
 | Parameter | Type | Default | Valid Values | Impact | Example |
 |-----------|------|---------|--------------|--------|---------|
 | `--bucket-path` | str | Required | Valid directory path | Determines which bucket to process | `--bucket-path="data/clients/test_run/hashtags/fitness/top_contrastive/buckets/bucket_18-33s"` |
+| `--strategy` | str | Required | contrastive, top | Determines is_top_performer labeling strategy | `--strategy="contrastive"` |
 
 **Invocation Pattern**: One invocation per bucket (enables parallelization)
 ```bash
@@ -591,16 +769,37 @@ CATEGORICAL_FEATURES = ['dominant_emotion_id', 'has_captions']
 # - pitch_scatter_ratio, gaze_variance, emotional_valence, emotion_consistency
 # - average_face_size, scene_duration_variance
 
-# Expected feature counts (for validation) - UPDATED with middle aggregation and 0-3s hook only
+# **NEW (S7B2 Fix): Cross-window feature names**
+# These features are computed from relationships between temporal windows
+CROSS_WINDOW_FEATURES_0_3S = []  # No cross-window features (single window)
+
+CROSS_WINDOW_FEATURES_3_9S = [
+    'xwin_eye_contact_consistency',      # std(eye_contact_rate across windows)
+    'xwin_word_density_std',             # std(word_count across windows)
+    'xwin_energy_progression_slope'      # polyfit slope of energy progression
+]
+
+CROSS_WINDOW_FEATURES_9_13S_PLUS = [
+    'xwin_hook_to_middle_energy',        # mean(middle_energy) - hook_energy
+    'xwin_middle_to_closing_energy',     # closing_energy - mean(middle_energy)
+    'xwin_eye_contact_consistency',      # std(eye_contact_rate across windows)
+    'xwin_word_density_std',             # std(word_count across windows)
+    'xwin_energy_progression_slope'      # polyfit slope of energy progression
+]
+
+# Label column
+LABEL_COLUMN = 'is_top_performer'  # Binary target: 1 = top performer, 0 = bottom performer
+
+# Expected feature counts (for validation) - S7B2 UPDATE: includes cross-window + label
 EXPECTED_FEATURE_COUNTS = {
-    '0-3s': 24,   # 21 × 1 window (hook only) + 3 metadata (video_id, create_time, gender)
-    '3-9s': 45,   # 21 × 2 windows + 3 metadata
-    '9-13s': 66,  # 21 × 3 windows (hook + middle_aggregate + closing) + 3 metadata
-    '13-18s': 66, # 21 × 3 windows (hook + middle_aggregate + closing) + 3 metadata
-    '18-33s': 129, # 21 × 6 windows + 3 metadata
-    '33-60s': 150, # 21 × 7 windows + 3 metadata
-    '60-90s': 150,
-    '90-120s': 150
+    '0-3s': 25,   # 21 × 1 window + 3 metadata + 0 cross-window + 1 label
+    '3-9s': 49,   # 21 × 2 windows + 3 metadata + 3 cross-window + 1 label
+    '9-13s': 72,  # 21 × 3 windows + 3 metadata + 5 cross-window + 1 label
+    '13-18s': 72, # 21 × 3 windows + 3 metadata + 5 cross-window + 1 label
+    '18-33s': 135, # 21 × 6 windows + 3 metadata + 5 cross-window + 1 label
+    '33-60s': 156, # 21 × 7 windows + 3 metadata + 5 cross-window + 1 label
+    '60-90s': 156,
+    '90-120s': 156
 }
 
 # File paths (relative to bucket directory)
@@ -652,13 +851,15 @@ LOG_PROGRESS_INTERVAL = 10  # Log every N videos
 
 **Format**: CSV with header row, one row per video, flat column naming with underscores
 
-**Column Naming Convention** (Source: QA Q9, updated with aggregation and 0-3s):
+**Column Naming Convention** (S7B2 UPDATE: includes cross-window + label):
 ```
 video_id, create_time, gender,
 hook_scene_count, hook_word_count, hook_energy_level, ...,
 middle_1_scene_count, middle_1_word_count, middle_1_energy_level, ...  # For buckets 18-33s+
 middle_aggregate_scene_count, middle_aggregate_word_count, ...         # For buckets 9-13s, 13-18s
 closing_scene_count, closing_word_count, closing_energy_level, ...     # For buckets 3-9s+
+xwin_hook_to_middle_energy, xwin_eye_contact_consistency, ...,         # Cross-window features (0-5)
+is_top_performer                                                        # Target label (1 column)
 ```
 
 **Schema (Bucket 18-33s example - 6 windows)**:
@@ -683,17 +884,17 @@ closing_scene_count, closing_word_count, closing_energy_level, ...     # For buc
 | `closing_energy_level` | float | 0.0-1.0 | No | Audio energy in closing | 0.0163 |
 | ... | ... | ... | ... | (All 21 base features × 6 windows) | ... |
 
-**Total Columns by Bucket** (UPDATED - Middle Aggregation + 0-3s Hook Only):
-- 0-3s: 24 columns (1 window × 21 features + 3 metadata)
-- 3-9s: 45 columns (2 windows × 21 features + 3 metadata)
-- 9-13s, 13-18s: 66 columns (3 windows × 21 features + 3 metadata)
-  - Column naming: hook_*, middle_aggregate_*, closing_*, metadata
+**Total Columns by Bucket** (S7B2 UPDATE - Includes Cross-Window + Label):
+- 0-3s: 25 columns (1 window × 21 + 3 metadata + 0 cross-window + 1 label)
+- 3-9s: 49 columns (2 windows × 21 + 3 metadata + 3 cross-window + 1 label)
+- 9-13s, 13-18s: 72 columns (3 windows × 21 + 3 metadata + 5 cross-window + 1 label)
+  - Column naming: hook_*, middle_aggregate_*, closing_*, xwin_*, is_top_performer
   - Note: middle_1_*, middle_2_*, middle_3_* replaced by single middle_aggregate_*
-- 18-33s: 129 columns (6 windows × 21 features + 3 metadata)
-- 33-60s, 60-90s, 90-120s: 150 columns (7 windows × 21 features + 3 metadata)
+- 18-33s: 135 columns (6 windows × 21 + 3 metadata + 5 cross-window + 1 label)
+- 33-60s, 60-90s, 90-120s: 156 columns (7 windows × 21 + 3 metadata + 5 cross-window + 1 label)
 
-**Note on Cross-Window Features**:
-This stage outputs window-specific features only (21 per window). Cross-window features (e.g., `hook_to_middle_energy_delta`, `middle_to_closing_contrast`, `eye_contact_consistency`, `energy_trend_slope`, `window_consistency_score`) are computed in **Stage 4 (Feature Transformation)**, not Stage 3. These 5 additional features are added to the video-level RF training dataset by comparing values across temporal windows. See FeatureTransformationCHILD.md Section 2.3.2 for cross-window feature engineering logic.
+**Note on Cross-Window Features** (S7B2 UPDATE):
+This stage NOW computes cross-window features (moved from Stage 4 in S7B2 bug fix). Cross-window features (`xwin_hook_to_middle_energy`, `xwin_eye_contact_consistency`, etc.) are derived features that capture relationships between temporal windows (e.g., energy progression, pacing consistency). These 0-5 features (bucket-dependent) are created in Stage 3 and passed through to Stage 4 unchanged. Stage 4 validates these features exist but does NOT create them. This ensures cross-window features flow through the entire pipeline (Stages 3→4→5→6→7) and appear in Stage 7 LLM analysis output.
 
 **Row Count**: N = number of successfully processed videos (may be less than total files if some skipped)
 
@@ -1182,6 +1383,33 @@ python3 scripts/stage3_aggregation.py \
   - Column count: 0-3s bucket reduced from 45 → 24 columns (21 features, not 42)
   - Stage 4-7: No changes needed (already handle variable window counts per bucket)
 - **Date**: 2025-10-14 (Source: Stage 3-4 Compatibility Analysis Q4)
+
+**Decision 9**: Create cross-window features and is_top_performer label in Stage 3 (not Stage 4)
+- **Context**: S7B2 bug - Stage 7 cross_window_patterns field was empty because cross-window features were created in Stage 4, but Stage 3's aggregated_features.csv didn't include them.
+- **Root Cause**: Stage 4 created cross-window features but they weren't persisted in aggregated_features.csv, so Stage 6 couldn't access them for analysis, leading to empty cross_window_patterns in Stage 7 output.
+- **Alternatives Considered**:
+  - Option A: Keep in Stage 4, modify Stage 6 to re-compute - Rejected (duplicate logic)
+  - Option B: Move to Stage 3 - **CHOSEN**
+  - Option C: Persist Stage 4 intermediate outputs - Rejected (adds complexity)
+- **Rationale**:
+  - Single computation: Features created once in Stage 3, available to all downstream stages
+  - Schema consistency: Stage 3 outputs complete feature set, no hidden transformations
+  - Stage 4 simplification: Validates features exist, passes through unchanged (no duplication)
+  - Pipeline flow: Cross-window features flow through Stages 3→4→5→6→7 naturally
+- **Implementation Details**:
+  - Stage 3: Added `compute_cross_window_features()` function after base feature extraction (Step 2.3.2b)
+  - Stage 3: Added `add_is_top_performer_label()` function after dataframe creation (Step 2.3.3b)
+  - Stage 4: Removed cross-window creation logic, added validation instead
+  - Config: Added `get_stage3_expected_feature_count()` as single source of truth
+  - Feature naming: Used `xwin_` prefix to avoid collision with window-specific features
+- **Trade-offs**:
+  - Stage 3 code increased by ~100 lines (cross-window + label logic)
+  - But: Eliminated duplicate logic in Stage 4, fixed S7B2 bug, improved data flow clarity
+- **Impact**:
+  - Column counts: 0-3s=25 (+1), 3-9s=49 (+4), 9-13s/13-18s=72 (+6), 18-33s=135 (+6), 33-60s+=156 (+6)
+  - Stage 4-7: Schema changes only (new columns in input), no logic changes needed
+  - Stage 7: cross_window_patterns field now populated correctly
+- **Date**: 2025-10-28 (Source: PostBugFixUpdate.md S7B2 bug fix documentation)
 
 ---
 

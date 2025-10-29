@@ -54,7 +54,7 @@ This architecture choice (approved in Phase 1 Critique) enables both cross-windo
 
 ```
 Input: ml_analysis/aggregated_features.csv
-       Schema: (N videos, 129 columns for bucket 18-33s)
+       Schema: (N videos, 135 columns for bucket 18-33s) - includes xwin_* + is_top_performer from Stage 3
        Location: /data/clients/{client_id}/hashtags/{cluster_id}/{mode}_{strategy}/buckets/bucket_18-33s/ml_analysis/
    ↓
 Validation: Check schema, NaN values, ranges, row count (fail-fast if invalid)
@@ -63,8 +63,9 @@ Pipeline 1: Video-Level RF Transformation
    - One-hot encode: has_captions → 2 features, dominant_emotion_id → 7 features
    - Extract temporal: create_time → hour, day_of_week, month, is_weekend, is_business_hours (5 features)
    - Extract gender: gender_detection → gender_male, gender_female (2-3 features)
-   - Add target: is_top_performer (1 feature, contrastive only)
-   - Output: rf_transformed.csv (~178 features)
+   - Validate xwin features: Pass through from Stage 3 (0-5 features)
+   - Validate target: is_top_performer from Stage 3 (1 feature)
+   - Output: rf_transformed.csv (~147 features for 18-33s)
    ↓
 Pipeline 2: Window-Level RF Transformation (6 iterations for bucket 18-33s)
    - For each window (hook, middle_1-4, closing):
@@ -108,8 +109,9 @@ def validate_input(df, bucket, expected_count):
     Raises:
         ValueError: if validation fails with specific error message
     """
-    # 1. Check column count matches bucket expectations
-    expected_cols = get_expected_column_count(bucket)  # 129 for 18-33s
+    # 1. Check column count matches bucket expectations (S7B2 Fix: Updated counts)
+    from config.bucket_definitions import get_stage3_expected_feature_count
+    expected_cols = get_stage3_expected_feature_count(bucket)  # 135 for 18-33s (was 129)
     if len(df.columns) != expected_cols:
         raise ValueError(f"Expected {expected_cols} columns for bucket {bucket}, found {len(df.columns)}")
 
@@ -149,7 +151,36 @@ def validate_input(df, bucket, expected_count):
     if len(df) < expected_count:
         logger.warning(f"Warning: Expected {expected_count} videos, found {len(df)}. Proceeding with reduced sample size.")
 
-    logger.info(f"Input validation passed: {len(df)} videos, {len(df.columns)} columns")
+    # 7. Validate cross-window features exist (S7B2 Fix: Stage 3 contract)
+    # Expected features created in Stage 3 Section 3.3.1
+    expected_xwin = [
+        'xwin_hook_to_middle_energy',
+        'xwin_middle_to_closing_energy',
+        'xwin_eye_contact_consistency',
+        'xwin_word_density_std',
+        'xwin_energy_progression_slope'
+    ]
+    existing_xwin = [f for f in expected_xwin if f in df.columns]
+
+    if bucket == '0-3s':
+        # 0-3s buckets have 0 xwin features (expected - single window)
+        if existing_xwin:
+            logger.warning(f"Unexpected: {len(existing_xwin)} xwin features in 0-3s bucket")
+    elif bucket == '3-9s':
+        # 3-9s buckets have 3 xwin features (consistency, std, slope)
+        if len(existing_xwin) < 3:
+            raise ValueError(f"Missing cross-window features from Stage 3: expected 3, found {len(existing_xwin)}")
+    else:
+        # 9-13s+ buckets have 5 xwin features (all)
+        if len(existing_xwin) < 5:
+            raise ValueError(f"Missing cross-window features from Stage 3: expected 5, found {len(existing_xwin)}")
+
+    # 8. Validate is_top_performer label exists (S7B2 Fix: Stage 3 contract)
+    # Created in Stage 3 Section 3.3.2
+    if 'is_top_performer' not in df.columns:
+        raise ValueError("Missing is_top_performer label from Stage 3 (see MLPlanningv2.md Section 3.3.2)")
+
+    logger.info(f"Input validation passed: {len(df)} videos, {len(df.columns)} columns, {len(existing_xwin)} xwin features")
 ```
 
 **Edge Cases**:
@@ -160,6 +191,8 @@ def validate_input(df, bucket, expected_count):
 | Missing column | Fail-fast with error | Contract violation from Stage 3 |
 | NaN in required field | Fail-fast with error | Data corruption from Stage 3 (Stage 2 fail-fast should prevent this) |
 | Out-of-range value (e.g., eye_contact_rate=1.5) | Fail-fast with error | Bug in Stage 2 feature calculation |
+| **Missing xwin features (S7B2)** | Fail-fast with error (except 0-3s) | Stage 3 contract violation (Section 3.3.1) |
+| **Missing is_top_performer (S7B2)** | Fail-fast with error | Stage 3 contract violation (Section 3.3.2) |
 
 #### Step 2.3.2: Video-Level RF Transformation
 
@@ -178,7 +211,7 @@ def transform_video_level_rf(df, strategy, video_count):
         video_count: int, expected videos for target labeling
 
     Returns:
-        pandas DataFrame with ~178 features for bucket 18-33s
+        pandas DataFrame with ~147 features for bucket 18-33s (includes xwin from Stage 3)
     """
     df_rf = df.copy()
 
@@ -206,41 +239,36 @@ def transform_video_level_rf(df, strategy, video_count):
         # Direct one-hot encoding (gender is already a simple string: 'male', 'female', or null)
         df_rf = pd.get_dummies(df_rf, columns=['gender'], prefix='gender', dummy_na=True)
 
-    # 5. Add target variable is_top_performer (contrastive strategy only)
-    if strategy == 'contrastive':
-        top_count = int(video_count * 0.8)
-        df_rf['is_top_performer'] = (df_rf.index < top_count).astype(int)
+    # 5. Cross-Window Features Validation (S7B2 Fix)
+    # These features are created in Stage 3 (MLPlanningv2.md Section 3.3.1), not Stage 4
+    # Stage 4 validates presence and passes through unchanged
+    expected_xwin = [
+        'xwin_hook_to_middle_energy',
+        'xwin_middle_to_closing_energy',
+        'xwin_eye_contact_consistency',
+        'xwin_word_density_std',
+        'xwin_energy_progression_slope'
+    ]
+    existing_xwin = [f for f in expected_xwin if f in df_rf.columns]
 
-    # 6.5. Compute Cross-Window Delta Features (NEW)
-    # Purpose: Create explicit temporal progression features for Video-Level RF
-    # Source: Crosswindowupgrade.md Section 2.2
-
-    # Energy progression deltas
-    middle_energy_cols = [f'middle_{i}_energy_level' for i in range(1, len(BUCKET_WINDOWS[bucket])-1)]
-    if middle_energy_cols:  # Only if middle segments exist
-        df_rf['hook_to_middle_energy_delta'] = (
-            df_rf[middle_energy_cols].mean(axis=1) - df_rf['hook_energy_level']
-        )
-        df_rf['middle_to_closing_contrast'] = (
-            df_rf['closing_energy_level'] - df_rf[middle_energy_cols].mean(axis=1)
-        )
+    if existing_xwin:
+        logger.debug(f"✓ Found {len(existing_xwin)} cross-window features from Stage 3")
+        # Pass through unchanged - already in correct format for RF
     else:
-        # For buckets 0-3s, 3-9s (no middle segments) - set to neutral value
-        df_rf['hook_to_middle_energy_delta'] = 0.0
-        df_rf['middle_to_closing_contrast'] = 0.0
+        if bucket not in ['0-3s']:  # 0-3s buckets have 0 xwin features (expected)
+            logger.warning(f"⚠ No cross-window features found for bucket {bucket}")
 
-    # Consistency metrics (std deviation across all windows)
-    eye_contact_cols = [f'{w}_eye_contact_rate' for w in BUCKET_WINDOWS[bucket]]
-    df_rf['eye_contact_consistency'] = df_rf[eye_contact_cols].std(axis=1)
-
-    word_count_cols = [f'{w}_word_count' for w in BUCKET_WINDOWS[bucket]]
-    df_rf['word_density_std'] = df_rf[word_count_cols].std(axis=1)
-
-    # Progression slopes (linear regression across windows)
-    energy_cols = [f'{w}_energy_level' for w in BUCKET_WINDOWS[bucket]]
-    df_rf['energy_progression_slope'] = df_rf[energy_cols].apply(
-        lambda row: calculate_linear_slope(row.values), axis=1
-    )
+    # 6. Target Variable Validation (S7B2 Fix)
+    # is_top_performer is created in Stage 3 (MLPlanningv2.md Section 3.3.2), not Stage 4
+    # Stage 4 validates presence and uses as-is
+    if 'is_top_performer' not in df_rf.columns:
+        logger.warning("is_top_performer missing from Stage 3, using fallback labeling")
+        # Fallback: Create if missing (legacy compatibility)
+        if strategy == 'contrastive':
+            top_count = int(video_count * 0.8)
+            df_rf['is_top_performer'] = (df_rf.index < top_count).astype(int)
+    else:
+        logger.debug("✓ Using is_top_performer label from Stage 3")
 
     # 7. Keep all other features as-is (Direct transform for 17 features)
     # emotional_valence, emotion_consistency, and all temporal window features unchanged
@@ -256,6 +284,8 @@ def transform_video_level_rf(df, strategy, video_count):
 | create_time parse error | Fail-fast with error | Invalid timestamp from Stage 3 |
 | Unknown emotion_id (not 1-7) | Fail-fast with error | Invalid data from Stage 2 |
 | Duplicate one-hot columns | Drop duplicates, keep first | Pandas get_dummies safety |
+| **Missing xwin features (S7B2)** | Warn and continue (expect from Stage 3) | Stage 3 should create these; fallback allows legacy compatibility |
+| **Missing is_top_performer (S7B2)** | Warn and create fallback | Stage 3 should create this; fallback ensures pipeline doesn't break |
 
 #### Step 2.3.3: Window-Level RF Transformation
 
@@ -516,8 +546,8 @@ def validate_outputs_and_checkpoint(output_files, bucket, video_count):
 - **Stage 2 fail-fast**: Ensures no NaN values from failed video processing (Stage 2 stops pipeline if videos fail)
 
 **This stage is required by**:
-- **Stage 5 (ML Model Training)**: Expects all 13 transformation files in exact format (schema validation happens before training)
-- Stage 5 Video-Level RF model requires: `rf_transformed.csv` with ~178 features
+- **Stage 5 (ML Model Training)**: Expects all transformation files in exact format (schema validation happens before training)
+- Stage 5 Video-Level RF model requires: `rf_transformed.csv` with ~147 features (bucket 18-33s, includes xwin from Stage 3)
 - Stage 5 Window-Level RF models (6) require: `{window}_rf_transformed.csv` with 22 features each
 - Stage 5 Window-Level K-Means models (6) require: `{window}_km_transformed.csv` with 39 features each, all scaled [0-1]
 
@@ -694,12 +724,12 @@ LOG_MEMORY_USAGE = True  # Log peak memory
 | `create_time` | string (ISO 8601) | - | No | Video publish timestamp | "2025-01-15T14:30:00Z" |
 | `gender` | string | male/female/null | Yes | Detected gender | "male" |
 
-**Total Columns by Bucket**:
-- Bucket 0-3s: 24 columns (21 × 1 + 3 metadata: video_id, create_time, gender)
-- Bucket 3-9s: 45 columns (21 × 2 + 3 metadata)
-- Bucket 9-13s, 13-18s: 66 columns (21 × 3 + 3 metadata) - middle_aggregate
-- Bucket 18-33s: 129 columns (21 × 6 + 3 metadata)
-- Bucket 33-60s, 60-90s, 90-120s: 150 columns (21 × 7 + 3 metadata)
+**Total Columns by Bucket (S7B2 Fix - includes xwin + is_top_performer)**:
+- Bucket 0-3s: 25 columns (21×1 + 3 metadata + 0 xwin + 1 label)
+- Bucket 3-9s: 49 columns (21×2 + 3 metadata + 3 xwin + 1 label)
+- Bucket 9-13s, 13-18s: 72 columns (21×3 + 3 metadata + 5 xwin + 1 label) - middle_aggregate
+- Bucket 18-33s: 135 columns (21×6 + 3 metadata + 5 xwin + 1 label)
+- Bucket 33-60s, 60-90s, 90-120s: 156 columns (21×7 + 3 metadata + 5 xwin + 1 label)
 
 ### 5.2 Output Schema
 
@@ -1060,10 +1090,10 @@ logger.info(f"Video-Level RF: {video_rf_time:.1f}s, Window-Level RF: {window_rf_
 
 **Source**: QA Q7 (Layer 1 - Unit tests with synthetic data)
 
-**Test fixtures**:
-- `tests/fixtures/stage4/test_bucket_18-33s_minimal.csv` (10 videos, 129 columns, synthetic data)
-- `tests/fixtures/stage4/test_bucket_9-13s_minimal.csv` (10 videos, 66 columns, middle_aggregate)
-- `tests/fixtures/stage4/test_bucket_3-9s_minimal.csv` (10 videos, 45 columns, hook + closing only)
+**Test fixtures (S7B2 Fix - updated column counts)**:
+- `tests/fixtures/stage4/test_bucket_18-33s_minimal.csv` (10 videos, 135 columns with xwin + label)
+- `tests/fixtures/stage4/test_bucket_9-13s_minimal.csv` (10 videos, 72 columns with xwin + label)
+- `tests/fixtures/stage4/test_bucket_3-9s_minimal.csv` (10 videos, 49 columns with xwin + label)
 
 **Test cases**:
 
@@ -1163,7 +1193,7 @@ logger.info(f"Video-Level RF: {video_rf_time:.1f}s, Window-Level RF: {window_rf_
 
 **Synthetic fixture** (unit tests):
 
-**File**: `tests/fixtures/stage4/test_bucket_18-33s_minimal.csv` (10 videos, 129 columns)
+**File**: `tests/fixtures/stage4/test_bucket_18-33s_minimal.csv` (10 videos, 135 columns - includes xwin + label)
 
 ```csv
 hook_scene_count,hook_eye_contact_rate,hook_word_count,hook_energy_level,hook_dominant_emotion_id,hook_emotional_valence,hook_has_captions,...,middle_1_scene_count,...,closing_scene_count,...,create_time,gender
@@ -1174,7 +1204,7 @@ hook_scene_count,hook_eye_contact_rate,hook_word_count,hook_energy_level,hook_do
 
 **Real fixture** (integration tests):
 
-**File**: `tests/fixtures/stage4/real_bucket_18-33s_stage3_output.csv` (50 videos, 129 columns, captured from actual Stage 3 run)
+**File**: `tests/fixtures/stage4/real_bucket_18-33s_stage3_output.csv` (50 videos, 135 columns with xwin + label, captured from actual Stage 3 run)
 
 *[Real data with actual feature distributions from test analysis run]*
 
@@ -1307,12 +1337,13 @@ pytest tests/performance/test_stage4_timing.py -v --benchmark-only
 **Decision 4**: Add Cross-Window Features to Video-Level RF Only
 - **Context**: Critique_Stage7_LLMAnalysis.md (Stage 7 LLM Analysis critique) identified critical gap - cross-window delta features (hook_to_middle_energy_delta, middle_to_closing_contrast, eye_contact_consistency, word_density_std, energy_progression_slope) are NOT computed anywhere in current pipeline
 - **Alternatives Considered**:
-  - **Option A** (chosen): Add to Video-Level RF transformation (Stage 4, Step 6.5)
+  - **Option A** (initial): Add to Video-Level RF transformation (Stage 4, Step 6.5) - implemented initially
   - **Option B**: Add to Window-Level RF transformation (rejected - architectural mismatch)
-  - **Option C**: Add to Stage 3 aggregation (rejected - aggregation layer should stay simple)
-- **Rationale**: Cross-window features require multiple windows (hook, middle segments, closing) to compute deltas, consistency metrics, and progression slopes. Video-Level RF sees all windows simultaneously (178 features across 6 windows), making it the correct location. Window-Level RF operates on isolated windows (21 features per window), incompatible with cross-window computations.
-- **Trade-offs**: +5 features to Video-Level RF (178→183), +80 lines code/docs, +1.5 hours development time, but provides explicit temporal patterns to ML model (vs implicit learning from raw window features)
-- **Date**: 2025-10-15 (Crosswindowupgrade.md planning)
+  - **Option C** (final - S7B2 Fix): Move to Stage 3 aggregation (chosen for pipeline consistency)
+- **Rationale**: Cross-window features must exist in aggregated_features.csv for Stage 6 distribution analysis. Creating in Stage 3 ensures availability to all downstream stages (4, 5, 6, 7). Stage 4 validates presence and passes through unchanged.
+- **Migration (S7B2 Fix)**: Moved from Stage 4 to Stage 3 (2025-10-28). Stage 4 now validates these features exist rather than computing them.
+- **Trade-offs**: Stage 3 complexity +5 features, but ensures consistent schema for all downstream stages
+- **Date**: Initial 2025-10-15 (Crosswindowupgrade.md), Migrated 2025-10-28 (S7B2 Fix)
 
 ---
 
