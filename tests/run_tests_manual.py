@@ -51,7 +51,7 @@ def test_bucket_33_60s():
 
             # Assertions
             assert len(df) == 1, f"Expected 1 row, got {len(df)}"
-            assert len(df.columns) == 150, f"Expected 150 columns, got {len(df.columns)}"
+            assert len(df.columns) == 156, f"Expected 156 columns, got {len(df.columns)}"
 
             # Check column naming convention
             required_cols = [
@@ -76,7 +76,7 @@ def test_bucket_33_60s():
             assert summary['videos_processed'] == 1
             assert summary['videos_skipped'] == 0
             assert summary['output_csv']['rows'] == 1
-            assert summary['output_csv']['columns'] == 150
+            assert summary['output_csv']['columns'] == 156
 
             duration = time.time() - start_time
             print(f"✅ PASS - Duration: {duration:.2f}s")
@@ -125,7 +125,7 @@ def test_bucket_9_13s_aggregation():
 
             # Assertions
             assert len(df) == 1, f"Expected 1 row, got {len(df)}"
-            assert len(df.columns) == 66, f"Expected 66 columns, got {len(df.columns)}"
+            assert len(df.columns) == 72, f"Expected 72 columns, got {len(df.columns)}"
 
             # Check aggregation columns exist
             aggregation_cols = [
@@ -153,7 +153,7 @@ def test_bucket_9_13s_aggregation():
             assert summary['videos_processed'] == 1
             assert summary['videos_skipped'] == 0
             assert summary['output_csv']['rows'] == 1
-            assert summary['output_csv']['columns'] == 66
+            assert summary['output_csv']['columns'] == 72
 
             duration = time.time() - start_time
             print(f"✅ PASS - Duration: {duration:.2f}s")

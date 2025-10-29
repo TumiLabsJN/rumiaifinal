@@ -88,16 +88,21 @@ MIN_FEATURES = ['shortest_scene']
 MAX_FEATURES = ['longest_scene']
 CATEGORICAL_FEATURES = ['dominant_emotion_id', 'has_captions']
 
-# Expected feature counts (for validation) - Source: FeatureAggregationCHILD.md Section 4.2
+# Expected feature counts (DEPRECATED - use get_stage3_expected_feature_count() from config)
+# Kept for reference only. validate_output() now uses config/bucket_definitions.py
+# Source: FeatureAggregationCHILD.md Section 4.2 + S7B2.md Root Cause Fix
+#
+# Updated 2025-10-28: Added cross-window features (0-5) + is_top_performer label (1)
+# Formula: (21 × windows) + 3 metadata + X cross-window + 1 label
 EXPECTED_FEATURE_COUNTS = {
-    '0-3s': 24,    # 21 × 1 window (hook only) + 3 metadata
-    '3-9s': 45,    # 21 × 2 windows + 3 metadata
-    '9-13s': 66,   # 21 × 3 windows (hook + middle_aggregate + closing) + 3 metadata
-    '13-18s': 66,  # 21 × 3 windows (hook + middle_aggregate + closing) + 3 metadata
-    '18-33s': 129, # 21 × 6 windows + 3 metadata
-    '33-60s': 150, # 21 × 7 windows + 3 metadata
-    '60-90s': 150,
-    '90-120s': 150
+    '0-3s': 25,     # 21×1 + 3 + 0 cross-window + 1 = 25 (was 24)
+    '3-9s': 49,     # 21×2 + 3 + 3 cross-window + 1 = 49 (was 45)
+    '9-13s': 72,    # 21×3 + 3 + 5 cross-window + 1 = 72 (was 66)
+    '13-18s': 72,   # 21×3 + 3 + 5 cross-window + 1 = 72 (was 66)
+    '18-33s': 135,  # 21×6 + 3 + 5 cross-window + 1 = 135 (was 129)
+    '33-60s': 156,  # 21×7 + 3 + 5 cross-window + 1 = 156 (was 150)
+    '60-90s': 156,  # Same as 33-60s (was 150)
+    '90-120s': 156  # Same as 33-60s (was 150)
 }
 
 # File paths (relative to bucket directory)
@@ -286,6 +291,197 @@ def extract_features(temporal_windows_json: Path, bucket: str) -> Dict:
     return video_features
 
 
+def add_cross_window_features(df: pd.DataFrame, bucket: str) -> pd.DataFrame:
+    """
+    Compute cross-window derived features after base aggregation.
+
+    Cross-window features represent relationships BETWEEN temporal windows
+    (e.g., energy change from hook to middle, overall energy trend, consistency metrics).
+
+    Args:
+        df: DataFrame with base temporal features (varying by bucket)
+        bucket: Duration bucket (determines which windows exist)
+
+    Returns:
+        DataFrame with 0-5 additional cross-window features (bucket-dependent)
+
+    Features Added (when applicable):
+        1. hook_to_middle_energy_delta: Energy change from hook to middle average
+        2. middle_to_closing_delta: Energy change from middle average to closing
+        3. eye_contact_consistency: Std deviation of eye_contact_rate across windows
+        4. word_density_std: Std deviation of word_count across windows
+        5. energy_progression_slope: Linear regression slope across all windows
+
+    Bucket-Specific Behavior:
+        - 0-3s: 0 features (only hook, no comparisons possible)
+        - 3-9s: 3 features (hook + closing: consistency metrics + slope, no deltas)
+        - 9-13s, 13-18s: 5 features (handles middle_aggregate correctly)
+        - 18-33s+: 5 features (full feature set)
+
+    Source: S7B2.md Root Cause Fix (lines 311-419)
+    """
+    from config.bucket_definitions import BUCKET_WINDOWS
+
+    logger.info(f"Computing cross-window features for bucket {bucket}...")
+
+    # Get actual window names for this bucket (handles middle_aggregate)
+    windows = BUCKET_WINDOWS[bucket]
+
+    # Identify existing windows from column names
+    has_hook = 'hook_energy_level' in df.columns
+    has_closing = 'closing_energy_level' in df.columns
+
+    # CRITICAL: Handle middle_aggregate for buckets 9-13s, 13-18s
+    middle_energy_cols = [f'{w}_energy_level' for w in windows if w.startswith('middle')]
+    has_middle = len(middle_energy_cols) > 0
+
+    cross_window_count = 0
+
+    # Feature 1: Hook to Middle energy delta
+    # Only compute if both hook and middle exist
+    if has_hook and has_middle:
+        df['xwin_hook_to_middle_energy'] = (
+            df[middle_energy_cols].mean(axis=1) - df['hook_energy_level']
+        )
+        cross_window_count += 1
+        logger.debug("  ✓ Computed xwin_hook_to_middle_energy")
+
+    # Feature 2: Middle to Closing energy delta
+    # Only compute if both middle and closing exist
+    if has_middle and has_closing:
+        df['xwin_middle_to_closing_energy'] = (
+            df['closing_energy_level'] - df[middle_energy_cols].mean(axis=1)
+        )
+        cross_window_count += 1
+        logger.debug("  ✓ Computed xwin_middle_to_closing_energy")
+
+    # Feature 3: Eye contact consistency (std deviation across all windows)
+    eye_contact_cols = [f'{w}_eye_contact_rate' for w in windows]
+    if len(eye_contact_cols) >= 2:  # Need at least 2 windows for std
+        df['xwin_eye_contact_consistency'] = df[eye_contact_cols].std(axis=1)
+        cross_window_count += 1
+        logger.debug("  ✓ Computed xwin_eye_contact_consistency")
+
+    # Feature 4: Word density std (pacing variability)
+    word_count_cols = [f'{w}_word_count' for w in windows]
+    if len(word_count_cols) >= 2:
+        df['xwin_word_density_std'] = df[word_count_cols].std(axis=1)
+        cross_window_count += 1
+        logger.debug("  ✓ Computed xwin_word_density_std")
+
+    # Feature 5: Energy progression slope (linear trend across windows)
+    # Only compute if 2+ windows exist (minimum for slope calculation)
+    energy_cols = [f'{w}_energy_level' for w in windows]
+
+    if len(energy_cols) >= 2:
+        # Compute linear regression slope for each video (index-based)
+        slopes = []
+        for idx, row in df.iterrows():
+            # Convert to float to handle mixed dtypes (iterrows() can create object dtype)
+            y = row[energy_cols].values.astype(float)
+            x = np.arange(len(y))
+
+            # Handle NaN/None values: skip videos with incomplete data
+            if pd.isna(y).any():
+                slopes.append(np.nan)
+            else:
+                # Use np.polyfit with index-based x (simpler, ML-sufficient)
+                slope, _ = np.polyfit(x, y, 1)
+                slopes.append(slope)
+
+        df['xwin_energy_progression_slope'] = slopes
+        cross_window_count += 1
+        logger.debug("  ✓ Computed xwin_energy_progression_slope")
+
+    logger.info(f"  Added {cross_window_count} cross-window features")
+
+    return df
+
+
+def add_is_top_performer_label(df: pd.DataFrame, bucket_path: Path, strategy: str) -> pd.DataFrame:
+    """
+    Add is_top_performer column from Stage 1's selected_videos.json.
+
+    This label indicates whether each video is in the top 80% (viral) or bottom 20% (non-viral)
+    for contrastive analysis. Stage 6 needs this to compute distribution comparisons.
+
+    Args:
+        df: DataFrame with aggregated features (includes video_id column)
+        bucket_path: Path to bucket directory
+        strategy: "contrastive" or "top"
+
+    Returns:
+        DataFrame with added is_top_performer column (1 = top 80%, 0 = bottom 20%)
+
+    Behavior by Strategy:
+        - Contrastive: Read from selected_videos.json (explicit top/bottom labels)
+        - Top: All videos = 1 (no bottom performers to contrast against)
+
+    Fallback:
+        - If selected_videos.json missing: Log warning + use index-based labeling (first 80% = top)
+        - If video_id not found in mapping: Default to 1 (assume top performer)
+
+    Source: S7B2.md Issue #5 - Alternative A (add to Stage 3)
+    """
+    logger.info(f"Adding is_top_performer labels (strategy: {strategy})...")
+
+    if strategy == 'top':
+        # Top mode: All videos are top performers by definition
+        df['is_top_performer'] = 1
+        logger.info("  ✓ Top mode: All videos labeled as top performers (is_top_performer=1)")
+        return df
+
+    # Contrastive mode: Read labels from Stage 1 output
+    selected_videos_path = bucket_path / "selected_videos.json"
+
+    if selected_videos_path.exists():
+        try:
+            with open(selected_videos_path, 'r') as f:
+                selected = json.load(f)
+
+            # Create mapping: video_id → is_top_performer
+            performer_map = {
+                str(v['id']): v.get('is_top_performer', True)
+                for v in selected['videos']
+            }
+
+            # Map to DataFrame (graceful handling for missing video_ids)
+            df['is_top_performer'] = (
+                df['video_id'].astype(str).map(performer_map).fillna(1).astype(int)
+            )
+
+            # Log distribution for verification
+            top_count = (df['is_top_performer'] == 1).sum()
+            bottom_count = (df['is_top_performer'] == 0).sum()
+            logger.info(
+                f"  ✓ Loaded performer status from selected_videos.json: "
+                f"{top_count} top ({top_count/len(df)*100:.1f}%), "
+                f"{bottom_count} bottom ({bottom_count/len(df)*100:.1f}%)"
+            )
+
+        except Exception as e:
+            logger.warning(
+                f"  ⚠ Failed to read selected_videos.json: {e}. "
+                f"Using fallback index-based labeling."
+            )
+            # Fallback: Use index-based 80/20 split
+            top_count = int(len(df) * 0.8)
+            df['is_top_performer'] = (df.index < top_count).astype(int)
+            logger.info(f"  ✓ Fallback labeling: first {top_count} videos = top performers")
+
+    else:
+        logger.warning(
+            f"  ⚠ selected_videos.json not found at {selected_videos_path}. "
+            f"Using fallback index-based labeling."
+        )
+        # Fallback: Use index-based 80/20 split
+        top_count = int(len(df) * 0.8)
+        df['is_top_performer'] = (df.index < top_count).astype(int)
+        logger.info(f"  ✓ Fallback labeling: first {top_count} videos = top performers")
+
+    return df
+
+
 def validate_input(data: dict, video_id: str, bucket: str):
     """
     Validate temporal_windows_updated.json before feature extraction.
@@ -352,15 +548,17 @@ def validate_input(data: dict, video_id: str, bucket: str):
         raise ValueError(f"Video {video_id}: Missing metadata.create_time")
 
 
-def process_bucket(bucket_path: Path, bucket: str) -> Tuple[pd.DataFrame, Dict]:
+def process_bucket(bucket_path: Path, bucket: str, strategy: str) -> Tuple[pd.DataFrame, Dict]:
     """
     Process all videos in bucket directory.
 
     Source: FeatureAggregationCHILD.md Section 2.3.3
+    Updated: S7B2.md Root Cause Fix (added cross-window features + is_top_performer)
 
     Args:
         bucket_path: Path to bucket directory
         bucket: Bucket name (e.g., "18-33s")
+        strategy: Analysis mode ("contrastive" or "top")
 
     Returns:
         tuple: (DataFrame with aggregated features, dict with skip reasons)
@@ -440,10 +638,17 @@ def process_bucket(bucket_path: Path, bucket: str) -> Tuple[pd.DataFrame, Dict]:
     if skipped_reasons:
         logger.info(f"Skipped reasons: {dict(skipped_reasons)}")
 
-    # Convert to DataFrame
-    df = pd.DataFrame(aggregated_data)
+    # Convert to DataFrame with base features
+    df_base = pd.DataFrame(aggregated_data)
+    logger.info(f"Base aggregation complete: {len(df_base)} videos, {len(df_base.columns)} base columns")
 
-    return df, skipped_reasons
+    # ===== S7B2 FIX: Add cross-window features (0-5 features) =====
+    df_with_cross_window = add_cross_window_features(df_base, bucket)
+
+    # ===== S7B2 FIX: Add is_top_performer label (1 column) =====
+    df_complete = add_is_top_performer_label(df_with_cross_window, bucket_path, strategy)
+
+    return df_complete, skipped_reasons
 
 
 def validate_output(df: pd.DataFrame, bucket: str):
@@ -451,6 +656,7 @@ def validate_output(df: pd.DataFrame, bucket: str):
     Validate aggregated DataFrame before saving.
 
     Source: FeatureAggregationCHILD.md Section 6.3
+    Updated: S7B2.md (uses config function for expected counts)
 
     Args:
         df: Aggregated features DataFrame
@@ -459,18 +665,20 @@ def validate_output(df: pd.DataFrame, bucket: str):
     Raises:
         AssertionError: if output schema invalid
     """
+    from config.bucket_definitions import get_stage3_expected_feature_count
+
     # 1. Check row count > 0
     assert len(df) > 0, "DataFrame has 0 rows (no valid videos processed)"
 
-    # 2. Check column count matches expected for bucket
-    expected_cols = EXPECTED_FEATURE_COUNTS[bucket]
+    # 2. Check column count matches expected for bucket (use config function)
+    expected_cols = get_stage3_expected_feature_count(bucket)
     actual_cols = len(df.columns)
 
     assert actual_cols == expected_cols, \
         f"Column count mismatch: expected {expected_cols}, got {actual_cols}"
 
     # 3. Check required columns exist
-    required_cols = ['video_id', 'create_time']
+    required_cols = ['video_id', 'create_time', 'is_top_performer']
     missing_cols = [c for c in required_cols if c not in df.columns]
 
     assert len(missing_cols) == 0, f"Missing required columns: {missing_cols}"
@@ -521,14 +729,16 @@ def save_aggregated_csv(df: pd.DataFrame, output_path: Path):
             temp_path.unlink()
 
 
-def aggregate_features(bucket_path: str) -> Tuple[Path, Path]:
+def aggregate_features(bucket_path: str, strategy: str = 'contrastive') -> Tuple[Path, Path]:
     """
     Complete Stage 3 feature aggregation pipeline.
 
     Source: FeatureAggregationCHILD.md Appendix C
+    Updated: S7B2.md Root Cause Fix (added strategy parameter)
 
     Args:
         bucket_path: str, path to bucket directory (e.g., "bucket_18-33s")
+        strategy: str, analysis mode ("contrastive" or "top"), default "contrastive"
 
     Returns:
         tuple: (csv_path, summary_path)
@@ -546,6 +756,7 @@ def aggregate_features(bucket_path: str) -> Tuple[Path, Path]:
     logger.info(f"Stage 3 Feature Aggregation starting")
     logger.info(f"Bucket path: {bucket_path}")
     logger.info(f"Bucket: {bucket}")
+    logger.info(f"Strategy: {strategy}")
 
     # Pre-flight validation - raises ValueError if fails
     total_files = validate_dependencies(bucket_path)
@@ -555,7 +766,7 @@ def aggregate_features(bucket_path: str) -> Tuple[Path, Path]:
     # ===== 2. Load and Extract Features from All Videos =====
     # process_bucket raises ValueError if zero valid videos
     # Let exceptions propagate to caller (orchestrator or main())
-    df, skipped_reasons = process_bucket(bucket_path, bucket)
+    df, skipped_reasons = process_bucket(bucket_path, bucket, strategy)
 
     # ===== 3. Validate Output Schema =====
     logger.info("Validating output schema")
@@ -659,13 +870,16 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Process single bucket
-  python3 scripts/stage3_aggregation.py --bucket-path="data/clients/test_run/hashtags/fitness/top_contrastive/buckets/bucket_18-33s"
+  # Process single bucket (contrastive mode)
+  python3 scripts/stage3_aggregation.py --bucket-path="data/clients/test_run/hashtags/fitness/top_contrastive/buckets/bucket_18-33s" --strategy=contrastive
+
+  # Process single bucket (top mode)
+  python3 scripts/stage3_aggregation.py --bucket-path="data/clients/test_run/hashtags/fitness/top/buckets/bucket_18-33s" --strategy=top
 
   # Parallel processing (3 buckets simultaneously)
-  python3 scripts/stage3_aggregation.py --bucket-path="...bucket_18-33s" &
-  python3 scripts/stage3_aggregation.py --bucket-path="...bucket_33-60s" &
-  python3 scripts/stage3_aggregation.py --bucket-path="...bucket_60-90s" &
+  python3 scripts/stage3_aggregation.py --bucket-path="...bucket_18-33s" --strategy=contrastive &
+  python3 scripts/stage3_aggregation.py --bucket-path="...bucket_33-60s" --strategy=contrastive &
+  python3 scripts/stage3_aggregation.py --bucket-path="...bucket_60-90s" --strategy=contrastive &
         """
     )
     parser.add_argument(
@@ -673,11 +887,17 @@ Examples:
         required=True,
         help="Path to bucket directory (e.g., data/clients/test_run/hashtags/fitness/top_contrastive/buckets/bucket_18-33s)"
     )
+    parser.add_argument(
+        "--strategy",
+        required=True,
+        choices=['contrastive', 'top'],
+        help="Analysis mode: 'contrastive' (top 80%% vs bottom 20%%) or 'top' (top performers only)"
+    )
 
     args = parser.parse_args()
 
     try:
-        csv_path, summary_path = aggregate_features(args.bucket_path)
+        csv_path, summary_path = aggregate_features(args.bucket_path, args.strategy)
 
         print(f"\n✓ Aggregated features saved to: {csv_path}")
         print(f"✓ Summary saved to: {summary_path}")

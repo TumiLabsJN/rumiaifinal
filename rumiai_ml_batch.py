@@ -331,7 +331,7 @@ def validate_stage7_prerequisites(bucket_path: str, bucket: str) -> None:
 def validate_stage7_outputs(bucket_path: str, bucket: str) -> None:
     """
     Validate Stage 7 outputs created correctly.
-    Source: LLMAnalysisCHILDTI.md Section 3 (Stage Contract - StageOutput)
+    Source: LLMAnalysisCHILDTI.md Section 2.2 (Output Contract)
 
     Validates:
     - Phase 1 window analyses (hook, middle_X, closing)
@@ -450,7 +450,7 @@ def handle_stage7_error(error: Exception, bucket_path: str) -> None:
 def cleanup_stage7_partial_outputs(bucket_path: str) -> None:
     """
     Remove partial outputs from failed Stage 7 execution.
-    Source: LLMAnalysisCHILDTI.md Section 3 StageOutput
+    Source: LLMAnalysisCHILDTI.md Section 2.2 (Output Contract)
 
     Note: Stage 7 has checkpoint/resume capability (.phase1_status.json).
     Only cleanup if catastrophic failure (not for recoverable errors).

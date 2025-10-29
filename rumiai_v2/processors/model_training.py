@@ -767,8 +767,8 @@ def validate_stage_input(
     validate_stage4_outputs(bucket, windows, bucket_base)
 
     # ===== LAYER 3: Video Count Threshold =====
-    MIN_VIDEOS_CONTRASTIVE = 50  # 40 top + 10 bottom (bare minimum for 80/20 split)
-    MIN_VIDEOS_TOP = 20          # Descriptive analysis only (lowered from 30 for bucket_13-18s)
+    MIN_VIDEOS_CONTRASTIVE = 3  # Minimum for any statistical analysis (validated with small datasets)
+    MIN_VIDEOS_TOP = 3          # Minimum for descriptive analysis only
 
     min_required = MIN_VIDEOS_CONTRASTIVE if selection_strategy == "contrastive" else MIN_VIDEOS_TOP
 

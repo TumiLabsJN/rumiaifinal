@@ -34,21 +34,21 @@ from rumiai_v2.processors.feature_transformation import (
 
 @pytest.fixture
 def fixture_bucket_18_33s():
-    """Load synthetic test fixture for bucket 18-33s (10 videos, 129 columns)"""
+    """Load synthetic test fixture for bucket 18-33s (10 videos, 135 columns)"""
     fixture_path = Path(__file__).parent.parent / "fixtures" / "stage4" / "test_bucket_18-33s_minimal.csv"
     return pd.read_csv(fixture_path)
 
 
 @pytest.fixture
 def fixture_bucket_9_13s():
-    """Load synthetic test fixture for bucket 9-13s (10 videos, 66 columns)"""
+    """Load synthetic test fixture for bucket 9-13s (10 videos, 72 columns)"""
     fixture_path = Path(__file__).parent.parent / "fixtures" / "stage4" / "test_bucket_9-13s_minimal.csv"
     return pd.read_csv(fixture_path)
 
 
 @pytest.fixture
 def fixture_bucket_3_9s():
-    """Load synthetic test fixture for bucket 3-9s (10 videos, 45 columns)"""
+    """Load synthetic test fixture for bucket 3-9s (10 videos, 49 columns)"""
     fixture_path = Path(__file__).parent.parent / "fixtures" / "stage4" / "test_bucket_3-9s_minimal.csv"
     return pd.read_csv(fixture_path)
 

@@ -1,0 +1,25 @@
+{
+  "cluster_id": "wellnesspt2_test5",
+  "description": "Comprehensive healthy lifestyle cluster - 9 hashtags covering fitness, wellness, nutrition, and habits",
+  "primary_hashtag": "#healthy",
+  "variant_hashtags": [
+    "#healthylifestyle",
+    "#healthyeating",
+    "#healthyliving",
+    "#fitnesstips",
+    "#fitnesslifestyle",
+    "#healthandfit",
+    "#wellness",
+    "#healthyhabits"
+  ],
+  "scrape_config": {
+    "runs_per_hashtag": 4,
+    "delay_between_runs_ms": 180000,
+    "results_per_page": 600
+  },
+  "metadata": {
+    "created_date": "2025-10-28T00:00:00Z",
+    "created_by": "jorge",
+    "notes": "Test 5: Comprehensive 9-hashtag cluster - 9 hashtags × 4 runs × 600 results = 36 scrapes, ~5,000-6,500 unique videos expected after deduplication. Balanced coverage: Fitness (35%), Wellness (20%), Nutrition (15%), Lifestyle (15%), General (15%). Includes #wellness for cross-cluster comparison with Test 4."
+  }
+}

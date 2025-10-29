@@ -35,19 +35,23 @@ logger = logging.getLogger(__name__)
 
 def get_expected_column_count(bucket: str) -> int:
     """
-    Get expected input column count for bucket.
+    DEPRECATED: Use get_stage3_expected_feature_count() from config/bucket_definitions.py instead.
 
-    Source: FeatureTransformationTI.md Section 4.6
+    This function returns the OLD formula without cross-window features or is_top_performer.
+    Kept for backward compatibility only.
+
+    Source: FeatureTransformationTI.md Section 4.6 (OUTDATED)
+    Updated: S7B2.md Root Cause Fix - use config function instead
 
     Args:
         bucket: str, bucket name (e.g., "18-33s")
 
     Returns:
-        int, expected column count
+        int, expected column count (WITHOUT cross-window features or label)
     """
     from config.bucket_definitions import BUCKET_WINDOWS
     window_count = len(BUCKET_WINDOWS[bucket])
-    return (21 * window_count) + 3
+    return (21 * window_count) + 3  # OLD formula: temporal features + metadata only
 
 
 def get_required_columns(bucket: str) -> List[str]:
@@ -121,19 +125,30 @@ def get_expected_rf_column_count(bucket: str) -> int:
     Get expected Video-Level RF output column count.
 
     Source: FeatureTransformationTI.md Section 4.6
+    Updated: S7B2.md Root Cause Fix - bucket-aware cross-window count
 
     Args:
         bucket: str, bucket name (e.g., "18-33s")
 
     Returns:
-        int, expected column count
+        int, expected column count after transformation
     """
     from config.bucket_definitions import BUCKET_WINDOWS
     window_count = len(BUCKET_WINDOWS[bucket])
     temporal_features = 21 * window_count
-    # temporal + emotions(7) + temporal_extract(5) + gender(3) + cross_window(5) + target(1)
+
+    # Cross-window features are bucket-aware (Stage 3 creates these)
+    # 0-3s: 0 features, 3-9s: 3 features, 9-13s+: 5 features
+    if bucket == '0-3s':
+        cross_window_features = 0
+    elif bucket == '3-9s':
+        cross_window_features = 3
+    else:
+        cross_window_features = 5
+
+    # temporal + emotions(7) + temporal_extract(5) + gender(3) + cross_window(0-5) + target(1)
     # Note: has_captions NOT one-hot encoded, remains Boolean in temporal features
-    return temporal_features + 7 + 5 + 3 + 5 + 1
+    return temporal_features + 7 + 5 + 3 + cross_window_features + 1
 
 
 def get_base_features() -> List[str]:
@@ -236,11 +251,14 @@ def validate_input(df: pd.DataFrame, bucket: str, expected_count: int) -> None:
     Raises:
         ValueError: if validation fails with specific error message
     """
-    # 1. Check column count matches bucket expectations
-    expected_cols = get_expected_column_count(bucket)  # 129 for 18-33s
+    # 1. Check column count matches bucket expectations (with cross-window features + is_top_performer)
+    # Source: S7B2.md Root Cause Fix - use config function (single source of truth)
+    from config.bucket_definitions import get_stage3_expected_feature_count
+    expected_cols = get_stage3_expected_feature_count(bucket)  # 135 for 18-33s (was 129)
     if len(df.columns) != expected_cols:
         raise ValueError(
-            f"Expected {expected_cols} columns for bucket {bucket}, found {len(df.columns)}"
+            f"Expected {expected_cols} columns for bucket {bucket}, found {len(df.columns)}. "
+            f"Stage 3 output must include: base features + metadata + cross-window features + is_top_performer."
         )
 
     # 2. Check all required columns exist
@@ -478,83 +496,41 @@ def transform_video_level_rf(
         df_rf['gender_female'] = 0
         df_rf['gender_nan'] = 0
 
-    # 5. Add target variable is_top_performer (contrastive strategy only)
-    if strategy == 'contrastive':
-        # Read performer status from selected_videos.json (Stage 1 output)
-        if bucket_path:
-            import json
-            selected_videos_path = os.path.join(bucket_path, "selected_videos.json")
-
-            if os.path.exists(selected_videos_path):
-                with open(selected_videos_path) as f:
-                    selected = json.load(f)
-
-                # Create mapping: video_id → is_top_performer
-                performer_map = {
-                    str(v['id']): v.get('is_top_performer', True)
-                    for v in selected['videos']
-                }
-                df_rf['is_top_performer'] = df_rf['video_id'].astype(str).map(performer_map).fillna(1).astype(int)
-
-                # Log distribution for verification
-                top_count = (df_rf['is_top_performer'] == 1).sum()
-                bottom_count = (df_rf['is_top_performer'] == 0).sum()
-                logger.info(
-                    f"Loaded performer status from selected_videos.json: "
-                    f"{top_count} top ({top_count/len(df_rf)*100:.1f}%), "
-                    f"{bottom_count} bottom ({bottom_count/len(df_rf)*100:.1f}%)"
-                )
-            else:
-                logger.warning(f"selected_videos.json not found at {selected_videos_path}, using fallback labeling")
-                top_count = int(len(df_rf) * 0.8)
-                df_rf['is_top_performer'] = (df_rf.index < top_count).astype(int)
-        else:
-            # Fallback for old code paths without bucket_path
-            logger.warning("bucket_path not provided to transform_video_level_rf, using fallback labeling")
-            top_count = int(len(df_rf) * 0.8)
-            df_rf['is_top_performer'] = (df_rf.index < top_count).astype(int)
-
-    # 6. Compute Cross-Window Delta Features (NEW)
-    from config.bucket_definitions import BUCKET_WINDOWS
-    windows = BUCKET_WINDOWS[bucket]
-
-    # Check which windows exist
-    has_closing = 'closing' in windows
-    has_middle = any(w.startswith('middle') for w in windows)
-
-    # Energy progression deltas (requires both middle and closing)
-    if has_middle and has_closing:
-        middle_windows = [w for w in windows if w.startswith('middle')]
-        middle_energy_cols = [f'{w}_energy_level' for w in middle_windows]
-
-        df_rf['hook_to_middle_energy_delta'] = (
-            df_rf[middle_energy_cols].mean(axis=1) - df_rf['hook_energy_level']
+    # 5. Validate is_top_performer Exists (Stage 3 created it)
+    # Source: S7B2.md Root Cause Fix - moved to Stage 3
+    if 'is_top_performer' not in df.columns:
+        raise ValueError(
+            "is_top_performer column missing from aggregated_features.csv. "
+            "Stage 3 must create this column (see S7B2.md fix)."
         )
-        df_rf['middle_to_closing_delta'] = (
-            df_rf['closing_energy_level'] - df_rf[middle_energy_cols].mean(axis=1)
-        )
-    elif has_closing and not has_middle:
-        # Bucket 3-9s: has hook + closing but no middle
-        df_rf['hook_to_middle_energy_delta'] = 0.0  # No middle
-        df_rf['middle_to_closing_delta'] = 0.0   # No middle
+
+    # is_top_performer passed through unchanged (already in df_rf)
+    logger.debug("✓ Using is_top_performer from Stage 3")
+
+    # 6. Validate Cross-Window Features Exist (Stage 3 created them)
+    # Source: S7B2.md Root Cause Fix - moved to Stage 3
+    # Cross-window features are bucket-aware: 0-3s has 0, 3-9s has 3, 9-13s+ has 5
+    # Note: Prefixed with xwin_ to avoid collision with window-specific features
+    expected_cross_window = [
+        'xwin_hook_to_middle_energy',
+        'xwin_middle_to_closing_energy',
+        'xwin_eye_contact_consistency',
+        'xwin_word_density_std',
+        'xwin_energy_progression_slope'
+    ]
+    existing_cross_window = [f for f in expected_cross_window if f in df.columns]
+
+    if existing_cross_window:
+        logger.debug(f"✓ Using {len(existing_cross_window)} cross-window features from Stage 3")
     else:
-        # Bucket 0-3s: only hook, no middle or closing
-        df_rf['hook_to_middle_energy_delta'] = 0.0
-        df_rf['middle_to_closing_delta'] = 0.0
+        # Only bucket 0-3s should have zero cross-window features
+        if bucket != '0-3s':
+            logger.warning(
+                f"⚠ No cross-window features found for bucket {bucket}. "
+                "Expected for buckets 3-9s+ (Stage 3 should create them)."
+            )
 
-    # Consistency metrics (std deviation across all windows)
-    eye_contact_cols = [f'{w}_eye_contact_rate' for w in windows]
-    df_rf['eye_contact_consistency'] = df_rf[eye_contact_cols].std(axis=1)
-
-    word_count_cols = [f'{w}_word_count' for w in windows]
-    df_rf['word_density_std'] = df_rf[word_count_cols].std(axis=1)
-
-    # Progression slopes (linear regression across windows)
-    energy_cols = [f'{w}_energy_level' for w in windows]
-    df_rf['energy_progression_slope'] = df_rf[energy_cols].apply(
-        lambda row: calculate_linear_slope_with_timestamps(row.values, windows, bucket),
-        axis=1
-    )
+    # Cross-window features passed through unchanged (no transformation needed)
 
     logger.info(
         f"Video-Level RF transformation complete: "
@@ -597,32 +573,14 @@ def transform_window_level_rf(
     # Remove window prefix from column names (hook_scene_count → scene_count)
     df_window.columns = [c.replace(window_prefix, '') for c in df_window.columns]
 
-    # Add target variable is_top_performer (contrastive strategy only)
-    if strategy == 'contrastive':
-        # Read performer status from selected_videos.json (Stage 1 output)
-        if bucket_path:
-            import json
-            selected_videos_path = os.path.join(bucket_path, "selected_videos.json")
-
-            if os.path.exists(selected_videos_path):
-                with open(selected_videos_path) as f:
-                    selected = json.load(f)
-
-                # Create mapping: video_id → is_top_performer
-                performer_map = {
-                    str(v['id']): v.get('is_top_performer', True)
-                    for v in selected['videos']
-                }
-                df_window['is_top_performer'] = df['video_id'].astype(str).map(performer_map).fillna(1).astype(int)
-            else:
-                logger.warning(f"selected_videos.json not found at {selected_videos_path}, using fallback labeling")
-                top_count = int(len(df) * 0.8)
-                df_window['is_top_performer'] = (df.index < top_count).astype(int)
-        else:
-            # Fallback for old code paths without bucket_path
-            logger.warning("bucket_path not provided to transform_window_level_rf, using fallback labeling")
-            top_count = int(len(df) * 0.8)
-            df_window['is_top_performer'] = (df.index < top_count).astype(int)
+    # Add target variable is_top_performer from Stage 3 input
+    # Source: S7B2.md Root Cause Fix - Stage 3 creates this column
+    if 'is_top_performer' not in df.columns:
+        raise ValueError(
+            "is_top_performer column missing from aggregated_features.csv. "
+            "Stage 3 must create this column (see S7B2.md fix)."
+        )
+    df_window['is_top_performer'] = df['is_top_performer'].copy()
 
     # NOTE: Encode has_captions for RF (prevents quantile errors in Stage 6)
     # Match video-level encoding (line 439-444) for consistency

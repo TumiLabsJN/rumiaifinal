@@ -57,7 +57,7 @@ def create_test_scenario(scenario_name, has_checkpoint, has_csv, checkpoint_stat
             "videos_skipped": 0,
             "bucket": "18-33s",
             "duration_seconds": 45.2,
-            "feature_count": 129
+            "feature_count": 135
         }
         checkpoint_path = checkpoints_dir / "stage_3_checkpoint.json"
         with open(checkpoint_path, 'w') as f:

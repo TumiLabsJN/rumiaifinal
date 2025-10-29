@@ -4,10 +4,15 @@
 
 ## 📋 Test Index
 
+### Hashtag Tests (Wellness Cluster)
 - [Test 1: 150-Day Date Filter](#test-1-150-day-date-filter) - Original baseline test
 - [Test 2: 270-Day Date Filter](#test-2-270-day-date-filter) - Extended 9-month window
 - [Test 3: 180-Minute Scrape Delay + 100 Videos](#test-3-180-minute-scrape-delay--100-videos) - Extended delay with larger sample size
 - [Test 4: 4 Runs Per Hashtag + 100 Videos](#test-4-4-runs-per-hashtag--100-videos) - Doubled scraping runs with larger sample size
+- [Test 5: Healthy + Fitness Cluster (9 Hashtags)](#test-5-healthy--fitness-cluster-9-hashtags) - Comprehensive fitness-focused cluster, 36 scrapes, 100 videos per bucket
+
+### Competitor Tests
+- [CompetitorTest: @nutrachampssupplement](#competitortest-nutrachampssupplement) - Single creator analysis, top 60 per bucket, 270-day window
 
 ---
 
@@ -2783,3 +2788,714 @@ EOF
 
 **Test 4 Added:** 2025-10-27
 **Author:** RumiAI Testing Team
+
+---
+---
+
+
+---
+
+# Test 5: Healthy + Fitness Cluster (9 Hashtags)
+
+## 📋 Test Overview
+
+**Test ID:** E2E-WELLNESS-005  
+**Test Type:** Comprehensive Fitness-Focused Multi-Hashtag Cluster  
+**Client:** Rollo  
+**Cluster:** wellnesspt2_test5 (9 hashtags: #healthy + 8 variants)  
+**Objective:** Validate fitness-heavy cluster with maximum hashtag coverage and cross-cluster comparison capability
+
+---
+
+## 🎯 Test Objectives
+
+This test expands on the wellness cluster approach with:
+
+1. **Maximum Hashtag Coverage:** 9 hashtags (vs 4 in Test 4) for comprehensive content diversity
+2. **Fitness Emphasis:** 35% fitness content (#fitnesstips, #fitnesslifestyle, #healthandfit)
+3. **Cross-Cluster Comparison:** Includes #wellness for direct comparison with Test 4
+4. **Behavioral Content:** Adds #healthyhabits for routine/habit-focused patterns
+5. **Larger Scraping Scale:** 36 scrapes (vs 16 in Test 4) for deeper data pool
+
+**Success Criteria:** Achieve 5,000-6,500 unique videos with balanced fitness/wellness/nutrition coverage
+
+---
+
+## 📦 Test Configuration
+
+### Cluster Configuration
+**File:** `/home/jorge/rumiaifinal/config/hashtag_clusters/wellnesspt2_test5.json`
+
+```json
+{
+  "cluster_id": "wellnesspt2_test5",
+  "description": "Comprehensive healthy lifestyle cluster - 9 hashtags covering fitness, wellness, nutrition, and habits",
+  "primary_hashtag": "#healthy",
+  "variant_hashtags": [
+    "#healthylifestyle",
+    "#healthyeating",
+    "#healthyliving",
+    "#fitnesstips",
+    "#fitnesslifestyle",
+    "#healthandfit",
+    "#wellness",
+    "#healthyhabits"
+  ],
+  "scrape_config": {
+    "runs_per_hashtag": 4,
+    "delay_between_runs_ms": 180000,
+    "results_per_page": 600
+  }
+}
+```
+
+### Hashtag Content Distribution
+
+| Category | Hashtags | Expected % |
+|----------|----------|------------|
+| **Fitness/Exercise** | #fitnesstips, #fitnesslifestyle, #healthandfit | 35% |
+| **Wellness/Mindfulness** | #wellness, #healthyhabits | 20% |
+| **Food/Nutrition** | #healthyeating | 15% |
+| **Lifestyle/Habits** | #healthylifestyle, #healthyliving | 15% |
+| **General/Mixed** | #healthy (primary) | 15% |
+
+### CLI Parameters
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| `--client` | Rollo | Test client identifier |
+| `--target` | wellnesspt2_test5 | Cluster ID from config file |
+| `--analysis-type` | hashtag | Cluster analysis mode |
+| `--selection-strategy` | contrastive | Top 80% + Bottom 20% per bucket |
+| `--video-count` | 100 | Videos per winning bucket |
+| `--date-filter` | last_270_days | 9-month window (same as Test 4) |
+| `--country-code` | US | Geographic filter |
+| `--report-type` | single | Single hashtag analysis |
+| `--report-audience` | client | Report format for brand/client |
+
+**Expected Scraping:**
+- 9 hashtags × 4 runs × 600 results = **36 scrapes**
+- ~21,600 videos before deduplication
+- ~5,000-6,500 unique videos after deduplication (~70-75% retention)
+- ~3,000-4,500 videos after 270-day filter
+- **300 videos selected** (100 per winning bucket × 3 buckets)
+
+**Scraping Duration:** ~108 minutes (36 scrapes × 3 min/scrape) = **1.8 hours**
+
+---
+
+## 🚀 Test Execution
+
+### Command
+
+```bash
+cd /home/jorge/rumiaifinal
+
+python rumiai_ml_batch.py \
+  --client Rollo \
+  --target wellnesspt2_test5 \
+  --analysis-type hashtag \
+  --selection-strategy contrastive \
+  --video-count 100 \
+  --date-filter last_270_days \
+  --country-code US \
+  --report-type single \
+  --report-audience client
+```
+
+### Expected Runtime
+
+| Stage | Expected Duration | Notes |
+|-------|------------------|-------|
+| Stage 0 | <5 seconds | Foundation setup |
+| Stage 1 | **1.8-2 hours** | **36 scrapes** (9 hashtags × 4 runs) |
+| Stage 2 | 3-5 hours | Video processing (300 videos) |
+| Stage 2.5 | <10 seconds | File organization |
+| Stage 2.6 | 3-5 minutes | Pattern discovery |
+| **⏸️ PAUSE** | **Manual** | **Taxonomy curation** |
+| Stage 2.7 | 20-30 minutes | Video classification (300 videos) |
+| Stage 3 | 10-20 minutes | Feature aggregation |
+| Stage 4 | 5-10 minutes | Feature transformation |
+| Stage 5 | 10-15 minutes | ML model training |
+| Stage 6 | 5-10 minutes | ML analysis generation |
+| Stage 7 | 20-30 minutes | LLM report generation |
+| **TOTAL** | **5-8 hours** | **Excluding manual curation** |
+
+**Longer than Test 4 due to:**
+- More scrapes (36 vs 16)
+- Same video processing count (300 videos)
+
+---
+
+## 📊 Key Differences from Test 4
+
+| Aspect | Test 4 (wellness) | Test 5 (wellnesspt2) |
+|--------|-------------------|----------------------|
+| **Hashtags** | 4 hashtags | **9 hashtags** |
+| **Scrapes** | 16 scrapes | **36 scrapes** |
+| **Scraping Time** | ~30-45 min | **~1.8-2 hours** |
+| **Focus** | Pure wellness/supplements | **Fitness + wellness mix** |
+| **Expected Unique Videos** | 1,500-2,000 | **5,000-6,500** |
+| **Content Mix** | Supplements-heavy | **Fitness-heavy (35%)** |
+| **Cross-Cluster** | Standalone | **Includes #wellness overlap** |
+
+---
+
+## 🔍 Strategic Value
+
+### 1. Cross-Cluster Comparison
+**#wellness appears in both Test 4 and Test 5:**
+- Test 4: #wellness as primary focus (supplements, holistic wellness)
+- Test 5: #wellness as 1 of 9 hashtags (fitness + wellness context)
+
+**Analysis Opportunity:** Compare how #wellness performs in different cluster contexts
+
+### 2. Fitness Content ML Training
+Test 5 is first test with significant fitness content:
+- Workout demonstrations
+- Exercise form/technique
+- Training programs
+- Fitness lifestyle vlogs
+
+**ML Value:** Train models on fitness-specific creative patterns
+
+### 3. Behavioral Content (#healthyhabits)
+Captures routine-building and habit-stacking content:
+- Morning routines
+- Daily habits
+- Productivity + health
+- Behavior change frameworks
+
+### 4. Maximum Diversity
+9 hashtags provide:
+- Broader creator diversity
+- More content style variety
+- Better coverage of wellness spectrum
+
+---
+
+## ✅ Success Criteria
+
+### Primary Success Criteria
+
+1. **Stage 1: Video Discovery**
+   - [ ] 36/36 scrapes complete successfully
+   - [ ] 5,000-6,500 unique videos after deduplication
+   - [ ] Deduplication rate: 70-75% retention
+   - [ ] 3 winning buckets identified
+   - [ ] 300 videos selected (100 per bucket)
+
+2. **Stage 2: Video Processing**
+   - [ ] 300/300 videos processed
+   - [ ] 0 processing failures
+   - [ ] All videos have temporal_windows_updated.json
+
+3. **Stage 2.7: Classification**
+   - [ ] >95% classification success (285+/300 videos)
+   - [ ] Taxonomy reflects fitness + wellness + nutrition mix
+
+4. **Stage 5: ML Training**
+   - [ ] 6 models trained (RF + K-Means × 3 buckets)
+   - [ ] Training accuracy >80%
+   - [ ] No class imbalance errors
+
+5. **Stage 7: LLM Analysis**
+   - [ ] 3 bucket analyses complete
+   - [ ] Creative reports generated
+   - [ ] Exit code: 0
+
+### Comparison Metrics vs Test 4
+
+| Metric | Test 4 Target | Test 5 Target |
+|--------|---------------|---------------|
+| Unique videos | 1,500-2,000 | 5,000-6,500 |
+| Deduplication rate | 60-65% | 70-75% |
+| Scraping time | 30-45 min | 1.8-2 hours |
+| Fitness content % | <10% | ~35% |
+| Videos processed | 300 | 300 |
+| Classification success | >95% | >95% |
+
+---
+
+## 📂 Output Directory Structure
+
+```
+data/clients/Rollo/
+└── hashtags/
+    └── wellnesspt2_test5/
+        └── top_contrastive/
+            ├── config.json
+            ├── cluster_analytics.json  # 36 scrapes documented
+            ├── winner_analysis.json
+            ├── content_taxonomies/
+            │   └── wellnesspt2_test5_taxonomy.json
+            └── buckets/
+                ├── bucket_{winning_bucket_1}/
+                │   ├── selected_videos.json  # 100 videos
+                │   ├── top/  # 80 videos
+                │   ├── bottom/  # 20 videos
+                │   ├── validation/
+                │   │   └── video_review.csv
+                │   ├── ml_analysis/
+                │   │   ├── aggregated_features.json
+                │   │   ├── rf_transformed.csv
+                │   │   ├── kmeans_transformed.csv
+                │   │   ├── *_analysis.json
+                │   │   └── llm/
+                │   │       ├── hook_analysis.json
+                │   │       ├── closing_analysis.json
+                │   │       ├── winning_formulas.json
+                │   │       └── complete_analysis_{bucket}.json
+                │   └── models/
+                │       ├── rf_classifier.pkl
+                │       ├── kmeans_hook.pkl
+                │       └── training_summary.json
+                ├── bucket_{winning_bucket_2}/
+                └── bucket_{winning_bucket_3}/
+```
+
+---
+# COMPETITOR ANALYSIS TESTS
+
+# CompetitorTest: @nutrachampssupplement
+
+## 📋 Test Overview
+
+**Test ID:** E2E-COMPETITOR-001  
+**Test Type:** Competitor Creative Analysis (Handle-based)  
+**Client:** Rollo_test6
+**Target:** @nutrachampssupplement (TikTok Handle)  
+**Analysis Type:** Competitor  
+**Objective:** Analyze competitor's top-performing creative patterns across winning duration buckets
+
+---
+
+## 🎯 Key Differences from Hashtag Tests
+
+| Aspect | Hashtag Tests (Tests 1-4) | Competitor Test |
+|--------|---------------------------|-----------------|
+| **Analysis Type** | `--analysis-type hashtag` | `--analysis-type competitor` |
+| **Target** | Hashtag cluster (e.g., wellness) | TikTok handle (e.g., @nutrachampssupplement) |
+| **Selection Strategy** | Contrastive (top 80% + bottom 20%) | **Top performers only** |
+| **Video Source** | Multiple hashtags with deduplication | Single creator (all unique videos) |
+| **Deduplication** | High (~40-60% duplicates across hashtags) | None (0% - all videos are unique) |
+| **Scraping** | Multiple runs with delays | Single comprehensive scrape |
+| **Content Diversity** | High (many creators) | Low (single creator style) |
+
+---
+
+## 📦 Test Configuration
+
+### CLI Parameters
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| `--client` | Rollo_test6 | Test client identifier |
+| `--target` | nutrachampssupplement | TikTok handle (without @) |
+| `--analysis-type` | competitor | Handle-based analysis |
+| `--selection-strategy` | top | Top performers only (no contrastive) |
+| `--video-count` | 60 | Videos per winning bucket |
+| `--date-filter` | last_270_days | 9-month window |
+| `--country-code` | US | Geographic filter |
+| `--report-type` | single | Single creator analysis |
+| `--report-audience` | client | Report format for brand/client |
+
+**Expected Behavior:**
+- Single scrape of @nutrachampssupplement's profile
+- All videos are unique (0% deduplication)
+- Date filter: Last 270 days
+- Duration bucketing: Videos distributed across 8 buckets
+- Winner analysis: Select top 3 buckets by video count
+- Video selection: **Top 60 performers per winning bucket** (no bottom performers)
+
+---
+
+## 🚀 Test Execution
+
+### Command
+
+```bash
+cd /home/jorge/rumiaifinal
+
+python rumiai_ml_batch.py \
+  --client Rollo \
+  --target nutrachampssupplement \
+  --analysis-type competitor \
+  --selection-strategy top \
+  --video-count 60 \
+  --date-filter last_270_days \
+  --country-code US \
+  --report-type single \
+  --report-audience client
+```
+    t5_retention = (t5_unique / t5_scraped) * 100
+
+print(f"Test 4: {t4_scraped} scraped → {t4_unique} unique ({t4_retention:.1f}% retention)")
+print(f"Test 5: {t5_scraped} scraped → {t5_unique} unique ({t5_retention:.1f}% retention)")
+print(f"Incremental gain: +{t5_unique - t4_unique} unique videos")
+
+
+### Expected Runtime
+
+| Stage | Expected Duration | Notes |
+|-------|------------------|-------|
+| Stage 0 | <5 seconds | Foundation setup |
+| Stage 1 | 3-5 minutes | Single profile scrape (no multi-run delays) |
+| Stage 2 | 1.5-3 hours | Video processing (180 videos = 60 × 3 buckets) |
+| Stage 2.5 | <10 seconds | File organization |
+| Stage 2.6 | 3-5 minutes | Pattern discovery (competitor-specific taxonomy) |
+| **⏸️ PAUSE** | **Manual** | **Taxonomy curation (30-60 min)** |
+| Stage 2.7 | 10-20 minutes | Video classification (180 videos) |
+| Stage 3 | 5-10 minutes | Feature aggregation |
+| Stage 4 | 3-5 minutes | Feature transformation |
+| Stage 5 | 5-10 minutes | ML model training |
+| Stage 6 | 3-5 minutes | ML analysis generation |
+| Stage 7 | 15-20 minutes | LLM report generation |
+| **TOTAL** | **2-4 hours** | **Excluding manual curation** |
+
+**Faster than Hashtag Tests because:**
+- No multi-run scraping delays (single scrape)
+- Fewer total videos (180 vs 240-300)
+- No deduplication overhead
+
+---
+
+## 📊 Pipeline Flow & Key Differences
+
+### Stage 1: Video Discovery (Competitor Mode)
+
+**Differences from Hashtag Mode:**
+
+1. **No Cluster Scraping** - Single handle scrape
+2. **No Deduplication** - All videos are unique
+3. **No Hashtag Validation** - Creator's videos are pre-validated
+4. **No Cluster Analytics** - Single-source data
+
+**Expected Output:**
+```
+✓ Stage 1: Video Discovery - COMPLETE
+  Scraping: 1/1 profile scrape successful
+  Total videos: ~300-500 (depends on creator)
+  Date filter: 300-500 → 180-250 videos (last 270 days)
+  Winner buckets: [e.g., bucket_13-18s, bucket_18-33s, bucket_33-60s]
+  Selected: 180 videos (60 per bucket, top performers only)
+```
+
+**Key Output Files:**
+- `winner_analysis.json` - Bucket distribution
+- `buckets/bucket_{duration}/selected_videos.json` - Top 60 videos per bucket
+- **No cluster_analytics.json** (not applicable for competitor analysis)
+
+### Stage 2.6: Pattern Discovery (Competitor Taxonomy)
+
+**Competitor-Specific Patterns:**
+- Single creator's content style
+- Consistent visual/audio branding
+- Recurring creative frameworks
+- Hook patterns specific to creator
+- CTA strategies
+
+**Expected Taxonomy Depth:**
+- Fewer content categories (5-10 vs 15-25 for hashtags)
+- More specific to creator's niche
+- Higher pattern consistency
+
+### Stage 5: ML Model Training (Top-Only Strategy)
+
+**Key Difference:**
+- Models trained **only on top performers** (no contrastive learning)
+- Random Forest predicts "top tier" vs "mid tier" within top 60
+- K-Means clusters top performers by creative style
+- Insights focus on "what makes their best content work"
+
+---
+
+## 📂 Output Directory Structure
+
+```
+data/clients/Rollo/
+└── competitor/
+    └── nutrachampssupplement/
+        └── top/  # Note: "top" not "top_contrastive"
+            ├── config.json
+            ├── winner_analysis.json
+            └── buckets/
+                ├── bucket_18-33s/  # Example winning bucket
+                │   ├── selected_videos.json  # Top 60 videos
+                │   ├── top/
+                │   │   └── [60 video JSONs]
+                │   ├── validation/
+                │   │   └── video_review.csv
+                │   ├── ml_analysis/
+                │   │   ├── aggregated_features.json
+                │   │   ├── rf_transformed.csv
+                │   │   ├── kmeans_transformed.csv
+                │   │   ├── *_analysis.json  # Stage 6 ML analysis
+                │   │   └── llm/  # Stage 7 LLM reports
+                │   │       ├── hook_analysis.json
+                │   │       ├── closing_analysis.json
+                │   │       ├── winning_formulas.json
+                │   │       └── complete_analysis_18-33s.json
+                │   └── models/
+                │       ├── rf_classifier.pkl
+                │       ├── kmeans_hook.pkl
+                │       └── training_summary.json
+                ├── bucket_33-60s/  # Example winning bucket
+                │   └── [same structure]
+                └── bucket_60-90s/  # Example winning bucket
+                    └── [same structure]
+```
+
+**Key Directory Differences:**
+- Path includes `/competitor/` not `/hashtag/`
+- Subdirectory is `/top/` not `/top_contrastive/`
+- No `cluster_analytics.json`
+- Only `top/` folder per bucket (no `bottom/` folder)
+
+---
+
+## ✅ Success Criteria
+
+### Primary Success Criteria
+
+1. **Stage 1: Video Discovery**
+   - [ ] Single profile scrape completes successfully
+   - [ ] Videos filtered to last 270 days
+   - [ ] 3 winning buckets identified
+   - [ ] 60 videos selected per winning bucket (top performers)
+   - [ ] `winner_analysis.json` generated
+
+2. **Stage 2: Video Processing**
+   - [ ] All 180 videos processed (60 × 3 buckets)
+   - [ ] All videos have `temporal_windows_updated.json`
+   - [ ] 0 processing failures
+   - [ ] Checkpoints enable resume if interrupted
+
+3. **Stage 2.7: Classification**
+   - [ ] 180/180 videos classified successfully
+   - [ ] Classification matches competitor's content style
+   - [ ] Taxonomy reflects single creator patterns
+
+4. **Stage 5: ML Training**
+   - [ ] 6 models trained (RF + K-Means × 3 buckets)
+   - [ ] Models trained on top performers only
+   - [ ] No class imbalance errors
+   - [ ] Training metrics > 80% accuracy
+
+5. **Stage 7: LLM Analysis**
+   - [ ] 3 bucket analyses generated
+   - [ ] Creative reports identify competitor's winning patterns
+   - [ ] `complete_analysis_{bucket}.json` for each bucket
+   - [ ] Exit code: 0
+
+### Success Metrics
+
+| Metric | Target | Notes |
+|--------|--------|-------|
+| Videos processed | 180 (100%) | 60 per bucket × 3 buckets |
+| Classification success | >95% | 171+/180 videos |
+| ML training success | 6/6 models | RF + K-Means per bucket |
+| Pipeline completion | Exit code 0 | No errors |
+| Processing time | <4 hours | Excluding manual curation |
+
+---
+
+## 🔍 Analysis Use Cases
+
+### What This Test Tells You
+
+1. **Competitor's Winning Duration Strategy**
+   - Which video lengths perform best for this creator?
+   - Do they focus on short-form (<30s) or long-form (60-90s)?
+
+2. **Creative Patterns Within Top Performers**
+   - What creative frameworks do they reuse?
+   - Hook patterns, CTA strategies, visual styles
+   - Temporal progressions (hook → closing)
+
+3. **Content Strategy Insights**
+   - Publishing frequency (via date filter)
+   - Topic diversity (via taxonomy)
+   - Engagement patterns (via bucket winners)
+
+4. **Benchmarking Against Hashtag Tests**
+   - Compare competitor's patterns vs industry (Test 4 wellness cluster)
+   - Identify unique strategies vs common patterns
+   - Find gaps in competitor's approach
+
+---
+
+## 📊 Comparison Commands
+
+### Compare Competitor vs Hashtag Test 4
+
+```bash
+# Video counts
+echo "Test 4 (hashtag):" && find data/clients/Rollo_Test4 -name "*temporal_windows_updated.json" | wc -l
+echo "CompetitorTest:" && find data/clients/Rollo/competitor/nutrachampssupplement -name "*temporal_windows_updated.json" | wc -l
+
+# Winning buckets
+echo "Test 4 winners:" && cat data/clients/Rollo_Test4/hashtags/wellness_test4/top_contrastive/winner_analysis.json | jq '.winner_buckets'
+echo "Competitor winners:" && cat data/clients/Rollo/competitor/nutrachampssupplement/top/winner_analysis.json | jq '.winner_buckets'
+
+# ML model performance
+echo "Test 4 models:" && cat data/clients/Rollo_Test4/hashtags/wellness_test4/top_contrastive/buckets/*/models/training_summary.json | jq '.metrics'
+echo "Competitor models:" && cat data/clients/Rollo/competitor/nutrachampssupplement/top/buckets/*/models/training_summary.json | jq '.metrics'
+
+# LLM creative reports
+echo "Test 4 reports:" && cat data/clients/Rollo_Test4/hashtags/wellness_test4/top_contrastive/buckets/*/ml_analysis/llm/winning_formulas.json | jq '.creative_reports | length'
+echo "Competitor reports:" && cat data/clients/Rollo/competitor/nutrachampssupplement/top/buckets/*/ml_analysis/llm/winning_formulas.json | jq '.creative_reports | length'
+```
+
+---
+
+## ❌ Failure Scenarios & Troubleshooting
+
+### Failure 1: Stage 1 - Profile Not Found
+
+**Error:**
+```
+ERROR: TikTok profile @nutrachampssupplement not found
+```
+
+**Solutions:**
+```bash
+# Verify handle spelling (common mistake: including @)
+# Correct:   --target nutrachampssupplement
+# Incorrect: --target @nutrachampssupplement
+
+# Check if profile is public
+# Visit: https://www.tiktok.com/@nutrachampssupplement
+
+# Try alternative scraper if primary fails
+# (Implementation-specific fallback logic)
+```
+
+### Failure 2: Stage 1 - Too Few Videos After Date Filter
+
+**Error:**
+```
+WARNING: Only 45 videos after date filter (need 60 per bucket × 3 = 180 minimum)
+```
+
+**Solutions:**
+```bash
+# Option 1: Extend date filter
+python rumiai_ml_batch.py \
+  --date-filter last_365_days \
+  # ... other params
+
+# Option 2: Reduce video count per bucket
+python rumiai_ml_batch.py \
+  --video-count 40 \
+  # ... other params
+
+# Option 3: Analyze top 2 buckets instead of 3
+# (Automatic: winner analysis will select top N buckets with sufficient videos)
+```
+
+### Failure 3: Stage 5 - Not Enough Class Diversity (Top-Only Strategy)
+
+**Error:**
+```
+ERROR: ML training requires at least 2 classes, but top-only strategy has 1
+```
+
+**Note:** This should NOT happen because:
+- Top 60 videos are split by RF into "top tier" vs "mid tier"
+- K-Means creates natural clusters within top performers
+- If this error occurs, it's a bug in the implementation
+
+**Workaround:**
+```bash
+# Switch to contrastive strategy (not recommended for competitor analysis)
+python rumiai_ml_batch.py \
+  --selection-strategy contrastive \
+  # ... other params
+```
+
+---
+
+## 📝 Test Execution Log Template
+
+```markdown
+## CompetitorTest Execution Log
+
+**Date:** [YYYY-MM-DD]
+**Executed By:** [Name]
+**Command:** 
+```bash
+python rumiai_ml_batch.py --client Rollo --target nutrachampssupplement --analysis-type competitor --selection-strategy top --video-count 60 --date-filter last_270_days --country-code US --report-type single --report-audience client
+```
+
+### Stage Results
+
+| Stage | Status | Duration | Notes |
+|-------|--------|----------|-------|
+| Stage 0 | ✅ PASS | [time] | Foundation setup |
+| Stage 1 | ✅ PASS | [time] | [X] videos scraped, [Y] after date filter, [Z] buckets |
+| Stage 2 | ✅ PASS | [time] | [X]/[Y] videos processed |
+| Stage 2.5 | ✅ PASS | [time] | File organization |
+| Stage 2.6 | ✅ PASS | [time] | [X] patterns discovered |
+| Stage 2.7 | ✅ PASS | [time] | [X]/[Y] videos classified |
+| Stage 3 | ✅ PASS | [time] | Features aggregated |
+| Stage 4 | ✅ PASS | [time] | Features transformed |
+| Stage 5 | ✅ PASS | [time] | [X] models trained |
+| Stage 6 | ✅ PASS | [time] | ML analysis generated |
+| Stage 7 | ✅ PASS | [time] | LLM reports generated |
+
+### Winning Buckets
+
+| Bucket | Video Count | Top 60 Selected |
+|--------|-------------|-----------------|
+| [duration] | [count] | ✅ Yes |
+| [duration] | [count] | ✅ Yes |
+| [duration] | [count] | ✅ Yes |
+
+### Final Output
+
+- **Videos Processed:** [X]/[Y]
+- **Classification Success:** [X]% ([Y]/[Z] videos)
+- **Models Trained:** [X]/6
+- **Creative Reports:** [X] reports across [Y] buckets
+- **Exit Code:** 0 ✅
+- **Total Duration:** [X] hours [Y] minutes
+
+### Issues Encountered
+
+| Issue | Stage | Severity | Resolution |
+|-------|-------|----------|------------|
+| [description] | [stage] | Low/Med/High | [how fixed] |
+
+### Key Insights
+
+**Competitor's Winning Patterns:**
+- [Pattern 1]
+- [Pattern 2]
+- [Pattern 3]
+
+**Comparison to Test 4 (Wellness Hashtag):**
+- [Similarity/Difference 1]
+- [Similarity/Difference 2]
+
+**Recommendations:**
+- [Recommendation 1]
+- [Recommendation 2]
+```
+
+---
+
+## 📚 Related Documentation
+
+- **Competitor Analysis Implementation:** `COMPETITOR_ANALYSIS_IMPLEMENTATION.md` (if exists)
+- **Test 4 (Hashtag Baseline):** See above in this document
+- **System Architecture:** `SystemArchitecturev2.md`
+- **ML Roadmap:** `MLROADMAP.md`
+
+---
+
+**CompetitorTest Added:** 2025-10-28  
+**Author:** RumiAI Testing Team  
+**Status:** Ready for execution
+
+

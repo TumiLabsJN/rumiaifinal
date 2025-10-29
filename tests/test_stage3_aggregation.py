@@ -105,7 +105,7 @@ class TestBucket913sAggregation:
         # Verify CSV structure
         df = pd.read_csv(csv_path)
         assert len(df) == 1, f"Expected 1 row, got {len(df)}"
-        assert len(df.columns) == 66, f"Expected 66 columns, got {len(df.columns)}"
+        assert len(df.columns) == 72, f"Expected 72 columns, got {len(df.columns)}"
 
         # Check aggregation columns exist
         assert 'middle_aggregate_scene_count' in df.columns
@@ -129,7 +129,7 @@ class TestBucket913sAggregation:
         assert summary['videos_processed'] == 1
         assert summary['videos_skipped'] == 0
         assert summary['output_csv']['rows'] == 1
-        assert summary['output_csv']['columns'] == 66
+        assert summary['output_csv']['columns'] == 72
 
 
 class TestErrorHandling:
