@@ -2980,6 +2980,129 @@ def calculate_competitor_avg_views(client_id, competitor_handle):
 
 ---
 
+##### Function 10: `extract_common_winning_buckets()`
+
+**Function**: `extract_common_winning_buckets(client_id: str, competitor_handles: list, mode: str = 'top', strategy: str = 'contrastive') -> dict`
+
+**Purpose**: Identify common winning buckets across multiple competitors for Report 4 Section 5 (Supplementary Insights)
+
+**Type**: 🆕 Entirely new function
+
+**Use Case**: Determines which buckets to display in the Supplementary Insights section (only buckets that 2+ competitors share)
+
+**Input Parameters**:
+- `client_id` (str): Client identifier
+  - Example: `"acme"`
+- `competitor_handles` (list): List of competitor handles without @ symbol
+  - Example: `["drinkpoppi", "nike", "vitalproteins"]`
+- `mode` (str): Analysis mode (default: "top")
+  - Values: "top" or "bottom"
+- `strategy` (str): Analysis strategy (default: "contrastive")
+  - Values: "contrastive"
+
+**Process**:
+1. For each competitor, load `winner_analysis.json` and extract `top_3_buckets`
+2. Count frequency of each bucket across all competitors
+3. Filter to buckets that appear in 2+ competitors (common buckets)
+4. Sort by frequency (most common first)
+5. For each common bucket, create list of competitors who have that bucket
+
+**Returns**:
+```python
+{
+    'common_buckets': ['18-33s', '13-18s', ...],  # Sorted by frequency (desc)
+    'bucket_competitors': {
+        '18-33s': ['@drinkpoppi', '@nike', '@vitalproteins'],  # 3 competitors
+        '13-18s': ['@drinkpoppi', '@vitalproteins']            # 2 competitors
+    }
+}
+```
+
+**Example Implementation**:
+```python
+from collections import Counter
+import json
+import os
+
+def extract_common_winning_buckets(client_id, competitor_handles, mode='top', strategy='contrastive'):
+    """
+    Find common buckets that appear in 2+ competitors' top_3_buckets.
+
+    Args:
+        client_id: Client identifier (e.g., "acme")
+        competitor_handles: List without @ (e.g., ["drinkpoppi", "nike"])
+        mode: 'top' or 'bottom'
+        strategy: 'contrastive'
+
+    Returns:
+        dict: Common buckets and competitor mapping
+
+    Example:
+        >>> extract_common_winning_buckets('acme', ['drinkpoppi', 'nike', 'vitalproteins'])
+        {
+            'common_buckets': ['18-33s', '13-18s'],
+            'bucket_competitors': {
+                '18-33s': ['@drinkpoppi', '@nike', '@vitalproteins'],
+                '13-18s': ['@drinkpoppi', '@vitalproteins']
+            }
+        }
+    """
+    bucket_frequency = Counter()
+    competitor_buckets = {}
+
+    # Load each competitor's top_3_buckets
+    for handle in competitor_handles:
+        base_path = f"/data/clients/{client_id}/competitors/{handle}/{mode}_{strategy}"
+        winner_path = os.path.join(base_path, 'winner_analysis.json')
+
+        if os.path.exists(winner_path):
+            with open(winner_path, 'r') as f:
+                winner_data = json.load(f)
+                top_3 = winner_data.get('top_3_buckets', [])
+                competitor_buckets[handle] = top_3
+
+                for bucket in top_3:
+                    bucket_frequency[bucket] += 1
+
+    # Find common buckets (appear in 2+ competitors)
+    common_buckets = [bucket for bucket, count in bucket_frequency.most_common() if count >= 2]
+
+    # Map competitors to each common bucket
+    bucket_competitors = {}
+    for bucket in common_buckets:
+        bucket_competitors[bucket] = [
+            f"@{handle}" for handle, buckets in competitor_buckets.items()
+            if bucket in buckets
+        ]
+
+    return {
+        'common_buckets': common_buckets,
+        'bucket_competitors': bucket_competitors
+    }
+```
+
+**Output Example**:
+```python
+{
+    'common_buckets': ['18-33s', '13-18s'],
+    'bucket_competitors': {
+        '18-33s': ['@drinkpoppi', '@nike', '@vitalproteins'],
+        '13-18s': ['@drinkpoppi', '@vitalproteins']
+    }
+}
+```
+
+**Edge Cases**:
+- If no common buckets exist (all competitors have different winning buckets) → Returns empty `common_buckets` array
+- If `winner_analysis.json` missing for a competitor → Skips that competitor
+- If competitor has <3 winning buckets → Uses whatever buckets are available
+
+**Used By**: Report 4 → Section 5: Supplementary Insights (Top Things to Do)
+
+**Implementation Location**: Stage8MVP2.md Section 3.4 Function 10
+
+---
+
 
 ---
 
