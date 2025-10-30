@@ -1,0 +1,212 @@
+# METAPROMPT: Semantic Range Definition for RumiAI Stage 7
+
+## 🎯 YOUR TASK
+
+You are continuing work on defining semantic ranges for 26 ML features in RumiAI's Stage 7 analysis. Your job is to define human-readable labels for numeric values (e.g., "0.058" → "medium shot").
+
+**Current Status**: Category 1 (Visual Composition) COMPLETE. Categories 2-6 remain (22 features).
+
+**Working Directory**: `/home/jorge/rumiaifinal/`
+
+---
+
+## 📚 REQUIRED READING (In Order)
+
+1. **FeatureThresholdLogic.md** - READ THIS FIRST
+   - Contains the complete 4-step process you must follow
+   - Shows completed example (Category 1: Visual Composition)
+   - Documents the file update workflow
+
+2. **LLMOutputFix.md** - Implementation decisions
+   - Search for "CATEGORY 1: VISUAL COMPOSITION (4 features) ✅ FINALIZED" to see completed example
+   - Categories 2-6 have placeholder comments - you will fill these in
+
+3. **config/semantic_interpretations.py** - Code implementation
+   - Category 1 complete with 4 features defined
+   - 22 features remaining (marked as TODO)
+
+---
+
+## 🔄 THE 4-STEP PROCESS (From FeatureThresholdLogic.md)
+
+### **Step 1: Research and Define Semantic Ranges**
+
+**Process**:
+```bash
+# For each feature, extract production data
+find /home/jorge/rumiaifinal/data -name "rf_video_analysis.json" -exec jq -r \
+  '.feature_importance[] | select(.feature | contains("FEATURE_NAME")) |
+  "\(.feature)|\(.top_performer_avg)|\(.bottom_performer_avg)|\(.distribution.thresholds.high // "null")|\(.distribution.thresholds.low // "null")"' {} \; | sort -t'|' -k1
+```
+
+**Output**: Data range, metric type, direction, proposed ranges
+
+---
+
+### **Step 2: Present Methodology Table**
+
+**Three methodology types**:
+1. **Quartile-Based** (data-driven) - For continuous metrics
+2. **Semantic Categories** (logic-driven) - For count features with obvious meaning
+3. **Domain Expertise** (industry standards) - For features with established terminology
+
+**Format**:
+| Feature | Method Used | Data Range | Rigor Level | Rationale |
+|---------|-------------|------------|-------------|-----------|
+
+---
+
+### **Step 3: Present Output Examples**
+
+**For EACH feature, provide 5-6 examples showing**:
+- Value → Label mapping
+- Include top/bottom performer averages
+- Show how it looks in full output sentence
+
+**Example format**:
+```
+Feature: average_face_size
+
+Example outputs:
+- Value: 0.031 → Label: "wide shot" → Description: "full body visible with environment"
+- Value: 0.058 (top avg) → Label: "medium shot" → Description: "upper body (chest/waist up)"
+[... 3-4 more examples]
+
+In context:
+"Face size in opening: 72% of top performers use medium shots vs 15% of bottom (avg: close-up)"
+```
+
+---
+
+### **Step 4: Visual Calibration (If Applicable)**
+
+**CRITICAL**: If the user provides images with values, use them to recalibrate thresholds.
+
+**Process**:
+1. View each image with Read tool
+2. Visually assess what the value represents
+3. Check if your proposed labels match reality
+4. Adjust thresholds if needed
+5. Document changes in a table
+
+**Example** (from Category 1):
+- Initial threshold: 0.06 for "wide shot"
+- Visual evidence: 0.0514 showed upper body (medium), not full body (wide)
+- Adjustment: Changed threshold from 0.06 → 0.04
+
+---
+
+## 📁 FILE UPDATE WORKFLOW
+
+After completing Steps 1-4 for a category, update **THREE files**:
+
+### **1. FeatureThresholdLogic.md**
+**Location**: In the category's Step 4 section
+
+**Add**:
+- Visual calibration table (if applicable)
+- Key findings from the research
+- Final validation results
+- Mark status as "FINALIZED"
+
+---
+
+### **2. LLMOutputFix.md**
+**Location**: Search for "CATEGORY X: [Name]" in the SEMANTIC_INTERPRETATIONS code block
+
+**Update format**:
+```python
+'feature_name': {
+    'metric_type': 'ratio|variance|count|continuous|duration',
+    'direction': 'higher_is_more|lower_is_better|higher_is_closer|neutral',
+    'unit': 'descriptive unit',
+    'data_range': (min, max),
+    'ranges': [
+        (min1, max1, 'label1', 'description1'),
+        (min2, max2, 'label2', 'description2'),
+        # 3-5 ranges per feature
+    ],
+    'notes': 'Methodology: [method]. [Findings]. [Recalibration notes if any].'
+},
+```
+
+**Replace the TODO comment with actual definitions**
+
+---
+
+### **3. config/semantic_interpretations.py**
+**Location**: SEMANTIC_INTERPRETATIONS dictionary
+
+**Update**: Same structure as LLMOutputFix.md, just in Python format
+
+**Keep in sync** with LLMOutputFix.md
+
+---
+
+## 📋 REMAINING WORK
+
+**Status Tracker** (from FeatureThresholdLogic.md):
+
+| Category | Features | Status |
+|----------|----------|--------|
+| ✅ Visual Composition | 4 | COMPLETE |
+| ⏳ Energy/Performance | 4 | TODO - Start here |
+| ⏳ Audio/Speech | 4 | TODO |
+| ⏳ Eye Contact/Gaze | 3 | TODO |
+| ⏳ Scene/Pacing | 4 | TODO |
+| ⏳ Movement/Temporal/Metadata | 7 | TODO |
+
+**Total**: 22 features remaining
+
+---
+
+## 🎯 YOUR IMMEDIATE NEXT STEPS
+
+1. **Confirm understanding** by reading FeatureThresholdLogic.md completely
+2. **Start Category 2: Energy/Performance** (4 features)
+   - energy_max
+   - energy_level
+   - energy_variance
+   - emotional_valence
+3. **Follow the 4-step process** for each feature
+4. **Update all three files** when category complete
+5. **Repeat** for remaining categories
+
+---
+
+## ⚠️ CRITICAL REMINDERS
+
+1. **Always follow Steps 1-4** - Don't skip ahead to implementation
+2. **Wait for visual calibration** - User may provide images to validate thresholds
+3. **Update all three files** - Keep documentation in sync
+4. **Show examples** - Concrete value→label mappings are critical
+5. **Document methodology** - Explain your threshold choices
+
+---
+
+## 📊 EXAMPLE: Category 1 (Reference)
+
+**See FeatureThresholdLogic.md lines 100-291** for complete example of:
+- Step 1: Research (data extraction)
+- Step 2: Methodology table
+- Step 3: Output examples (6 per feature)
+- Step 4: Visual calibration (recalibration from 4 to 5 categories)
+
+**Key lesson**: average_face_size thresholds were recalibrated from (0.06, 0.10, 0.20) to (0.04, 0.09, 0.15, 0.30) after viewing real images. Always be ready to adjust!
+
+---
+
+## 🚀 START COMMAND
+
+**When ready, say**: "I've read FeatureThresholdLogic.md and I'm ready to start Category 2: Energy/Performance. Should I begin with Step 1 (data extraction for the 4 features)?"
+
+---
+
+## 📝 QUESTIONS?
+
+- Process unclear? → Re-read FeatureThresholdLogic.md Steps 1-4
+- Methodology choice? → Review the 3 methodology types in Step 2
+- Update location? → Check "File Update Workflow" section
+- Example needed? → See Category 1 (Visual Composition) in FeatureThresholdLogic.md
+
+**Good luck! The process is systematic - follow it step by step.**

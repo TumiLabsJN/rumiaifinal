@@ -2983,90 +2983,7 @@ def calculate_competitor_avg_views(client_id, competitor_handle):
 
 ---
 
-#### 0.5.7: Visual Direction Categorization
-
-**Function**: `get_visual_direction(avg_eye_contact_rate: float, avg_face_size: float) -> str`
-
-**Purpose**: Categorize visual framing/direction based on eye contact and face size metrics from temporal windows
-
-**When to Use**:
-- Report 2 (Hashtag → Creator): Phase 1 Hook execution guidance
-- Any report needing visual framing descriptions for creator guidance
-
-**Input Parameters**:
-- `avg_eye_contact_rate` (float): Average eye contact rate from hook window (0-3s) across top performers
-  - Range: 0.0 to 1.0
-  - Source: `temporal_windows.hook.eye_contact_rate`
-- `avg_face_size` (float): Average face size ratio from hook window across top performers
-  - Range: 0.0 to 1.0 (proportion of frame)
-  - Source: `temporal_windows.hook.average_face_size`
-
-**Process**:
-1. Check if high eye contact (>0.7) AND large face size (>0.3) → Close-up, direct
-2. Else if high eye contact (>0.7) → Direct to camera, medium shot
-3. Else if large face size (>0.3) → Face visible but not direct
-4. Else → Wide shot or object-focused
-
-**Example Implementation**:
-```python
-def get_visual_direction(avg_eye_contact_rate: float, avg_face_size: float) -> str:
-    """
-    Categorize visual framing based on eye contact and face size.
-
-    Args:
-        avg_eye_contact_rate: Average eye contact rate (0.0-1.0)
-        avg_face_size: Average face size ratio (0.0-1.0)
-
-    Returns:
-        str: Visual direction description for creator guidance
-
-    Example:
-        >>> get_visual_direction(0.87, 0.44)
-        "Face visible, direct to camera (close-up)"
-
-        >>> get_visual_direction(0.90, 0.05)
-        "Face visible, direct to camera (medium shot)"
-
-        >>> get_visual_direction(0.0, 0.44)
-        "Face visible, not direct to camera"
-
-        >>> get_visual_direction(0.0, 0.05)
-        "Wide shot or object-focused"
-    """
-    # High eye contact + close face = direct close-up
-    if avg_eye_contact_rate > 0.7 and avg_face_size > 0.3:
-        return "Face visible, direct to camera (close-up)"
-
-    # High eye contact but distant = direct medium shot
-    elif avg_eye_contact_rate > 0.7:
-        return "Face visible, direct to camera (medium shot)"
-
-    # Face present but no eye contact
-    elif avg_face_size > 0.3:
-        return "Face visible, not direct to camera"
-
-    # Low values = wide or object-focused
-    else:
-        return "Wide shot or object-focused"
-```
-
-**Output Format**:
-```python
-# String describing visual framing for creator execution guidance
-"Face visible, direct to camera (close-up)"
-```
-
-**Usage in Reports**:
-- **Template 2 (Creator)**: Phase 1 Hook execution guidance
-- Shows creators exact framing/camera positioning needed
-
-**Data Source**:
-- Temporal windows data: `{video_id}_temporal_windows_updated.json` → `temporal_windows.hook`
-- Validated with real data from 5 sample videos (eye_contact range: 0.0-0.90, face_size range: 0.0-0.44)
-
----
-
-#### 0.5.8: Bucket-Scoped Cluster Metrics (The Proof Section)
+#### 0.5.7: Bucket-Scoped Cluster Metrics (The Proof Section)
 
 **Function**: `calculate_proof_metrics_bucket_scoped(bucket_path, bucket_name, formula_cluster_id)`
 
@@ -3780,6 +3697,90 @@ def assign_performance_labels(sorted_buckets):
 
 ---
 
+##### Calculation 8: Formula Name Extraction (Quantitative Intelligence Section)
+
+**Fields Using This**: 9 fields (Report 1, Page 3, Section 4, Lines 259-271)
+- Formula names for all 3 winning buckets (3 formulas × 3 buckets = 9 fields)
+
+**Purpose**: Extract Stage 7 LLM-generated formula names for each winning bucket
+
+**Input Data**:
+- `winner_analysis.json` → `top_3_buckets` (bucket names)
+- Per bucket: `ml_analysis/llm/winning_formulas.json` → `creative_reports[0-2].formula_name`
+
+**Implementation**:
+```python
+# extract_client_data.py - Report 1 Quantitative Intelligence Section
+def extract_formula_names_per_bucket(analysis_path, winning_buckets):
+    """
+    Extract 3 formula names per winning bucket (9 total).
+
+    Args:
+        analysis_path: Path to analysis directory
+        winning_buckets: List of 3 winning bucket names from winner_analysis.json
+
+    Returns:
+        dict: {
+            "bucket_1_formulas": ["Formula 1", "Formula 2", "Formula 3"],
+            "bucket_2_formulas": ["Formula 4", "Formula 5", "Formula 6"],
+            "bucket_3_formulas": ["Formula 7", "Formula 8", "Formula 9"]
+        }
+    """
+    import json
+
+    all_formulas = {}
+
+    for idx, bucket_name in enumerate(winning_buckets, start=1):
+        bucket_path = f"{analysis_path}/buckets/bucket_{bucket_name}"
+
+        # Load winning formulas for this bucket
+        with open(f"{bucket_path}/ml_analysis/llm/winning_formulas.json") as f:
+            winning_formulas = json.load(f)
+
+        # Extract 3 formula names from creative_reports array
+        formulas = [
+            report["formula_name"]
+            for report in winning_formulas["creative_reports"][:3]
+        ]
+
+        all_formulas[f"bucket_{idx}_formulas"] = formulas
+
+    return all_formulas
+    # Example: {
+    #   "bucket_1_formulas": [
+    #       "The Silent-to-Vocal Engagement Journey",
+    #       "The Visual Storytelling Formula",
+    #       "The Vocal Variety Formula"
+    #   ],
+    #   "bucket_2_formulas": [...],
+    #   "bucket_3_formulas": [...]
+    # }
+```
+
+**Output**: Dict with 3 arrays (3 formula names each)
+
+**Complexity**: Simple (15-20 lines)
+
+**Data Source**: `ml_analysis/llm/winning_formulas.json → creative_reports[].formula_name`
+
+**Field Mapping**:
+```python
+result = extract_formula_names_per_bucket(analysis_path, winning_buckets)
+
+# Map to Excel fields:
+BUCKET_1_FORMULA_1_NAME = result["bucket_1_formulas"][0]
+BUCKET_1_FORMULA_2_NAME = result["bucket_1_formulas"][1]
+BUCKET_1_FORMULA_3_NAME = result["bucket_1_formulas"][2]
+BUCKET_2_FORMULA_1_NAME = result["bucket_2_formulas"][0]
+BUCKET_2_FORMULA_2_NAME = result["bucket_2_formulas"][1]
+BUCKET_2_FORMULA_3_NAME = result["bucket_2_formulas"][2]
+BUCKET_3_FORMULA_1_NAME = result["bucket_3_formulas"][0]
+BUCKET_3_FORMULA_2_NAME = result["bucket_3_formulas"][1]
+BUCKET_3_FORMULA_3_NAME = result["bucket_3_formulas"][2]
+```
+
+---
+
 **Report 1 Calculation Summary**:
 
 | Calculation | Fields | Complexity | Lines of Code | Dependencies |
@@ -3791,7 +3792,8 @@ def assign_performance_labels(sorted_buckets):
 | 5. Top Bucket Label | 1 | Simple | ~5 | Calc 4 |
 | 6. Coverage Percentage | 1 | Simple | ~12 | None |
 | 7. Performance Labels | 1 | Simple | ~10 | Calc 4 |
-| **Total** | **8 fields** | | **~92 lines** | |
+| 8. Formula Name Extraction | 9 | Simple | ~20 | None |
+| **Total** | **17 fields** | | **~112 lines** | |
 
 **Implementation Notes**:
 - All calculations should be implemented in `extract_client_data.py`
@@ -3806,7 +3808,7 @@ def assign_performance_labels(sorted_buckets):
 
 **Report**: Hashtag → Creator (Content Creator Report)
 
-**Total**: 8 inline calculations covering 19 field instances
+**Total**: 8 inline calculations covering 16 field instances
 
 **Dependencies**: This section uses functions documented in Section 0.5:
 - `calculate_proof_metrics_bucket_scoped()` (0.5.8)
@@ -4050,59 +4052,6 @@ def format_to_title_case(snake_case_items):
 
 ---
 
-##### Calculation 5: CTA Example Phrase Generator
-
-**Field Using This**: CTA Example Phrase (Report 2, Pattern Execution, Line 809)
-
-**Purpose**: Map CTA type to example phrase for creator guidance
-
-**Input Data**: Most common CTA type from `aggregate_content_classifications()`
-
-**Implementation**:
-```python
-# extract_creator_data.py - Report 2 Pattern Execution Blueprint
-def generate_cta_example(cta_type):
-    """
-    Generate example CTA phrase based on most common type.
-
-    Args:
-        cta_type: Most common CTA from aggregation (e.g., "link_in_bio")
-
-    Returns:
-        str: Example phrase
-    """
-    cta_phrases = {
-        "link_in_bio": "Link in bio!",
-        "save_post": "Save this for later!",
-        "comment": "Comment your thoughts!",
-        "follow": "Follow for more!",
-        "share": "Share with a friend!",
-        "tag_friend": "Tag someone who needs this!",
-        "none": "Watch until the end!"
-    }
-
-    return cta_phrases.get(cta_type, "Link in bio!")
-    # Default to "Link in bio!" if type not found
-```
-
-**Example Usage**:
-```python
-# Get most common CTA type
-aggregated = aggregate_content_classifications(bucket_path, "top")
-cta_counter = aggregated["caption_cta_type"]
-most_common_cta = cta_counter.most_common(1)[0][0]  # e.g., "link_in_bio"
-
-# Generate example phrase
-example = generate_cta_example(most_common_cta)
-# Returns: "Link in bio!"
-```
-
-**Output**: String (example phrase)
-
-**Complexity**: Simple (dictionary lookup)
-
----
-
 ##### Calculation 5: Calculate original content percentage
 
 **Purpose**: Calculate percentage of original content (inverse of repost rate)
@@ -4243,14 +4192,13 @@ cta_pct_1 = top_ctas[0]["percentage"]     # 67
 | 2. Percentage Increases | 2 | Simple | ~8 | Function 0.5.8 |
 | 3. Timing Ranges | 1 | Simple | ~12 | None |
 | 4. snake_case to Title Case | 1 | Simple | ~5 | None |
-| 5. CTA Example Generator | 1 | Simple | ~12 (dictionary) | Function 0.5.1 |
-| 6. Top 3 with Percentages | 12 | Simple | ~10 | Function 0.5.1 |
-| **Total** | **19 field instances** | | **~55 lines** | |
+| 5. Top 3 with Percentages | 12 | Simple | ~10 | Function 0.5.1 |
+| **Total** | **18 field instances** | | **~43 lines** | |
 
 **Implementation Notes**:
 - All calculations should be implemented in `extract_creator_data.py`
 - Calculations 1-2 depend on `calculate_proof_metrics_bucket_scoped()` output
-- Calculation 6 handles 12 fields but uses same function for both hook and CTA types
+- Calculation 5 handles 12 fields but uses same function for both hook and CTA types
 - Test with actual data from `/data/clients/test_final/hashtags/`
 
 ---
@@ -4667,7 +4615,6 @@ All scripts import from `report_utils.py` module containing Section 0.5/0.6 func
 - `extract_hashtag_analysis()` - Extract hashtag patterns across buckets
 - `extract_mention_analysis()` - Extract @mention patterns for content sourcing
 - `calculate_engagement_metrics()` - Calculate real engagement rates from metadata
-- `get_visual_direction()` - Categorize visual framing (close-up, medium, wide)
 - `calculate_proof_metrics_bucket_scoped()` - Compare cluster performance within bucket
 
 **Section 0.6 Functions** (Inline Calculations):
@@ -4914,7 +4861,7 @@ All fields are single-cell values in Column B. Multi-value fields (lists, arrays
 
 | Report Type | Output File Name | Structure |
 |-------------|------------------|-----------|
-| Report 1: Hashtag → Client | `{hashtag}_client_data.xlsx` | Single tab: ~50 fields across 3 pages |
+| Report 1: Hashtag → Client | `{hashtag}_client_data.xlsx` | Single tab: ~62 fields across 3 pages |
 | Report 2: Hashtag → Creator | `{hashtag}_creator_data.xlsx` | 3 tabs (1 per winning bucket formula): ~40 fields per tab across 2 pages |
 | Report 3: Single Competitor | `{competitor}_analysis_data.xlsx` | Single tab: ~60 fields across 3 pages |
 | Report 4: Multi-Competitor | `multi_competitor_{N}comp_data.xlsx` | Single tab: ~80+ fields across 4 pages (varies by N competitors) |

@@ -219,7 +219,7 @@ Generating 6 QR codes...
 - Tab 2: `Formula_13-18s`
 - Tab 3: `Formula_60-90s`
 
-**Each tab contains the same ~40 fields** (values are bucket-specific):
+**Each tab contains the same ~35 fields** (values are bucket-specific):
 
 ```python
 # Field structure per tab - two-column format: Field Name | Value
@@ -231,7 +231,6 @@ fields_per_tab = [
     ('', ''),  # Empty row
 
     # --- Header Section ---
-    ('PATTERN_NAME', 'The Question Hook Formula'),  # From winning_formulas.json
     ('DURATION', '18-33s'),  # Bucket name
     ('HASHTAG', '#nutrition'),  # From CLI parameter
 
@@ -250,22 +249,6 @@ fields_per_tab = [
     ('ENG_MULTIPLIER', '1.5x'),  # Calculated: top_eng / bottom_eng
     ('ENG_INCREASE_PCT', '50'),  # Calculated: ((top - bottom) / bottom) * 100
 
-    # --- Contrastive Analysis ---
-    ('', ''),
-    ('TOP_BEHAVIOR_1', 'Ask question in first 2s (60% top vs 20% bottom)'),  # From Stage 7 LLM analysis
-    ('TOP_BEHAVIOR_2', 'Show product by 5s (47% vs 15%)'),
-    ('TOP_BEHAVIOR_3', 'Use 5-7 text overlays (72% vs 25%)'),
-    ('', ''),
-    ('BOTTOM_BEHAVIOR_1', 'Generic opening (0.8 questions avg)'),
-    ('BOTTOM_BEHAVIOR_2', 'Product reveal after 10s'),
-    ('BOTTOM_BEHAVIOR_3', 'No text overlays'),
-
-    # --- Pattern Summary ---
-    ('', ''),
-    ('PATTERN_SUMMARY_PHASE_1', 'Hook (0-3s): Ask compelling question'),
-    ('PATTERN_SUMMARY_PHASE_2', 'Show (3-15s): Reveal product + benefit'),
-    ('PATTERN_SUMMARY_PHASE_3', 'Prove (15-33s): Demonstrate result + CTA'),
-
     # =============================
     # PAGE 2: HOW TO EXECUTE
     # =============================
@@ -273,19 +256,16 @@ fields_per_tab = [
     ('PAGE_2_HOW_TO_EXECUTE', ''),
     ('', ''),
 
-    # --- Video Category Selection ---
+    # --- Freestyle Tips ---
     ('VIDEO_CATEGORY', 'Recipe Tutorial'),  # From Stage 2.7 content_analysis (most common)
 
-    # --- Pattern Execution Blueprint: Phase 1 (Hook) ---
+    # --- Phase 1: Hook (0-3s) ---
     ('', ''),
     ('PHASE_1_LABEL', '--- Phase 1: Hook (0-3s) ---'),
     ('PHASE_1_TIMING', '0-3s'),
     ('PHASE_1_CONTENT_PATTERN', 'Problem-Solution'),  # From aggregate_content_classifications()
-    ('PHASE_1_WORD_COUNT_AVG', '12.5'),  # From temporal_windows.hook.word_count (averaged)
-    ('PHASE_1_ENERGY_AVG', '0.47'),  # From temporal_windows.hook.energy_level
-    ('PHASE_1_VISUAL_DIRECTION', 'Face visible, direct to camera (close-up)'),  # From get_visual_direction()
 
-    # --- Pattern Execution Blueprint: Phase 2 (Middle) ---
+    # --- Phase 2: Middle (3s to last 3s) ---
     ('', ''),
     ('PHASE_2_LABEL', '--- Phase 2: Middle (3s to last 3s) ---'),
     ('PHASE_2_TIMING', '3s to last 3s'),
@@ -294,15 +274,17 @@ fields_per_tab = [
     ('PHASE_2_KEYWORD_3', '#antiinflammatory'),
     ('PHASE_2_TACTIC_1', 'Personal testimony'),  # From aggregate_content_classifications() -> content_tactics
     ('PHASE_2_TACTIC_2', 'Before/after reveal'),
-    ('PHASE_2_SCENE_CHANGES_PER_10S', '2.3'),  # From temporal_windows middle segments avg
-    ('PHASE_2_ENERGY_AVG', '0.36'),
 
-    # --- Pattern Execution Blueprint: Phase 3 (Closing) ---
+    # --- Phase 3: Closing (last 3s) ---
     ('', ''),
     ('PHASE_3_LABEL', '--- Phase 3: Closing (last 3s) ---'),
     ('PHASE_3_TIMING', 'last 3s'),
-    ('PHASE_3_CTA_TYPE', 'link_in_bio'),  # From aggregate_content_classifications() -> caption_analysis.cta_type
-    ('PHASE_3_ENERGY_MAX', '0.91'),  # From temporal_windows.closing.energy_max
+    ('PHASE_3_CTA_TYPE_1', 'link_in_bio'),  # From get_top_n_from_field(field="caption_cta_type", n=3)
+    ('PHASE_3_CTA_DESC_1', 'Direct viewers to link in bio'),  # From get_descriptions_from_taxonomy()
+    ('PHASE_3_CTA_TYPE_2', 'save_post'),
+    ('PHASE_3_CTA_DESC_2', 'Encourage saving post for later'),
+    ('PHASE_3_CTA_TYPE_3', 'comment'),
+    ('PHASE_3_CTA_DESC_3', 'Ask viewers to comment'),
 
     # --- Caption Structure ---
     ('', ''),
@@ -864,83 +846,7 @@ video_category = top_patterns['content_category']['most_common']  # "recipe_tuto
 
 ---
 
-#### Function 5: `get_visual_direction()`
-
-**Purpose**: Categorize visual framing based on eye contact and face size metrics
-
-**Used by**: Report 2 only
-
-**Input Parameters**:
-- `avg_eye_contact_rate` (float): Average eye contact rate from hook window (0-3s)
-  Range: 0.0 to 1.0
-- `avg_face_size` (float): Average face size ratio from hook window
-  Range: 0.0 to 1.0 (proportion of frame)
-
-**Output**: String describing visual direction for creator guidance
-
-**Implementation**:
-```python
-def get_visual_direction(avg_eye_contact_rate, avg_face_size):
-    """
-    Categorize visual framing for creator execution guidance.
-
-    Categories:
-    - Close-up, direct: High eye contact + large face
-    - Medium shot, direct: High eye contact + distant face
-    - Not direct: Face present but no eye contact
-    - Wide/object-focused: Low eye contact + small/no face
-
-    Examples:
-    - (0.87, 0.44) → "Face visible, direct to camera (close-up)"
-    - (0.90, 0.05) → "Face visible, direct to camera (medium shot)"
-    - (0.0, 0.44) → "Face visible, not direct to camera"
-    - (0.0, 0.05) → "Wide shot or object-focused"
-    """
-
-    # High eye contact + close face = direct close-up
-    if avg_eye_contact_rate > 0.7 and avg_face_size > 0.3:
-        return "Face visible, direct to camera (close-up)"
-
-    # High eye contact but distant = direct medium shot
-    elif avg_eye_contact_rate > 0.7:
-        return "Face visible, direct to camera (medium shot)"
-
-    # Face present but no eye contact
-    elif avg_face_size > 0.3:
-        return "Face visible, not direct to camera"
-
-    # Low values = wide or object-focused
-    else:
-        return "Wide shot or object-focused"
-```
-
-**Data Source**: Temporal windows data from `{video_id}_temporal_windows_updated.json` → `temporal_windows.hook.eye_contact_rate` and `temporal_windows.hook.average_face_size`
-
-**Calculation for bucket average**:
-```python
-# For all top performers in bucket, average the hook window metrics
-total_eye_contact = 0
-total_face_size = 0
-video_count = 0
-
-for video_id in top_performer_ids:
-    temporal_path = f"{bucket_path}/../../insights/{video_id}_temporal_windows_updated.json"
-    with open(temporal_path) as f:
-        temporal_data = json.load(f)
-
-    total_eye_contact += temporal_data['temporal_windows']['hook']['eye_contact_rate']
-    total_face_size += temporal_data['temporal_windows']['hook']['average_face_size']
-    video_count += 1
-
-avg_eye_contact = total_eye_contact / video_count
-avg_face_size = total_face_size / video_count
-
-visual_direction = get_visual_direction(avg_eye_contact, avg_face_size)
-```
-
----
-
-#### Function 6: `calculate_engagement_metrics()`
+#### Function 5: `calculate_engagement_metrics()`
 
 **Purpose**: Calculate real engagement rate from TikTok video metadata
 
@@ -1106,34 +1012,10 @@ This section documents the exact structure of all JSON files referenced by the f
 **Structure**:
 ```python
 {
-    "pattern_name": "The Question Hook Formula",
     "bucket": "18-33s",
-    "cluster_id": 0,
-    "contrastive_analysis": {
-        "top_behaviors": [
-            "Ask question in first 2s (avg 3.2 questions in hook)",
-            "Show product by 5 seconds (immediate visual payoff)",
-            "Use 5-7 text overlays (keep attention with text)"
-        ],
-        "bottom_behaviors": [
-            "Generic opening/statement (0.8 questions avg)",
-            "Product reveal after 10+ seconds (viewers already scrolled)",
-            "No text overlays (viewers get bored/confused)"
-        ]
-    },
-    "pattern_summary": {
-        "phase_1": "Hook (0-3s): Ask compelling question",
-        "phase_2": "Show (3-15s): Reveal product + explain benefit",
-        "phase_3": "Prove (15-33s): Demonstrate result + CTA"
-    }
+    "cluster_id": 0
 }
 ```
-
-**Used for fields**:
-- `PATTERN_NAME` → `pattern_name`
-- `TOP_BEHAVIOR_1-3` → `contrastive_analysis.top_behaviors[0-2]`
-- `BOTTOM_BEHAVIOR_1-3` → `contrastive_analysis.bottom_behaviors[0-2]`
-- `PATTERN_SUMMARY_PHASE_1-3` → `pattern_summary.phase_1-3`
 
 ---
 
@@ -1322,11 +1204,6 @@ This section documents the exact structure of all JSON files referenced by the f
 ```
 
 **Used for fields**:
-- `PHASE_1_WORD_COUNT_AVG` → Average `temporal_windows.hook.word_count` across top performers
-- `PHASE_1_ENERGY_AVG` → Average `temporal_windows.hook.energy_level` across top performers
-- `PHASE_1_VISUAL_DIRECTION` → Calculated from average `eye_contact_rate` and `average_face_size` via `get_visual_direction()`
-- `PHASE_2_SCENE_CHANGES_PER_10S` → Average scene changes per 10 seconds from middle segments
-- `PHASE_2_ENERGY_AVG` → Average energy level from middle segments
 - `PHASE_3_ENERGY_MAX` → Average `temporal_windows.closing.energy_max` across top performers
 
 **Calculation pattern for averages**:
@@ -1461,8 +1338,6 @@ def main():
         tab_data.append(['', ''])
 
         # Header Section
-        # TODO: Load winning_formulas.json and extract pattern_name
-        tab_data.append(['PATTERN_NAME', 'The Question Hook Formula'])  # Placeholder
         tab_data.append(['DURATION', bucket_name])
         tab_data.append(['HASHTAG', f'#{args.hashtag}'])
 
@@ -1490,24 +1365,6 @@ def main():
         tab_data.append(['ENG_MULTIPLIER', calculate_multiplier(top_eng, bottom_eng)])
         tab_data.append(['ENG_INCREASE_PCT', calculate_percentage_increase(top_eng, bottom_eng)])
 
-        # Contrastive Analysis
-        tab_data.append(['', ''])
-        # TODO: Extract from Stage 7 LLM analysis
-        tab_data.append(['TOP_BEHAVIOR_1', 'Placeholder - Ask question in first 2s'])
-        tab_data.append(['TOP_BEHAVIOR_2', 'Placeholder - Show product by 5s'])
-        tab_data.append(['TOP_BEHAVIOR_3', 'Placeholder - Use 5-7 text overlays'])
-        tab_data.append(['', ''])
-        tab_data.append(['BOTTOM_BEHAVIOR_1', 'Placeholder - Generic opening'])
-        tab_data.append(['BOTTOM_BEHAVIOR_2', 'Placeholder - Product reveal after 10s'])
-        tab_data.append(['BOTTOM_BEHAVIOR_3', 'Placeholder - No text overlays'])
-
-        # Pattern Summary
-        tab_data.append(['', ''])
-        # TODO: Extract from Stage 7 LLM analysis
-        tab_data.append(['PATTERN_SUMMARY_PHASE_1', 'Hook (0-3s): Ask compelling question'])
-        tab_data.append(['PATTERN_SUMMARY_PHASE_2', 'Show (3-15s): Reveal product + benefit'])
-        tab_data.append(['PATTERN_SUMMARY_PHASE_3', 'Prove (15-33s): Demonstrate result + CTA'])
-
         # --- PAGE 2: HOW TO EXECUTE ---
         tab_data.append(['', ''])
         tab_data.append(['PAGE_2_HOW_TO_EXECUTE', ''])
@@ -1523,11 +1380,6 @@ def main():
         tab_data.append(['PHASE_1_TIMING', '0-3s'])
         # TODO: Extract from aggregate_content_classifications()
         tab_data.append(['PHASE_1_CONTENT_PATTERN', 'Problem-Solution'])  # Placeholder
-        # TODO: Calculate from temporal_windows.hook across top performers
-        tab_data.append(['PHASE_1_WORD_COUNT_AVG', '12.5'])  # Placeholder
-        tab_data.append(['PHASE_1_ENERGY_AVG', '0.47'])  # Placeholder
-        # TODO: Calculate eye contact and face size, then call get_visual_direction()
-        tab_data.append(['PHASE_1_VISUAL_DIRECTION', 'Face visible, direct to camera (close-up)'])  # Placeholder
 
         # Phase 2: Middle
         tab_data.append(['', ''])
@@ -1540,18 +1392,19 @@ def main():
         # TODO: Extract from aggregate_content_classifications() -> content_tactics top 2
         tab_data.append(['PHASE_2_TACTIC_1', 'Personal testimony'])  # Placeholder
         tab_data.append(['PHASE_2_TACTIC_2', 'Before/after reveal'])
-        # TODO: Calculate from temporal_windows middle segments
-        tab_data.append(['PHASE_2_SCENE_CHANGES_PER_10S', '2.3'])  # Placeholder
-        tab_data.append(['PHASE_2_ENERGY_AVG', '0.36'])  # Placeholder
 
         # Phase 3: Closing
         tab_data.append(['', ''])
         tab_data.append(['PHASE_3_LABEL', '--- Phase 3: Closing (last 3s) ---'])
         tab_data.append(['PHASE_3_TIMING', 'last 3s'])
-        # TODO: Extract from aggregate_content_classifications() -> caption_analysis.cta_type
-        tab_data.append(['PHASE_3_CTA_TYPE', 'link_in_bio'])  # Placeholder
-        # TODO: Calculate from temporal_windows.closing.energy_max
-        tab_data.append(['PHASE_3_ENERGY_MAX', '0.91'])  # Placeholder
+
+        # Extract Top 3 CTA types and descriptions
+        top_3_ctas = get_top_n_from_field(aggregated, field="caption_cta_type", n=3)
+        cta_descriptions = get_descriptions_from_taxonomy(top_3_ctas, taxonomy_type="cta_type")
+
+        for i in range(3):
+            tab_data.append([f'PHASE_3_CTA_TYPE_{i+1}', top_3_ctas[i] if i < len(top_3_ctas) else ''])
+            tab_data.append([f'PHASE_3_CTA_DESC_{i+1}', cta_descriptions[i] if i < len(cta_descriptions) else ''])
 
         # Caption Structure
         tab_data.append(['', ''])
@@ -1619,16 +1472,13 @@ if __name__ == '__main__':
 ### Implementation Notes for LLM
 
 **TODO items in skeleton above**:
-1. Load `winning_formulas.json` to extract `pattern_name`, contrastive analysis, pattern summary
-2. Implement `aggregate_content_classifications()` - see Section 3.2 for full function
-3. Calculate temporal window averages (word count, energy, scene changes) from top performers
-4. Calculate eye contact and face size averages, call `get_visual_direction()`
-5. Extract caption analysis fields from aggregated Stage 2.7 data
+1. Implement `aggregate_content_classifications()` - see Section 3.2 for full function
+2. Extract caption analysis fields from aggregated Stage 2.7 data
 
 **Testing checklist**:
 - [ ] Script runs without errors
 - [ ] Excel file created with 3 tabs
-- [ ] Each tab has ~68 rows (fields + empty rows + dividers)
+- [ ] Each tab has ~63 rows (fields + empty rows + dividers)
 - [ ] 6 QR code PNGs generated in qr_codes/ subdirectory
 - [ ] QR codes scan successfully and open TikTok videos
 - [ ] Field values are not placeholders (actual data extracted)
@@ -1680,7 +1530,7 @@ Aggregating content intelligence from 120 videos...
 
 ✓ Extraction complete
   Excel: /data/clients/acme/hashtags/nutrition/top_contrastive/nutrition_client_data.xlsx
-  Total fields: 52
+  Total fields: 62
 ```
 
 ---
@@ -1689,7 +1539,7 @@ Aggregating content intelligence from 120 videos...
 
 **Excel Structure**: Single tab with two-column format (Field Name | Value)
 
-**Total Fields**: ~52 fields across 3 pages
+**Total Fields**: ~62 fields across 3 pages
 
 ```python
 # Field structure - two-column format: Field Name | Value
@@ -1839,23 +1689,28 @@ fields = [
     ('PAGE_3_YOUR_CREATIVE_REPORTS', ''),  # Section divider
     ('', ''),
 
+    # --- Section 4: Quantitative Intelligence ---
     # Note: 9 formulas = 3 winning buckets × 3 formulas per bucket
+    # Bucket names + formula names extracted via extract_formula_names_per_bucket()
     ('FORMULA_COUNT', '9'),  # Total formulas delivered
     ('', ''),
 
-    # Bucket 1 formulas
-    ('BUCKET_1_FORMULA_1_NAME', 'The Question Hook Formula'),  # From winning_formulas.json
-    ('BUCKET_1_FORMULA_2_NAME', 'The Fast-Paced Product Demo'),
-    ('BUCKET_1_FORMULA_3_NAME', 'The Myth-Busting Reveal'),
+    # Bucket 1: Duration + 3 formulas
+    ('BUCKET_1_NAME', '18-33s'),  # From winner_analysis.json → top_3_buckets[0]
+    ('BUCKET_1_FORMULA_1_NAME', 'The Silent-to-Vocal Engagement Journey'),  # From ml_analysis/llm/winning_formulas.json
+    ('BUCKET_1_FORMULA_2_NAME', 'The Visual Storytelling Formula'),
+    ('BUCKET_1_FORMULA_3_NAME', 'The Vocal Variety Formula'),
     ('', ''),
 
-    # Bucket 2 formulas
+    # Bucket 2: Duration + 3 formulas
+    ('BUCKET_2_NAME', '13-18s'),  # From winner_analysis.json → top_3_buckets[1]
     ('BUCKET_2_FORMULA_1_NAME', 'The Transformation Story'),
     ('BUCKET_2_FORMULA_2_NAME', 'The Ingredient Deep-Dive'),
     ('BUCKET_2_FORMULA_3_NAME', 'The Side-by-Side Comparison'),
     ('', ''),
 
-    # Bucket 3 formulas
+    # Bucket 3: Duration + 3 formulas
+    ('BUCKET_3_NAME', '60-90s'),  # From winner_analysis.json → top_3_buckets[2]
     ('BUCKET_3_FORMULA_1_NAME', 'The Step-by-Step Tutorial'),
     ('BUCKET_3_FORMULA_2_NAME', 'The Expert Interview Format'),
     ('BUCKET_3_FORMULA_3_NAME', 'The Before-After Journey'),
@@ -1863,7 +1718,8 @@ fields = [
 ```
 
 **Notes**:
-- Total fields: ~122 (including section dividers and empty rows)
+- Total fields: ~125 (including section dividers and empty rows)
+- Data fields: ~62 (excluding dividers and empty rows)
 - Field naming: `UPPERCASE_WITH_UNDERSCORES`
 - Multi-value fields use numbered suffixes (e.g., `KEYWORD_1`, `KEYWORD_2`)
 - Empty rows (`('', '')`) provide visual separation
@@ -2226,7 +2082,119 @@ top_3_categories = combined_content_category.most_common(3)
 
 ---
 
-#### Function 4: Inline Calculations
+#### Function 4: `extract_formula_names_per_bucket()`
+
+**Purpose**: Extract Stage 7 LLM-generated formula names for Page 3 Section 4 (Quantitative Intelligence)
+
+**When to Use**: Report 1 only - extracts 9 formula names (3 per winning bucket) for the creative reports summary
+
+**Input Parameters**:
+- `analysis_path` (str): Path to analysis directory
+  - Example: `/data/clients/acme/hashtags/nutrition/top_contrastive/`
+- `winning_buckets` (list): List of 3 winning bucket names
+  - Example: `["18-33s", "13-18s", "60-90s"]`
+  - Source: `winner_analysis.json` → `top_3_buckets`
+
+**Process**:
+1. Loop through each winning bucket
+2. For each bucket:
+   - Build path to `ml_analysis/llm/winning_formulas.json`
+   - Load JSON file
+   - Extract `creative_reports[0-2].formula_name` (3 formulas per bucket)
+3. Return dict with bucket names and formula arrays
+
+**Implementation**:
+```python
+def extract_formula_names_per_bucket(analysis_path, winning_buckets):
+    """
+    Extract 3 formula names per winning bucket (9 total) from Stage 7 output.
+
+    Args:
+        analysis_path: Path to analysis directory
+        winning_buckets: List of 3 bucket names from winner_analysis.json
+
+    Returns:
+        dict: {
+            "bucket_names": ["18-33s", "13-18s", "60-90s"],
+            "bucket_formulas": {
+                "bucket_1": ["Formula 1", "Formula 2", "Formula 3"],
+                "bucket_2": ["Formula 4", "Formula 5", "Formula 6"],
+                "bucket_3": ["Formula 7", "Formula 8", "Formula 9"]
+            }
+        }
+    """
+    import json
+
+    bucket_formulas = {}
+
+    for idx, bucket_name in enumerate(winning_buckets, start=1):
+        bucket_path = f"{analysis_path}/buckets/bucket_{bucket_name}"
+        winning_formulas_path = f"{bucket_path}/ml_analysis/llm/winning_formulas.json"
+
+        with open(winning_formulas_path, 'r') as f:
+            winning_formulas = json.load(f)
+
+        # Extract 3 formula names from creative_reports array
+        formulas = [
+            report["formula_name"]
+            for report in winning_formulas["creative_reports"][:3]
+        ]
+
+        bucket_formulas[f"bucket_{idx}"] = formulas
+
+    return {
+        "bucket_names": winning_buckets,
+        "bucket_formulas": bucket_formulas
+    }
+```
+
+**Output Format**:
+```python
+{
+    "bucket_names": ["18-33s", "13-18s", "60-90s"],
+    "bucket_formulas": {
+        "bucket_1": [
+            "The Silent-to-Vocal Engagement Journey",
+            "The Visual Storytelling Formula",
+            "The Vocal Variety Formula"
+        ],
+        "bucket_2": [
+            "The Transformation Story",
+            "The Ingredient Deep-Dive",
+            "The Side-by-Side Comparison"
+        ],
+        "bucket_3": [
+            "The Step-by-Step Tutorial",
+            "The Expert Interview Format",
+            "The Before-After Journey"
+        ]
+    }
+}
+```
+
+**Usage in Main Script**:
+```python
+# Extract formula data
+formula_data = extract_formula_names_per_bucket(analysis_path, winning_buckets)
+
+# Map to Excel fields
+data['BUCKET_1_NAME'] = formula_data['bucket_names'][0]
+data['BUCKET_1_FORMULA_1_NAME'] = formula_data['bucket_formulas']['bucket_1'][0]
+data['BUCKET_1_FORMULA_2_NAME'] = formula_data['bucket_formulas']['bucket_1'][1]
+data['BUCKET_1_FORMULA_3_NAME'] = formula_data['bucket_formulas']['bucket_1'][2]
+
+data['BUCKET_2_NAME'] = formula_data['bucket_names'][1]
+data['BUCKET_2_FORMULA_1_NAME'] = formula_data['bucket_formulas']['bucket_2'][0]
+# ... and so on for all 12 fields
+```
+
+**Data Source**: `{bucket_path}/ml_analysis/llm/winning_formulas.json` → `creative_reports[].formula_name`
+
+**Validation Status**: ✅ **Verified** with rollo_test4/wellness_test4 data
+
+---
+
+#### Function 5: Inline Calculations
 
 These are simple calculations that don't need separate functions but are documented for completeness:
 
@@ -2849,29 +2817,18 @@ def main():
     optimal_hashtag_count = round(sum(all_hashtag_counts) / len(all_hashtag_counts)) if all_hashtag_counts else 7
 
     # =============================
-    # STEP 6: Load Formula Names from Stage 7
+    # STEP 6: Extract Formula Names from Stage 7 (Function 4)
     # =============================
-    formula_names = []
-    for bucket_name in winning_buckets:
-        formulas_path = os.path.join(
-            base_path, 'buckets', f'bucket_{bucket_name}',
-            'ml_analysis', 'llm', 'winning_formulas.json'
-        )
+    # Extract bucket names and formula names for Page 3 Section 4
+    formula_data = extract_formula_names_per_bucket(base_path, winning_buckets)
 
-        try:
-            with open(formulas_path) as f:
-                formulas_data = json.load(f)
-
-            # Extract 3 formula names for this bucket
-            for report in formulas_data['creative_reports']:
-                formula_names.append(report['formula_name'])
-        except FileNotFoundError:
-            # If Stage 7 not run yet, use placeholders
-            formula_names.extend([
-                f"Formula {len(formula_names)+1} ({bucket_name})",
-                f"Formula {len(formula_names)+2} ({bucket_name})",
-                f"Formula {len(formula_names)+3} ({bucket_name})"
-            ])
+    # formula_data contains:
+    # - bucket_names: ["18-33s", "13-18s", "60-90s"]
+    # - bucket_formulas: {
+    #     "bucket_1": ["Formula 1", "Formula 2", "Formula 3"],
+    #     "bucket_2": ["Formula 4", "Formula 5", "Formula 6"],
+    #     "bucket_3": ["Formula 7", "Formula 8", "Formula 9"]
+    #   }
 
     # =============================
     # STEP 7: Build Excel Data Structure
@@ -3010,15 +2967,21 @@ def main():
     tab_data.append(['PAGE_3_YOUR_CREATIVE_REPORTS', ''])
     tab_data.append(['', ''])
 
+    # Section 4: Quantitative Intelligence
     tab_data.append(['FORMULA_COUNT', '9'])
     tab_data.append(['', ''])
 
-    # 9 formula names (3 per winning bucket)
-    for i in range(0, 9, 3):
-        bucket_idx = i // 3 + 1
-        tab_data.append([f'BUCKET_{bucket_idx}_FORMULA_1_NAME', formula_names[i] if i < len(formula_names) else 'Placeholder'])
-        tab_data.append([f'BUCKET_{bucket_idx}_FORMULA_2_NAME', formula_names[i+1] if i+1 < len(formula_names) else 'Placeholder'])
-        tab_data.append([f'BUCKET_{bucket_idx}_FORMULA_3_NAME', formula_names[i+2] if i+2 < len(formula_names) else 'Placeholder'])
+    # 12 fields: 3 bucket names + 9 formula names (3 per bucket)
+    for bucket_idx in range(1, 4):
+        bucket_key = f'bucket_{bucket_idx}'
+
+        # Add bucket name
+        tab_data.append([f'BUCKET_{bucket_idx}_NAME', formula_data['bucket_names'][bucket_idx-1]])
+
+        # Add 3 formula names for this bucket
+        tab_data.append([f'BUCKET_{bucket_idx}_FORMULA_1_NAME', formula_data['bucket_formulas'][bucket_key][0]])
+        tab_data.append([f'BUCKET_{bucket_idx}_FORMULA_2_NAME', formula_data['bucket_formulas'][bucket_key][1]])
+        tab_data.append([f'BUCKET_{bucket_idx}_FORMULA_3_NAME', formula_data['bucket_formulas'][bucket_key][2]])
         tab_data.append(['', ''])
 
     # =============================

@@ -255,60 +255,33 @@ Caption Strategy That Works:
 
 #### Section 4: Quantitative Intelligence
 
-**Duration Bucket 13-18s:**
-  • Formula 1: The Question Hook Formula (BRAINSTORM)
-  • Formula 2: The Fast-Paced Product Demo
-  • Formula 3: The Myth-Busting Reveal
+**Duration Bucket [BUCKET_1_NAME]:**
+  • Formula 1: [BUCKET_1_FORMULA_1_NAME]
+  • Formula 2: [BUCKET_1_FORMULA_2_NAME]
+  • Formula 3: [BUCKET_1_FORMULA_3_NAME]
 
-**Duration Bucket 18-33s:**
-  • Formula 4: The Transformation Story
-  • Formula 5: The Ingredient Deep-Dive
-  • Formula 6: The Side-by-Side Comparison
+**Duration Bucket [BUCKET_2_NAME]:**
+  • Formula 4: [BUCKET_2_FORMULA_1_NAME]
+  • Formula 5: [BUCKET_2_FORMULA_2_NAME]
+  • Formula 6: [BUCKET_2_FORMULA_3_NAME]
 
-**Duration Bucket 33-60s:**
-  • Formula 7: The Step-by-Step Tutorial
-  • Formula 8: The Expert Interview Format
-  • Formula 9: The Before-After Journey
+**Duration Bucket [BUCKET_3_NAME]:**
+  • Formula 7: [BUCKET_3_FORMULA_1_NAME]
+  • Formula 8: [BUCKET_3_FORMULA_2_NAME]
+  • Formula 9: [BUCKET_3_FORMULA_3_NAME]
 
-
-**Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
-⚠️ **Pending Quantitative LLM Output**
-⚠️ **Pending Quantitative LLM Output**
-
----
-
-### Page 3: Your Creative Reports
-(BRAINSTORM - Do you really need this?)
-**Purpose**: Show what reports were delivered
-
----
-
-#### Report Distribution
-
-Your content creators will receive 9 creative strategy reports tailored to the #nutrition hashtag:
-
-**Duration Bucket 13-18s:**
-  • Formula 1: The Question Hook Formula (BRAINSTORM)
-  • Formula 2: The Fast-Paced Product Demo
-  • Formula 3: The Myth-Busting Reveal
-
-**Duration Bucket 18-33s:**
-  • Formula 4: The Transformation Story
-  • Formula 5: The Ingredient Deep-Dive
-  • Formula 6: The Side-by-Side Comparison
-
-**Duration Bucket 33-60s:**
-  • Formula 7: The Step-by-Step Tutorial
-  • Formula 8: The Expert Interview Format
-  • Formula 9: The Before-After Journey
 
 **Dynamic Fields**:
 | Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
 |----------------|--------|------------------------|-----------|---------|-----------|
-| Hashtag (in intro text) | Config | `/config/hashtag_clusters/{target}.json` → `primary_hashtag` | String | "#nutrition" | ✅ **Report 1 Header** |
-| Duration Bucket ranges (3 buckets) | Stage 1 | `/data/clients/{client}/hashtag/{target}/{mode}_{strategy}/winner_analysis.json` → `top_3_buckets` array | Array[String] | ["18-33s", "13-18s", "60-90s"] | ✅ **Report 1 Header** |
-| Pattern Names (9 formulas) | Stage 7 | For each winning bucket in `top_3_buckets`: `/data/clients/{client}/hashtag/{target}/{mode}_{strategy}/buckets/bucket_{name}/ml_analysis/llm/winning_formulas.json` → `creative_reports[0-2].formula_name` → 3 names per bucket, 9 total | Array[String] | ["The Question Hook Formula", "The Transformation Story", ...] | ⚠️ **NOT VERIFIED** (BRAINSTORM - Quantitative) |
+| Duration Bucket names (3 buckets) | Stage 1 | `/data/clients/{client}/hashtags/{target}/{mode}_{strategy}/winner_analysis.json` → `top_3_buckets` array | Array[String] | ["18-33s", "13-18s", "60-90s"] | ✅ **Verified** |
+| Formula names per bucket (9 total) | Stage 7 | For each winning bucket in `top_3_buckets`: `/data/clients/{client}/hashtags/{target}/{mode}_{strategy}/buckets/bucket_{bucket_name}/ml_analysis/llm/winning_formulas.json` → `creative_reports[0-2].formula_name` → Extract 3 formula names per bucket | Array[String] per bucket | Bucket 1: ["The Silent-to-Vocal Engagement Journey", "The Visual Storytelling Formula", "The Vocal Variety Formula"] | ✅ **Verified** |
+
+**Notes**:
+- Bucket names are dynamically populated from `winner_analysis.json` (same source as Section 3)
+- Each bucket always has exactly 3 formulas (guaranteed by Stage 7 output schema)
+- Formula names are LLM-generated and unique per bucket/hashtag combination
+- Formula naming convention typically follows: "The [Pattern] Formula" or "The [Pattern] Journey"
 
 ---
 
@@ -377,7 +350,6 @@ Duration | Avg Views  | Avg Engagement | Rating
 60-90s   | 310K       | 1.3%           | ⭐⭐⭐
 
 These 3 durations represent 75.9% of top-performing #nutrition content.
-```
 
 **Dynamic Fields**:
 | Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
@@ -392,7 +364,6 @@ These 3 durations represent 75.9% of top-performing #nutrition content.
 | Top bucket label | Calculated | Bucket ranked #1 from Field 4 (highest engagement + views) gets "← BEST" label, others blank | String | "← BEST", "", "" | ✅ **This session** |
 | Coverage percentage | Calculated | Load `winner_analysis.json` → for each bucket in `top_3_buckets`, sum counts from `top_100_distribution` → divide by total of all buckets → multiply by 100 → round to 1 decimal | Float (%) | 75.9 | ✅ **This session** |
 | Hashtag (in description) | Config | `/config/hashtag_clusters/{target}.json` → `primary_hashtag` | String | "#nutrition" | ✅ **Report 1 Header** |
-```
 
 ---
 
@@ -440,7 +411,7 @@ formula_cluster_id)` (Section 0.5.8) → returns `bottom_cluster.avg_views`. **P
 | Engagement percentage increase | Calculated | `((Field #2 - Field #5) / Field #5) × 100%` → Example: `((1.2 - 0.8) / 0.8) × 100% = 50%` → Round to integer | Integer (%) | 50 | ✅ **This session** |
 
 **Calculation Method** (Real Engagement from Apify Data):
-
+```
 Uses `calculate_engagement_metrics()` function (Section 0.5.5 in Stage8MVP.md) to calculate real engagement rates from actual TikTok interaction data:
 - **Data Source**: `unified_analysis/{video_id}.json` → `metadata` (lines 8-12)
 - **Formula**: `(likes + comments + shares + saves) / views × 100%`
@@ -448,61 +419,19 @@ Uses `calculate_engagement_metrics()` function (Section 0.5.5 in Stage8MVP.md) t
 - **Output**: Real measured engagement rates, not estimates
 
 **Benefit**: Data integrity and transparency - shows actual engagement performance, not industry benchmark estimates.
-
----
-
-#### Contrastive Analysis (Do This vs Don't)
-
 ```
-Top performers do THIS:
-✅ Ask question in first 2s (avg 3.2 questions in hook) (BRAINSTORM)
-✅ Show product by 5 seconds (immediate visual payoff) (BRAINSTORM)
-✅ Use 5-7 text overlays (keep attention with text) (BRAINSTORM)
-
-Bottom performers do THIS:
-❌ Generic opening/statement (0.8 questions avg) (BRAINSTORM) 
-❌ Product reveal after 10+ seconds (viewers already scrolled) (BRAINSTORM)
-❌ No text overlays (viewers get bored/confused) (BRAINSTORM)
-```
-
-**Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
-|----------------|--------|------------------------|-----------|---------|-----------|
-| Top behaviors (3-5 items) | Stage 2.7 + Function | Step 1: `aggregate_content_classifications(bucket_path, "top")` → top stats. Step 2: `aggregate_content_classifications(bucket_path, "bottom")` → bottom stats. Step 3: `calculate_effect_sizes(top_stats, bottom_stats)` (Section 0.5.1) → filter `effect_size > 1.5` AND `top_percentage > bottom_percentage` → select top 3-5 by highest effect_size → format as behaviors | Array[String] | ["Ask question in first 2s (60% top vs 20% bottom)", "Show product by 5s (47% vs 15%)", etc.] | ✅ **This session** |
-| Bottom behaviors (3-5 items) | Stage 2.7 + Function | Same as Field #1, but filter `effect_size > 1.5` AND `bottom_percentage > top_percentage` → select top 3-5 anti-patterns by highest effect_size → format as "don't do this" behaviors | Array[String] | ["Generic opening (65% bottom vs 18% top)", "Late product reveal (52% vs 12%)", etc.] | ✅ **This session** |
-
----
-
-#### Pattern Summary (3-Step Overview)
-
-```
-1️⃣ Hook (0-3s): Ask compelling question (BRAINSTORM - Quantitative - Must match Bucket Duration)
-2️⃣ Show (3-15s): Reveal product + explain benefit (BRAINSTORM - Quantitative - Must match Bucket Duration)
-3️⃣ Prove (15-33s): Demonstrate result + CTA (BRAINSTORM - Quantitative - Must match Bucket Duration)
-
-[VISUAL: Simple timeline graphic with 3 boxes]
-```
-
-**Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
-|----------------|--------|------------------------|-----------|---------|-----------|
-| Step 1 (Hook) description | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[j].structure.hook` → Simplify/shorten for summary (remove cluster ID) | String | "Ask compelling question" | ✅ **This session** |
-| Step 2 (Middle) description | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[j].structure.middle_1` → Use first middle segment as representative → Simplify/shorten for summary | String | "Reveal product + explain benefit" | ✅ **This session** |
-| Step 3 (Closing) description | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[j].structure.closing` → Simplify/shorten for summary (remove cluster ID) | String | "Demonstrate result + CTA" | ✅ **This session** |
-| Timing ranges (all 3 steps) | Calculated | Hook: "0-3s" (fixed). Middle: "3s to {bucket_end - 3}s" (calculated from bucket duration). Closing: "last 3s" (calculated). Example for 18-33s bucket: ["0-3s", "3-30s", "30-33s"] | Array[String] | ["0-3s", "3-15s", "15-18s"] for 18s video | ✅ **This session** |
 
 ---
 
 ### Page 2: "How to Execute" (Copy-Paste Implementation)
 
-#### Video Category Selection
+#### Freestyle Tips
+For those who'd rather mix and match what works best with their style!
 
 **Pick ONE from each category below:**
 
 **MOST VIRAL CONTENT TYPES**
 ```
-Choose the format that best fits your style:
-
 □ [Content Category 1]
    Description: [Auto-generated description]
 
@@ -515,8 +444,6 @@ Choose the format that best fits your style:
 
 **MOST USED ENGAGEMENT DRIVERS**
 ```
-Pick the tactic that feels most authentic to you:
-
 □ [Engagement Driver 1]
 □ [Engagement Driver 2]
 □ [Engagement Driver 3]
@@ -533,8 +460,6 @@ Pick the tactic that feels most authentic to you:
 
 ---
 
-#### Pattern Execution Blueprint
-
 **⏱️ PHASE 1: HOOK (0-3 seconds)**
 
 ```
@@ -548,13 +473,6 @@ Strategy: Pick ONE from Top 3 below:
 
 □ [Hook Strategy 3]
    Description: [Auto-generated description]
-
-Execution:
-• 2 sentences, moderate pace (BRAINSTORM - Quantitative - Must match Bucket Duration)
-• Two sentences at normal speed (BRAINSTORM - Quantitative - Must match Bucket Duration)
-• Conversational delivery (BRAINSTORM - Quantitative - Must match Bucket Duration)
-• Face visible, direct to camera (close-up) (BRAINSTORM - Quantitative - Must match Bucket Duration)
-• High energy from start (enthusiastic tone) (BRAINSTORM - Quantitative - Must match Bucket Duration)
 ```
 
 **Dynamic Fields**:
@@ -562,9 +480,6 @@ Execution:
 |----------------|--------|------------------------|-----------|---------|-----------|
 | Hook Strategies (Top 3) | Stage 7 | **Base Function**: `aggregate_content_classifications(bucket_path, "top")` (Section 0.5.1) → **Wrapper**: `get_top_n_from_field(bucket_path, "hook_strategy", n=3, "top")` (Section 0.5.1.1) → Returns array of top 3 hook strategy names | Array of strings | ["question_hook", "problem_solution", "shocking_fact"] | ⚠️ **FUNCTION READY, AWAITING STAGE 2.7 DATA** (Section 0.5.1.1) |
 | Hook Strategy Descriptions | Stage 2.6 Taxonomy | **Function**: `get_descriptions_from_taxonomy(strategy_names, taxonomy_type)` (Section 0.5.1.2) → Read curated taxonomy file → Extract `description` for each strategy in Top 3 → Source: `/config/taxonomies/hook_strategy.json` → Returns array of descriptions | Array of strings | ["Opens with a question...", "Starts with problem...", "Begins with surprising..."] | ✅ **FUNCTION READY** (Section 0.5.1.2) |
-| Word count (semantic) | Stage 7 Quantitative | Aggregate `temporal_windows.hook.word_count` across winning cluster → Calculate avg → Map to semantic categories: (0-5)="Brief", (6-10)="One sentence", (11-15)="2 sentences moderate", (16-20)="2-3 sentences fast" → Output 3 bullet points: label + description + pacing | Array[String] | ["2 sentences, moderate pace", "Two sentences at normal speed", "Conversational delivery"] | ⚠️ **Pending Quantitative LLM Output** (Stage 7) |
-| Visual direction | Stage 7 Quantitative | Aggregate `temporal_windows.hook.eye_contact_rate` and `average_face_size` across winning cluster → Calculate avg → Apply `get_visual_direction()` (Section 0.5.7): If eye_contact > 0.7 AND face_size > 0.3: "Face visible, direct to camera (close-up)"; else other categories | String | "Face visible, direct to camera (close-up)" | ⚠️ **Pending Quantitative LLM Output** (Stage 7) |
-| Energy description | Stage 7 Quantitative | Aggregate `temporal_windows.hook.energy_level` across winning cluster → Calculate avg → Map to categories: High (>0.6), Moderate (0.4-0.6), Low (<0.4) → Format: "{Level} energy from start" | String | "High energy from start (enthusiastic tone)" | ⚠️ **Pending Quantitative LLM Output** (Stage 7) |
 
 ---
 
@@ -597,12 +512,6 @@ Content Tactics (use 1-2 from Top 4):
 □ [Tactic 2]
 □ [Tactic 3]
 □ [Tactic 4]
-
-Execution Standards:
-• Fast pacing: 2-3 scene changes per 10 seconds (BRAINSTORM)
-• Use 5-7 text overlays throughout (highlight key points) (BRAINSTORM)
-• Maintain moderate energy (don't drop off mid-video) (BRAINSTORM)
-• Product clearly visible in shots (BRAINSTORM)
 ```
 
 **Dynamic Fields**:
@@ -611,30 +520,29 @@ Execution Standards:
 | Pain Points (Top 5) | Stage 7 | **Base Function**: `aggregate_content_classifications(bucket_path, "top")` (Section 0.5.1) → **Wrapper**: `get_top_n_from_field(bucket_path, "pain_points", n=5, "top")` (Section 0.5.1.1) → Returns array of top 5 pain point names | Array of strings | ["bloating", "low_energy", "weight_loss", "gut_health", "brain_fog"] | ⚠️ **FUNCTION READY, AWAITING STAGE 2.7 DATA** (Section 0.5.1.1) |
 | Keywords (Top 8) | Stage 7 | **Base Function**: `aggregate_content_classifications(bucket_path, "top")` (Section 0.5.1) → **Wrapper**: `get_top_n_from_field(bucket_path, "keywords", n=8, "top")` (Section 0.5.1.1) → Returns array of top 8 keyword names | Array of strings | ["protein", "gut_health", "fiber", "probiotics", "metabolism", "holistic", "meal_prep", "supplements"] | ⚠️ **FUNCTION READY, AWAITING STAGE 2.7 DATA** (Section 0.5.1.1) |
 | Content Tactics (Top 4) | Stage 7 | **Base Function**: `aggregate_content_classifications(bucket_path, "top")` (Section 0.5.1) → **Wrapper**: `get_top_n_from_field(bucket_path, "content_tactics", n=4, "top")` (Section 0.5.1.1) → Returns array of top 4 tactic names | Array of strings | ["direct_to_camera", "voiceover", "text_overlay", "product_showcase"] | ⚠️ **FUNCTION READY, AWAITING STAGE 2.7 DATA** (Section 0.5.1.1) |
-| Scene changes rate | Stage 7 Quantitative | Aggregate `temporal_windows.middle_segments[].scene_count` across winning cluster → Calculate avg per segment ÷ duration → Format: "X scene changes per 10s" | Float | 2.3 scene changes per 10s | ⚠️ **Pending Quantitative LLM Output** (Stage 7) |
-| Text overlay count | Stage 7 Quantitative | Aggregate `temporal_windows.middle_segments[].text_overlay_count` across winning cluster → Sum across all middle segments → Format: "X-Y total" | Integer | 5-7 total | ⚠️ **Pending Quantitative LLM Output** (Stage 7) |
-| Energy standard | Stage 7 Quantitative | Aggregate `temporal_windows.middle_segments[].energy_level` across winning cluster → Calculate avg → Map to categories: High (>0.6), Moderate (0.4-0.6), Low (<0.4) | String | "Moderate energy (0.35+)" | ⚠️ **Pending Quantitative LLM Output** (Stage 7) |
 
 ---
 
 **⏱️ PHASE 3: CLOSING (Last 3 seconds)**
 
 ```
-CTA: "Link in bio!" or "Save this for later!"
+CTA: Pick ONE from Top 3 below:
 
-Execution:
-• Peak energy (most enthusiastic moment of entire video) (BRAINSTORM - Quantitative - Must match Bucket Duration)
-• Point to save button or bio link (gesture/visual cue) (BRAINSTORM - Quantitative - Must match Bucket Duration) 
-• Hold final frame 1-2 seconds (give viewers time to click) (BRAINSTORM - Quantitative - Must match Bucket Duration)
+□ [CTA Type 1]
+   Description: [Auto-generated description]
+
+□ [CTA Type 2]
+   Description: [Auto-generated description]
+
+□ [CTA Type 3]
+   Description: [Auto-generated description]
 ```
 
 **Dynamic Fields**:
 | Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
 |----------------|--------|------------------------|-----------|---------|-----------|
-| CTA Type | Stage 7 | **Base Function**: `aggregate_content_classifications(bucket_path, "top")` (Section 0.5.1) → Extract `caption_analysis.cta_type` from each classification → Find most common CTA type | String | "link_in_bio" | ⚠️ **FUNCTION READY, AWAITING STAGE 2.7 DATA** (Section 0.5.1) |
-| CTA Example Phrase | Stage 7 LLM | Generate example phrase based on most common `cta_type` → Map: "link_in_bio" → "Link in bio!", "save_post" → "Save this for later!", etc. | String | "Link in bio!" | ⚠️ **Pending Quantitative LLM Output** (Stage 7) |
-| Peak Energy Note | Stage 7 Quantitative | Aggregate `temporal_windows.closing.energy_level` across winning cluster → Calculate max or avg → Map to category: High (>0.8) → "Peak energy", Moderate (0.6-0.8) → "High energy" | String | "Peak energy (0.9+)" | ⚠️ **Pending Quantitative LLM Output** (Stage 7) |
-| Visual Cue | Stage 7 Quantitative | Analyze closing segment for gestures/visual elements (if available from temporal windows or ML pipeline) → Generate instruction: "Point to save button", "Gesture to bio link" | String | "Point to save button" | ⚠️ **Pending Quantitative LLM Output** (Stage 7) |
+| CTA Types (Top 3) | Stage 7 | **Base Function**: `aggregate_content_classifications(bucket_path, "top")` (Section 0.5.1) → **Wrapper**: `get_top_n_from_field(bucket_path, "caption_cta_type", n=3, "top")` (Section 0.5.1.1) → Returns array of top 3 CTA type names | Array of strings | ["link_in_bio", "save_post", "comment"] | ⚠️ **FUNCTION READY, AWAITING STAGE 2.7 DATA** (Section 0.5.1.1) |
+| CTA Type Descriptions | Stage 2.6 Taxonomy | **Function**: `get_descriptions_from_taxonomy(cta_names, taxonomy_type)` (Section 0.5.1.2) → Read curated taxonomy file → Extract `description` for each CTA in Top 3 → Source: `/config/taxonomies/caption_cta_type.json` → Returns array of descriptions | Array of strings | ["Direct viewers to link in bio", "Encourage saving post for later", "Ask viewers to comment"] | ✅ **FUNCTION READY** (Section 0.5.1.2) |
 
 ---
 
@@ -663,8 +571,6 @@ WINNING CAPTION PATTERNS:
    • Use {{avg_hashtag_count}} hashtags (average from winning cluster)
    • Place at end of caption for best performance
 
-EXAMPLE WINNING CAPTION:
-[Generated example using top hook + top CTA + correct hashtag count]
 ```
 
 **Dynamic Fields**:
@@ -738,8 +644,9 @@ QR Codes from top performers of the video bucket duration
 
 ## 3. Handle/Single Competitor → Client (Deep Dive Report)
 
-**Status**: 🔄 **IN PROGRESS** - Redesigned to match Report 4 structure
 
+**Status**: 🔄 **IN PROGRESS** - Redesigned to match Report 4 structure
+```
 **Audience**: Tumi Labs clients (business owners)
 
 **Purpose**: Deep dive competitive intelligence on 1 competitor
@@ -751,30 +658,7 @@ QR Codes from top performers of the video bucket duration
 **Reading Time**: 6-8 minutes (scannable in 2 minutes)
 
 **Design Philosophy**: Simplified version of Report 4 (Multi-Competitor) adapted for single competitor analysis
-
----
-
-### Input Data Sources
-
-- Competitor Stage 7: `winning_formulas.json`
-- Competitor Stage 6: `rf_video_analysis.json`, `kmeans_analysis.json`
-- Competitor Stage 1: `winner_analysis.json` (bucket distribution)
-- Competitor Stage 2: Video metadata (URLs, view counts, hashtags, timestamps, `likes`, `comments`, `shares`, `saves` for engagement calculation)
-- Competitor Stage 2.7: `content_analysis` outputs (content categories, hook strategies)
-- Config: CLI parameters (`--competitor`, `--analysis-period`)
-
----
-
-### Design Decisions Locked
-
-- ✅ Page count: 3 pages (streamlined from 4)
-- ✅ Analysis period: Last 90 days
-- ✅ Competitor focus: Single competitor deep dive (no client baseline)
-- ✅ Posting frequency: Simplified one-line metric (no table)
-- ✅ Content sections: Distribution + Performance + Creative Intelligence
-- ✅ Comparison approach: Pure competitor analysis (no market average)
-
----
+```
 
 ### Page 1: Executive Overview
 
@@ -2449,7 +2333,7 @@ Based on available data, here are the realistic options for creator reports:
 1. **Data integrity**: Uses Content Analysis (video-level) and Temporal Windows (segment-level) correctly without inventing precision we don't have
 2. **Actionable**: Creators get clear structure (Hook → Middle → Close) with specific patterns and metrics
 3. **Mobile-friendly**: Concise, scannable format fits 2-page PDF constraint
-4. **Honest marketing**: Can call it "Pattern Execution Blueprint" instead of "second-by-second timeline"
+4. **Honest marketing**: Uses phase-based structure (Hook → Middle → Closing) instead of claiming precise "second-by-second timeline"
 
 **Impact on Template Fields (Section 2: Hashtag → Creator)**:
 

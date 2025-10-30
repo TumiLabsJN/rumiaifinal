@@ -1,17 +1,11 @@
 #!/bin/bash
 ################################################################################
-# Copy Missing Videos from Test 4 to Test 3
+# DRY RUN: Copy Missing Videos from Test 4 to Test 3
 #
-# Purpose: Copy 60 missing videos (37 from bucket_3-9s, 23 from bucket_60-90s)
-#          from Test 4 to Test 3 to recover from checkpoint corruption
+# Purpose: Test copy operation with 2 sample videos (1 per bucket)
 #
-# Source: rollo_test4/hashtags/wellness_test4/
-# Target: rollo_test3/hashtags/wellness_test3/
-#
-# Files copied per video:
-#   1. videos/{video_id}.mp4
-#   2. analysis/insights/{video_id}_temporal_windows_updated.json
-#   3. analysis/unified/{video_id}.json
+# This script will actually copy 2 videos to verify the operation works
+# before running the full 60-video copy.
 #
 # Created: 2025-10-29
 ################################################################################
@@ -38,10 +32,14 @@ successful_files=0
 failed_files=0
 
 # Log file
-LOG_FILE="/home/jorge/rumiaifinal/copy_test4_to_test3_$(date +%Y%m%d_%H%M%S).log"
-echo "Copy operation started at $(date)" | tee "$LOG_FILE"
-echo "Log file: $LOG_FILE" | tee -a "$LOG_FILE"
-echo "" | tee -a "$LOG_FILE"
+LOG_FILE="/home/jorge/rumiaifinal/copy_dryrun_$(date +%Y%m%d_%H%M%S).log"
+
+echo -e "${YELLOW}=====================================================================${NC}"
+echo -e "${YELLOW}DRY RUN MODE - Testing with 2 sample videos${NC}"
+echo -e "${YELLOW}=====================================================================${NC}"
+echo ""
+echo "Log file: $LOG_FILE"
+echo "" | tee "$LOG_FILE"
 
 ################################################################################
 # Function: Copy video files
@@ -63,10 +61,23 @@ copy_video_files() {
     local tgt_insights="$TEST3_BASE/buckets/bucket_${bucket}/analysis/insights/${video_id}_temporal_windows_updated.json"
     local tgt_unified="$TEST3_BASE/buckets/bucket_${bucket}/analysis/unified/${video_id}.json"
 
+    echo "  Source paths:" | tee -a "$LOG_FILE"
+    echo "    Video:    $src_video" | tee -a "$LOG_FILE"
+    echo "    Insights: $src_insights" | tee -a "$LOG_FILE"
+    echo "    Unified:  $src_unified" | tee -a "$LOG_FILE"
+    echo "  Target paths:" | tee -a "$LOG_FILE"
+    echo "    Video:    $tgt_video" | tee -a "$LOG_FILE"
+    echo "    Insights: $tgt_insights" | tee -a "$LOG_FILE"
+    echo "    Unified:  $tgt_unified" | tee -a "$LOG_FILE"
+    echo "" | tee -a "$LOG_FILE"
+
     # Copy video file
     if [ -f "$src_video" ]; then
+        echo "  Checking source video..." | tee -a "$LOG_FILE"
+        ls -lh "$src_video" | tee -a "$LOG_FILE"
         if cp "$src_video" "$tgt_video"; then
-            echo "  ✓ Copied video file" | tee -a "$LOG_FILE"
+            echo -e "  ${GREEN}✓ Copied video file${NC}" | tee -a "$LOG_FILE"
+            ls -lh "$tgt_video" | tee -a "$LOG_FILE"
             successful_files=$((successful_files + 1))
         else
             echo -e "  ${RED}✗ Failed to copy video file${NC}" | tee -a "$LOG_FILE"
@@ -82,8 +93,11 @@ copy_video_files() {
 
     # Copy insights file
     if [ -f "$src_insights" ]; then
+        echo "  Checking source insights..." | tee -a "$LOG_FILE"
+        ls -lh "$src_insights" | tee -a "$LOG_FILE"
         if cp "$src_insights" "$tgt_insights"; then
-            echo "  ✓ Copied insights file" | tee -a "$LOG_FILE"
+            echo -e "  ${GREEN}✓ Copied insights file${NC}" | tee -a "$LOG_FILE"
+            ls -lh "$tgt_insights" | tee -a "$LOG_FILE"
             successful_files=$((successful_files + 1))
         else
             echo -e "  ${RED}✗ Failed to copy insights file${NC}" | tee -a "$LOG_FILE"
@@ -99,8 +113,11 @@ copy_video_files() {
 
     # Copy unified file
     if [ -f "$src_unified" ]; then
+        echo "  Checking source unified..." | tee -a "$LOG_FILE"
+        ls -lh "$src_unified" | tee -a "$LOG_FILE"
         if cp "$src_unified" "$tgt_unified"; then
-            echo "  ✓ Copied unified file" | tee -a "$LOG_FILE"
+            echo -e "  ${GREEN}✓ Copied unified file${NC}" | tee -a "$LOG_FILE"
+            ls -lh "$tgt_unified" | tee -a "$LOG_FILE"
             successful_files=$((successful_files + 1))
         else
             echo -e "  ${RED}✗ Failed to copy unified file${NC}" | tee -a "$LOG_FILE"
@@ -117,78 +134,77 @@ copy_video_files() {
     # Update video counters
     total_videos=$((total_videos + 1))
     if [ "$video_success" = true ]; then
-        echo -e "  ${GREEN}✓ Video $video_id complete${NC}" | tee -a "$LOG_FILE"
+        echo -e "  ${GREEN}✓✓✓ Video $video_id COMPLETE (all 3 files copied)${NC}" | tee -a "$LOG_FILE"
         successful_videos=$((successful_videos + 1))
     else
-        echo -e "  ${RED}✗ Video $video_id incomplete${NC}" | tee -a "$LOG_FILE"
+        echo -e "  ${RED}✗✗✗ Video $video_id INCOMPLETE (some files failed)${NC}" | tee -a "$LOG_FILE"
         failed_videos=$((failed_videos + 1))
     fi
     echo "" | tee -a "$LOG_FILE"
 }
 
 ################################################################################
-# Main execution
+# Main execution - DRY RUN with 2 sample videos
 ################################################################################
 
 echo "=====================================================================" | tee -a "$LOG_FILE"
-echo "COPYING BUCKET 3-9s (37 videos)" | tee -a "$LOG_FILE"
+echo "SAMPLE 1: Bucket 3-9s (testing 1 video)" | tee -a "$LOG_FILE"
 echo "=====================================================================" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
-# Read video IDs from temp file
-if [ ! -f /tmp/test3_missing_3_9s.txt ]; then
-    echo -e "${RED}ERROR: Missing video list not found: /tmp/test3_missing_3_9s.txt${NC}" | tee -a "$LOG_FILE"
-    echo "Please run the verification commands first to generate this file." | tee -a "$LOG_FILE"
-    exit 1
-fi
-
-while IFS= read -r video_id; do
-    copy_video_files "$video_id" "3-9s"
-done < /tmp/test3_missing_3_9s.txt
+# Get first video from bucket 3-9s
+sample_video_1=$(head -1 /tmp/test3_missing_3_9s.txt)
+echo "Selected video: $sample_video_1" | tee -a "$LOG_FILE"
+echo "" | tee -a "$LOG_FILE"
+copy_video_files "$sample_video_1" "3-9s"
 
 echo "=====================================================================" | tee -a "$LOG_FILE"
-echo "COPYING BUCKET 60-90s (23 videos)" | tee -a "$LOG_FILE"
+echo "SAMPLE 2: Bucket 60-90s (testing 1 video)" | tee -a "$LOG_FILE"
 echo "=====================================================================" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
-# Read video IDs from temp file
-if [ ! -f /tmp/test3_missing_60_90s.txt ]; then
-    echo -e "${RED}ERROR: Missing video list not found: /tmp/test3_missing_60_90s.txt${NC}" | tee -a "$LOG_FILE"
-    echo "Please run the verification commands first to generate this file." | tee -a "$LOG_FILE"
-    exit 1
-fi
-
-while IFS= read -r video_id; do
-    copy_video_files "$video_id" "60-90s"
-done < /tmp/test3_missing_60_90s.txt
+# Get first video from bucket 60-90s
+sample_video_2=$(head -1 /tmp/test3_missing_60_90s.txt)
+echo "Selected video: $sample_video_2" | tee -a "$LOG_FILE"
+echo "" | tee -a "$LOG_FILE"
+copy_video_files "$sample_video_2" "60-90s"
 
 ################################################################################
 # Summary
 ################################################################################
 
 echo "" | tee -a "$LOG_FILE"
-echo "=====================================================================" | tee -a "$LOG_FILE"
-echo "COPY OPERATION COMPLETE" | tee -a "$LOG_FILE"
-echo "=====================================================================" | tee -a "$LOG_FILE"
+echo -e "${YELLOW}=====================================================================${NC}" | tee -a "$LOG_FILE"
+echo -e "${YELLOW}DRY RUN COMPLETE${NC}" | tee -a "$LOG_FILE"
+echo -e "${YELLOW}=====================================================================${NC}" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
-echo "Videos:" | tee -a "$LOG_FILE"
-echo "  Total: $total_videos" | tee -a "$LOG_FILE"
+echo "Videos tested: 2 (1 per bucket)" | tee -a "$LOG_FILE"
 echo -e "  ${GREEN}Successful: $successful_videos${NC}" | tee -a "$LOG_FILE"
 echo -e "  ${RED}Failed: $failed_videos${NC}" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
-echo "Files (3 per video):" | tee -a "$LOG_FILE"
-echo "  Total: $total_files" | tee -a "$LOG_FILE"
-echo -e "  ${GREEN}Successful: $successful_files${NC}" | tee -a "$LOG_FILE"
-echo -e "  ${RED}Failed: $failed_files${NC}" | tee -a "$LOG_FILE"
+echo "Files copied (3 per video):" | tee -a "$LOG_FILE"
+echo -e "  ${GREEN}Successful: $successful_files/6${NC}" | tee -a "$LOG_FILE"
+echo -e "  ${RED}Failed: $failed_files/6${NC}" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
-echo "Completed at $(date)" | tee -a "$LOG_FILE"
 echo "Log saved to: $LOG_FILE" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
 if [ $failed_videos -eq 0 ]; then
-    echo -e "${GREEN}✓ All videos copied successfully!${NC}" | tee -a "$LOG_FILE"
+    echo -e "${GREEN}=====================================================================${NC}" | tee -a "$LOG_FILE"
+    echo -e "${GREEN}✓✓✓ DRY RUN SUCCESSFUL!${NC}" | tee -a "$LOG_FILE"
+    echo -e "${GREEN}=====================================================================${NC}" | tee -a "$LOG_FILE"
+    echo "" | tee -a "$LOG_FILE"
+    echo "The copy operation works correctly. You can now run the full script:" | tee -a "$LOG_FILE"
+    echo "  ./copy_test4_to_test3.sh" | tee -a "$LOG_FILE"
+    echo "" | tee -a "$LOG_FILE"
+    echo "This will copy the remaining 58 videos (36 + 22)." | tee -a "$LOG_FILE"
     exit 0
 else
-    echo -e "${YELLOW}⚠ Some videos failed to copy. Check log for details.${NC}" | tee -a "$LOG_FILE"
+    echo -e "${RED}=====================================================================${NC}" | tee -a "$LOG_FILE"
+    echo -e "${RED}⚠ DRY RUN FAILED${NC}" | tee -a "$LOG_FILE"
+    echo -e "${RED}=====================================================================${NC}" | tee -a "$LOG_FILE"
+    echo "" | tee -a "$LOG_FILE"
+    echo "Some files failed to copy. Review the log above to identify issues." | tee -a "$LOG_FILE"
+    echo "DO NOT run the full script until this is resolved." | tee -a "$LOG_FILE"
     exit 1
 fi

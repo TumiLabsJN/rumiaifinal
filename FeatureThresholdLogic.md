@@ -1,8 +1,17 @@
 # Feature Threshold Logic - Semantic Range Definition Process
 
-**Purpose**: Document the systematic process for defining semantic ranges for all 26 base features in RumiAI Stage 7 analysis.
+## 🎯 Project Context
 
-**Context**: We're creating human-readable interpretations of numeric ML features (e.g., "0.058" → "wide shot") for creator-friendly insights.
+**What we're doing**: Implementing Approach C (Full Semantic Dictionaries) for RumiAI Stage 7 `supplementary_insights` output.
+
+**Goal**: Convert raw numeric ML features into creator-friendly semantic labels.
+- Example: `average_face_size: 0.058` → `"Face size in opening: 72% of top performers use medium shots vs 15% of bottom"`
+
+**Why**: Current output has technical jargon (`hook_energy_max: 0.13 in top vs 0.16 in bottom`) that creators can't use. We need actionable language (`"High energy delivery in opening: 72% of top performers vs 15% of bottom"`).
+
+**Approach**: Python-only formatting (no LLM) with semantic interpretation dictionaries for all 26 base features.
+
+**Key Decision**: Using Approach C = Full semantic dictionaries with human-readable labels (e.g., "wide shot", "close-up", "high energy").
 
 ---
 
@@ -246,25 +255,49 @@ Context in full output:
 
 ---
 
-### **Step 4: Discussion - Pending Review**
+### **Step 4: Visual Calibration & Finalization** ✅ COMPLETED
 
-**Questions for review**:
+**Recalibration Process**: Used 6 real TikTok images to validate thresholds
 
-1. **average_face_size**: Does 0.06 (6% of frame) correctly divide "wide" from "medium" shot?
-   - Top performers avg 0.058 (labeled "wide shot")
-   - Bottom performers avg 0.084 (labeled "medium shot")
-   - Does this match cinematography standards?
+#### **Visual Evidence Analysis**
 
-2. **person_count**: Are the boundaries (1.5, 2.5, 5.0) appropriate?
-   - Seems logical, but should we round differently for averages?
+| Image | Value | Visual Description | Initial Label (OLD) | Calibrated Label (NEW) | Match? |
+|-------|-------|-------------------|---------------------|----------------------|--------|
+| Img06 | 0.0312 | Full body + environment | wide shot | wide shot | ✅ |
+| Img05 | 0.0514 | Upper body (chest up) | **wide shot** ❌ | **medium shot** ✅ | Adjusted |
+| Img04 | 0.0864 | Upper body (chest up) | medium shot | medium shot | ✅ |
+| Img03 | 0.1127 | Head + shoulders | close-up | close-up | ✅ |
+| Img02 | 0.2013 | Tight head shot | extreme close-up | **tight close-up** ✅ | Added category |
+| Img01 | 0.4561 | Face dominates frame | extreme close-up | extreme close-up | ✅ |
 
-3. **object_count**: Should we calculate quartiles instead of rough estimates?
-   - Current thresholds (3.0, 6.0, 10.0) are not data-driven
+#### **Key Findings from Visual Calibration**:
 
-4. **overlay_unique_count**: Is "moderate text" the right label for 2.5-4.5?
-   - Top performers avg 2.83 (would be "moderate")
-   - Bottom performers avg 5.08 (would be "heavy")
-   - Does this distinction make sense?
+1. **Original threshold (0.06) was too high for "wide shot"**
+   - 0.0514 showed upper body (medium), not full body (wide)
+   - Adjusted boundary from 0.06 → **0.04**
+
+2. **Needed more granularity above 0.15**
+   - 0.2013 (tight head) vs 0.4561 (face dominates) looked very different
+   - Added **"tight close-up"** category (0.15-0.30)
+   - Now have 5 categories instead of 4
+
+3. **Final calibrated ranges for average_face_size**:
+   ```
+   (0.0, 0.04, 'wide shot', 'full body visible with environment')
+   (0.04, 0.09, 'medium shot', 'upper body (chest/waist up)')
+   (0.09, 0.15, 'close-up', 'head and shoulders prominent')
+   (0.15, 0.30, 'tight close-up', 'head fills most of frame')
+   (0.30, 1.0, 'extreme close-up', 'face dominates entire frame')
+   ```
+
+#### **Validation Results**:
+
+✅ **average_face_size**: RECALIBRATED - 5 categories, thresholds adjusted based on visual evidence
+✅ **person_count**: APPROVED - semantic categories are logical and appropriate
+✅ **object_count**: APPROVED - rough estimates acceptable for now, can refine later if needed
+✅ **overlay_unique_count**: APPROVED - labels make sense for observed values
+
+**Status**: Category 1 (Visual Composition) - **FINALIZED** after visual calibration
 
 ---
 
@@ -292,8 +325,46 @@ Context in full output:
 
 ---
 
+## 🔄 File Update Workflow
+
+After completing each category's 4-step process, update **THREE files** in this order:
+
+### **1. FeatureThresholdLogic.md** (This File) - Process Documentation
+- **Purpose**: Document methodology, visual examples, recalibration decisions
+- **Location**: Step 4 section for each category
+- **What to update**: Add visual calibration table, key findings, validation results
+
+### **2. LLMOutputFix.md** - Final Implementation Decisions
+- **Purpose**: Finalized semantic range definitions for implementation
+- **Location**: Search for "CATEGORY X: [Name] (N features)" section
+- **What to update**: The SEMANTIC_INTERPRETATIONS dictionary entries
+- **Format**:
+  ```python
+  'feature_name': {
+      'metric_type': 'ratio|variance|count|continuous|duration',
+      'direction': 'higher_is_more|lower_is_better|higher_is_closer|neutral',
+      'unit': 'descriptive unit',
+      'data_range': (min, max),  # From production/visual data
+      'ranges': [
+          (min1, max1, 'label1', 'description1'),
+          (min2, max2, 'label2', 'description2'),
+          # ... 3-5 ranges per feature
+      ],
+      'notes': 'Methodology: [method used]. [Key findings]. [Any recalibration notes].'
+  },
+  ```
+
+### **3. config/semantic_interpretations.py** - Code Implementation
+- **Purpose**: Actual Python code used by Stage 7
+- **Location**: Same structure as LLMOutputFix.md, just in Python format
+- **What to update**: The SEMANTIC_INTERPRETATIONS dictionary
+- **Note**: Keep in sync with LLMOutputFix.md
+
+---
+
 ## 📝 Notes
 
 - This document will be updated as each category is completed
 - All final definitions go into `config/semantic_interpretations.py`
 - Rationale and methodology stay documented here for transparency
+- Visual calibration examples stay here as reference for future features
