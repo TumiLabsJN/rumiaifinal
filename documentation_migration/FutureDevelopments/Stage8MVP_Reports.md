@@ -8,19 +8,8 @@
 
 ---
 
-## Template Structure Overview
-
-| # | Report Type | Audience | Status | Source |
-|---|-------------|----------|--------|--------|
-| 1 | Hashtag → Client | Tumi Labs Clients | ✅ **COMPLETE** | MLCreativeReports.md |
-| 2 | Hashtag → Creator | Content Creators | ✅ **COMPLETE** | Stage8Planning.md section 1.1 |
-| 3 | Handle/Single Competitor → Client | Tumi Labs Clients | ✅ **COMPLETE** | This document (Page 1-4 structure) |
-| 4 | Handle/Multiple Competitor → Client | Tumi Labs Clients | ✅ **COMPLETE** | This document (Page 1-4 structure) |
-
----
-
 ## 1. Hashtag → Client (Executive Report)
-
+```
 **Audience**: Tumi Labs clients (business owners)
 
 **Purpose**: Prove ML sophistication, reduce anxiety, provide creator sourcing strategy
@@ -30,16 +19,7 @@
 **Format**: 3-page PDF (desktop-first, mobile-tested)
 
 **Reading Time**: 5-7 minutes (scannable in 2 minutes)
-
----
-
-### Input Data Sources
-
-- Stage 1: `winner_analysis.json`, `cluster_analytics.json`
-- Stage 2: Video metadata (`views`, `likes`, `comments`, `shares`, `saves`) from `unified_analysis/{video_id}.json` → `metadata` (lines 8-12) for engagement calculation
-- Stage 6: `rf_video_analysis.json`, `kmeans_analysis.json`
-- Stage 7: `winning_formulas.json` (all 3 buckets)
-
+```
 ---
 
 ### Page 1: Scale of Analysis
@@ -76,12 +56,6 @@ using 60+ ML features per video (computer vision, audio analysis, NLP)
 | Winning Bucket %s (3) | Winner Analysis | Same file → `top_100_distribution[bucket]` for each winning bucket | Array[Integer] | [43, 12, 11] | ✅ **Report 1 Header** |
 | Top Performers Count | Selection Manifest | `/data/clients/{client}/hashtag/{target}/{mode}_{strategy}/selection_manifest.json` → Sum all `top_performers` array lengths | Integer | 88 | ✅ **Report 1 Header** |
 | Bottom Performers Count | Selection Manifest | Same file → Sum all `bottom_performers` array lengths | Integer | 23 | ✅ **Report 1 Header** |
-
-**Decision**: ✅ Always display "Past 2-3 months" regardless of actual `--date-filter` parameter for marketing consistency and perceived recency.
-
-**Decision**: ✅ Display total scraped videos (1,826) instead of selected videos (111) for marketing impact. The full funnel (winning formats + deep analysis counts) provides context and shows rigor without misleading.
-
-**Decision**: ✅ Show all 3 winning buckets with percentages (not just top bucket) to demonstrate comprehensive pattern identification.
 
 ---
 
@@ -199,10 +173,6 @@ Your creative reports focus exclusively on these durations.
 | Avg views per winning bucket | Calculated | `calculate_avg_views_per_bucket()` for each winning bucket: load `selected_videos.json` → filter `is_top_performer == true` → average `playCount` → format with K/M suffix (from Section 0.5.6) | Integer (formatted with K/M) | 1.9M, 575K, 2.1M | ✅ **This session** |
 | Performance labels | Calculated | Based on Section 2 star rating rank (engagement + views): Rank 1 (5 stars) = "highest performance", Rank 2 (4 stars) = "strong performance + volume", Rank 3 (3 stars) = "proven success" | String | "highest performance", "strong performance + volume", "proven success" | ✅ **This session** |
 
-**Decision**: ✅ Keep only Creator Profile Priorities section. Removed redundant sections:
-- Content Saturation (not actionable, redundant)
-- Trend Direction (too risky to fabricate M-o-M trends)
-- Creator Recommendations with specific hiring quantities (too prescriptive)
 
 ---
 
@@ -300,6 +270,7 @@ Each 2-page report includes:
 
 ## 2. Hashtag → Creator (Content Creator Report)
 
+```
 **Audience**: Content creators (affiliates)
 
 **Purpose**: Deliver actionable creative formulas with proof and execution steps
@@ -309,24 +280,7 @@ Each 2-page report includes:
 **Format**: 2-page PDF (**MOBILE-OPTIMIZED** - minimum 12pt body, 16pt+ headings, portrait layout)
 
 **Reading Time**: 2-3 minutes
-
----
-
-### Input Data Sources
-
-- Stage 2: Video metadata (`views`, `likes`, `comments`, `shares`, `saves`) from `unified_analysis/{video_id}.json` → `metadata` (lines 8-12) for engagement calculation
-- Stage 7: `winning_formulas.json` (3 creative reports per bucket)
-
----
-
-### Report Characteristics
-
-- **Catchy**: Grab attention with proof and numbers immediately
-- **Evidence-based**: Show performance data upfront (not buried at end)
-- **Actionable**: Dead simple to implement (copy-paste execution guide)
-- **Mobile-optimized**: Designed for phone/tablet viewing
-- **Scannable**: Find what you need in seconds
-- **Consistent**: All 9 reports follow same 2-page structure
+```
 
 ---
 
@@ -512,6 +466,14 @@ Content Tactics (use 1-2 from Top 4):
 □ [Tactic 2]
 □ [Tactic 3]
 □ [Tactic 4]
+
+Top Things to Do
+□ [Supplementary Insight 1]
+□ [Supplementary Insight 2]
+□ [Supplementary Insight 3]
+□ [Supplementary Insight 4]
+□ [Supplementary Insight 5]
+
 ```
 
 **Dynamic Fields**:
@@ -520,6 +482,7 @@ Content Tactics (use 1-2 from Top 4):
 | Pain Points (Top 5) | Stage 7 | **Base Function**: `aggregate_content_classifications(bucket_path, "top")` (Section 0.5.1) → **Wrapper**: `get_top_n_from_field(bucket_path, "pain_points", n=5, "top")` (Section 0.5.1.1) → Returns array of top 5 pain point names | Array of strings | ["bloating", "low_energy", "weight_loss", "gut_health", "brain_fog"] | ⚠️ **FUNCTION READY, AWAITING STAGE 2.7 DATA** (Section 0.5.1.1) |
 | Keywords (Top 8) | Stage 7 | **Base Function**: `aggregate_content_classifications(bucket_path, "top")` (Section 0.5.1) → **Wrapper**: `get_top_n_from_field(bucket_path, "keywords", n=8, "top")` (Section 0.5.1.1) → Returns array of top 8 keyword names | Array of strings | ["protein", "gut_health", "fiber", "probiotics", "metabolism", "holistic", "meal_prep", "supplements"] | ⚠️ **FUNCTION READY, AWAITING STAGE 2.7 DATA** (Section 0.5.1.1) |
 | Content Tactics (Top 4) | Stage 7 | **Base Function**: `aggregate_content_classifications(bucket_path, "top")` (Section 0.5.1) → **Wrapper**: `get_top_n_from_field(bucket_path, "content_tactics", n=4, "top")` (Section 0.5.1.1) → Returns array of top 4 tactic names | Array of strings | ["direct_to_camera", "voiceover", "text_overlay", "product_showcase"] | ⚠️ **FUNCTION READY, AWAITING STAGE 2.7 DATA** (Section 0.5.1.1) |
+| Supplementary Insights (Top 5) | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `supplementary_insights.universal_principles` → Take first 5 items from array | Array of strings | ["middle_3_eye_contact_rate: 0.57 in top vs 0.43 in bottom (gap: 0.14)", "middle_1_energy_variance: 0.00 in top vs 0.00 in bottom (gap: 0.00)", "middle_3_energy_variance: 0.00 in top vs 0.00 in bottom (gap: 0.00)", "middle_3_energy_level: 0.10 in top vs 0.06 in bottom (gap: 0.04)", "hook_eye_contact_rate: 0.51 in top vs 0.63 in bottom (gap: 0.11)"] | ⚠️ **READY** (Stage 7 data exists) |
 
 ---
 
@@ -545,6 +508,8 @@ CTA: Pick ONE from Top 3 below:
 | CTA Type Descriptions | Stage 2.6 Taxonomy | **Function**: `get_descriptions_from_taxonomy(cta_names, taxonomy_type)` (Section 0.5.1.2) → Read curated taxonomy file → Extract `description` for each CTA in Top 3 → Source: `/config/taxonomies/caption_cta_type.json` → Returns array of descriptions | Array of strings | ["Direct viewers to link in bio", "Encourage saving post for later", "Ask viewers to comment"] | ✅ **FUNCTION READY** (Section 0.5.1.2) |
 
 ---
+
+
 
 **CAPTION STRUCTURE** (Don't skip this!)
 
@@ -592,6 +557,44 @@ WINNING CAPTION PATTERNS:
 
 ---
 
+#### Ready Templates
+Proven to work through our Machine Learning and analysis of over 500+ videos!
+
+**Template 1**
+Name: [Formula Name 1]
+Hook: [Hook Step 1]
+Middle: [Middle Step 1]
+Closing: [Closing Step 1]
+
+**Template 2**
+Name: [Formula Name 2]
+Hook: [Hook Step 2]
+Middle: [Middle Step 2]
+Closing: [Closing Step 2]
+
+**Template 3**
+Name: [Formula Name 3]
+Hook: [Hook Step 3]
+Middle: [Middle Step 3]
+Closing: [Closing Step 3]
+
+**Dynamic Fields**:
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Formula Name 1 | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[0].formula_name` | String | "The Silent-to-Vocal Engagement Journey" | ⚠️ **READY** (Stage 7 data exists) |
+| Hook Step 1 | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[0].step_by_step_template[]` → Filter for line starting with "Hook" | String | "Hook (0-3s): Strong eye contact (0.77), prominent face presence (0.42), establish direct connection" | ⚠️ **READY** (Stage 7 data exists) |
+| Middle Step 1 | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[0].step_by_step_template[]` → Filter for first line starting with "Middle" | String | "Middle_1 (3-6s): Transition to pure visual storytelling (0.00 speech), let visuals speak" | ⚠️ **READY** (Stage 7 data exists) |
+| Closing Step 1 | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[0].step_by_step_template[]` → Filter for line starting with "Closing" | String | "Closing (23-26s): Visual-first silent closer, minimal verbal content (0.09), indirect gaze (0.19)" | ⚠️ **READY** (Stage 7 data exists) |
+| Formula Name 2 | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[1].formula_name` | String | "The Visual Storytelling Formula" | ⚠️ **READY** (Stage 7 data exists) |
+| Hook Step 2 | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[1].step_by_step_template[]` → Filter for line starting with "Hook" | String | "Hook: Use multiple visual angles or dynamic elements to create immediate visual interest" | ⚠️ **READY** (Stage 7 data exists) |
+| Middle Step 2 | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[1].step_by_step_template[]` → Filter for first line starting with "Middle" | String | "Middle: Maintain visual variety with strategic scene transitions and visual enhancements" | ⚠️ **READY** (Stage 7 data exists) |
+| Closing Step 2 | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[1].step_by_step_template[]` → Filter for line starting with "Closing" | String | "Closing: Return to primary visual focus while maintaining dynamic elements" | ⚠️ **READY** (Stage 7 data exists) |
+| Formula Name 3 | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[2].formula_name` | String | "The Vocal Variety Formula" | ⚠️ **READY** (Stage 7 data exists) |
+| Hook Step 3 | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[2].step_by_step_template[]` → Filter for line starting with "Hook" | String | "Hook: Establish vocal tone with clear articulation and moderate pacing" | ⚠️ **READY** (Stage 7 data exists) |
+| Middle Step 3 | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[2].step_by_step_template[]` → Filter for first line starting with "Middle" | String | "Middle: Use strategic pauses and vocal variety for emphasis and engagement" | ⚠️ **READY** (Stage 7 data exists) |
+| Closing Step 3 | Stage 7 | `/ml_analysis/llm/winning_formulas.json` → `creative_reports[2].step_by_step_template[]` → Filter for line starting with "Closing" | String | "Closing: Maintain vocal energy while delivering clear call-to-action" | ⚠️ **READY** (Stage 7 data exists) |
+
+
 **Phase 4: Examples**
 [QR CODE]
 Scan to watch: Top Performer Using this reports' patterns (620K views, 1.4% engagement)
@@ -601,6 +604,7 @@ Scan to watch: Bottom Performer - Don't Do This (95K views)
 
 **Dynamic Fields**:
 | Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|--------------|--------|------------------------|-----------|---------|-----------|
 | QR Code (Top Performer) | Stage 2 + Section 0.5.2 | **Function**: `select_qr_code_videos(bucket_path, bucket_name)` (Section 0.5.2) → returns `top_performer.url` → generate QR code PNG. **Process**: Load `selection_manifest.json` → get `videos_by_bucket[bucket_name].top_performers[]` → load `selected_videos.json` → select max by `(playCount, createTime)` → use `webVideoUrl` | QR Code Image | https://www.tiktok.com/@agitthaaii/video/7545713916584774968 | ✅ **READY** (Section 0.5.2) |
 | QR Code (Bottom Performer) | Stage 2 + Section 0.5.2 | **Function**: `select_qr_code_videos(bucket_path, bucket_name)` (Section 0.5.2) → returns `bottom_performer.url` → generate QR code PNG. **Process**: Load `selection_manifest.json` → get `videos_by_bucket[bucket_name].bottom_performers[]` → load `selected_videos.json` → select max by `(playCount, createTime)` → use `webVideoUrl` | QR Code Image | https://www.tiktok.com/@ahealthydoseofash/video/7560886598309612814 | ✅ **READY** (Section 0.5.2) |
 | Bottom video views | Stage 2 | From selected bottom QR video (Field #3): `playCount` → format with K/M suffix | Integer (formatted with K/M) | 95K | ✅ **This session** |
@@ -942,7 +946,38 @@ Total unique @mentions: 47
 
 ---
 
-#### Section 6: Videos
+#### Section 6: Creative Formulas
+
+**Duration Bucket [BUCKET_1_NAME]:**
+  • Formula 1: [BUCKET_1_FORMULA_1_NAME]
+  • Formula 2: [BUCKET_1_FORMULA_2_NAME]
+  • Formula 3: [BUCKET_1_FORMULA_3_NAME]
+
+**Duration Bucket [BUCKET_2_NAME]:**
+  • Formula 4: [BUCKET_2_FORMULA_1_NAME]
+  • Formula 5: [BUCKET_2_FORMULA_2_NAME]
+  • Formula 6: [BUCKET_2_FORMULA_3_NAME]
+  
+**Duration Bucket [BUCKET_3_NAME]:**
+  • Formula 7: [BUCKET_3_FORMULA_1_NAME]
+  • Formula 8: [BUCKET_3_FORMULA_2_NAME]
+  • Formula 9: [BUCKET_3_FORMULA_3_NAME]
+
+
+**Dynamic Fields**:
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Duration Bucket names (3 buckets) | Stage 1 | `/data/clients/{client}/competitors/{target}/{mode}_{strategy}/winner_analysis.json` → `top_3_buckets` array | Array[String] | ["18-33s", "13-18s", "60-90s"] | ✅ **Verified** |
+| Formula names per bucket (9 total) | Stage 7 | For each winning bucket in `top_3_buckets`: `/data/clients/{client}/competitors/{target}/{mode}_{strategy}/buckets/bucket_{bucket_name}/ml_analysis/llm/winning_formulas.json` → `creative_reports[0-2].formula_name` → Extract 3 formula names per bucket | Array[String] per bucket | Bucket 1: ["The Silent-to-Vocal Engagement Journey", "The Visual Storytelling Formula", "The Vocal Variety Formula"] | ✅ **Verified** |
+
+**Notes**:
+- Bucket names are dynamically populated from `winner_analysis.json` (same source as Section 3)
+- Each bucket always has exactly 3 formulas (guaranteed by Stage 7 output schema)
+- Formula names are LLM-generated and unique per bucket/hashtag combination
+- Formula naming convention typically follows: "The [Pattern] Formula" or "The [Pattern] Journey"
+
+
+#### Section 7: Videos
 
 **Purpose**: Provide visual proof of top-performing videos per competitor
 (BRAINSTORM) - SAMPLE BELOW. Need to update!
@@ -1015,7 +1050,7 @@ Same functions as Report 4, but applied to single competitor:
 
 ---
 ## 4. Handle/Multiple Competitor → Client (Market Intelligence Report)
-
+```
 **Status**: ✅ **COMPLETE**
 
 **Audience**: Tumi Labs clients (business owners)
@@ -1027,28 +1062,7 @@ Same functions as Report 4, but applied to single competitor:
 **Format**: 4-page PDF (desktop-optimized, executive-focused)
 
 **Reading Time**: 10-12 minutes (scannable in 3 minutes)
-
----
-
-### Input Data Sources
-
-- Competitor Stage 1: `winner_analysis.json` (bucket distribution, avg views per bucket)
-- Competitor Stage 2: Video metadata (posting frequency, total duration, hashtags, @mentions, `views`, `likes`, `comments`, `shares`, `saves` for engagement calculation)
-- Competitor Stage 2.7: Content Analysis (categories, hooks, pain points, keywords, engagement drivers)
-- Competitor Stage 6: `kmeans_analysis.json` (pattern diversity)
-- Competitor Stage 7: `winning_formulas.json` (top formulas per competitor)
-- Config: CLI parameters (`--competitors` list, `--analysis-period`)
-
----
-
-### Design Decisions Locked
-
-- ✅ Pure market intelligence (no client comparison)
-- ✅ Competitors only: 2-5 handles analyzed
-- ✅ Analysis period: Last 90 days (matches single competitor report)
-- ✅ No engagement metrics (not available)
-- ✅ Focus: What competitors are doing (not what client should do)
-
+```
 ---
 
 ### Page 1: Market Overview & Performance Rankings
@@ -1756,7 +1770,89 @@ Top Affiliate Contributors:
 
 **Implementation**: See Stage8MVP.md Section 0.5.4 for `extract_mention_analysis()` function
 
+
+#### Section 5: Top Things To Do (Quantitative)
 ---
+
+**[BUCKET_1_NAME]** (e.g., 18-33s)
+
+**Top Things to Do - [COMPETITOR_1_HANDLE]**
+□ [BUCKET_1_COMP_1_INSIGHT_1]
+□ [BUCKET_1_COMP_1_INSIGHT_2]
+□ [BUCKET_1_COMP_1_INSIGHT_3]
+□ [BUCKET_1_COMP_1_INSIGHT_4]
+□ [BUCKET_1_COMP_1_INSIGHT_5]
+
+**Top Things to Do - [COMPETITOR_2_HANDLE]** *(if applicable)*
+□ [BUCKET_1_COMP_2_INSIGHT_1]
+□ [BUCKET_1_COMP_2_INSIGHT_2]
+□ [BUCKET_1_COMP_2_INSIGHT_3]
+□ [BUCKET_1_COMP_2_INSIGHT_4]
+□ [BUCKET_1_COMP_2_INSIGHT_5]
+
+**Top Things to Do - [COMPETITOR_3_HANDLE]** *(if applicable)*
+□ [BUCKET_1_COMP_3_INSIGHT_1]
+□ [BUCKET_1_COMP_3_INSIGHT_2]
+□ [BUCKET_1_COMP_3_INSIGHT_3]
+□ [BUCKET_1_COMP_3_INSIGHT_4]
+□ [BUCKET_1_COMP_3_INSIGHT_5]
+
+---
+
+**[BUCKET_2_NAME]** *(if applicable)*
+
+**Top Things to Do - [COMPETITOR_1_HANDLE]** *(if applicable for this bucket)*
+□ [BUCKET_2_COMP_1_INSIGHT_1]
+□ [BUCKET_2_COMP_1_INSIGHT_2]
+□ [BUCKET_2_COMP_1_INSIGHT_3]
+□ [BUCKET_2_COMP_1_INSIGHT_4]
+□ [BUCKET_2_COMP_1_INSIGHT_5]
+
+**Top Things to Do - [COMPETITOR_2_HANDLE]** *(if applicable for this bucket)*
+□ [BUCKET_2_COMP_2_INSIGHT_1]
+□ [BUCKET_2_COMP_2_INSIGHT_2]
+□ [BUCKET_2_COMP_2_INSIGHT_3]
+□ [BUCKET_2_COMP_2_INSIGHT_4]
+□ [BUCKET_2_COMP_2_INSIGHT_5]
+
+**Top Things to Do - [COMPETITOR_3_HANDLE]** *(if applicable for this bucket)*
+□ [BUCKET_2_COMP_3_INSIGHT_1]
+□ [BUCKET_2_COMP_3_INSIGHT_2]
+□ [BUCKET_2_COMP_3_INSIGHT_3]
+□ [BUCKET_2_COMP_3_INSIGHT_4]
+□ [BUCKET_2_COMP_3_INSIGHT_5]
+
+---
+
+**[BUCKET_3_NAME]** *(if applicable)*
+
+**Top Things to Do - [COMPETITOR_1_HANDLE]** *(if applicable for this bucket)*
+□ [BUCKET_3_COMP_1_INSIGHT_1]
+□ [BUCKET_3_COMP_1_INSIGHT_2]
+□ [BUCKET_3_COMP_1_INSIGHT_3]
+□ [BUCKET_3_COMP_1_INSIGHT_4]
+□ [BUCKET_3_COMP_1_INSIGHT_5]
+
+**Top Things to Do - [COMPETITOR_2_HANDLE]** *(if applicable for this bucket)*
+□ [BUCKET_3_COMP_2_INSIGHT_1]
+□ [BUCKET_3_COMP_2_INSIGHT_2]
+□ [BUCKET_3_COMP_2_INSIGHT_3]
+□ [BUCKET_3_COMP_2_INSIGHT_4]
+□ [BUCKET_3_COMP_2_INSIGHT_5]
+
+**Top Things to Do - [COMPETITOR_3_HANDLE]** *(if applicable for this bucket)*
+□ [BUCKET_3_COMP_3_INSIGHT_1]
+□ [BUCKET_3_COMP_3_INSIGHT_2]
+□ [BUCKET_3_COMP_3_INSIGHT_3]
+□ [BUCKET_3_COMP_3_INSIGHT_4]
+□ [BUCKET_3_COMP_3_INSIGHT_5]
+
+**Dynamic Fields**:
+| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
+|----------------|--------|------------------------|-----------|---------|-----------|
+| Bucket names (1-3) | Stage 1 | For each competitor: `/data/clients/{client}/competitors/{competitor_handle}/{mode}_{strategy}/winner_analysis.json` → `top_3_buckets` → Merge all competitors' winning buckets → Find common buckets across 2+ competitors → Return unique bucket list (sorted by frequency) | Array[String] | ["18-33s", "13-18s", "60-90s"] | ✅ **Verified** |
+| Competitor handles per bucket | Calculated | For each bucket in common_buckets: Check each competitor's `top_3_buckets` → If bucket exists in competitor's list, include competitor → Return list of applicable competitor handles per bucket | Nested Array | Bucket "18-33s": ["@drinkpoppi", "@nike", "@vitalproteins"], Bucket "13-18s": ["@drinkpoppi", "@vitalproteins"] | ✅ **Verified** |
+| Supplementary Insights per competitor per bucket | Stage 7 | For each (bucket, competitor) pair: `/data/clients/{client}/competitors/{competitor_handle}/{mode}_{strategy}/buckets/bucket_{bucket_name}/ml_analysis/llm/winning_formulas.json` → `supplementary_insights.universal_principles[0-4]` → Only extract if competitor has this bucket in their `top_3_buckets` | Nested Array of Strings | Bucket "18-33s", Competitor "@drinkpoppi": ["middle_3_eye_contact_rate: 0.57 in top vs 0.43 in bottom (gap: 0.14)", "middle_1_energy_variance: 0.00 in top vs 0.00 in bottom (gap: 0.00)", "middle_3_energy_variance: 0.00 in top vs 0.00 in bottom (gap: 0.00)", "middle_3_energy_level: 0.10 in top vs 0.06 in bottom (gap: 0.04)", "hook_eye_contact_rate: 0.51 in top vs 0.63 in bottom (gap: 0.11)"] | ⚠️ **READY** (Stage 7 data exists) |
 
 ### Page 4: Visual Examples
 

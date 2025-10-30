@@ -243,34 +243,47 @@ Create NEW hook strategy names based on opening patterns you observe in THIS spe
 
 ---
 
-## CATEGORIES 3-6: Simple Lists
+## CATEGORY 3: Closing Strategies
 
-For Categories 3-6 below: Extract phrases (2-4 words) that appear or are IMPLIED in at least 10% of videos (minimum 3). Phrases can be verbatim quotes OR interpretations of what's shown/discussed. Return as simple string lists.
+Identify HOW videos end. Analyze the LAST 10 WORDS of each transcript to detect ending techniques and calls-to-action.
+
+Examples to show naming style only (these are NOT limits):
+- direct_cta: Explicit call-to-action at end
+- question_prompt: Ends with question to viewers
+- cliffhanger_ending: Creates anticipation for next video
+
+Create NEW closing strategy names based on ending patterns you observe in THIS specific hashtag (#{hashtag}). Focus on the rhetorical technique used to close the video, not specific content. Typically this will be 2-5 closing strategies, but return only as many as you genuinely observe.
+
+---
+
+## CATEGORIES 4-7: Simple Lists
+
+For Categories 4-7 below: Extract phrases (2-4 words) that appear or are IMPLIED in at least 10% of videos (minimum 3). Phrases can be verbatim quotes OR interpretations of what's shown/discussed. Return as simple string lists.
 
 GROUNDING RULE: Every term you list must be traceable to specific transcripts. If you cannot point to at least 3 transcripts showing this pattern, do not include it.
 
-### CATEGORY 3: Audience Pain Points
+### CATEGORY 4: Audience Pain Points
 
 Identify PROBLEMS, STRUGGLES, or UNMET NEEDS mentioned or implied. Include:
 - Explicit problems stated ("I have bloating")
 - Implied problems from solutions shown ("I started doing X and Y went away" → Y is pain point)
 - Challenges discussed
 
-### CATEGORY 4: Trending Keywords
+### CATEGORY 5: Trending Keywords
 
-Identify TOPICS, METHODS, SOLUTIONS, or CONCEPTS mentioned or implied (excluding problems from Category 3). Include:
+Identify TOPICS, METHODS, SOLUTIONS, or CONCEPTS mentioned or implied (excluding problems from Category 4). Include:
 - Specific terms used repeatedly
 - Methods or practices discussed
 - Solutions or approaches mentioned
 
-### CATEGORY 5: Engagement Drivers
+### CATEGORY 6: Engagement Drivers
 
 Identify CONTENT FEATURES or TECHNIQUES that make content compelling (not topics). Include:
 - Storytelling devices mentioned or used
 - Proof elements described ("I show before/after photos")
 - Engagement tactics visible in how creators speak
 
-### CATEGORY 6: Content Tactics
+### CATEGORY 7: Content Tactics
 
 Identify PRESENTATION STYLES or FORMATS mentioned or implied. Include:
 - Delivery methods described or evident from speech patterns
@@ -304,6 +317,14 @@ Return your analysis as valid JSON with this exact structure:
         "representative_video_ids": ["7526250443832331550", "7428596413707144481"]
       }}
     ],
+    "closing_strategies": [
+      {{
+        "name": "direct_cta",
+        "frequency": 32,
+        "examples": ["click the link in my bio", "follow for more tips like this"],
+        "representative_video_ids": ["7526250443832331550", "7428596413707144481"]
+      }}
+    ],
     "audience_pain_points": ["chronic bloating", "low energy"],
     "trending_keywords": ["protein intake", "gut health"],
     "engagement_drivers": ["before after reveal"],
@@ -312,9 +333,9 @@ Return your analysis as valid JSON with this exact structure:
 }}
 
 Requirements:
-- Categories 1-2: Provide 2-3 examples and 2-3 representative_video_ids per pattern
+- Categories 1-3: Provide 2-3 examples and 2-3 representative_video_ids per pattern
 - DO NOT include a "percentage" field - this will be calculated automatically by Python post-processing
-- Categories 3-6: Simple string lists only (no objects, no extra fields)
+- Categories 4-7: Simple string lists only (no objects, no extra fields)
 
 ---
 
@@ -559,6 +580,7 @@ def run_discovery_stage(
     logger.info(f"STAGE 2.6 COMPLETE")
     logger.info(f"Discovered {len(raw_taxonomy['discovered_patterns']['content_categories'])} content categories")
     logger.info(f"Discovered {len(raw_taxonomy['discovered_patterns']['hook_strategies'])} hook strategies")
+    logger.info(f"Discovered {len(raw_taxonomy['discovered_patterns']['closing_strategies'])} closing strategies")
     logger.info(f"=" * 80)
 
     return raw_taxonomy

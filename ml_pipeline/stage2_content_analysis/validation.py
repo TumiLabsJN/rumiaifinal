@@ -113,8 +113,8 @@ def validate_classification_inputs(taxonomy_path: str, manifest_path: str):
 
     # Check all required fields present
     required_fields = [
-        'content_categories', 'hook_strategies', 'audience_pain_points',
-        'trending_keywords', 'engagement_drivers', 'content_tactics'
+        'content_categories', 'hook_strategies', 'closing_strategies',
+        'audience_pain_points', 'trending_keywords', 'engagement_drivers', 'content_tactics'
     ]
     missing = [f for f in required_fields if f not in taxonomy]
     if missing:
@@ -139,6 +139,15 @@ def validate_classification_inputs(taxonomy_path: str, manifest_path: str):
     for strategy in taxonomy['hook_strategies']:
         if 'name' not in strategy or 'definition' not in strategy:
             raise ValueError(f"hook_strategies missing name or definition: {strategy}")
+        if len(strategy['definition']) < 10:
+            raise ValueError(
+                f"Definition too short for '{strategy['name']}': "
+                f"'{strategy['definition']}' (min 10 chars)"
+            )
+
+    for strategy in taxonomy['closing_strategies']:
+        if 'name' not in strategy or 'definition' not in strategy:
+            raise ValueError(f"closing_strategies missing name or definition: {strategy}")
         if len(strategy['definition']) < 10:
             raise ValueError(
                 f"Definition too short for '{strategy['name']}': "
@@ -253,11 +262,11 @@ def validate_discovery_output(raw_taxonomy: Dict[str, Any]):
     if missing:
         raise ValueError(f"Discovery output missing fields: {missing}")
 
-    # Validation 2: Check discovered_patterns has all 6 categories
+    # Validation 2: Check discovered_patterns has all 7 categories
     # Source: ContentAnalysisCHILD.md Section 6.3 lines 931-937
     required_patterns = [
-        'content_categories', 'hook_strategies', 'audience_pain_points',
-        'trending_keywords', 'engagement_drivers', 'content_tactics'
+        'content_categories', 'hook_strategies', 'closing_strategies',
+        'audience_pain_points', 'trending_keywords', 'engagement_drivers', 'content_tactics'
     ]
     patterns = raw_taxonomy['discovered_patterns']
     missing = [f for f in required_patterns if f not in patterns]
@@ -299,11 +308,11 @@ def validate_classification_output(classification: Dict[str, Any]):
     Raises:
         ValueError: If output structure invalid
     """
-    # Validation 1: Check all 12 top-level fields present
+    # Validation 1: Check all 13 top-level fields present
     # Source: 2.7ClassificationCritique.md Section 9 - Required fields
     required_fields = [
         'video_id', 'taxonomy_version', 'content_category', 'hook_strategy',
-        'pain_points', 'keywords', 'engagement_drivers', 'content_tactics',
+        'closing_strategy', 'pain_points', 'keywords', 'engagement_drivers', 'content_tactics',
         'caption_analysis', 'confidence', 'transcript_available', 'note'
     ]
     missing = [f for f in required_fields if f not in classification]

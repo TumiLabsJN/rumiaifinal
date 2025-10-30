@@ -3151,7 +3151,7 @@ def analyze_path_frequencies(video_paths: list) -> list:
       "rank": 1
     },
     {
-      "feature": "hook_to_middle_energy_delta",
+      "feature": "xwin_hook_to_middle_energy",
       "importance": 0.12,
       "interpretation": "Energy change from hook to middle average",
       "top_performer_avg": 0.15,
@@ -3161,7 +3161,7 @@ def analyze_path_frequencies(video_paths: list) -> list:
       "pattern_type": "cross_window"
     },
     {
-      "feature": "middle_to_closing_contrast",
+      "feature": "xwin_middle_to_closing_energy",
       "importance": 0.10,
       "interpretation": "Energy gap between middle avg and closing peak",
       "top_performer_avg": 0.28,
@@ -3171,7 +3171,7 @@ def analyze_path_frequencies(video_paths: list) -> list:
       "pattern_type": "cross_window"
     },
     {
-      "feature": "eye_contact_consistency",
+      "feature": "xwin_eye_contact_consistency",
       "importance": 0.08,
       "interpretation": "Std deviation of eye contact across all windows",
       "top_performer_avg": 0.12,
@@ -3243,10 +3243,10 @@ Top Single-Window Features:
 Top Cross-Window Features (these only exist at video-level):
 {format_cross_window_features(rf_video_data)}
 
-Key Cross-Window Insights from RF:
-- Energy progression matters: Building from hook → middle (delta +0.15) predicts virality
-- Closing contrast matters: Large energy gap between middle avg and closing peak (0.28) predicts virality
-- Consistency matters: Low variance in eye_contact across windows (std 0.12) predicts virality
+Key Cross-Window Insights from RF (xwin_ features from Stage 3):
+- xwin_hook_to_middle_energy: Building from hook → middle (delta +0.15) predicts virality
+- xwin_middle_to_closing_energy: Large energy gap between middle avg and closing peak (0.28) predicts virality
+- xwin_eye_contact_consistency: Low variance in eye_contact across windows (std 0.12) predicts virality
 
 ## Your Task
 
@@ -3312,11 +3312,11 @@ For each cluster path above 10% threshold:
      - 10-14.9%: "moderate" (1 in 10 videos - proven pattern)
 4. **Temporal Progression**: How key features evolve across windows
    - Show actual values per window (hook: 0.55, middle_avg: 0.65, closing: 0.85)
-   - Calculate deltas (hook_to_middle_delta, middle_to_closing_contrast)
+   - Calculate deltas (xwin_hook_to_middle_energy, xwin_middle_to_closing_energy)
    - Describe pattern in words
 5. **RF Cross-Window Validation**: How formula matches video-level RF patterns
    - Compare formula's deltas to RF top_performer_avg
-   - List matches (e.g., "hook_to_middle_energy_delta: 0.16 matches RF avg 0.15")
+   - List matches (e.g., "xwin_hook_to_middle_energy: 0.16 matches RF avg 0.15")
    - Provide rf_validation_score (e.g., "9/10" if 3/3 patterns match)
 6. **Strategy Description**: Overall creative approach
 7. **When to Use**: Content types and creator profiles that fit this formula

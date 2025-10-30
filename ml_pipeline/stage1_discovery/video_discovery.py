@@ -25,6 +25,7 @@ from .cluster_analytics import save_cluster_analytics
 from .constants import (
     EXIT_CODE_SUCCESS,
     EXIT_CODE_USER_ABORT,
+    TOP_PERFORMERS_FOR_ANALYSIS,
 )
 
 # Import foundation modules
@@ -270,7 +271,7 @@ class VideoDiscovery:
             "top_3_buckets": winning_buckets,
             "winner_coverage": sum(
                 winner_distribution.get(b, 0) for b in winning_buckets
-            ) / sum(winner_distribution.values()) * 100,
+            ) / TOP_PERFORMERS_FOR_ANALYSIS * 100,
             "scrape_timestamp": datetime.now(timezone.utc).isoformat(),
             "analysis_date": datetime.now(timezone.utc).isoformat()
         }

@@ -4408,28 +4408,28 @@ Input:
   rf_video_data = {
       'feature_importance': [
           {'feature': 'eye_contact_rate', 'importance': 0.35, 'gap': 0.43},
-          {'feature': 'hook_to_middle_energy_delta', 'importance': 0.18, 'gap': 0.25},  # Cross-window!
-          {'feature': 'eye_contact_consistency', 'importance': 0.12, 'gap': 0.32},  # Cross-window!
+          {'feature': 'xwin_hook_to_middle_energy', 'importance': 0.18, 'gap': 0.25},  # Cross-window! (S7B2 fix)
+          {'feature': 'xwin_eye_contact_consistency', 'importance': 0.12, 'gap': 0.32},  # Cross-window! (S7B2 fix)
           {'feature': 'word_count', 'importance': 0.22, 'gap': 0.28}
       ]
   }
 
 Execution:
-  Filter by CROSS_WINDOW_KEYWORDS = ['delta', 'consistency', 'contrast', 'progression', '_std']
+  Filter by CROSS_WINDOW_KEYWORDS = ['delta', 'consistency', 'contrast', 'progression', '_std', 'xwin_']  # S7B2: Added xwin_ prefix
 
-  Features found:
-    - hook_to_middle_energy_delta (contains 'delta')
-    - eye_contact_consistency (contains 'consistency')
+  Features found (S7B2 names):
+    - xwin_hook_to_middle_energy (contains 'xwin_')
+    - xwin_eye_contact_consistency (contains 'xwin_')
 
   Sort by importance: Already sorted
   Take top 5: Only 2 available
 
-  Feature: hook_to_middle_energy_delta
+  Feature: xwin_hook_to_middle_energy  # ← S7B2 fix: renamed from hook_to_middle_energy_delta
     gap = 0.25 → prevalence = 65.0%
     interpretation = 'energy builds from hook to middle'
     pattern = "65% of high-performing videos show energy builds from hook to middle"
 
-  Feature: eye_contact_consistency
+  Feature: xwin_eye_contact_consistency  # ← S7B2 fix: renamed from eye_contact_consistency
     gap = 0.32 → prevalence = 78.0%
     interpretation = 'consistent eye contact throughout (bookend pattern)'
     pattern = "78% of high-performing videos show consistent eye contact throughout (bookend pattern)"
@@ -4481,8 +4481,8 @@ Cross-Window Patterns:
   "formula_name": "The Educator's Arc",
   "rf_cross_window_validation": {
     "matches_top_patterns": [
-      "hook_to_middle_energy_delta: 0.16 (RF rank #4)",
-      "eye_contact_consistency: 0.12 std dev (RF rank #6)"
+      "xwin_hook_to_middle_energy: 0.16 (RF rank #4)",  // S7B2 fix
+      "xwin_eye_contact_consistency: 0.12 std dev (RF rank #6)"  // S7B2 fix
     ],
     "rf_validation_score": "9/10"
   }
@@ -6569,6 +6569,35 @@ Section 9.9: Cost Management & Budget Controls (265 lines total)
    - Status: ✅ Complete (2025-10-21)
 
 **No Other Deviations**: All other content matches HLD and FoundationCHILD specifications exactly
+
+---
+
+#### Entry 5: S7B2 Documentation Update (2025-10-28)
+
+**Status**: ✅ Complete
+**Type**: Documentation Update (No Code Changes)
+
+**Issue**: Stage 7 TI documentation referenced old cross-window feature names (pre-S7B2 fix)
+
+**Root Cause**: S7B2 architectural change (2025-10-28) renamed cross-window features from Stage 4-created names to Stage 3-created names with xwin_ prefix
+
+**Changes Applied**:
+- Section 7.3 (Lines 4411-4442): Updated walkthrough example with xwin_ feature names
+- Section 7.3 (Lines 4483-4486): Updated LLM output example with xwin_ feature names
+- Added xwin_ to CROSS_WINDOW_KEYWORDS documentation
+
+**Features Renamed** (S7B2):
+- hook_to_middle_energy_delta → xwin_hook_to_middle_energy
+- middle_to_closing_contrast → xwin_middle_to_closing_energy
+- eye_contact_consistency → xwin_eye_contact_consistency
+- word_density_std → xwin_word_density_std
+- energy_progression_slope → xwin_energy_progression_slope
+
+**Impact**: Documentation now matches S7B2 implementation. No code changes needed in Stage 7 (keyword matching still works).
+
+**Source**: PostBugFixUpdate.md - S7B2 fix documentation
+
+**Reconciliation**: Parent HLD (LLMAnalysisCHILD.md) also updated on 2025-10-28
 
 ---
 

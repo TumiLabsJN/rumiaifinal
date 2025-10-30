@@ -274,6 +274,12 @@ fields_per_tab = [
     ('PHASE_2_KEYWORD_3', '#antiinflammatory'),
     ('PHASE_2_TACTIC_1', 'Personal testimony'),  # From aggregate_content_classifications() -> content_tactics
     ('PHASE_2_TACTIC_2', 'Before/after reveal'),
+    ('', ''),
+    ('SUPPLEMENTARY_INSIGHT_1', 'middle_3_eye_contact_rate: 0.57 in top vs 0.43 in bottom (gap: 0.14)'),  # From winning_formulas.json -> supplementary_insights.universal_principles
+    ('SUPPLEMENTARY_INSIGHT_2', 'middle_1_energy_variance: 0.00 in top vs 0.00 in bottom (gap: 0.00)'),
+    ('SUPPLEMENTARY_INSIGHT_3', 'middle_3_energy_variance: 0.00 in top vs 0.00 in bottom (gap: 0.00)'),
+    ('SUPPLEMENTARY_INSIGHT_4', 'middle_3_energy_level: 0.10 in top vs 0.06 in bottom (gap: 0.04)'),
+    ('SUPPLEMENTARY_INSIGHT_5', 'hook_eye_contact_rate: 0.51 in top vs 0.63 in bottom (gap: 0.11)'),
 
     # --- Phase 3: Closing (last 3s) ---
     ('', ''),
@@ -293,6 +299,23 @@ fields_per_tab = [
     ('CAPTION_EMOJI_USAGE', 'some'),  # From aggregate_content_classifications() -> caption_analysis.emoji_usage
     ('CAPTION_HASHTAG_COUNT', '7'),  # From aggregate_content_classifications() -> caption_analysis.hashtag_count (mean)
 
+    # --- Ready Templates ---
+    ('', ''),
+    ('TEMPLATE_1_NAME', 'The Silent-to-Vocal Engagement Journey'),  # From winning_formulas.json -> creative_reports[0].formula_name
+    ('TEMPLATE_1_HOOK', 'Hook (0-3s): Strong eye contact (0.77), prominent face presence (0.42), establish direct connection'),  # From step_by_step_template
+    ('TEMPLATE_1_MIDDLE', 'Middle_1 (3-6s): Transition to pure visual storytelling (0.00 speech), let visuals speak'),  # First Middle line
+    ('TEMPLATE_1_CLOSING', 'Closing (23-26s): Visual-first silent closer, minimal verbal content (0.09), indirect gaze (0.19)'),  # From step_by_step_template
+    ('', ''),
+    ('TEMPLATE_2_NAME', 'The Visual Storytelling Formula'),  # From creative_reports[1].formula_name
+    ('TEMPLATE_2_HOOK', 'Hook: Use multiple visual angles or dynamic elements to create immediate visual interest'),
+    ('TEMPLATE_2_MIDDLE', 'Middle: Maintain visual variety with strategic scene transitions and visual enhancements'),
+    ('TEMPLATE_2_CLOSING', 'Closing: Return to primary visual focus while maintaining dynamic elements'),
+    ('', ''),
+    ('TEMPLATE_3_NAME', 'The Vocal Variety Formula'),  # From creative_reports[2].formula_name
+    ('TEMPLATE_3_HOOK', 'Hook: Establish vocal tone with clear articulation and moderate pacing'),
+    ('TEMPLATE_3_MIDDLE', 'Middle: Use strategic pauses and vocal variety for emphasis and engagement'),
+    ('TEMPLATE_3_CLOSING', 'Closing: Maintain vocal energy while delivering clear call-to-action'),
+
     # --- QR Codes ---
     ('', ''),
     ('QR_CODE_TOP_FILE', 'nutrition_18-33s_top.png'),  # From generate_qr_codes()
@@ -306,10 +329,12 @@ fields_per_tab = [
 ```
 
 **Notes**:
-- Total fields per tab: ~68 (including section dividers and empty rows)
+- Total fields per tab: ~85 (including section dividers and empty rows)
 - Field naming: `UPPERCASE_WITH_UNDERSCORES`
 - Multi-value fields use numbered suffixes (e.g., `KEYWORD_1`, `KEYWORD_2`, `KEYWORD_3`)
 - Empty rows (`('', '')`) provide visual separation between sections
+- Ready Templates: 12 fields (3 templates × 4 fields each: NAME, HOOK, MIDDLE, CLOSING)
+- Supplementary Insights: 5 fields (quantitative metrics from Stage 7 LLM analysis)
 - Section dividers use equals signs for page-level, dashes for subsections
 
 ---
@@ -1393,6 +1418,19 @@ def main():
         tab_data.append(['PHASE_2_TACTIC_1', 'Personal testimony'])  # Placeholder
         tab_data.append(['PHASE_2_TACTIC_2', 'Before/after reveal'])
 
+        # Supplementary Insights
+        tab_data.append(['', ''])
+        # Load winning_formulas.json to extract supplementary insights
+        winning_formulas_path = os.path.join(bucket_path, 'ml_analysis', 'llm', 'winning_formulas.json')
+
+        if os.path.exists(winning_formulas_path):
+            with open(winning_formulas_path, 'r') as f:
+                winning_formulas = json.load(f)
+                universal_principles = winning_formulas.get('supplementary_insights', {}).get('universal_principles', [])
+
+                for i in range(min(5, len(universal_principles))):
+                    tab_data.append([f'SUPPLEMENTARY_INSIGHT_{i+1}', universal_principles[i]])
+
         # Phase 3: Closing
         tab_data.append(['', ''])
         tab_data.append(['PHASE_3_LABEL', '--- Phase 3: Closing (last 3s) ---'])
@@ -1413,6 +1451,36 @@ def main():
         tab_data.append(['CAPTION_LENGTH', 'short'])
         tab_data.append(['CAPTION_EMOJI_USAGE', 'some'])
         tab_data.append(['CAPTION_HASHTAG_COUNT', '7'])
+
+        # Ready Templates
+        tab_data.append(['', ''])
+        # TODO: Load winning_formulas.json from bucket_path
+        winning_formulas_path = os.path.join(bucket_path, 'ml_analysis', 'llm', 'winning_formulas.json')
+
+        if os.path.exists(winning_formulas_path):
+            with open(winning_formulas_path, 'r') as f:
+                winning_formulas = json.load(f)
+                creative_reports = winning_formulas.get('creative_reports', [])
+
+                for i in range(min(3, len(creative_reports))):
+                    report = creative_reports[i]
+                    template_num = i + 1
+
+                    # Extract formula name
+                    tab_data.append([f'TEMPLATE_{template_num}_NAME', report.get('formula_name', '')])
+
+                    # Extract step-by-step template
+                    steps = report.get('step_by_step_template', [])
+                    hook = next((s for s in steps if s.startswith('Hook')), '')
+                    middle = next((s for s in steps if s.startswith('Middle')), '')
+                    closing = next((s for s in steps if s.startswith('Closing')), '')
+
+                    tab_data.append([f'TEMPLATE_{template_num}_HOOK', hook])
+                    tab_data.append([f'TEMPLATE_{template_num}_MIDDLE', middle])
+                    tab_data.append([f'TEMPLATE_{template_num}_CLOSING', closing])
+
+                    if i < 2:  # Add empty row between templates (not after last one)
+                        tab_data.append(['', ''])
 
         # QR Codes
         tab_data.append(['', ''])
@@ -3313,6 +3381,26 @@ fields = [
 
     ('TOTAL_UNIQUE_MENTIONS', '47'),
 
+    # --- Section 6: Creative Formulas ---
+    ('', ''),
+    # Bucket 1 (First winning bucket)
+    ('BUCKET_1_NAME', '18-33s'),  # From winner_analysis.json -> top_3_buckets[0]
+    ('BUCKET_1_FORMULA_1_NAME', 'The Silent-to-Vocal Engagement Journey'),  # From ml_analysis/llm/winning_formulas.json
+    ('BUCKET_1_FORMULA_2_NAME', 'The Visual Storytelling Formula'),
+    ('BUCKET_1_FORMULA_3_NAME', 'The Vocal Variety Formula'),
+    ('', ''),
+    # Bucket 2 (Second winning bucket)
+    ('BUCKET_2_NAME', '13-18s'),  # From winner_analysis.json -> top_3_buckets[1]
+    ('BUCKET_2_FORMULA_1_NAME', 'The Transformation Story'),
+    ('BUCKET_2_FORMULA_2_NAME', 'The Personal Journey'),
+    ('BUCKET_2_FORMULA_3_NAME', 'The Quick Win'),
+    ('', ''),
+    # Bucket 3 (Third winning bucket)
+    ('BUCKET_3_NAME', '60-90s'),  # From winner_analysis.json -> top_3_buckets[2]
+    ('BUCKET_3_FORMULA_1_NAME', 'The Step-by-Step Tutorial'),
+    ('BUCKET_3_FORMULA_2_NAME', 'The Expert Breakdown'),
+    ('BUCKET_3_FORMULA_3_NAME', 'The Deep Dive'),
+
     # --- QR Code Metadata ---
     ('', ''),
     ('QR_CODE_FILE', 'drinkpoppi_top.png'),
@@ -4336,6 +4424,27 @@ def main():
     tab_data.append(['', ''])
     tab_data.append(['TOTAL_UNIQUE_MENTIONS', str(mention_analysis['total_unique_mentions'])])
 
+    # Section 6: Creative Formulas
+    tab_data.append(['', ''])
+    # Extract bucket names and formulas from winning_formulas.json
+    for i, bucket_name in enumerate(winner_data['top_3_buckets'], 1):
+        bucket_path = os.path.join(base_path, 'buckets', f'bucket_{bucket_name}')
+        winning_formulas_path = os.path.join(bucket_path, 'ml_analysis', 'llm', 'winning_formulas.json')
+
+        tab_data.append([f'BUCKET_{i}_NAME', bucket_name])
+
+        if os.path.exists(winning_formulas_path):
+            with open(winning_formulas_path, 'r') as f:
+                winning_formulas = json.load(f)
+                creative_reports = winning_formulas.get('creative_reports', [])
+
+                for j in range(min(3, len(creative_reports))):
+                    formula_name = creative_reports[j].get('formula_name', '')
+                    tab_data.append([f'BUCKET_{i}_FORMULA_{j+1}_NAME', formula_name])
+
+        if i < 3:  # Add empty row between buckets (not after last one)
+            tab_data.append(['', ''])
+
     # QR Code Metadata
     tab_data.append(['', ''])
     tab_data.append(['QR_CODE_FILE', f"{args.competitor}_top.png"])
@@ -4689,6 +4798,36 @@ fields = [
     ('CONTENT_TACTIC_COMP_1_BUCKET_18_33S_2', 'Voiceover'),
     # ... similar for all combinations
 
+    # --- Supplementary Insights (Top 5 per bucket per competitor) ---
+    # Only included if competitor has this bucket in their top_3_buckets
+    ('', ''),
+    # Bucket 1 (18-33s) - Competitor 1
+    ('SUPP_INSIGHT_COMP_1_BUCKET_18_33S_1', 'middle_3_eye_contact_rate: 0.57 in top vs 0.43 in bottom (gap: 0.14)'),
+    ('SUPP_INSIGHT_COMP_1_BUCKET_18_33S_2', 'middle_1_energy_variance: 0.00 in top vs 0.00 in bottom (gap: 0.00)'),
+    ('SUPP_INSIGHT_COMP_1_BUCKET_18_33S_3', 'middle_3_energy_variance: 0.00 in top vs 0.00 in bottom (gap: 0.00)'),
+    ('SUPP_INSIGHT_COMP_1_BUCKET_18_33S_4', 'middle_3_energy_level: 0.10 in top vs 0.06 in bottom (gap: 0.04)'),
+    ('SUPP_INSIGHT_COMP_1_BUCKET_18_33S_5', 'hook_eye_contact_rate: 0.51 in top vs 0.63 in bottom (gap: 0.11)'),
+    # Bucket 1 (18-33s) - Competitor 2 (if applicable)
+    ('SUPP_INSIGHT_COMP_2_BUCKET_18_33S_1', 'middle_2_word_count: 25.3 in top vs 18.2 in bottom (gap: 7.1)'),
+    ('SUPP_INSIGHT_COMP_2_BUCKET_18_33S_2', '...'),
+    ('SUPP_INSIGHT_COMP_2_BUCKET_18_33S_3', '...'),
+    ('SUPP_INSIGHT_COMP_2_BUCKET_18_33S_4', '...'),
+    ('SUPP_INSIGHT_COMP_2_BUCKET_18_33S_5', '...'),
+    # Bucket 1 (18-33s) - Competitor 3 (if applicable)
+    ('SUPP_INSIGHT_COMP_3_BUCKET_18_33S_1', '...'),
+    ('SUPP_INSIGHT_COMP_3_BUCKET_18_33S_2', '...'),
+    ('SUPP_INSIGHT_COMP_3_BUCKET_18_33S_3', '...'),
+    ('SUPP_INSIGHT_COMP_3_BUCKET_18_33S_4', '...'),
+    ('SUPP_INSIGHT_COMP_3_BUCKET_18_33S_5', '...'),
+    ('', ''),
+    # Bucket 2 (13-18s) - Competitors (if bucket is common)
+    ('SUPP_INSIGHT_COMP_1_BUCKET_13_18S_1', '...'),
+    # ... similar for all applicable competitors
+    ('', ''),
+    # Bucket 3 (33-60s) - Competitors (if bucket is common)
+    ('SUPP_INSIGHT_COMP_1_BUCKET_33_60S_1', '...'),
+    # ... similar for all applicable competitors
+
     # --- Hashtag Strategy (aggregate across all buckets per competitor) ---
     ('', ''),
     ('HASHTAG_TOTAL_UNIQUE_COMP_1', '42'),
@@ -4794,10 +4933,44 @@ fields = [
 
 **Notes**:
 - Total fields: ~150-300 depending on competitor count (2-5)
-- 3 competitors example: ~287 fields
+- 3 competitors example: ~287 fields (+ variable supplementary insights fields)
 - Per-bucket aggregations: (3 buckets × N competitors) × (2 categories + 2 drivers + 2 hooks + 2 CTAs + 3 pain points + 3 keywords + 2 tactics) = significant field expansion
+- Supplementary Insights: Variable field count based on common buckets
 - Field naming: `{TYPE}_{COMP|BUCKET}_{INDEX}`
 - Empty rows for visual separation
+
+---
+
+### Implementation Notes for Supplementary Insights
+
+**Challenge**: Variable structure based on which competitors have which winning buckets
+
+**Logic**:
+1. **Bucket Discovery**:
+   - Load each competitor's `winner_analysis.json`
+   - Extract `top_3_buckets` for each competitor
+   - Find common buckets (buckets appearing in 2+ competitors' lists)
+   - Sort by frequency (most common first)
+
+2. **Conditional Field Generation**:
+   - Only create fields for common buckets
+   - Within each bucket, only include competitors who have that bucket in their `top_3_buckets`
+   - Field naming: `SUPP_INSIGHT_COMP_{comp_idx}_BUCKET_{bucket_key}_{insight_num}`
+   - Example: `SUPP_INSIGHT_COMP_1_BUCKET_18_33S_3`
+
+3. **Field Count Calculation**:
+   - Variable based on common buckets and applicable competitors
+   - Formula: `sum(len(bucket_competitors[bucket]) * 5 for bucket in common_buckets)`
+   - Example: 2 common buckets with [3, 2] competitors = (3×5) + (2×5) = 25 insight fields
+
+4. **Edge Cases**:
+   - If no common buckets exist across competitors → Section 5 not rendered (0 fields)
+   - If `winning_formulas.json` missing → Skip that competitor for that bucket
+   - If insights array has <5 items → Only populate available insights
+   - Bucket name formatting: "18-33s" → "18_33S" for field name
+
+5. **Maximum Fields**: 3 buckets × 5 competitors × 5 insights = 75 fields (extreme case)
+6. **Typical Fields**: 2 buckets × 3 competitors × 5 insights = 30 fields
 
 ---
 
@@ -5279,7 +5452,88 @@ def aggregate_per_bucket_content(client_id, competitors):
 
 ---
 
-#### Function 10: Inline Helper Functions
+#### Function 10: `extract_common_winning_buckets()`
+
+**Purpose**: Identify common winning buckets across multiple competitors
+
+**Used by**: Report 4 (Section 5: Supplementary Insights)
+
+**Signature**:
+```python
+def extract_common_winning_buckets(client_id, competitor_handles, mode='top', strategy='contrastive'):
+    """
+    Find common buckets that appear in 2+ competitors' top_3_buckets
+
+    Args:
+        client_id: Client identifier
+        competitor_handles: List of competitor handles (e.g., ['drinkpoppi', 'nike', 'vitalproteins'])
+        mode: 'top' or 'bottom'
+        strategy: 'contrastive' (default)
+
+    Returns:
+        dict: {
+            'common_buckets': ['18-33s', '13-18s', ...],  # Sorted by frequency
+            'bucket_competitors': {
+                '18-33s': ['@drinkpoppi', '@nike', '@vitalproteins'],
+                '13-18s': ['@drinkpoppi', '@vitalproteins'],
+                ...
+            }
+        }
+    """
+    from collections import Counter
+    import json
+    import os
+
+    bucket_frequency = Counter()
+    competitor_buckets = {}
+
+    # Load each competitor's top_3_buckets
+    for handle in competitor_handles:
+        base_path = f"/data/clients/{client_id}/competitors/{handle}/{mode}_{strategy}"
+        winner_path = os.path.join(base_path, 'winner_analysis.json')
+
+        if os.path.exists(winner_path):
+            with open(winner_path, 'r') as f:
+                winner_data = json.load(f)
+                top_3 = winner_data.get('top_3_buckets', [])
+                competitor_buckets[handle] = top_3
+
+                for bucket in top_3:
+                    bucket_frequency[bucket] += 1
+
+    # Find common buckets (appear in 2+ competitors)
+    common_buckets = [bucket for bucket, count in bucket_frequency.most_common() if count >= 2]
+
+    # Map competitors to each common bucket
+    bucket_competitors = {}
+    for bucket in common_buckets:
+        bucket_competitors[bucket] = [
+            f"@{handle}" for handle, buckets in competitor_buckets.items()
+            if bucket in buckets
+        ]
+
+    return {
+        'common_buckets': common_buckets,
+        'bucket_competitors': bucket_competitors
+    }
+```
+
+**Example Usage**:
+```python
+result = extract_common_winning_buckets('acme', ['drinkpoppi', 'nike', 'vitalproteins'])
+# Returns:
+# {
+#     'common_buckets': ['18-33s', '13-18s'],
+#     'bucket_competitors': {
+#         '18-33s': ['@drinkpoppi', '@nike', '@vitalproteins'],
+#         '13-18s': ['@drinkpoppi', '@vitalproteins']
+#     }
+# }
+```
+
+---
+
+#### Function 11: Inline Helper Functions
 
 ```python
 def format_views(view_count):
@@ -5634,6 +5888,45 @@ def main():
                 tab_data.append([f'CONTENT_TACTIC_COMP_{i}_BUCKET_{bucket_key}_{j}', tactic.replace('_', ' ').title()])
 
             tab_data.append(['', ''])
+
+    # Supplementary Insights (per-bucket, per-competitor)
+    tab_data.append(['', ''])
+
+    # Step 1: Find common winning buckets across competitors
+    common_bucket_data = extract_common_winning_buckets(args.client, competitors)
+    common_buckets = common_bucket_data['common_buckets']
+    bucket_competitors_map = common_bucket_data['bucket_competitors']
+
+    # Step 2: For each common bucket, extract insights for applicable competitors
+    for bucket_name in common_buckets:
+        applicable_competitors = bucket_competitors_map[bucket_name]
+
+        for competitor_handle in applicable_competitors:
+            # Find competitor's global index (1-based)
+            competitor_clean = competitor_handle.replace('@', '')
+            comp_global_idx = competitors.index(competitor_clean) + 1
+
+            # Load winning_formulas.json for this competitor + bucket
+            base_path = f"/data/clients/{args.client}/competitors/{competitor_clean}/{args.mode}_{args.strategy}"
+            bucket_path = os.path.join(base_path, 'buckets', f'bucket_{bucket_name}')
+            formulas_path = os.path.join(bucket_path, 'ml_analysis', 'llm', 'winning_formulas.json')
+
+            if os.path.exists(formulas_path):
+                with open(formulas_path, 'r') as f:
+                    formulas = json.load(f)
+                    insights = formulas.get('supplementary_insights', {}).get('universal_principles', [])
+
+                    # Extract top 5 insights
+                    bucket_key = bucket_name.replace('-', '_').upper()  # e.g., "18_33S"
+                    for i in range(min(5, len(insights))):
+                        field_name = f'SUPP_INSIGHT_COMP_{comp_global_idx}_BUCKET_{bucket_key}_{i+1}'
+                        tab_data.append([field_name, insights[i]])
+
+            # Add empty row between competitors within same bucket
+            tab_data.append(['', ''])
+
+        # Add empty row between buckets
+        tab_data.append(['', ''])
 
     # Hashtag Strategy (aggregate per competitor)
     tab_data.append(['', ''])

@@ -165,16 +165,19 @@ Be objective and evidence-based: select classifications that best match the vide
 **Category 2: Hook Strategies** (Single Selection)
 {json.dumps(taxonomy['hook_strategies'], indent=2)}
 
-**Category 3: Audience Pain Points** (Multiple Selection)
+**Category 3: Closing Strategies** (Single Selection)
+{json.dumps(taxonomy['closing_strategies'], indent=2)}
+
+**Category 4: Audience Pain Points** (Multiple Selection)
 {json.dumps(taxonomy['audience_pain_points'], indent=2)}
 
-**Category 4: Trending Keywords** (Multiple Selection)
+**Category 5: Trending Keywords** (Multiple Selection)
 {json.dumps(taxonomy['trending_keywords'], indent=2)}
 
-**Category 5: Engagement Drivers** (Multiple Selection)
+**Category 6: Engagement Drivers** (Multiple Selection)
 {json.dumps(taxonomy['engagement_drivers'], indent=2)}
 
-**Category 6: Content Tactics** (Multiple Selection)
+**Category 7: Content Tactics** (Multiple Selection)
 {json.dumps(taxonomy['content_tactics'], indent=2)}
 
 ---
@@ -198,11 +201,13 @@ Be objective and evidence-based: select classifications that best match the vide
 
 Select the best-matching categories from the taxonomy above:
 
-**Categories 1-2: Single Selection (REQUIRED)**
+**Categories 1-3: Single Selection (REQUIRED)**
 
 **Content Category**: Select exactly ONE category that best describes the primary content format.
 
 **Hook Strategy**: Select exactly ONE strategy that best describes how the video opens.
+
+**Closing Strategy**: Select exactly ONE strategy that best describes how the video ends.
 
 **IMPORTANT**: You MUST copy the category name EXACTLY as written in the taxonomy. Do not paraphrase, abbreviate, or modify the string. Mismatched spelling or underscores will cause system errors.
 
@@ -210,7 +215,7 @@ Select the best-matching categories from the taxonomy above:
 
 **String Matching**: Copy category names character-for-character from taxonomy above.
 
-**Categories 3-6: Multiple Selection (0-N)**
+**Categories 4-7: Multiple Selection (0-N)**
 
 Select ALL applicable items from the taxonomy that are clearly present in the video:
 
@@ -308,13 +313,14 @@ Assign confidence based on two factors: (1) How well video matches taxonomy, (2)
 
 ### Output Format
 
-Return a single JSON object with ALL 12 fields present. Do not add fields beyond this schema.
+Return a single JSON object with ALL 13 fields present. Do not add fields beyond this schema.
 
 **Required fields** (must be non-null):
 - video_id: String (provided in input)
 - taxonomy_version: Always use "stage2.6_output"
 - content_category: String (exactly one from taxonomy)
 - hook_strategy: String (exactly one from taxonomy)
+- closing_strategy: String (exactly one from taxonomy)
 - confidence: "high"|"medium"|"low"
 - transcript_available: true|false
 - note: String with explanation OR null if high confidence

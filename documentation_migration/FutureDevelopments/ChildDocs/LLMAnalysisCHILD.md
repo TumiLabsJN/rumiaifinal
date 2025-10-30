@@ -901,19 +901,22 @@ def generate_cross_window_patterns(rf_video_data: dict) -> list[str]:
 
     See Stage7PromptCritique.md Gap #3 lines 3290-3308 for full rationale.
 
-    Cross-Window Features (computed by Stage 4):
-    1. hook_to_middle_energy_delta: middle_avg_energy - hook_energy
-    2. middle_to_closing_contrast: closing_energy - middle_avg_energy
-    3. eye_contact_consistency: std_dev([hook, middle_*, closing])
-    4. word_density_std: std_dev([word_count across windows])
-    5. energy_progression_slope: linear regression slope of energy
+    Cross-Window Features (computed by Stage 3, passed through Stage 4):
+    1. xwin_hook_to_middle_energy: middle_avg_energy - hook_energy (buckets 9-13s+)
+    2. xwin_middle_to_closing_energy: closing_energy - middle_avg_energy (buckets 9-13s+)
+    3. xwin_eye_contact_consistency: std_dev([eye_contact_rate across windows]) (buckets 3-9s+)
+    4. xwin_word_density_std: std_dev([word_count across windows]) (buckets 3-9s+)
+    5. xwin_energy_progression_slope: linear regression slope of energy (buckets 3-9s+)
+
+    **S7B2 Note** (2025-10-28): Cross-window features now created in Stage 3 (not Stage 4) with xwin_ prefix
+    to avoid collision with window-specific features. See PostBugFixUpdate.md for details.
 
     Args:
         rf_video_data: Video-level RF feature importance data
             {
                 'feature_importance': [
                     {
-                        'feature': 'hook_to_middle_energy_delta',
+                        'feature': 'xwin_hook_to_middle_energy',
                         'importance': 0.18,
                         'rank': 4,
                         'top_performer_avg': 0.15,
@@ -937,9 +940,9 @@ def generate_cross_window_patterns(rf_video_data: dict) -> list[str]:
         When features missing (graceful degradation):
         [
             "Cross-window progression analysis requires Stage 6 RF cross-window features",
-            "These features are computed in Stage 4 (FeatureTransformationCHILD.md Section 6.5)",
-            "Expected features: hook_to_middle_energy_delta, middle_to_closing_contrast, ...",
-            "Stage 7 will automatically use these features once Stage 4/6 pipeline is complete"
+            "These features are computed in Stage 3 (Stage3_HLD.md Section 4.5), passed through Stage 4",
+            "Expected features: xwin_hook_to_middle_energy, xwin_middle_to_closing_energy, ...",
+            "Stage 7 will automatically use these features once Stage 3/4/6 pipeline is complete"
         ]
     """
     cross_features = rf_video_data.get('feature_importance', [])
@@ -956,9 +959,9 @@ def generate_cross_window_patterns(rf_video_data: dict) -> list[str]:
         # Graceful fallback
         return [
             "Cross-window progression analysis requires Stage 6 RF cross-window features",
-            "These features are computed in Stage 4 (FeatureTransformationCHILD.md Section 6.5)",
-            "Expected features: hook_to_middle_energy_delta, middle_to_closing_contrast, eye_contact_consistency, word_density_std, energy_progression_slope",
-            "Stage 7 will automatically use these features once Stage 4/6 pipeline is complete"
+            "These features are computed in Stage 3 (Stage3_HLD.md Section 4.5), passed through Stage 4",
+            "Expected features: xwin_hook_to_middle_energy, xwin_middle_to_closing_energy, xwin_eye_contact_consistency, xwin_word_density_std, xwin_energy_progression_slope (S7B2: xwin_ prefix required)",
+            "Stage 7 will automatically use these features once Stage 3/4/6 pipeline is complete"
         ]
 
     # If features exist, generate insights
@@ -979,11 +982,11 @@ def generate_cross_window_patterns(rf_video_data: dict) -> list[str]:
 def _interpret_cross_window_feature(feature_name: str) -> str:
     """Translate cross-window feature name to human-readable pattern."""
     interpretations = {
-        'hook_to_middle_energy_delta': 'energy builds from hook to middle',
-        'middle_to_closing_contrast': 'strong energy peak in closing vs middle',
-        'eye_contact_consistency': 'consistent eye contact throughout (bookend pattern)',
-        'word_density_std': 'varied pacing across windows',
-        'energy_progression_slope': 'steady energy progression from start to end'
+        'xwin_hook_to_middle_energy': 'energy builds from hook to middle',
+        'xwin_middle_to_closing_energy': 'strong energy peak in closing vs middle',
+        'xwin_eye_contact_consistency': 'consistent eye contact throughout (bookend pattern)',
+        'xwin_word_density_std': 'varied pacing across windows',
+        'xwin_energy_progression_slope': 'steady energy progression from start to end'
     }
     return interpretations.get(feature_name, feature_name.replace('_', ' '))
 

@@ -173,21 +173,187 @@ SEMANTIC_INTERPRETATIONS = {
         'notes': 'Raw word count from Whisper transcription. Production range: 0-44 words per window. Note: Interpretation varies by window duration - same count represents different speaking rates in different buckets.'
     },
 
-    # TODO: speech_coverage, word_density_std
+    'speech_coverage': {
+        'metric_type': 'ratio',
+        'direction': 'lower_is_better',
+        'unit': 'proportion of window with speech',
+        'data_range': (0.0, 0.889),
+        'ranges': [
+            (0.0, 0.2, 'minimal coverage', 'mostly silent/music'),
+            (0.2, 0.4, 'low coverage', 'some speech breaks'),
+            (0.4, 0.6, 'moderate coverage', 'balanced speech/silence'),
+            (0.6, 0.8, 'high coverage', 'mostly speaking'),
+            (0.8, 1.0, 'constant speech', 'continuous talking')
+        ],
+        'notes': 'Measures proportion of temporal window with speech. Production range: 0.0-0.889. Top performers avg 0.078-0.179 (minimal/low) vs bottom 0.778-0.889 (high/constant), suggesting breathing room performs better.'
+    },
+
+    'word_density_std': {
+        'metric_type': 'variance',
+        'direction': 'lower_is_better',
+        'unit': 'std deviation of word count across windows',
+        'data_range': (0, 25),
+        'ranges': [
+            (0, 3, 'very consistent', 'steady pacing throughout'),
+            (3, 8, 'consistent', 'minor pacing variation'),
+            (8, 15, 'varied', 'noticeable pacing changes'),
+            (15, 30, 'very varied', 'significant pacing shifts')
+        ],
+        'notes': 'Std deviation of word_count across temporal windows. Measures pacing consistency. Production averages: top 0.389 vs bottom 1.873 (includes many silent videos). Individual video range: 0-25. Lower std = more consistent pacing.'
+    },
 
     # ========================================
-    # REMAINING CATEGORIES (15 features) - TODO
+    # CATEGORY 4: EYE CONTACT/GAZE (3 features) ✅ FINALIZED
     # ========================================
-    # CATEGORY 4: Eye Contact/Gaze (3 features)
-    #   - eye_contact_rate, eye_contact_consistency, gaze_variance
-    # CATEGORY 5: Scene/Pacing (4 features)
-    #   - scene_count, scene_duration_variance, longest_scene, shortest_scene
-    # CATEGORY 6: Movement/Temporal/Metadata (7 features)
-    #   - gesture_count, energy_progression_slope, middle_to_closing_energy,
-    #     middle_to_closing_delta, hour, day_of_week, dominant_emotion_id
+
+    'eye_contact_rate': {
+        'metric_type': 'ratio',
+        'direction': 'neutral',
+        'unit': 'proportion of time with eye contact',
+        'data_range': (0.0, 0.844),
+        'ranges': [
+            (0.0, 0.2, 'minimal eye contact', 'rarely looks at camera'),
+            (0.2, 0.5, 'occasional eye contact', 'some camera engagement'),
+            (0.5, 0.7, 'moderate eye contact', 'balanced camera presence'),
+            (0.7, 0.9, 'frequent eye contact', 'mostly looks at camera'),
+            (0.9, 1.0, 'constant eye contact', 'continuous camera gaze')
+        ],
+        'notes': 'Measures proportion of window with eye contact (MediaPipe detection). Production range: 0.0-0.844. Mixed patterns across windows, direction is neutral as optimal eye contact appears context-dependent.'
+    },
+
+    'eye_contact_consistency': {
+        'metric_type': 'variance',
+        'direction': 'lower_is_better',
+        'unit': 'std deviation of eye contact across windows',
+        'data_range': (0.021, 0.225),
+        'ranges': [
+            (0.0, 0.08, 'very consistent', 'steady eye contact throughout'),
+            (0.08, 0.15, 'consistent', 'minor eye contact variation'),
+            (0.15, 0.22, 'varied', 'noticeable eye contact changes'),
+            (0.22, 0.40, 'very varied', 'significant eye contact shifts')
+        ],
+        'notes': 'Cross-window feature (xwin_eye_contact_consistency) measuring std of eye_contact_rate across windows. Production: top 0.141 vs bottom 0.225. Lower variance = more consistent eye contact throughout video.'
+    },
+
+    'gaze_variance': {
+        'metric_type': 'variance',
+        'direction': 'lower_is_better',
+        'unit': 'variance in gaze direction within window',
+        'data_range': (0.0, 0.154),
+        'ranges': [
+            (0.0, 0.001, 'no movement', 'static or no face detected'),
+            (0.001, 0.010, 'very stable', 'minimal gaze shifts'),
+            (0.010, 0.025, 'stable', 'slight gaze movement'),
+            (0.025, 0.055, 'moderate movement', 'noticeable gaze changes'),
+            (0.055, 0.200, 'varied', 'significant gaze movement')
+        ],
+        'notes': 'Measures gaze stability within single window (MediaPipe tracking). Range: 0.0-0.154. Many videos show 0.0 (no face/static). Top performers typically 0.001-0.010. Production: closing top=0.007 vs bottom=0.024. Lower variance = more focused gaze.'
+    },
+
+    # ========================================
+    # CATEGORY 5: SCENE/PACING (4 features) ✅ FINALIZED
+    # ========================================
+
+    'scene_count': {
+        'metric_type': 'count',
+        'direction': 'lower_is_better',
+        'unit': 'number of scene changes',
+        'data_range': (1, 17),
+        'ranges': [
+            (0, 2, 'minimal cuts', 'Up to 2 scene changes'),
+            (2, 5, 'moderate cuts', '2 to 5 scene changes'),
+            (5, 8, 'frequent cuts', '5 to 8 scene changes'),
+            (8, 15, 'rapid cuts', '8-15 scene changes'),
+            (15, 100, 'very rapid cuts', 'Over 15 scene changes')
+        ],
+        'notes': 'Methodology: Semantic categories based on absolute scene count. Production shows lower_is_better pattern: top performers avg 4.5-5.2 vs bottom 5.4-7.9. Hook/closing typically 1-2 scenes (3s windows), middle segments 1-17 scenes (6.5-10.8s windows). Scene changes are duration-agnostic and creator-friendly.'
+    },
+
+    'scene_duration_variance': {
+        'metric_type': 'variance',
+        'direction': 'lower_is_better',
+        'unit': 'variance in scene durations (seconds²)',
+        'data_range': (0.0, 33.25),
+        'ranges': [
+            (0.0, 0.001, 'no variation', 'Single scene or identical scene lengths'),
+            (0.001, 0.50, 'very consistent', 'Minimal scene length differences'),
+            (0.50, 1.50, 'consistent', 'Some scene length variation'),
+            (1.50, 5.0, 'varied', 'Noticeable scene length variation'),
+            (5.0, 40.0, 'highly varied', 'Erratic scene length variation')
+        ],
+        'notes': 'Methodology: Quartile-based with semantic adjustments. Measures variance in scene durations within window (in seconds²). Lower variance = more consistent pacing. Hook: 51% have zero variance (static hold). Closing: 20% zero variance. Middle windows: higher absolute values due to longer duration. Top performers consistently show lower variance than bottom performers across all windows.'
+    },
+
+    'longest_scene': {
+        'metric_type': 'duration',
+        'direction': 'higher_is_more',
+        'unit': 'seconds',
+        'data_range': (0.63, 16.2),
+        'ranges': [
+            (0.0, 1.5, 'quick cuts', 'Longest scene under 1.5 seconds'),
+            (1.5, 3.0, 'moderate hold', 'Longest scene 1.5-3 seconds'),
+            (3.0, 5.0, 'extended hold', 'Longest scene 3-5 seconds'),
+            (5.0, 8.0, 'long hold', 'Longest scene 5-8 seconds'),
+            (8.0, 20.0, 'very long hold', 'Longest scene over 8 seconds')
+        ],
+        'notes': 'Methodology: Duration-based semantic categories. Measures longest single scene within window. Hook: 47% have full 3s as one scene (static hold). Closing: 20% have full 3s. Middle windows scale proportionally with duration. Direction is higher_is_more based on hook data showing longer opening scenes in top performers (1.61s vs 1.31s from earlier production analysis).'
+    },
+
+    'shortest_scene': {
+        'metric_type': 'duration',
+        'direction': 'neutral',
+        'unit': 'seconds',
+        'data_range': (0.03, 16.2),
+        'ranges': [
+            (0.0, 0.3, 'flash cut', 'Shortest scene under 0.3 seconds'),
+            (0.3, 0.7, 'quick cut', 'Shortest scene 0.3-0.7 seconds'),
+            (0.7, 1.5, 'standard cut', 'Shortest scene 0.7-1.5 seconds'),
+            (1.5, 3.0, 'slow cut', 'Shortest scene 1.5-3 seconds'),
+            (3.0, 20.0, 'no rapid cuts', 'Shortest scene over 3 seconds')
+        ],
+        'notes': 'Methodology: Duration-based semantic categories with domain expertise. Measures shortest single scene within window. Hook: 51% have full 3s (no cuts). Closing: 39% have full 3s. Direction is neutral based on production data showing minimal discrimination (top=0.934s vs bottom=0.939s). Extreme outliers exist where even shortest scene is 3s+ (videos with very few, very long scenes).'
+    },
+
+    # ========================================
+    # CATEGORY 6: MOVEMENT/TEMPORAL/METADATA (7 features) - PARTIAL
+    # ========================================
+
+    'hour': {
+        'metric_type': 'count',
+        'direction': 'neutral',
+        'unit': 'hour of day (0-23)',
+        'data_range': (0, 23),
+        'ranges': [
+            (0, 6, 'late night', 'Posted between midnight-6am'),
+            (6, 12, 'morning', 'Posted between 6am-noon'),
+            (12, 18, 'afternoon', 'Posted between noon-6pm'),
+            (18, 24, 'evening', 'Posted between 6pm-midnight')
+        ],
+        'notes': 'Methodology: Semantic categories based on time-of-day conventions. Metadata feature from TikTok post timestamp. Direction is neutral as optimal posting time is context-dependent and platform-specific.'
+    },
+
+    'day_of_week': {
+        'metric_type': 'count',
+        'direction': 'neutral',
+        'unit': 'day of week (0=Monday, 6=Sunday)',
+        'data_range': (0, 6),
+        'ranges': [
+            (0, 1, 'Monday', 'Posted on Monday'),
+            (1, 2, 'Tuesday', 'Posted on Tuesday'),
+            (2, 3, 'Wednesday', 'Posted on Wednesday'),
+            (3, 4, 'Thursday', 'Posted on Thursday'),
+            (4, 5, 'Friday', 'Posted on Friday'),
+            (5, 6, 'Saturday', 'Posted on Saturday'),
+            (6, 7, 'Sunday', 'Posted on Sunday')
+        ],
+        'notes': 'Methodology: Semantic categories (day names). Metadata feature from TikTok post timestamp. Direction is neutral as optimal posting day varies by niche and audience. 0=Monday, 6=Sunday format.'
+    },
+
+    # TODO: gesture_count, energy_progression_slope, middle_to_closing_energy,
+    #       middle_to_closing_delta, dominant_emotion_id
 }
 
-# NOTE: 4 of 26 features defined (Visual Composition complete)
+# NOTE: 21 of 26 features defined (Categories 1-5 complete, Category 6 partial: 2/7 features)
 # See FeatureThresholdLogic.md for methodology and process
 # See LLMOutputFix.md for finalized decisions
 

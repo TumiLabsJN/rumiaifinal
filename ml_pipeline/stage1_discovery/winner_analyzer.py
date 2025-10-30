@@ -96,22 +96,79 @@ class WinnerAnalyzer:
 
     def _select_top_performers(self, videos: List[Dict]) -> List[Dict]:
         """
-        Select top performers for analysis.
+        Select top performers ensuring exactly TOP_PERFORMERS_FOR_ANALYSIS (100)
+        videos with valid durations.
 
-        Normal mode: top 100 if ≥100 available
-        Degraded mode: all videos if < 100 available
+        Iterates through sorted videos (by engagement DESC) and collects
+        videos with valid durations (not None, within 0-120s range) until
+        reaching target count or exhausting available videos.
+
+        Normal mode: Collect 100 videos with valid durations
+        Degraded mode: Return all available if < 100 valid videos exist
+
+        Args:
+            videos: Filtered videos sorted by engagement DESC
+
+        Returns:
+            List of top performer videos (up to TOP_PERFORMERS_FOR_ANALYSIS)
+            All returned videos have valid durations for bucketing
+
+        Note:
+            Fix implemented 2025-10-30 (WinningVideoFix.md)
+            Ensures exactly 100 videos in winner_distribution (not 92)
         """
         if len(videos) < TOP_PERFORMERS_FOR_ANALYSIS:
-            # Degraded mode
+            # Degraded mode: Not enough videos total
             logger.warning(
                 f"Small dataset ({len(videos)} videos). Analyzing all available. "
                 f"Statistical validity may be limited. Recommended: ≥100 videos."
             )
             return videos
-        else:
-            # Normal mode
-            logger.info(f"Analyzing top {TOP_PERFORMERS_FOR_ANALYSIS} performers")
-            return videos[:TOP_PERFORMERS_FOR_ANALYSIS]
+
+        # Normal mode: Select exactly 100 videos with valid durations
+        selected = []
+        skipped_invalid_duration = 0
+
+        for video in videos:
+            duration = video.get("duration")
+
+            # Check 1: Duration exists
+            if duration is None:
+                skipped_invalid_duration += 1
+                continue
+
+            # Check 2: Duration within valid range (0-120s)
+            try:
+                bucket = assign_bucket(duration)  # Raises ValueError if > 120s
+                selected.append(video)
+
+                # Stop when we have exactly 100
+                if len(selected) >= TOP_PERFORMERS_FOR_ANALYSIS:
+                    break
+
+            except ValueError:
+                # Duration > 120s (invalid for our bucket system)
+                skipped_invalid_duration += 1
+                continue
+
+        # Log results
+        logger.info(f"Analyzing top {TOP_PERFORMERS_FOR_ANALYSIS} performers")
+
+        if skipped_invalid_duration > 0:
+            logger.info(
+                f"Skipped {skipped_invalid_duration} videos with invalid/missing duration "
+                f"during top performer selection"
+            )
+
+        # Handle edge case: Not enough valid videos
+        if len(selected) < TOP_PERFORMERS_FOR_ANALYSIS:
+            logger.warning(
+                f"Only {len(selected)} videos with valid durations available "
+                f"(target: {TOP_PERFORMERS_FOR_ANALYSIS}). Analyzing {len(selected)} videos. "
+                f"Statistical validity may be limited."
+            )
+
+        return selected
 
     def _bucket_top_performers(self, top_performers: List[Dict]) -> Dict[str, int]:
         """

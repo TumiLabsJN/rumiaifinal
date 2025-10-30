@@ -255,3 +255,102 @@ def get_logger(name: str) -> logging.Logger:
         logger.addHandler(handler)
 
     return logger
+
+
+def extract_transcript_ending(text: str, max_words: int = 10) -> str:
+    """
+    Extract last N words from transcript for closing strategy analysis.
+
+    HARDENED against edge cases:
+    - Ellipsis handling (strips trailing punctuation)
+    - Empty/None transcripts (returns "")
+    - No punctuation (splits by whitespace only)
+    - Multiple whitespace/newlines (normalizes with split())
+
+    Args:
+        text: Full transcript text from Whisper
+        max_words: Number of words to extract from end (default: 10)
+
+    Returns:
+        str: Last N words, or full text if shorter, or empty string if no text
+
+    Examples:
+        >>> extract_transcript_ending("Text here...")
+        "Text here"
+
+        >>> extract_transcript_ending("Word " * 5)
+        "Word Word Word Word Word"
+
+        >>> extract_transcript_ending("no punctuation here")
+        "no punctuation here"
+
+        >>> extract_transcript_ending("text  \n\n  more")
+        "text more"
+    """
+    # DEFENSE 1: Handle empty/None input
+    if not text or not text.strip():
+        return ""
+
+    # DEFENSE 4: Normalize whitespace (handles multiple spaces, newlines, tabs)
+    # .split() with no args splits on ANY whitespace and removes empty strings
+    text = text.strip()
+    words = text.split()  # Handles "text  \n\n  more" → ["text", "more"]
+
+    if not words:
+        return ""
+
+    # DEFENSE 2: Handle transcripts shorter than max_words
+    if len(words) <= max_words:
+        # Return all words joined (already normalized)
+        return " ".join(words)
+
+    # DEFENSE 3: Extract last N words (no regex needed - whitespace already handled)
+    ending_words = words[-max_words:]
+    ending_text = " ".join(ending_words)
+
+    # DEFENSE 1 (Ellipsis): Strip trailing punctuation (., !, ?, ...)
+    # This handles "... text here..." → "text here"
+    ending_text = ending_text.rstrip('.!?…')  # Note: … is single char ellipsis
+
+    return ending_text.strip()
+
+
+def extract_transcript_opening(text: str, max_words: int = 10) -> str:
+    """
+    Extract first N words from transcript for hook strategy analysis.
+
+    COMPANION FUNCTION to extract_transcript_ending for symmetry.
+    Uses same hardened approach (whitespace normalization, no regex).
+
+    Args:
+        text: Full transcript text from Whisper
+        max_words: Number of words to extract from beginning (default: 10)
+
+    Returns:
+        str: First N words, or full text if shorter, or empty string if no text
+
+    Examples:
+        >>> extract_transcript_opening("This is why you need to try this. It changed my life.", max_words=10)
+        "This is why you need to try this"
+
+        >>> extract_transcript_opening("Short text", max_words=10)
+        "Short text"
+    """
+    # Handle empty or None input
+    if not text or not text.strip():
+        return ""
+
+    # Normalize whitespace (handles multiple spaces, newlines, tabs)
+    text = text.strip()
+    words = text.split()  # Split on any whitespace
+
+    if not words:
+        return ""
+
+    # Handle transcripts shorter than max_words
+    if len(words) <= max_words:
+        return " ".join(words)
+
+    # Extract first N words
+    opening_words = words[:max_words]
+    return " ".join(opening_words)
