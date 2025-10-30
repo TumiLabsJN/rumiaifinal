@@ -211,14 +211,18 @@ class Stage6Input:
     # Aggregated Features CSV
     aggregated_csv_path: str        # Path to aggregated features CSV
                                     # Location: "{ml_analysis_dir}/aggregated_features.csv"
-                                    # Schema: 129 columns for bucket "18-33s" (21 features × 6 windows + 3 metadata)
+                                    # Schema: 135 columns for bucket "18-33s" (21×6 + 3 metadata + 5 xwin + 1 label) - S7B2 Fix
+                                    # Source of Truth: config/bucket_definitions.py::get_stage3_expected_feature_count(bucket)
+                                    # Created by Stage 3, includes xwin features (MLPlanningv2.md Section 3.3.1)
                                     # Source: Stage 3 (Feature Aggregation)
                                     # Purpose: Distribution analysis for video-level RF
 
     # RF Transformed CSV
     rf_transformed_csv_path: str    # Path to video-level RF transformed CSV
                                     # Location: "{ml_analysis_dir}/rf_transformed.csv"
-                                    # Schema: 178-190 columns (includes cross-window features)
+                                    # Schema: 147-168 columns (includes xwin features from Stage 3) - S7B2 Fix
+                                    # Calculation: get_stage3_expected_feature_count(bucket) + 12 (Stage 4 transformations)
+                                    # Example bucket 18-33s: 135 + 12 = 147
                                     # Source: Stage 4 (Feature Transformation)
 
     # Window RF Transformed CSVs (6-7 files)
@@ -378,7 +382,9 @@ CheckpointSchema = {
 VideoLevelRFModelSchema = {
     # Scikit-learn RandomForestClassifier attributes
     "feature_importances_": "numpy.ndarray",  # Required, shape (n_features,), Range: 0.0-1.0
-                                              # Length: 183 for bucket "18-33s" (includes cross-window features)
+                                              # Length: 147 for bucket "18-33s" (S7B2 Fix)
+                                              # Calculation: get_stage3_expected_feature_count(bucket) + 12
+                                              # Includes xwin features from Stage 3, passed through Stage 4
                                               # Example: [0.22, 0.18, 0.15, ...]
 
     "feature_names_in_": "numpy.ndarray",     # Required, shape (n_features,), dtype: str
@@ -486,7 +492,7 @@ AggregatedFeaturesSchema = {
     "closing_energy_level": float,            # Required, Range: 0.0-1.0, Example: 0.75
     # ... (20 more closing features)
 
-    # Total: 3 metadata + 126 window features = 129 columns for bucket "18-33s"
+    # Total: 3 metadata + 126 window features + 5 xwin + 1 label = 135 columns for bucket "18-33s" (S7B2 Fix)
 }
 
 # ===== INPUT SCHEMA 7: Stage 4 Window RF Transformed CSVs =====
@@ -528,8 +534,9 @@ VideoRFAnalysisSchema = {
     "bucket": str,                            # Required, Example: "18-33s"
     "hashtag": str,                           # Optional (can be None), Example: "#nutrition"
     "video_count": int,                       # Required, Range: 50-300, Example: 100
-    "input_features": int,                    # Required, Range: 24-220, Example: 178
-                                              # Varies by bucket (includes cross-window features)
+    "input_features": int,                    # Required, Range: 37-168, Example: 147 (S7B2 Fix)
+                                              # Varies by bucket (includes xwin features from Stage 3)
+                                              # Calculation: get_stage3_expected_feature_count(bucket) + 12
 
     "feature_importance": list[dict],         # Required, Length: 10 (top 10 features)
     # Each feature_importance entry:
@@ -768,7 +775,9 @@ def generate_video_rf_json(bucket_path: str, bucket: str) -> dict:
     rf_model = joblib.load(model_path)
 
     # ===== Step 2: Extract Feature Importance =====
-    feature_importances = rf_model.feature_importances_  # NumPy array (length = 183 for bucket 18-33s)
+    feature_importances = rf_model.feature_importances_  # NumPy array (length = 147 for bucket 18-33s, S7B2 Fix)
+                                                          # Calculation: get_stage3_expected_feature_count(bucket) + 12
+                                                          # Includes xwin features from Stage 3
     feature_names = rf_model.feature_names_in_  # From sklearn attribute
 
     # Sort features by importance, take top 10
@@ -783,7 +792,7 @@ def generate_video_rf_json(bucket_path: str, bucket: str) -> dict:
 
     # ===== Step 3: Load aggregated_features.csv for Distribution Analysis =====
     # NOTE: Video-level uses aggregated_features.csv (Stage 3) not rf_transformed.csv (Stage 4)
-    # Rationale: Video-level RF includes cross-window features computed from raw aggregated values
+    # Rationale (S7B2): Video-level RF includes xwin features created by Stage 3 in aggregated_features.csv
     agg_csv_path = os.path.join(bucket_path, 'ml_analysis/aggregated_features.csv')
     df = pd.read_csv(agg_csv_path)
 
@@ -1441,7 +1450,7 @@ K-Means JSON closing_kmeans_analysis.json.tmp cluster sizes ([35, 42, 22]) sum t
 | `analysis_type` | Must equal `"random_forest"` | `"random_forest"` | `"kmeans"` | Reject, exit code 3 |
 | `bucket` | Must match input bucket parameter | `"18-33s"` | `"0-3s"` (mismatch) | Reject, exit code 3 |
 | `video_count` | Must be > 0 and ≤ 300 | `100` | `0` or `500` | Reject, exit code 3 |
-| `input_features` | Must be > 0 and ≤ 220 | `178` | `0` or `500` | Reject, exit code 3 |
+| `input_features` | Must be > 0 and ≤ 168 | `147` | `0` or `200` | Reject, exit code 3 |
 | `feature_importance` | Must have exactly 10 entries | `[{...}, {...}, ... 10 items]` | `[{...}, {...}]` (2 items) | Reject, exit code 3 |
 | `feature_importance[].importance` | Must be 0.0-1.0 | `0.22` | `-0.1` or `1.5` | Reject, exit code 3 |
 | `distribution.thresholds.high` | Must be ≥ `low` threshold | `high=0.6, low=0.4` | `high=0.3, low=0.5` | Reject, exit code 3 |
@@ -1490,7 +1499,7 @@ K-Means JSON closing_kmeans_analysis.json.tmp cluster sizes ([35, 42, 22]) sum t
 
 | Edge Case | Validation Adjustment | Rationale |
 |-----------|----------------------|-----------|
-| Feature not in aggregated CSV (derived feature) | Allow `distribution: None` | Cannot compute distribution for cross-window features not in raw data |
+| Feature not in aggregated CSV (derived feature) | Allow `distribution: None` | Cannot compute distribution for Stage 4 derived features (xwin features ARE in aggregated CSV from Stage 3) |
 | All videos have same value (variance=0) | Allow `high_threshold == low_threshold` | Valid edge case - no spread in data |
 | model_metrics.json missing window metrics | Allow `accuracy: None, precision: None, recall: None` | Non-critical - feature importance still valid |
 | X_data is numpy array (no feature names) | Allow fallback to CSV header read | Ensures feature names always available |
@@ -1887,8 +1896,8 @@ Exit Code: 0
 ```
 /data/clients/acme_corp/hashtags/nutrition/top_contrastive/bucket_18-33s/
 ├── ml_analysis/
-│   ├── aggregated_features.csv (100 rows × 129 columns, ~15 MB)
-│   ├── rf_transformed.csv (100 rows × 178 columns)
+│   ├── aggregated_features.csv (100 rows × 135 columns, ~18 MB) - S7B2 Fix
+│   ├── rf_transformed.csv (100 rows × 147 columns) - S7B2 Fix
 │   ├── hook_rf_transformed.csv (100 rows × 21 columns)
 │   ├── middle_1_rf_transformed.csv (100 rows × 21 columns)
 │   ├── middle_2_rf_transformed.csv (100 rows × 21 columns)
@@ -1902,7 +1911,7 @@ Exit Code: 0
 │   ├── middle_4_km_transformed.csv (100 rows × 21 columns)
 │   └── closing_km_transformed.csv (100 rows × 21 columns)
 └── models/
-    ├── rf_video_18-33s.pkl (RandomForestClassifier, 178 features)
+    ├── rf_video_18-33s.pkl (RandomForestClassifier, 147 features) - S7B2 Fix
     ├── rf_hook_18-33s.pkl (RandomForestClassifier, 21 features)
     ├── rf_middle_1_18-33s.pkl (RandomForestClassifier, 21 features)
     ├── rf_middle_2_18-33s.pkl (RandomForestClassifier, 21 features)
@@ -1985,9 +1994,9 @@ Exit Code: 0
 # ===== Step 2: Generate Video-Level RF JSON (1.2s) =====
 [2025-01-28 14:30:01] INFO: Generating ML analysis JSONs to temp directory...
 [2025-01-28 14:30:01] DEBUG: Loading video RF model: models/rf_video_18-33s.pkl
-[2025-01-28 14:30:01] DEBUG: Extracting feature importance (178 features)
+[2025-01-28 14:30:01] DEBUG: Extracting feature importance (147 features) - S7B2 Fix
 [2025-01-28 14:30:01] DEBUG: Top 10 features: ['hook_eye_contact_rate' (0.22), 'middle_avg_word_count' (0.18), ...]
-[2025-01-28 14:30:01] DEBUG: Loading aggregated_features.csv for distribution analysis (100 rows × 129 columns)
+[2025-01-28 14:30:01] DEBUG: Loading aggregated_features.csv for distribution analysis (100 rows × 135 columns) - S7B2 Fix
 [2025-01-28 14:30:02] DEBUG: Computing distribution stats for top 10 features...
 [2025-01-28 14:30:02] DEBUG:   Feature 1/10: hook_eye_contact_rate (top_avg=0.88, bottom_avg=0.45, gap=0.43)
 [2025-01-28 14:30:02] DEBUG:   Feature 2/10: middle_avg_word_count (top_avg=55.2, bottom_avg=28.4, gap=26.8)
@@ -2174,7 +2183,7 @@ Total:                   11.2s (100%)
 /data/clients/acme_corp/hashtags/nutrition/top_contrastive/bucket_18-33s/
 ├── ml_analysis/
 │   ├── aggregated_features.csv (100 rows × 129 columns)
-│   ├── rf_transformed.csv (100 rows × 178 columns)
+│   ├── rf_transformed.csv (100 rows × 147 columns) - S7B2 Fix
 │   ├── hook_rf_transformed.csv  ← MISSING
 │   ├── middle_1_rf_transformed.csv (100 rows × 21 columns)
 │   └── ... (other CSVs present)

@@ -241,7 +241,10 @@ def generate_video_rf_json(bucket_path: str, bucket: str) -> dict:
     rf_model = joblib.load(model_path)
 
     # ===== 2. Extract Feature Importance =====
-    feature_importances = rf_model.feature_importances_  # NumPy array (length = 183 for bucket 18-33s after cross-window features)
+    feature_importances = rf_model.feature_importances_  # NumPy array (length varies by bucket)
+                                                          # Calculation: get_stage3_expected_feature_count(bucket) + 12
+                                                          # Example 18-33s: 135 + 12 = 147 (S7B2 Fix)
+                                                          # Includes xwin features from Stage 3, passed through Stage 4
     feature_names = rf_model.feature_names_in_  # From sklearn attribute
 
     # Sort features by importance, take top 10
@@ -256,8 +259,8 @@ def generate_video_rf_json(bucket_path: str, bucket: str) -> dict:
 
     # ===== 3. Load aggregated_features.csv for Distribution Analysis =====
     # DESIGN DECISION: Video-level uses aggregated_features.csv (Stage 3) not rf_transformed.csv (Stage 4)
-    # Rationale: Video-level RF includes cross-window features (e.g., hook_to_middle_energy_delta)
-    # computed from raw aggregated values. Distribution percentiles must match raw data source.
+    # Rationale (S7B2): Video-level RF includes xwin features (e.g., xwin_hook_to_middle_energy)
+    # created in Stage 3 and available in aggregated_features.csv. Distribution percentiles computed here.
     # See CrossHLDalignment2do.md Issue #5 for full rationale.
     agg_csv_path = os.path.join(bucket_path, 'ml_analysis/aggregated_features.csv')
     df = pd.read_csv(agg_csv_path)
@@ -820,16 +823,34 @@ WINDOW_KMEANS_JSON_TEMPLATE = "{window}_kmeans_analysis.json"
 
 ### 5.1 Input Schema
 
-**File 1**: `ml_analysis/aggregated_features.csv` (from Stage 4)
+**File 1**: `ml_analysis/aggregated_features.csv` (from **Stage 3** - includes xwin features, see MLPlanningv2.md Section 3.3.1)
 
 **Purpose**: Source for distribution analysis (percentile thresholds, high/medium/low classifications)
 
-**Total Columns by Bucket**:
-- 0-3s: 24 columns (1 window × 21 features + 3 metadata)
-- 3-9s: 45 columns (2 windows × 21 features + 3 metadata)
-- 9-13s, 13-18s: 66 columns (3 windows × 21 features + 3 metadata) - middle_aggregate used
-- 18-33s: 129 columns (6 windows × 21 features + 3 metadata)
-- 33-60s, 60-90s, 90-120s: 150 columns (7 windows × 21 features + 3 metadata)
+**Total Columns by Bucket (S7B2 Fix)**:
+
+**Source of Truth**: `config/bucket_definitions.py::get_stage3_expected_feature_count(bucket)`
+
+**Usage**:
+```python
+from config.bucket_definitions import get_stage3_expected_feature_count
+
+# Stage 6 reads aggregated_features.csv with column counts from Stage 3
+expected_cols = get_stage3_expected_feature_count(bucket)
+
+# Examples:
+# bucket='0-3s'   → 25  (21×1 + 3 + 0 xwin + 1 label)
+# bucket='3-9s'   → 49  (21×2 + 3 + 3 xwin + 1 label)
+# bucket='9-13s'  → 72  (21×3 + 3 + 5 xwin + 1 label)
+# bucket='18-33s' → 135 (21×6 + 3 + 5 xwin + 1 label)
+# bucket='33-60s' → 156 (21×7 + 3 + 5 xwin + 1 label)
+```
+
+**Formula**: `Total = (21 × window_count) + 3 metadata + xwin_count + 1 label`
+- xwin_count: 0 (0-3s), 3 (3-9s), 5 (9-13s+)
+- See config/bucket_definitions.py lines 185-195 for bucket-specific xwin logic
+
+**Note**: Stage 6 doesn't validate column counts (reads file as-is), but documenting here for schema reference.
 
 **Sample Columns** (bucket 18-33s):
 | Column | Type | Range | Nulls? | Description | Example |
@@ -849,7 +870,10 @@ WINDOW_KMEANS_JSON_TEMPLATE = "{window}_kmeans_analysis.json"
 **Purpose**: Video-level RF model for cross-window feature importance
 
 **Attributes**:
-- `feature_importances_`: NumPy array (length = 178 for bucket 18-33s)
+- `feature_importances_`: NumPy array (length varies by bucket - S7B2 Fix)
+  - **Calculation**: `get_stage3_expected_feature_count(bucket) + 12` (Stage 4 transformations)
+  - Example for 18-33s: `135 + 12 = 147`
+  - Stage 4 adds: +6 (emotion one-hot), +4 (temporal extract), +2 (gender one-hot) = +12 net
 - `feature_names_in_`: NumPy array of strings (feature names)
 
 **File 3**: `models/rf_{window}_{bucket}.pkl` (from Stage 5, 6-7 files per bucket)
@@ -988,20 +1012,31 @@ WINDOW_KMEANS_JSON_TEMPLATE = "{window}_kmeans_analysis.json"
 | `bucket` | str | `"18-33s"`, etc. | Yes | Duration bucket |
 | `hashtag` | str/null | Any | No | Hashtag analyzed (set by caller) |
 | `video_count` | int | 50-300 | Yes | Total videos in bucket |
-| `input_features` | int | 24-220 | Yes | Feature count (varies by bucket, includes 5 cross-window features from Stage 4) |
+| `input_features` | int | 37-168 | Yes | Feature count (calculated from `get_stage3_expected_feature_count(bucket)` + 12 Stage 4 transformations, includes 0-5 xwin features from **Stage 3 Section 3.3.1**) |
 | `feature_importance` | array | Length 10 | Yes | Top 10 features with stats |
 
-**Cross-Window Features** (computed in Stage 4, extracted by Stage 6):
+**Cross-Window Features (S7B2 Fix - created in Stage 3, extracted by Stage 6)**:
 
-Stage 6 extracts video-level RF feature importance which includes 5 cross-window features computed by Stage 4 (FeatureTransformationCHILD.md Section 6.5, Step 2.3.2):
+Stage 6 extracts video-level RF feature importance which includes **0-5 cross-window features** (bucket-dependent, see config/bucket_definitions.py lines 185-195) **created by Stage 3** (MLPlanningv2.md Section 3.3.1):
+
+**Feature Count by Bucket**:
+```python
+# Source: config/bucket_definitions.py lines 185-195
+if bucket == '0-3s':
+    cross_window_features = 0  # Single window, no comparisons
+elif bucket == '3-9s':
+    cross_window_features = 3  # consistency, std, slope only
+else:  # 9-13s+
+    cross_window_features = 5  # All 5 features
+```
 
 | Feature Name | Type | Range | Description | Source |
 |--------------|------|-------|-------------|--------|
-| `hook_to_middle_energy_delta` | Delta | [-1, 1] | Energy change from hook to middle average | Stage 4 Step 6.5 |
-| `middle_to_closing_contrast` | Delta | [-1, 1] | Energy gap between middle avg and closing peak | Stage 4 Step 6.5 |
-| `eye_contact_consistency` | Variance | [0, 1] | Std deviation of eye contact across all windows | Stage 4 Step 6.5 |
-| `word_density_std` | Variance | [0, ∞] | Std deviation of word count across windows | Stage 4 Step 6.5 |
-| `energy_progression_slope` | Rate | [-∞, ∞] | Linear regression slope of energy across windows | Stage 4 Step 6.5 |
+| `xwin_hook_to_middle_energy` | Delta | [-1, 1] | Energy change from hook to middle average | Stage 3 Section 3.3.1 |
+| `xwin_middle_to_closing_energy` | Delta | [-1, 1] | Energy gap between middle avg and closing | Stage 3 Section 3.3.1 |
+| `xwin_eye_contact_consistency` | Variance | [0, 1] | Std deviation of eye contact across all windows | Stage 3 Section 3.3.1 |
+| `xwin_word_density_std` | Variance | [0, ∞] | Std deviation of word count across windows | Stage 3 Section 3.3.1 |
+| `xwin_energy_progression_slope` | Rate | [-1, 1] | Linear regression slope of energy across windows | Stage 3 Section 3.3.1 |
 
 **For Stage 7 Phase 2 (Cross-Window Synthesis)**:
 
@@ -1009,6 +1044,13 @@ These cross-window features enable Stage 7's `generate_cross_window_patterns()` 
 - "78% of high-performing videos use 'bookend' eye contact pattern (high in hook/closing, lower in middle)"
 - "Energy progression: 65% build energy, 12% maintain consistent energy, 23% variable"
 - "Closing energy should match or exceed middle average (85% of top performers follow this)"
+
+**S7B2 Pipeline Flow**:
+1. **Stage 3** creates xwin features in aggregated_features.csv (MLPlanningv2.md Section 3.3.1)
+2. **Stage 4** validates presence and passes through to rf_transformed.csv
+3. **Stage 5** trains Video-Level RF model on rf_transformed.csv (includes xwin features)
+4. **Stage 6** extracts feature importance from trained model (THIS STAGE)
+5. **Stage 7** generates insights using xwin feature distributions
 
 **How Stage 6 Processes These Features**:
 1. Stage 6 loads the trained video-level RF model from `models/rf_video_{bucket}.pkl`
@@ -1019,10 +1061,10 @@ These cross-window features enable Stage 7's `generate_cross_window_patterns()` 
 
 **Note**: Cross-window features are only present in **video-level RF**, not window-level RF or K-Means outputs, because they require multiple windows to compute deltas and consistency metrics.
 
-**Reference**:
-- FeatureTransformationCHILD.md Section 6.5 (lines 221-250) for complete computation logic
-- FeatureTransformationCHILD.md lines 612-619 for feature list definition
-- FeatureTransformationCHILD.md lines 740-744 for output schema details
+**Reference (S7B2 Fix)**:
+- MLPlanningv2.md Section 3.3.1 (lines 1531-1579) for xwin feature creation logic
+- config/bucket_definitions.py lines 185-195 for bucket-specific xwin feature counts
+- Stage 4 no longer creates xwin features (S7B2 migration to Stage 3)
 
 ---
 
