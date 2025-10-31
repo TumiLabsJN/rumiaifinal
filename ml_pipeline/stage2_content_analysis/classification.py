@@ -64,11 +64,11 @@ def extract_json(response_text: str, video_id: str = None) -> Dict[str, Any]:
 
     text = text.strip()
 
-    # Step 2: Find JSON boundaries
+    # Step 2: Find first complete JSON object using brace counting
+    # This handles cases where LLM returns multiple JSON objects
     first_brace = text.find('{')
-    last_brace = text.rfind('}')
 
-    if first_brace == -1 or last_brace == -1:
+    if first_brace == -1:
         # Log the failure case for debugging
         logger.error(
             f"No JSON braces found in response for {video_id}. "
@@ -76,13 +76,28 @@ def extract_json(response_text: str, video_id: str = None) -> Dict[str, Any]:
         )
         raise ValueError("No valid JSON braces found in response")
 
-    if last_brace <= first_brace:
-        logger.error(
-            f"Invalid brace order for {video_id}: first={first_brace}, last={last_brace}"
-        )
-        raise ValueError("Invalid JSON brace positions")
+    # Step 3: Find matching closing brace by counting depth
+    brace_count = 0
+    last_brace = -1
 
-    # Step 3: Extract JSON block
+    for i in range(first_brace, len(text)):
+        if text[i] == '{':
+            brace_count += 1
+        elif text[i] == '}':
+            brace_count -= 1
+            if brace_count == 0:
+                # Found matching closing brace for first opening brace
+                last_brace = i
+                break
+
+    if last_brace == -1:
+        logger.error(
+            f"No matching closing brace found for {video_id}. "
+            f"first_brace={first_brace}, text preview: {repr(text[first_brace:first_brace+200])}"
+        )
+        raise ValueError("No matching closing brace found")
+
+    # Step 4: Extract first complete JSON object
     json_text = text[first_brace:last_brace + 1]
 
     # Step 4: Attempt to parse
@@ -108,10 +123,14 @@ def extract_json(response_text: str, video_id: str = None) -> Dict[str, Any]:
 
     except json.JSONDecodeError as e:
         # JSON extraction found braces but content is malformed
-        # Log more context for debugging
+        # Enhanced debugging: Log complete context for troubleshooting
         logger.error(
-            f"Extracted text is not valid JSON for {video_id}: {str(e)}. "
-            f"Extracted: {json_text[:300]}..."
+            f"JSONDecodeError for {video_id}: {str(e)}\n"
+            f"  original_text length: {len(original_text)}\n"
+            f"  original_text preview: {repr(original_text[:500])}\n"
+            f"  json_text length: {len(json_text)}\n"
+            f"  json_text: {repr(json_text)}\n"
+            f"  first_brace: {first_brace}, last_brace: {last_brace}"
         )
         raise ValueError(f"Extracted text is not valid JSON: {str(e)}")
 
@@ -508,18 +527,29 @@ def classify_single_video_with_save(
     video_id: str,
     taxonomy: Dict[str, Any],
     client: anthropic.Anthropic,
-    output_dir: str
+    output_dir: str,
+    manifest: Optional[Dict[str, Any]] = None,
+    validation_cache: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
-    Helper function: Load video data, classify, and save result.
+    Classify video using dual-flow approach (if manifest provided) or legacy single-flow.
 
-    Source: ContentAnalysisCHILDTI.md Section 4.4.2
+    DUAL-FLOW MODE (manifest provided):
+    - Flow 1 (valid transcript): Full classification (transcript + caption)
+    - Flow 2 (invalid transcript): Caption analysis only
+
+    LEGACY MODE (manifest=None):
+    - Always attempts full classification (backwards compatible)
+
+    Source: ContentAnalysispt2.md Step 4 (Dual-Flow Classification)
 
     Args:
         video_id: Video identifier
         taxonomy: Curated taxonomy
         client: Anthropic API client
         output_dir: Directory to save classification result
+        manifest: Optional selection_manifest.json (enables dual-flow)
+        validation_cache: Optional validation cache for checking transcript validity
 
     Returns:
         dict: Classification result
@@ -530,22 +560,98 @@ def classify_single_video_with_save(
     # Load video data
     transcript, caption, hashtags = load_video_data(video_id)
 
-    # Validate business rules
-    validate_business_rules_classification(video_id, transcript, caption, hashtags)
+    # DUAL-FLOW MODE: Route based on transcript validity
+    if manifest is not None and validation_cache is not None:
+        # Get bucket and performer type for this video
+        bucket, performer_type = get_bucket_for_video(video_id, manifest)
 
-    # Classify video
-    classification = classify_video_llm(
-        video_id=video_id,
-        transcript=transcript,
-        caption=caption,
-        hashtags=hashtags,
-        taxonomy=taxonomy,
-        client=client
-    )
+        # Check if transcript is valid
+        is_valid_transcript = validation_cache.get(video_id, {}).get('is_valid', False)
 
-    # Save classification
-    output_path = f"{output_dir}/{video_id}_content.json"
-    save_json(output_path, classification)
+        if is_valid_transcript:
+            # Flow 1: Full classification
+            logger.info(f"📋 Flow 1 (With Transcript): {video_id} [bucket: {bucket}]")
+
+            llm_output = classify_video_with_transcript(
+                video_id=video_id,
+                transcript=transcript,
+                caption=caption,
+                hashtags=hashtags,
+                taxonomy=taxonomy,
+                client=client
+            )
+
+            # Save RAW LLM output
+            raw_output_dir = f"{output_dir}/raw_llm_output/bucket_{bucket}"
+            os.makedirs(raw_output_dir, exist_ok=True)
+            raw_output_path = f"{raw_output_dir}/{video_id}_raw.json"
+            save_json(raw_output_path, llm_output)
+
+            # Normalize schema (adds hashtag_count)
+            classification = normalize_classification_schema(
+                llm_output=llm_output,
+                video_id=video_id,
+                caption=caption,
+                transcript_available=True,
+                flow_type="full"
+            )
+
+        else:
+            # Flow 2: Caption only
+            logger.info(f"📋 Flow 2 (Caption Only): {video_id} [bucket: {bucket}]")
+
+            llm_output = classify_caption_only(
+                video_id=video_id,
+                caption=caption,
+                hashtags=hashtags,
+                client=client
+            )
+
+            # Save RAW LLM output
+            raw_output_dir = f"{output_dir}/raw_llm_output/bucket_{bucket}"
+            os.makedirs(raw_output_dir, exist_ok=True)
+            raw_output_path = f"{raw_output_dir}/{video_id}_raw.json"
+            save_json(raw_output_path, llm_output)
+
+            # Normalize schema (fills in defaults)
+            classification = normalize_classification_schema(
+                llm_output=llm_output,
+                video_id=video_id,
+                caption=caption,
+                transcript_available=False,
+                flow_type="caption_only"
+            )
+
+        # Add bucket metadata
+        classification['bucket'] = bucket
+        classification['performer_type'] = performer_type  # "top" or "bottom"
+
+        # Save VALIDATED output (final)
+        validated_output_dir = f"{output_dir}/validated/bucket_{bucket}"
+        os.makedirs(validated_output_dir, exist_ok=True)
+        validated_output_path = f"{validated_output_dir}/{video_id}_content.json"
+        save_json(validated_output_path, classification)
+
+    else:
+        # LEGACY MODE: Original single-flow classification
+        logger.info(f"📋 Legacy Mode (Single-Flow): {video_id}")
+
+        # Validate business rules
+        validate_business_rules_classification(video_id, transcript, caption, hashtags)
+
+        # Classify video (original flow)
+        classification = classify_video_llm(
+            video_id=video_id,
+            transcript=transcript,
+            caption=caption,
+            hashtags=hashtags,
+            taxonomy=taxonomy,
+            client=client
+        )
+
+        # Save classification
+        output_path = f"{output_dir}/{video_id}_content.json"
+        save_json(output_path, classification)
 
     return classification
 
@@ -555,12 +661,16 @@ def classify_all_videos_sequential(
     taxonomy: Dict[str, Any],
     client: anthropic.Anthropic,
     output_dir: str,
-    checkpoint_path: Optional[str] = None
+    checkpoint_path: Optional[str] = None,
+    manifest: Optional[Dict[str, Any]] = None,
+    validation_cache: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Classify videos sequentially with checkpoint/resume support.
 
-    Source: ContentAnalysisCHILDTI.md Section 4.4.1, 4.5.4
+    Dual-Flow Support: If manifest and validation_cache provided, uses Flow 1/Flow 2 routing.
+
+    Source: ContentAnalysisCHILDTI.md Section 4.4.1, 4.5.4 + ContentAnalysispt2.md Step 4
 
     Args:
         videos: List of video IDs to classify
@@ -568,6 +678,8 @@ def classify_all_videos_sequential(
         client: Anthropic API client
         output_dir: Directory to save results
         checkpoint_path: Optional path to checkpoint file
+        manifest: Optional manifest for dual-flow classification
+        validation_cache: Optional validation cache for dual-flow classification
 
     Returns:
         dict: {"completed": int, "failed": int, "failed_ids": list[str]}
@@ -592,8 +704,10 @@ def classify_all_videos_sequential(
     # Step 2: Process remaining videos
     for i, video_id in enumerate(remaining_videos):
         try:
-            # Classify and save
-            classify_single_video_with_save(video_id, taxonomy, client, output_dir)
+            # Classify and save (with optional dual-flow parameters)
+            classify_single_video_with_save(
+                video_id, taxonomy, client, output_dir, manifest, validation_cache
+            )
 
             # Update checkpoint (if enabled)
             if checkpoint_path:
@@ -633,12 +747,16 @@ def classify_all_videos_parallel(
     client: anthropic.Anthropic,
     output_dir: str,
     max_workers: int = 5,
-    checkpoint_path: Optional[str] = None
+    checkpoint_path: Optional[str] = None,
+    manifest: Optional[Dict[str, Any]] = None,
+    validation_cache: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Classify videos in parallel with checkpoint/resume support.
 
-    Source: ContentAnalysisCHILDTI.md Section 4.4.2, 4.5.5
+    Dual-Flow Support: If manifest and validation_cache provided, uses Flow 1/Flow 2 routing.
+
+    Source: ContentAnalysisCHILDTI.md Section 4.4.2, 4.5.5 + ContentAnalysispt2.md Step 4
 
     Args:
         videos: List of video IDs
@@ -647,6 +765,8 @@ def classify_all_videos_parallel(
         output_dir: Directory to save results
         max_workers: Concurrent workers (default: 5)
         checkpoint_path: Optional checkpoint file path
+        manifest: Optional manifest for dual-flow classification
+        validation_cache: Optional validation cache for dual-flow classification
 
     Returns:
         dict: {"completed": int, "failed": int, "failed_ids": list[str]}
@@ -672,11 +792,11 @@ def classify_all_videos_parallel(
 
     # Step 2: Submit all tasks to thread pool
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # Submit all classification tasks
+        # Submit all classification tasks (with optional dual-flow parameters)
         future_to_video = {
             executor.submit(
                 classify_single_video_with_save,
-                video_id, taxonomy, client, output_dir
+                video_id, taxonomy, client, output_dir, manifest, validation_cache
             ): video_id
             for video_id in remaining_videos
         }
@@ -732,12 +852,17 @@ def classify_all_videos(
     selection_strategy: str = "contrastive",
     parallel: bool = False,
     max_workers: int = 5,
-    checkpoint_enabled: bool = True
+    checkpoint_enabled: bool = True,
+    validation_cache: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Classify all videos with configurable parallel/sequential execution and checkpoints.
 
-    Source: ContentAnalysisCHILDTI.md Section 4.4
+    Dual-Flow Support (ContentAnalysispt2.md Step 4):
+    - If validation_cache provided: Routes to Flow 1 (transcript) or Flow 2 (caption-only)
+    - If validation_cache=None: Uses legacy single-flow classification
+
+    Source: ContentAnalysisCHILDTI.md Section 4.4 + ContentAnalysispt2.md Step 4
 
     Args:
         client_id: Client identifier
@@ -751,6 +876,7 @@ def classify_all_videos(
         parallel: Enable parallel mode (default: False)
         max_workers: Workers for parallel mode (default: 5)
         checkpoint_enabled: Enable checkpoint/resume (default: True)
+        validation_cache: Optional validation cache for dual-flow classification
 
     Returns:
         dict: Summary statistics with mode, duration, completed/failed counts
@@ -791,12 +917,14 @@ def classify_all_videos(
     if parallel:
         logger.info(f"🚀 Starting parallel classification: {len(all_videos)} videos, {max_workers} workers")
         results = classify_all_videos_parallel(
-            all_videos, taxonomy, anthropic_client, output_dir, max_workers, checkpoint_path
+            all_videos, taxonomy, anthropic_client, output_dir, max_workers, checkpoint_path,
+            manifest, validation_cache
         )
     else:
         logger.info(f"📋 Starting sequential classification: {len(all_videos)} videos")
         results = classify_all_videos_sequential(
-            all_videos, taxonomy, anthropic_client, output_dir, checkpoint_path
+            all_videos, taxonomy, anthropic_client, output_dir, checkpoint_path,
+            manifest, validation_cache
         )
 
     # Calculate summary statistics
@@ -882,16 +1010,34 @@ def run_classification_stage(
     logger.info("✓ Input validation passed")
 
     # Step 4: Load taxonomy and manifest
-    logger.info("Step 2/3: Loading taxonomy and manifest...")
+    logger.info("Step 2/4: Loading taxonomy and manifest...")
     taxonomy = load_json(taxonomy_path)
     manifest = load_json(manifest_path)
     logger.info("✓ Files loaded")
+
+    # Step 4a: Load validation cache (for dual-flow classification)
+    logger.info("Step 3/4: Loading transcript validation cache...")
+    try:
+        from .transcript_validation import load_validation_cache
+        validation_cache = load_validation_cache(
+            client_id, hashtag, analysis_type, analysis_mode, selection_strategy
+        )
+        logger.info(f"✓ Validation cache loaded - dual-flow classification enabled")
+    except FileNotFoundError:
+        logger.warning(
+            "⚠️  Validation cache not found - using legacy single-flow classification.\n"
+            "   Run Stage 2.5.1 (Transcript Validation) for dual-flow support."
+        )
+        validation_cache = None
+    except Exception as e:
+        logger.warning(f"⚠️  Failed to load validation cache: {e} - using legacy mode")
+        validation_cache = None
 
     # Step 5: Initialize Anthropic client
     anthropic_client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
     # Step 6: Classify all videos
-    logger.info("Step 3/3: Classifying all videos (Claude Haiku)...")
+    logger.info("Step 4/4: Classifying all videos (Claude Haiku)...")
     summary = classify_all_videos(
         client_id=client_id,
         hashtag=hashtag,
@@ -903,7 +1049,8 @@ def run_classification_stage(
         selection_strategy=selection_strategy,
         parallel=parallel,
         max_workers=max_workers,
-        checkpoint_enabled=checkpoint_enabled
+        checkpoint_enabled=checkpoint_enabled,
+        validation_cache=validation_cache
     )
 
     logger.info(f"=" * 80)
@@ -916,3 +1063,518 @@ def run_classification_stage(
     logger.info(f"=" * 80)
 
     return summary
+
+# ============================================================================
+# STEP 4: DUAL-FLOW CLASSIFICATION (ContentAnalysispt2.md)
+# Added: 2025-10-31
+# Purpose: Classify videos with valid OR invalid transcripts
+# ============================================================================
+
+
+def get_bucket_for_video(
+    video_id: str,
+    manifest: Dict[str, Any]
+) -> tuple:
+    """
+    Find which bucket a video belongs to and its performer type.
+
+    Args:
+        video_id: Video identifier
+        manifest: selection_manifest.json from Stage 2.5
+
+    Returns:
+        tuple: (bucket, performer_type) where:
+            - bucket: str (e.g., "33-60s")
+            - performer_type: str ("top" or "bottom")
+
+    Raises:
+        ValueError: If video not found in any bucket
+    """
+    for bucket, bucket_data in manifest['videos_by_bucket'].items():
+        if video_id in bucket_data['top_performers']:
+            return bucket, "top"
+        if video_id in bucket_data['bottom_performers']:
+            return bucket, "bottom"
+
+    raise ValueError(f"Video {video_id} not found in any bucket")
+
+
+def normalize_classification_schema(
+    llm_output: Dict[str, Any],
+    video_id: str,
+    caption: str,
+    transcript_available: bool,
+    flow_type: str
+) -> Dict[str, Any]:
+    """
+    Normalize LLM output to final 15-field schema.
+    
+    M10 FIX: Calculate hashtag_count from caption (not from LLM).
+    
+    Args:
+        llm_output: Validated output from LLM
+        video_id: Video identifier
+        caption: Video caption text
+        transcript_available: True if Flow 1, False if Flow 2
+        flow_type: "full" or "caption_only"
+        
+    Returns:
+        Normalized classification with all 15 fields
+    """
+    # Calculate hashtag_count from caption (M10 FIX)
+    hashtag_count = len([word for word in (caption or "").split() if word.startswith('#')])
+    
+    if flow_type == "full":
+        # Flow 1: Use all LLM fields, just add hashtag_count
+        normalized = llm_output.copy()
+        normalized['caption_analysis']['hashtag_count'] = hashtag_count
+        
+    else:  # caption_only
+        # Flow 2: Construct full schema with defaults
+        normalized = {
+            "video_id": video_id,
+            "taxonomy_version": "none_no_transcript",
+            "content_category": None,
+            "hook_strategy": None,
+            "closing_strategy": None,
+            "pain_points": [],
+            "keywords": [],
+            "engagement_drivers": [],
+            "content_tactics": [],
+            "caption_analysis": llm_output.get("caption_analysis", {}),
+            "confidence": "n/a",
+            "transcript_available": False,
+            "note": "No valid transcript - caption analysis only"
+        }
+        normalized['caption_analysis']['hashtag_count'] = hashtag_count
+    
+    return normalized
+
+
+def classify_video_with_transcript(
+    video_id: str,
+    transcript: str,
+    caption: str,
+    hashtags: List[str],
+    taxonomy: Dict[str, Any],
+    client: Any
+) -> Dict[str, Any]:
+    """
+    Flow 1: Full classification using transcript.
+    
+    LLM outputs ALL 13 fields (Python adds hashtag_count later).
+    Uses physical zone separation to prevent hallucination.
+    
+    Source: ContentAnalysispt2.md Step 4 (Lines 700-1010)
+    
+    Args:
+        video_id: Video identifier
+        transcript: Transcript text (validated as non-empty)
+        caption: Caption text
+        hashtags: List of hashtags
+        taxonomy: Curated taxonomy from Stage 2.6
+        client: Anthropic API client
+        
+    Returns:
+        Dict with 13 fields (transcript_available=True)
+    """
+    import json
+    
+    system_message = """You are an expert TikTok content classifier. Your task is to classify videos using a data-driven taxonomy discovered from real transcripts in this hashtag.
+
+Be objective and evidence-based. Only select classifications that have explicit support in the transcript. The taxonomy was created from analyzing top-performing videos, so you must ground all selections in what was actually said."""
+
+    prompt = f"""# CLASSIFICATION TASK
+
+You will classify a TikTok video using the taxonomy below. The taxonomy was empirically discovered from analyzing 60 top-performing video transcripts in this hashtag.
+
+**Video ID**: {video_id}
+
+---
+
+## ZONE 1: CONTENT CLASSIFICATION (Transcript Only)
+
+### Taxonomy (Data-Driven Patterns)
+
+{json.dumps(taxonomy, indent=2)}
+
+---
+
+### Video Transcript
+
+Below is what was SPOKEN in the video. Use ONLY this transcript for content classification.
+
+```
+{transcript}
+```
+
+**Note**: You will see the caption and hashtags in Zone 2, but do NOT use them for ANY content classification fields below. Zone 1 uses transcript ONLY.
+
+---
+
+### Classification Instructions
+
+Classify this video using the taxonomy above. Copy all category names EXACTLY as written (character-for-character).
+
+#### Categories 1-3: Single Selection (REQUIRED)
+
+Select exactly ONE option for each field:
+
+**content_category**:
+- What type of content is this? (e.g., "wellness_routine", "supplement_review")
+- Select ONE from taxonomy that best matches the video's overall format and purpose
+- Copy the category name EXACTLY from taxonomy
+
+**hook_strategy**:
+- How does the video open?
+- Analyze the first 5-10 spoken words in the transcript
+- Select ONE from taxonomy that matches how the speaker began
+- Copy the strategy name EXACTLY from taxonomy
+
+**closing_strategy**:
+- How does the video end?
+- Analyze the last 10 spoken words in the transcript
+- Select ONE from taxonomy that matches how the speaker concluded
+- Copy the strategy name EXACTLY from taxonomy
+
+---
+
+#### Categories 4-7: Multiple Selection (0-N items)
+
+Select ZERO or MORE items from taxonomy. Empty arrays [] are acceptable and encouraged when no match exists.
+
+**pain_points**:
+- Which problems or challenges are mentioned in the transcript?
+- Only include if:
+  1. **Explicitly stated** (e.g., "I had bloating") OR
+  2. **Strongly implied from solutions** (e.g., "I started probiotics and my gut issues went away" → "gut_issues" is pain point)
+- Do NOT infer based on video topic alone
+- Copy pain point names EXACTLY from taxonomy
+- Return [] if no pain points mentioned
+
+**keywords**:
+- What topics, methods, or products are central to this video?
+- Only include if explicitly mentioned in the transcript
+- Do NOT infer from context
+- Copy keyword names EXACTLY from taxonomy
+- Return [] if no keywords match
+
+**engagement_drivers**:
+- What tactics does the creator use to engage viewers?
+- Only include if observable from what the creator says or how they present
+- Examples: "before_after_reveal", "relatable_struggles", "humor_and_satire"
+- Copy driver names EXACTLY from taxonomy
+- Return [] if no drivers evident
+
+**content_tactics**:
+- What presentation styles are used in this video?
+- Only include if evident from transcript or explicitly mentioned
+- Examples: "direct_to_camera", "voiceover_narration", "step_by_step"
+- Copy tactic names EXACTLY from taxonomy
+- Return [] if no tactics evident
+
+---
+
+### Evidence Rules (CRITICAL)
+
+**Source Restrictions**:
+- ALL 7 fields (content_category, hook_strategy, closing_strategy, pain_points, keywords, engagement_drivers, content_tactics): **Transcript ONLY**
+
+**Selection Rules**:
+- Only select items that exist in the taxonomy
+- Copy names character-for-character (exact match)
+- Empty arrays acceptable if no match
+- Do NOT infer or hallucinate
+
+---
+
+### Examples: VALID Classifications ✅
+
+**Example 1: Explicit pain point**
+```
+Transcript: "I had terrible bloating after every meal"
+→ pain_points: ["bloating"] ✅
+Reasoning: Explicitly stated problem
+```
+
+**Example 2: Implied pain point from solution**
+```
+Transcript: "I started taking probiotics and my gut issues completely went away"
+→ pain_points: ["gut_issues"] ✅
+Reasoning: Solution mentioned → problem implied (gut issues went away)
+```
+
+**Example 3: Empty array when no match**
+```
+Transcript: "I love my morning wellness routine"
+→ pain_points: [] ✅
+Reasoning: No problems mentioned, empty array is correct
+```
+
+---
+
+### Examples: INVALID Classifications (Hallucination) ❌
+
+**Example 1: Inferring from topic alone**
+```
+Transcript: "I take supplements every morning"
+→ pain_points: ["brain_fog", "fatigue"] ❌ WRONG!
+Reasoning: Brain fog and fatigue are NOT mentioned in transcript
+Should be: pain_points: [] ✅
+```
+
+**Example 2: Inventing categories not in taxonomy**
+```
+Transcript: "Best green smoothie recipe"
+→ content_category: "smoothie_recipe" ❌ WRONG!
+Reasoning: "smoothie_recipe" doesn't exist in taxonomy
+Should use: closest match from actual taxonomy (e.g., "recipe_tutorial")
+```
+
+**Example 3: Using caption/hashtags for content fields**
+```
+Transcript: "I love wellness routines" (no mention of matcha)
+Caption: "#matcha #wellness" (you'll see this in Zone 2)
+→ keywords: ["matcha"] ❌ WRONG!
+Reasoning: Not mentioned in transcript
+Should be: keywords: [] ✅
+```
+
+---
+
+## ZONE 2: CAPTION ANALYSIS (Caption-Based)
+
+### Caption & Hashtags Data
+
+You are NOW seeing the caption and hashtags for the first time. Use these ONLY for caption analysis below. Do NOT go back and modify Zone 1 classifications.
+
+**Caption**:
+```
+{caption if caption else "(No caption available)"}
+```
+
+**Hashtags**:
+```
+{json.dumps(hashtags) if hashtags else "[]"}
+```
+
+---
+
+### Caption Analysis Instructions
+
+Analyze the caption structure. These fields are INDEPENDENT of the transcript taxonomy (Zone 1).
+
+**CRITICAL WARNING**: Use the exact string values specified below. Do NOT use variations. Do NOT use values from the transcript taxonomy.
+
+---
+
+### Caption Hook Type (select ONE)
+
+Copy EXACTLY one of these strings:
+- `"statement"`
+- `"question"`
+- `"command"`
+- `"teaser"`
+
+**DO NOT USE**: "declarative", "declarative_statement", "interrogative", or any other variation
+**DO NOT USE**: Values from transcript hook_strategies taxonomy
+
+**Examples**:
+- Caption: "This changed my life" → hook_type: `"statement"` ✅
+- Caption: "Did you know this?" → hook_type: `"question"` ✅
+- Caption: "Try this now" → hook_type: `"command"` ✅
+
+---
+
+### Call-to-Action Type (select ONE)
+
+Copy EXACTLY one of these strings:
+- `"link_in_bio"`
+- `"save_post"`
+- `"comment"`
+- `"follow"`
+- `"share"`
+- `"tag_friend"`
+- `"none"`
+
+---
+
+## ZONE 3: OUTPUT FORMAT
+
+**M10 FIX: hashtag_count removed from LLM output - Python calculates it**
+
+Return valid JSON with 12 fields below (Python will add hashtag_count). Use lowercase `true`/`false` for booleans.
+
+```json
+{{
+  "video_id": "{video_id}",
+  "taxonomy_version": "stage2.6_output",
+  "content_category": "...",
+  "hook_strategy": "...",
+  "closing_strategy": "...",
+  "pain_points": [...],
+  "keywords": [...],
+  "engagement_drivers": [...],
+  "content_tactics": [...],
+  "caption_analysis": {{
+    "hook_type": "...",
+    "cta_type": "..."
+  }},
+  "confidence": "high",
+  "transcript_available": true,
+  "note": null
+}}
+```
+
+### Confidence Assessment
+
+**"high"**:
+- Video clearly matches selected taxonomy categories
+- Strong transcript evidence for all selections
+- Confident in classifications
+
+**"medium"**:
+- Partial matches OR some inference required
+- Weaker evidence but reasonable classification
+- Some uncertainty
+
+**"low"**:
+- Limited evidence OR forced match
+- Uncertain classifications
+- Difficult to classify
+
+### Note Field
+
+- Use `null` for normal classifications
+- Use string for issues: `"Transcript quality poor but analyzable"`
+
+---
+
+## FINAL CHECKLIST
+
+Before submitting your response, verify:
+
+1. ✅ Zone 1: Used ONLY transcript for ALL 7 content classification fields
+2. ✅ All taxonomy category names copied EXACTLY (character-for-character)
+3. ✅ Empty arrays [] used when no match (not guessing)
+4. ✅ Zone 2: Caption fields use exact values: `"statement"` NOT `"declarative"`
+5. ✅ Output is valid JSON with all 13 fields
+6. ✅ No hallucinated classifications (check examples above)
+7. ✅ No invented categories not in taxonomy
+8. ✅ Did NOT use caption/hashtags for Zone 1 content fields
+"""
+
+    response = client.messages.create(
+        model="claude-3-haiku-20240307",
+        max_tokens=1024,
+        timeout=30,
+        system=system_message,
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return extract_json(response.content[0].text, video_id)
+
+
+def classify_caption_only(
+    video_id: str,
+    caption: str,
+    hashtags: List[str],
+    client: Any
+) -> Dict[str, Any]:
+    """
+    Flow 2: Caption analysis only (no valid transcript).
+    
+    LLM outputs ONLY caption_analysis (2 fields).
+    Python constructs full 15-field schema with defaults.
+    
+    Source: ContentAnalysispt2.md Step 4 (Lines 1015-1107)
+    
+    Args:
+        video_id: Video identifier
+        caption: Caption text
+        hashtags: List of hashtags
+        client: Anthropic API client
+        
+    Returns:
+        Dict with caption_analysis only (Python will fill rest)
+    """
+    import json
+    
+    system_message = """You are analyzing TikTok video captions and hashtags. The video has NO valid transcript (music/noise only). Return ONLY caption analysis fields."""
+
+    prompt = f"""# CAPTION ANALYSIS TASK
+
+Video has NO valid transcript. Analyze caption and hashtags ONLY.
+
+**Video ID**: {video_id}
+
+---
+
+## VIDEO DATA
+
+**Caption**:
+```
+{caption or "(No caption available)"}
+```
+
+**Hashtags**:
+```
+{json.dumps(hashtags) if hashtags else "[]"}
+```
+
+---
+
+## INSTRUCTIONS
+
+Analyze the caption structure using the exact values specified below.
+
+### Caption Hook Type (select ONE)
+
+Copy EXACTLY one of these strings:
+- `"statement"`
+- `"question"`
+- `"command"`
+- `"teaser"`
+
+**DO NOT USE**: "declarative", "declarative_statement", "interrogative", or any variation
+
+### Call-to-Action Type (select ONE)
+
+Copy EXACTLY one of these strings:
+- `"link_in_bio"`
+- `"save_post"`
+- `"comment"`
+- `"follow"`
+- `"share"`
+- `"tag_friend"`
+- `"none"`
+
+---
+
+## OUTPUT FORMAT
+
+**M10 FIX: hashtag_count removed - Python calculates it deterministically**
+
+Return ONLY these 2 caption fields (Python will construct full schema including hashtag_count):
+
+```json
+{{
+  "caption_analysis": {{
+    "hook_type": "...",
+    "cta_type": "..."
+  }}
+}}
+```
+
+**Note**: Python will add hashtag_count and all other 13 fields to create the full 15-field output.
+"""
+
+    response = client.messages.create(
+        model="claude-3-haiku-20240307",
+        max_tokens=128,
+        timeout=15,
+        system=system_message,
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return extract_json(response.content[0].text, video_id)

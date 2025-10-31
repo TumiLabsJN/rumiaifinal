@@ -43,6 +43,7 @@ from foundation.paths import PathBuilder, sanitize_client_id
 from ml_pipeline.stage1_discovery import VideoDiscovery
 from ml_pipeline.stage2_processing import stage_2_video_processing_main
 from ml_pipeline.stage2_5_organize import stage_2_5_file_organization_main
+from ml_pipeline.stage2_content_analysis.transcript_validation import run_transcript_validation_stage
 from ml_pipeline.stage2_content_analysis.discovery import run_discovery_stage
 from ml_pipeline.stage2_content_analysis.classification import run_classification_stage
 from ml_pipeline.stage2_content_analysis.taxonomy_validation import validate_curated_taxonomy
@@ -494,13 +495,14 @@ def main():
     - Stage 1: Video Discovery & Selection
     - Stage 2: Video Processing (RumiAI feature extraction)
     - Stage 2.5: File Organization
+    - Stage 2.5.1: Transcript Validation (filter music/noise)
     - Stage 2.6: Content Analysis - Pattern Discovery
     - Stage 2.7: Content Analysis - Video Classification
     - Stage 3: Feature Aggregation
     - Stage 4: Feature Transformation
     - Stage 5: ML Model Training
     - Stage 6: ML Analysis Generation
-    - Stage 7: LLM Report Generation (TODO)
+    - Stage 7: LLM Report Generation
 
     Exit Codes:
     - 0: Success (pipeline completed fully)
@@ -800,6 +802,61 @@ def main():
         except Exception as e:
             logger.error(f"Stage 2.5 failed: {e}", exc_info=True)
             print(f"\n✗ Stage 2.5 failed: {e}")
+            return 1
+
+        # ===== STAGE 2.5.1: TRANSCRIPT VALIDATION =====
+        logger.info("Starting Stage 2.5.1: Transcript Validation")
+        print("\n" + "="*80)
+        print("STAGE 2.5.1: TRANSCRIPT VALIDATION")
+        print("="*80)
+
+        try:
+            # Run transcript validation for all videos
+            # Source: ContentAnalysispt2.md Section 4.3.1
+            validation_summary = run_transcript_validation_stage(
+                client_id=sanitize_client_id(cli_args.client),
+                hashtag=cli_args.target,  # Pass original target with prefix
+                analysis_type=cli_args.analysis_type,
+                analysis_mode=cli_args.analysis_mode,
+                selection_strategy=cli_args.selection_strategy
+            )
+
+            logger.info(
+                f"Stage 2.5.1 complete: {validation_summary['valid_count']}/{validation_summary['total_count']} "
+                f"transcripts valid ({validation_summary['valid_count']/validation_summary['total_count']*100:.1f}%)"
+            )
+            print(f"\n✓ Stage 2.5.1: Transcript Validation - COMPLETE")
+            print(f"  Valid: {validation_summary['valid_count']}/{validation_summary['total_count']} transcripts")
+
+            # Show invalid breakdown if significant
+            if validation_summary['invalid_count'] > 0:
+                print(f"  Invalid: {validation_summary['invalid_count']} transcripts")
+                # Show top 3 failure reasons
+                top_reasons = sorted(
+                    validation_summary['invalid_reasons'].items(),
+                    key=lambda x: x[1],
+                    reverse=True
+                )[:3]
+                for reason, count in top_reasons:
+                    print(f"    - {reason}: {count}")
+
+        except ValueError as e:
+            # Minimum threshold check failed (<30 valid transcripts)
+            # Source: ContentAnalysispt2.md Q1 decision
+            logger.error(f"Stage 2.5.1 failed: {e}")
+            print(f"\n✗ Stage 2.5.1 failed: {e}")
+            return 1
+
+        except FileNotFoundError as e:
+            # Missing selection_manifest.json (Stage 2.5 incomplete)
+            logger.error(f"Stage 2.5.1 prerequisite missing: {e}")
+            print(f"\n✗ Stage 2.5.1 failed: {e}")
+            print("   Ensure Stage 2.5 (File Organization) completed successfully")
+            return 1
+
+        except Exception as e:
+            logger.error(f"Stage 2.5.1 failed: {e}", exc_info=True)
+            print(f"\n✗ Stage 2.5.1 failed: {e}")
             return 1
 
         # ===== STAGE 2.6 & 2.7: CONTENT ANALYSIS =====
@@ -1850,6 +1907,7 @@ def main():
         print("✓ Stage 1: Video Discovery & Selection - COMPLETE")
         print("✓ Stage 2: Video Processing - COMPLETE")
         print("✓ Stage 2.5: File Organization - COMPLETE")
+        print("✓ Stage 2.5.1: Transcript Validation - COMPLETE")
         print("✓ Stage 2.6/2.7: Content Analysis - COMPLETE")
         print("✓ Stage 3: Feature Aggregation - COMPLETE")
         print("✓ Stage 3.4: Review CSV Generation - COMPLETE")

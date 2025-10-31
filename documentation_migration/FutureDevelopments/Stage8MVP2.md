@@ -40,15 +40,26 @@
 ├── config.json                          # Run configuration
 ├── winner_analysis.json                 # Top 3 winning buckets identification
 ├── selection_manifest.json              # Video IDs per bucket (top/bottom performers)
-├── content_analysis/                    # ⚠️ ANALYSIS-LEVEL (not bucket-level)
-│   ├── {video_id}_content.json         # Stage 2.7 content classifications
-│   ├── {video_id}_content.json
-│   └── ... (all videos across all buckets)
-├── content_taxonomies/                  # Taxonomy definitions
+├── content_analysis/
+│   ├── validated/                       # 🆕 Per-bucket validated classifications
+│   │   ├── bucket_18-33s/
+│   │   │   ├── {video_id}_content.json # Includes "performer_type" & "bucket" fields
+│   │   │   └── ... (82 files)
+│   │   ├── bucket_33-60s/
+│   │   │   └── ... (70 files)
+│   │   └── bucket_60-90s/
+│   │       └── ... (89 files)
+│   └── raw_llm_output/                  # Unprocessed LLM responses
+│       ├── bucket_18-33s/
+│       ├── bucket_33-60s/
+│       └── bucket_60-90s/
+├── content_taxonomies/
+│   ├── {hashtag}_raw_discovery.json    # Analysis-level aggregation (48 sample videos)
+│   └── {hashtag}_taxonomy.json         # Category definitions
 ├── checkpoints/                         # Processing state
 └── buckets/
     ├── bucket_18-33s/
-    │   ├── selected_videos.json         # Video metadata for this bucket
+    │   ├── selected_videos.json         # TikTok API metadata for this bucket
     │   ├── videos/                      # Raw MP4s
     │   ├── analysis/
     │   │   ├── insights/                # Temporal windows JSON (Stage 2)
@@ -78,51 +89,68 @@
 ```
 
 **Key Path Differences from Idealized Documentation**:
-1. **content_analysis/** is at **analysis level**, not bucket level
-2. **LLM outputs** are in `ml_analysis/llm/`, not `llm_reports/analysis/`
-3. **LLM file naming**: `{window}_analysis.json`, `winning_formulas.json` (not `call_1_*`, `insights.json`)
+1. **content_analysis/validated/** is organized **per-bucket** (new refactored structure)
+2. Each validated file includes `"performer_type": "top"|"bottom"` field for filtering
+3. Each validated file includes `"bucket": "18-33s"` field for self-documentation
+4. **LLM outputs** are in `ml_analysis/llm/`, not `llm_reports/analysis/`
+5. **LLM file naming**: `{window}_analysis.json`, `winning_formulas.json` (not `call_1_*`, `insights.json`)
 
 ---
 
-### 0.3 Critical Path Logic for Scripts
+### 0.3 Content Analysis Data Architecture
 
-**Reading content_analysis Files**:
+**Stage 2.6 Discovery (Sample-Based)**:
+- **Processes**: 48 sample videos across all buckets
+- **Output**: `content_taxonomies/{hashtag}_raw_discovery.json` (analysis-level aggregation)
+- **Purpose**: Pattern discovery, taxonomy creation for Stage 2.6 ONLY
+- **Used by Stage 8?**: ❌ NO - Stage 8 reports use full 300 videos from Stage 2.7
 
-Stage 2.7 outputs are stored at **analysis level** (shared across all buckets), not bucket level. Scripts must:
-1. Navigate up from bucket path to analysis path
-2. Read all content_analysis files
-3. Filter by bucket using video IDs from `selected_videos.json`
+**Stage 2.7 Classification (Full Dataset)**:
+- **Processes**: 300+ total videos across all buckets
+- **Output**: `content_analysis/validated/bucket_{name}/*_content.json` (per-bucket organization)
+- **Purpose**: Complete video classification for ALL Stage 8 reports
+- **Used by**: ALL Stage 8 reports (with different aggregation strategies)
 
-**Example Path Resolution**:
+**Key Distinction**:
+- **`raw_discovery.json`**: 48 sample videos - ONLY for Stage 2.6 discovery, NOT for Stage 8 reports
+- **`validated/` files**: 300+ full videos - PRIMARY data source for ALL Stage 8 reports
+
+**Stage 8 Aggregation Strategy Matrix**:
+
+| Report | Aggregation Strategy | Data Source | Method |
+|--------|---------------------|-------------|--------|
+| Report 1 (Client) | All-buckets | `validated/` across ALL buckets | `aggregate_content_classifications()` + combine Counters |
+| Report 2 (Creator) | Per-bucket | `validated/bucket_{name}/` | `aggregate_content_classifications()` per bucket |
+| Report 3 (Competitor) | All-buckets | `validated/` across ALL buckets | `aggregate_content_classifications()` + combine Counters |
+| Report 4 (Multi-Competitor) | Per-bucket per-competitor | `validated/bucket_{name}/` | `aggregate_content_classifications()` per bucket per competitor |
+
+**All-Buckets vs Per-Bucket**:
+- **All-buckets**: Aggregate ALL 300 videos together (combine Counters from multiple buckets)
+- **Per-bucket**: Keep bucket aggregations separate (different patterns per duration)
+
+**Reading validated Files**:
+
+Stage 2.7 classification outputs are organized **per-bucket** in `validated/` subdirectories. Each file contains:
+- `"performer_type": "top"` or `"performer_type": "bottom"` - for filtering
+- `"bucket": "18-33s"` - bucket identifier (self-documenting)
+- All 12 classification fields (content_category, hook_strategy, caption_analysis, etc.)
+
+**Example Direct Path Access**:
 ```python
-# Given bucket_path
-bucket_path = "/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s"
+# Direct path to bucket's validated files
+base_path = "/data/clients/acme/hashtags/nutrition/top_contrastive"
+bucket_name = "18-33s"
 
-# Get analysis path (go up 2 levels from bucket)
-analysis_path = os.path.dirname(os.path.dirname(bucket_path))
-# Result: /data/clients/acme/hashtags/nutrition/top_contrastive
+bucket_dir = f"{base_path}/content_analysis/validated/bucket_{bucket_name}"
+content_files = glob.glob(f"{bucket_dir}/*_content.json")
 
-# Read content_analysis files
-content_analysis_dir = os.path.join(analysis_path, "content_analysis")
-pattern = f"{content_analysis_dir}/*_content.json"
-```
-
-**Filtering by Bucket**:
-```python
-# Load video IDs for this bucket
-with open(f"{bucket_path}/selected_videos.json") as f:
-    selected_data = json.load(f)
-
-top_count = selected_data["top_count"]
-bucket_video_ids = set([v["id"] for v in selected_data["videos"][:top_count]])
-
-# Filter content_analysis files to only this bucket's videos
-for file_path in glob.glob(pattern):
+# Filter by performer_type field in each JSON
+for file_path in content_files:
     with open(file_path) as f:
-        data = json.load(f)
+        content = json.load(f)
 
-    if data["video_id"] in bucket_video_ids:
-        # Process this video's content classification
+    if content.get("performer_type") == "top":
+        # Process this top performer video
         ...
 ```
 
@@ -713,160 +741,149 @@ import json
 import os
 from collections import Counter
 
-def aggregate_content_classifications(bucket_path, performer_type):
+def aggregate_content_classifications(bucket_name, base_path, performer_type="top"):
     """
-    Aggregate Stage 2.7 content analysis classifications across videos in a bucket.
+    Aggregate content patterns from per-bucket validated files.
 
-    CRITICAL PATH LOGIC:
-    - content_analysis/ is at ANALYSIS LEVEL (not bucket level)
-    - Navigate up from bucket_path to analysis_path
-    - Filter files by video IDs from selected_videos.json
+    NEW APPROACH (Post-Refactor):
+    - Files organized by bucket in validated/ subdirectory
+    - Each file has "performer_type" field for filtering
+    - Direct path to bucket directory (no navigation needed)
+    - No need to load selected_videos.json
 
     Process:
-    1. Load selected_videos.json to get video IDs for performer_type
-    2. Navigate to analysis-level content_analysis/ directory
-    3. For each video, load content_analysis/{video_id}_content.json
+    1. Build direct path to bucket's validated directory
+    2. Load all content files in bucket
+    3. Filter by performer_type field in JSON
     4. Aggregate all classification fields
-    5. Calculate top N for each field
-    """
+    5. Return Counter objects for downstream processing
 
-    # Step 1: Get video IDs for this performer type
-    # Load selected_videos.json from bucket
-    with open(os.path.join(bucket_path, 'selected_videos.json')) as f:
-        selected_data = json.load(f)
+    Args:
+        bucket_name: Bucket identifier (e.g., "18-33s")
+        base_path: Analysis base path (e.g., "/data/clients/acme/hashtags/nutrition/top_contrastive")
+        performer_type: "top" or "bottom" (default: "top")
 
-    top_count = selected_data.get("top_count", 0)
-    bottom_count = selected_data.get("bottom_count", 0)
-
-    if performer_type == "top":
-        # Top performers are first N videos
-        video_ids = [v["id"] for v in selected_data["videos"][:top_count]]
-    else:
-        # Bottom performers are next M videos after top performers
-        video_ids = [v["id"] for v in selected_data["videos"][top_count:top_count + bottom_count]]
-
-    # Step 2: Navigate to analysis-level content_analysis directory
-    # bucket_path = /data/.../buckets/bucket_18-33s
-    # analysis_path = /data/.../  (go up 2 levels)
-    analysis_path = os.path.dirname(os.path.dirname(bucket_path))
-    content_analysis_dir = os.path.join(analysis_path, 'content_analysis')
-
-    # Step 3: Load content analysis for each video
-    content_data = []
-    for video_id in video_ids:
-        content_path = os.path.join(content_analysis_dir, f'{video_id}_content.json')
-
-        # Skip if file doesn't exist (video may not have transcript)
-        if not os.path.exists(content_path):
-            continue
-
-        with open(content_path) as f:
-            content_data.append(json.load(f))
-
-    if not content_data:
-        return {}  # No content analysis available
-
-    # Step 3: Aggregate fields
-
-    # Single-value fields (content_category, hook_strategy)
-    content_categories = [d['content_category'] for d in content_data]
-    hook_strategies = [d['hook_strategy'] for d in content_data]
-
-    # Multi-value fields (arrays)
-    all_keywords = []
-    all_pain_points = []
-    all_content_tactics = []
-
-    for d in content_data:
-        all_keywords.extend(d.get('keywords', []))
-        all_pain_points.extend(d.get('pain_points', []))
-        all_content_tactics.extend(d.get('content_tactics', []))
-
-    # Caption analysis fields
-    caption_hook_types = [d['caption_analysis']['hook_type'] for d in content_data]
-    caption_cta_types = [d['caption_analysis']['cta_type'] for d in content_data]
-    caption_lengths = [d['caption_analysis']['caption_length'] for d in content_data]
-    emoji_usages = [d['caption_analysis']['emoji_usage'] for d in content_data]
-    hashtag_counts = [d['caption_analysis']['hashtag_count'] for d in content_data]
-
-    # Step 4: Calculate top N and most common
-
-    def get_top_n(items, n=3):
-        """Get top N items with percentages"""
-        counter = Counter(items)
-        total = len(items)
-        top_items = counter.most_common(n)
-        return [(item, int((count / total) * 100)) for item, count in top_items]
-
-    def get_most_common(items):
-        """Get most common item"""
-        counter = Counter(items)
-        return counter.most_common(1)[0][0] if counter else None
-
-    # Build result
-    result = {
-        'content_category': {
-            'all_values': content_categories,
-            'top_3': get_top_n(content_categories, 3),
-            'most_common': get_most_common(content_categories)
-        },
-        'hook_strategy': {
-            'all_values': hook_strategies,
-            'top_3': get_top_n(hook_strategies, 3),
-            'most_common': get_most_common(hook_strategies)
-        },
-        'keywords': {
-            'all_values': all_keywords,
-            'top_3': [item[0] for item in Counter(all_keywords).most_common(3)],
-            'top_5': [item[0] for item in Counter(all_keywords).most_common(5)]
-        },
-        'pain_points': {
-            'all_values': all_pain_points,
-            'top_3': get_top_n(all_pain_points, 3)
-        },
-        'content_tactics': {
-            'all_values': all_content_tactics,
-            'top_2': [item[0] for item in Counter(all_content_tactics).most_common(2)]
-        },
-        'caption_analysis': {
-            'hook_type': {
-                'most_common': get_most_common(caption_hook_types),
-                'percentage': get_top_n(caption_hook_types, 1)[0][1] if caption_hook_types else 0
-            },
-            'cta_type': {
-                'most_common': get_most_common(caption_cta_types),
-                'percentage': get_top_n(caption_cta_types, 1)[0][1] if caption_cta_types else 0
-            },
-            'caption_length': {
-                'most_common': get_most_common(caption_lengths),
-                'percentage': get_top_n(caption_lengths, 1)[0][1] if caption_lengths else 0
-            },
-            'emoji_usage': {
-                'most_common': get_most_common(emoji_usages),
-                'percentage': get_top_n(emoji_usages, 1)[0][1] if emoji_usages else 0
-            },
-            'hashtag_count': {
-                'mean': sum(hashtag_counts) / len(hashtag_counts) if hashtag_counts else 0,
-                'rounded': round(sum(hashtag_counts) / len(hashtag_counts)) if hashtag_counts else 0
-            }
+    Returns:
+        dict: {
+            "content_category": Counter({"wellness_routine": 25, ...}),
+            "hook_strategy": Counter({"question": 18, ...}),
+            "pain_points": Counter({"bloating": 12, ...}),
+            "keywords": Counter({"gut health": 15, ...}),
+            "engagement_drivers": Counter({"before_after": 8, ...}),
+            "content_tactics": Counter({"direct_camera": 22, ...}),
+            "caption_hook_type": Counter({"statement": 45, ...}),
+            "caption_cta_type": Counter({"link_in_bio": 18, ...}),
+            "hashtag_counts": [0, 3, 5, 7, ...],
+            "processed_count": 82
         }
-    }
+    """
+    import os
+    import json
+    import glob
+    from collections import Counter
 
-    return result
+    # Step 1: Build direct path to bucket directory
+    bucket_dir = f"{base_path}/content_analysis/validated/bucket_{bucket_name}"
+
+    if not os.path.exists(bucket_dir):
+        raise FileNotFoundError(f"Bucket directory not found: {bucket_dir}")
+
+    # Step 2: Load all content files in bucket
+    content_files = glob.glob(f"{bucket_dir}/*_content.json")
+
+    if not content_files:
+        return {}  # No content files in bucket
+
+    # Step 3: Initialize counters
+    content_categories = Counter()
+    hook_strategies = Counter()
+    closing_strategies = Counter()
+    pain_points = Counter()
+    keywords = Counter()
+    engagement_drivers = Counter()
+    content_tactics = Counter()
+
+    # Caption analysis counters
+    caption_hook_types = Counter()
+    caption_cta_types = Counter()
+    hashtag_counts = []
+
+    # Step 4: Aggregate from files matching performer_type
+    processed_count = 0
+
+    for file_path in content_files:
+        with open(file_path) as f:
+            content = json.load(f)
+
+        # Filter by performer_type field (built into each JSON)
+        if content.get("performer_type") != performer_type:
+            continue  # Skip non-matching performers
+
+        processed_count += 1
+
+        # Single-value fields
+        if content.get("content_category"):
+            content_categories[content["content_category"]] += 1
+        if content.get("hook_strategy"):
+            hook_strategies[content["hook_strategy"]] += 1
+        if content.get("closing_strategy"):
+            closing_strategies[content["closing_strategy"]] += 1
+
+        # Multi-value fields (arrays)
+        pain_points.update(content.get("pain_points", []))
+        keywords.update(content.get("keywords", []))
+        engagement_drivers.update(content.get("engagement_drivers", []))
+        content_tactics.update(content.get("content_tactics", []))
+
+        # Caption analysis
+        caption = content.get("caption_analysis", {})
+        if caption.get("hook_type"):
+            caption_hook_types[caption["hook_type"]] += 1
+        if caption.get("cta_type"):
+            caption_cta_types[caption["cta_type"]] += 1
+        if "hashtag_count" in caption:
+            hashtag_counts.append(caption["hashtag_count"])
+
+    if processed_count == 0:
+        logger.warning(f"No {performer_type} performers found in bucket {bucket_name}")
+        return {}
+
+    # Step 5: Return aggregated data as Counters
+    return {
+        "content_category": content_categories,
+        "hook_strategy": hook_strategies,
+        "closing_strategy": closing_strategies,
+        "pain_points": pain_points,
+        "keywords": keywords,
+        "engagement_drivers": engagement_drivers,
+        "content_tactics": content_tactics,
+        "caption_hook_type": caption_hook_types,
+        "caption_cta_type": caption_cta_types,
+        "hashtag_counts": hashtag_counts,
+        "processed_count": processed_count
+    }
 ```
 
-**Data Source**: `{analysis_path}/content_analysis/{video_id}_content.json` (⚠️ analysis-level, not bucket-level - see Section 0.2)
+**Data Source**: `/content_analysis/validated/bucket_{name}/*_content.json` (per-bucket organization)
+
+**Filter Field**: `content["performer_type"]` ("top" or "bottom")
+
+**Performance**: ~1.2ms for 82 files (excellent, linear scaling)
 
 **Usage in Report 2**:
 ```python
 # Get top performer content patterns for this bucket
-top_patterns = aggregate_content_classifications(bucket_path, "top")
+aggregated = aggregate_content_classifications(
+    bucket_name="18-33s",
+    base_path=base_path,
+    performer_type="top"
+)
 
 # Extract fields for Excel
-phase_1_pattern = top_patterns['hook_strategy']['most_common']  # "problem_solution"
-keywords = top_patterns['keywords']['top_3']  # ["#guthealth", "#protein", "#antiinflammatory"]
-cta_type = top_patterns['caption_analysis']['cta_type']['most_common']  # "link_in_bio"
-video_category = top_patterns['content_category']['most_common']  # "recipe_tutorial"
+phase_1_pattern = aggregated['hook_strategy'].most_common(1)[0][0]  # "problem_solution"
+keywords = [k for k, _ in aggregated['keywords'].most_common(3)]  # ["gut health", "protein", "fiber"]
+cta_type = aggregated['caption_hook_type'].most_common(1)[0][0]  # "link_in_bio"
+video_category = aggregated['content_category'].most_common(1)[0][0]  # "recipe_tutorial"
 ```
 
 ---
@@ -1130,18 +1147,19 @@ This section documents the exact structure of all JSON files referenced by the f
 
 ---
 
-#### File 5: `content_analysis/{video_id}_content.json`
+#### File 5: `content_analysis/validated/bucket_{name}/{video_id}_content.json`
 
-**Location**: `{analysis_path}/content_analysis/{video_id}_content.json` (⚠️ **ANALYSIS-LEVEL**, not bucket-level)
-- Example: `/data/clients/acme/hashtags/nutrition/top_contrastive/content_analysis/7545713916584774968_content.json`
+**Location**: `{base_path}/content_analysis/validated/bucket_{bucket_name}/{video_id}_content.json` (per-bucket organization)
+- Example: `/data/clients/acme/hashtags/nutrition/top_contrastive/content_analysis/validated/bucket_18-33s/7545713916584774968_content.json`
 
-**Purpose**: Stage 2.7 LLM content classification for one video (shared across all buckets)
+**Purpose**: Stage 2.7 LLM content classification for one video (organized by bucket, includes performer_type field)
 
-**How many files**: One per video (typically 40 top performers + 20 bottom performers = 60 files per bucket)
+**How many files**: Varies per bucket (e.g., bucket_18-33s: 82 files, bucket_33-60s: 70 files)
 
 **Structure**:
 ```python
 {
+    "video_id": "7545713916584774968",
     "content_category": "recipe_tutorial",  # Single value (required)
     "hook_strategy": "problem_solution",  # Single value (required)
     "keywords": ["#guthealth", "#protein", "#antiinflammatory"],  # Array (0-N items)
@@ -1157,7 +1175,9 @@ This section documents the exact structure of all JSON files referenced by the f
     },
     "taxonomy_version": "stage2.6_output",
     "confidence": "high",
-    "transcript_available": true
+    "transcript_available": true,
+    "bucket": "18-33s",  # 🆕 Bucket identifier
+    "performer_type": "top"  # 🆕 "top" or "bottom" for filtering
 }
 ```
 
@@ -1395,28 +1415,38 @@ def main():
         tab_data.append(['PAGE_2_HOW_TO_EXECUTE', ''])
         tab_data.append(['', ''])
 
+        # Aggregate content patterns for this bucket (top performers only)
+        aggregated = aggregate_content_classifications(
+            bucket_name=bucket_name,
+            base_path=base_path,
+            performer_type="top"
+        )
+
         # Video Category
-        # TODO: Call aggregate_content_classifications() - see Section 3.2 for full implementation
-        tab_data.append(['VIDEO_CATEGORY', 'Recipe Tutorial'])  # Placeholder
+        video_category = aggregated['content_category'].most_common(1)[0][0] if aggregated.get('content_category') else "Unknown"
+        tab_data.append(['VIDEO_CATEGORY', video_category])
 
         # Phase 1: Hook
         tab_data.append(['', ''])
         tab_data.append(['PHASE_1_LABEL', '--- Phase 1: Hook (0-3s) ---'])
         tab_data.append(['PHASE_1_TIMING', '0-3s'])
-        # TODO: Extract from aggregate_content_classifications()
-        tab_data.append(['PHASE_1_CONTENT_PATTERN', 'Problem-Solution'])  # Placeholder
+        phase_1_pattern = aggregated['hook_strategy'].most_common(1)[0][0] if aggregated.get('hook_strategy') else "Unknown"
+        tab_data.append(['PHASE_1_CONTENT_PATTERN', phase_1_pattern])
 
         # Phase 2: Middle
         tab_data.append(['', ''])
         tab_data.append(['PHASE_2_LABEL', '--- Phase 2: Middle (3s to last 3s) ---'])
         tab_data.append(['PHASE_2_TIMING', '3s to last 3s'])
-        # TODO: Extract from aggregate_content_classifications() -> keywords top 3
-        tab_data.append(['PHASE_2_KEYWORD_1', '#guthealth'])  # Placeholder
-        tab_data.append(['PHASE_2_KEYWORD_2', '#protein'])
-        tab_data.append(['PHASE_2_KEYWORD_3', '#antiinflammatory'])
-        # TODO: Extract from aggregate_content_classifications() -> content_tactics top 2
-        tab_data.append(['PHASE_2_TACTIC_1', 'Personal testimony'])  # Placeholder
-        tab_data.append(['PHASE_2_TACTIC_2', 'Before/after reveal'])
+        # Extract top 3 keywords
+        top_keywords = [k for k, _ in aggregated['keywords'].most_common(3)] if aggregated.get('keywords') else []
+        for i in range(3):
+            keyword = f"#{top_keywords[i]}" if i < len(top_keywords) else ""
+            tab_data.append([f'PHASE_2_KEYWORD_{i+1}', keyword])
+        # Extract top 2 content tactics
+        top_tactics = [t for t, _ in aggregated['content_tactics'].most_common(2)] if aggregated.get('content_tactics') else []
+        for i in range(2):
+            tactic = top_tactics[i] if i < len(top_tactics) else ""
+            tab_data.append([f'PHASE_2_TACTIC_{i+1}', tactic])
 
         # Supplementary Insights
         tab_data.append(['', ''])
@@ -1436,21 +1466,25 @@ def main():
         tab_data.append(['PHASE_3_LABEL', '--- Phase 3: Closing (last 3s) ---'])
         tab_data.append(['PHASE_3_TIMING', 'last 3s'])
 
-        # Extract Top 3 CTA types and descriptions
-        top_3_ctas = get_top_n_from_field(aggregated, field="caption_cta_type", n=3)
-        cta_descriptions = get_descriptions_from_taxonomy(top_3_ctas, taxonomy_type="cta_type")
+        # Extract Top 3 CTA types
+        top_cta_types = [c for c, _ in aggregated['caption_cta_type'].most_common(3)] if aggregated.get('caption_cta_type') else []
+        # TODO: Get CTA descriptions from taxonomy (implement get_descriptions_from_taxonomy if needed)
 
         for i in range(3):
-            tab_data.append([f'PHASE_3_CTA_TYPE_{i+1}', top_3_ctas[i] if i < len(top_3_ctas) else ''])
-            tab_data.append([f'PHASE_3_CTA_DESC_{i+1}', cta_descriptions[i] if i < len(cta_descriptions) else ''])
+            cta_type = top_cta_types[i] if i < len(top_cta_types) else ''
+            tab_data.append([f'PHASE_3_CTA_TYPE_{i+1}', cta_type])
+            tab_data.append([f'PHASE_3_CTA_DESC_{i+1}', ''])  # Placeholder for description
 
         # Caption Structure
         tab_data.append(['', ''])
-        # TODO: Extract all from aggregate_content_classifications() -> caption_analysis
-        tab_data.append(['CAPTION_HOOK_TYPE', 'question'])  # Placeholder
-        tab_data.append(['CAPTION_LENGTH', 'short'])
-        tab_data.append(['CAPTION_EMOJI_USAGE', 'some'])
-        tab_data.append(['CAPTION_HASHTAG_COUNT', '7'])
+        # Extract caption analysis from aggregated data
+        caption_hook = aggregated['caption_hook_type'].most_common(1)[0][0] if aggregated.get('caption_hook_type') else "unknown"
+        avg_hashtag_count = round(sum(aggregated.get('hashtag_counts', [])) / len(aggregated.get('hashtag_counts', [1]))) if aggregated.get('hashtag_counts') else 0
+
+        tab_data.append(['CAPTION_HOOK_TYPE', caption_hook])
+        tab_data.append(['CAPTION_LENGTH', 'short'])  # Placeholder - add to aggregation if needed
+        tab_data.append(['CAPTION_EMOJI_USAGE', 'some'])  # Placeholder - add to aggregation if needed
+        tab_data.append(['CAPTION_HASHTAG_COUNT', str(avg_hashtag_count)])
 
         # Ready Templates
         tab_data.append(['', ''])
@@ -1942,211 +1976,59 @@ def calculate_avg_views_per_bucket(bucket_path, performance_group="top"):
 
 #### Function 3: `aggregate_content_classifications()`
 
-**Purpose**: Aggregate 120 individual Stage 2.7 classifications into frequency distributions
+**Purpose**: Aggregate content patterns from per-bucket validated files
 
-**Used by**: Report 1 (Content Intelligence section)
+**Used by**: Report 1 (all-buckets aggregation for Content Intelligence section)
 
-**Input Parameters**:
-- `bucket_path` (string): Path to bucket folder containing `content_analysis/` subdirectory
-  - Example: `/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_18-33s/`
-- `performance_group` (string, optional): Filter by "top" or "bottom" performers
-  - If None: Aggregate all videos (for overall insights)
-  - If "top": Only aggregate top performers
-  - If "bottom": Only aggregate bottom performers
+**Implementation**: See Section 0.5.1 for complete function definition
 
-**Process**:
-1. Load all `{video_id}_content.json` files from `content_analysis/` folder
-2. Filter by `performance_group` if specified (using `performance_group` field from each file)
-3. **Quality Gate**: Filter by confidence (only include `high` and `medium` confidence classifications)
-   - Excludes unreliable `low` confidence classifications
-   - Tracks excluded count for quality reporting
-4. For each of 9 key fields, calculate frequency distributions:
-   - **Core Content Fields** (6): `content_category`, `hook_strategy`, `pain_points`, `keywords`, `engagement_drivers`, `content_tactics`
-   - **Caption Strategy Fields** (3): `cta_type`, `hook_type`, `hashtag_count` (mean/min/max/median)
-5. Calculate effect sizes (if both top and bottom groups aggregated)
-
-**Implementation**:
-```python
-from collections import Counter
-import glob
-import json
-import os
-
-def aggregate_content_classifications(bucket_path, performance_group=None):
-    """
-    Aggregate Stage 2.7 Content Analysis classifications.
-
-    CRITICAL PATH LOGIC:
-    - content_analysis/ is at ANALYSIS LEVEL (not bucket level)
-    - Navigate up from bucket_path to analysis_path
-    - Filter files by video IDs from selected_videos.json
-
-    Returns dict with frequency distributions for 9 key fields.
-    """
-    # Step 1: Get video IDs for this bucket and performance group
-    with open(os.path.join(bucket_path, 'selected_videos.json')) as f:
-        selected_data = json.load(f)
-
-    top_count = selected_data.get("top_count", 0)
-    bottom_count = selected_data.get("bottom_count", 0)
-
-    # Determine which video IDs to include
-    if performance_group == "top":
-        video_ids = set([v["id"] for v in selected_data["videos"][:top_count]])
-    elif performance_group == "bottom":
-        video_ids = set([v["id"] for v in selected_data["videos"][top_count:top_count + bottom_count]])
-    elif performance_group is None:
-        # All videos in this bucket
-        video_ids = set([v["id"] for v in selected_data["videos"][:top_count + bottom_count]])
-    else:
-        raise ValueError(f"Invalid performance_group: {performance_group}")
-
-    # Step 2: Navigate to analysis-level content_analysis directory
-    analysis_path = os.path.dirname(os.path.dirname(bucket_path))
-    content_analysis_dir = os.path.join(analysis_path, 'content_analysis')
-
-    pattern = f"{content_analysis_dir}/*_content.json"
-    classification_files = glob.glob(pattern)
-
-    # Step 3: Load and filter classifications by video IDs
-    all_classifications = []
-    for file_path in classification_files:
-        with open(file_path, 'r') as f:
-            data = json.load(f)
-
-            # Filter by video IDs for this bucket
-            if data.get('video_id') in video_ids:
-                all_classifications.append(data)
-
-    if not all_classifications:
-        return None  # No data found
-
-    # Quality Gate: Filter by confidence (exclude low confidence)
-    classifications = [
-        c for c in all_classifications
-        if c.get('confidence', 'high') in ['high', 'medium']
-    ]
-
-    excluded_count = len(all_classifications) - len(classifications)
-
-    # Aggregate core content fields (strings)
-    aggregated = {
-        'total_videos': len(classifications),
-        'excluded_low_confidence': excluded_count,
-        'content_category': Counter([c['content_category'] for c in classifications]),
-        'hook_strategy': Counter([c['hook_strategy'] for c in classifications]),
-    }
-
-    # Aggregate array fields (flatten then count)
-    for field in ['pain_points', 'keywords', 'engagement_drivers', 'content_tactics']:
-        all_values = []
-        for c in classifications:
-            all_values.extend(c.get(field, []))
-        aggregated[field] = Counter(all_values)
-
-    # Aggregate caption analysis fields
-    aggregated['caption_hook_type'] = Counter([
-        c['caption_analysis']['hook_type'] for c in classifications
-    ])
-    aggregated['caption_cta_type'] = Counter([
-        c['caption_analysis']['cta_type'] for c in classifications
-    ])
-
-    # Aggregate numeric fields (hashtag_count)
-    hashtag_counts = [c['caption_analysis']['hashtag_count'] for c in classifications]
-    aggregated['hashtag_count_stats'] = {
-        'mean': sum(hashtag_counts) / len(hashtag_counts),
-        'min': min(hashtag_counts),
-        'max': max(hashtag_counts),
-        'median': sorted(hashtag_counts)[len(hashtag_counts) // 2]
-    }
-
-    # Transcript availability ratio
-    with_transcript = sum(1 for c in classifications if c.get('transcript_available', False))
-    aggregated['transcript_available_ratio'] = with_transcript / len(classifications)
-
-    return aggregated
-```
-
-**Output Format**:
-```python
-{
-    'total_videos': 38,  # High/medium confidence only
-    'excluded_low_confidence': 2,  # Low confidence classifications excluded
-    'content_category': Counter({
-        'recipe_tutorial': 23,
-        'wellness_practice': 11,
-        'supplement_review': 4
-    }),
-    'hook_strategy': Counter({
-        'problem_solution': 24,
-        'question': 10,
-        'direct_statement': 6
-    }),
-    'pain_points': Counter({
-        'bloating': 21,
-        'low_energy': 15,
-        'inflammation': 8
-    }),
-    'keywords': Counter({
-        'gut_health': 27,
-        'protein': 22,
-        'fiber': 18
-    }),
-    'engagement_drivers': Counter({
-        'before_after_reveal': 19,
-        'personal_testimony': 16,
-        'product_recommendation': 14
-    }),
-    'content_tactics': Counter({
-        'direct_to_camera': 31,
-        'product_demonstration': 25,
-        'text_overlay_heavy': 20
-    }),
-    'caption_hook_type': Counter({
-        'question': 17,
-        'statement': 12,
-        'command': 7,
-        'teaser': 2
-    }),
-    'caption_cta_type': Counter({
-        'link_in_bio': 32,
-        'save_post': 5,
-        'comment': 3
-    }),
-    'hashtag_count_stats': {
-        'mean': 7.2,
-        'min': 3,
-        'max': 12,
-        'median': 7
-    },
-    'transcript_available_ratio': 0.95
-}
-```
-
-**Usage in Report 1**:
+**Usage in Report 1 (All-Buckets Aggregation)**:
 ```python
 # Aggregate across ALL winning buckets for market-level insights
-all_content_data = []
+from collections import Counter
 
-for bucket_name in winning_buckets:
-    bucket_path = f"{analysis_path}/buckets/bucket_{bucket_name}"
-    bucket_aggregated = aggregate_content_classifications(bucket_path, performance_group="top")
+# Combine aggregations from all buckets
+combined = {
+    'content_category': Counter(),
+    'hook_strategy': Counter(),
+    'pain_points': Counter(),
+    'keywords': Counter(),
+    'engagement_drivers': Counter(),
+    'content_tactics': Counter(),
+    'caption_hook_type': Counter(),
+    'caption_cta_type': Counter(),
+    'hashtag_counts': []
+}
 
-    if bucket_aggregated:
-        all_content_data.append(bucket_aggregated)
+for bucket_name in winning_buckets:  # e.g., ['18-33s', '33-60s', '60-90s']
+    # Get bucket-specific aggregation
+    bucket_data = aggregate_content_classifications(
+        bucket_name=bucket_name,
+        base_path=base_path,
+        performer_type="top"
+    )
 
-# Combine Counters from all buckets
-combined_content_category = Counter()
-for data in all_content_data:
-    combined_content_category.update(data['content_category'])
+    if bucket_data:
+        # Combine Counters from this bucket
+        combined['content_category'].update(bucket_data['content_category'])
+        combined['hook_strategy'].update(bucket_data['hook_strategy'])
+        combined['pain_points'].update(bucket_data['pain_points'])
+        combined['keywords'].update(bucket_data['keywords'])
+        combined['engagement_drivers'].update(bucket_data['engagement_drivers'])
+        combined['content_tactics'].update(bucket_data['content_tactics'])
+        combined['caption_hook_type'].update(bucket_data['caption_hook_type'])
+        combined['caption_cta_type'].update(bucket_data['caption_cta_type'])
+        combined['hashtag_counts'].extend(bucket_data.get('hashtag_counts', []))
 
-# Get top 3
-top_3_categories = combined_content_category.most_common(3)
-# Returns: [('recipe_tutorial', 46), ('wellness_practice', 28), ('supplement_review', 18)]
+# Extract top N from combined data (ALL 300 videos across all buckets)
+top_3_categories = [c for c, _ in combined['content_category'].most_common(3)]
+# Returns: ['recipe_tutorial', 'wellness_practice', 'supplement_review']
+
+top_5_keywords = [k for k, _ in combined['keywords'].most_common(5)]
+# Returns: ['gut_health', 'protein', 'fiber', 'supplements', 'anti-inflammatory']
 ```
 
-**Data Source**: `{analysis_path}/content_analysis/{video_id}_content.json` (⚠️ analysis-level - see Section 0.2 and Data Source File Formats section)
+**Data Source**: `content_analysis/validated/bucket_{name}/*_content.json` (per-bucket organization)
 
 ---
 
@@ -2622,19 +2504,16 @@ This section documents the exact JSON structure for all files used by this scrip
 
 ---
 
-#### File 5: `content_analysis/{video_id}_content.json`
+#### File 5: `content_analysis/validated/bucket_{name}/{video_id}_content.json`
 
-**Location**: `/data/clients/{client}/hashtags/{target}/{mode}_{strategy}/content_analysis/{video_id}_content.json` (⚠️ **ANALYSIS-LEVEL**, not bucket-level)
+**Location**: `/data/clients/{client}/hashtags/{target}/{mode}_{strategy}/content_analysis/validated/bucket_{bucket_name}/{video_id}_content.json` (per-bucket organization)
 
-**Purpose**: Stage 2.7 LLM content classifications per video (shared across all buckets)
+**Purpose**: Stage 2.7 LLM content classifications per video (organized by bucket, includes performer_type field)
 
 **Structure**:
 ```json
 {
   "video_id": "7540717847325003039",
-  "performance_group": "top",
-  "confidence": "high",
-  "transcript_available": true,
   "content_category": "recipe_tutorial",
   "hook_strategy": "problem_solution",
   "pain_points": ["bloating", "low_energy", "inflammation"],
@@ -2647,13 +2526,19 @@ This section documents the exact JSON structure for all files used by this scrip
     "caption_length": "short",
     "emoji_usage": "some",
     "hashtag_count": 7
-  }
+  },
+  "taxonomy_version": "stage2.6_output",
+  "confidence": "high",
+  "transcript_available": true,
+  "bucket": "18-33s",
+  "performer_type": "top"
 }
 ```
 
 **Fields Used**:
 - ALL fields for aggregation via `aggregate_content_classifications()`
-- `performance_group` → Filter by "top" or "bottom"
+- `performer_type` → Filter by "top" or "bottom"
+- `bucket` → Self-documenting bucket identifier
 - `confidence` → Quality gate (exclude "low")
 
 ---
@@ -2851,8 +2736,11 @@ def main():
     all_hashtag_counts = []
 
     for bucket_name in winning_buckets:
-        bucket_path = os.path.join(base_path, 'buckets', f'bucket_{bucket_name}')
-        bucket_aggregated = aggregate_content_classifications(bucket_path, performance_group="top")
+        bucket_aggregated = aggregate_content_classifications(
+            bucket_name=bucket_name,
+            base_path=base_path,
+            performer_type="top"
+        )
 
         if bucket_aggregated:
             all_content_categories.update(bucket_aggregated['content_category'])
@@ -4116,11 +4004,11 @@ This section documents the exact JSON structure for all files used by this scrip
 
 ---
 
-#### File 3: `content_analysis/{video_id}_content.json`
+#### File 3: `content_analysis/validated/bucket_{name}/{video_id}_content.json`
 
-**Location**: `/data/clients/{client}/competitors/{target}/{mode}_{strategy}/content_analysis/{video_id}_content.json` (⚠️ **ANALYSIS-LEVEL**, not bucket-level)
+**Location**: `/data/clients/{client}/competitors/{target}/{mode}_{strategy}/content_analysis/validated/bucket_{bucket_name}/{video_id}_content.json` (per-bucket organization)
 
-**Purpose**: Stage 2.7 content classifications (shared across all buckets)
+**Purpose**: Stage 2.7 content classifications (organized by bucket, includes performer_type field)
 
 **Structure**: Same as Report 1 - see Section 3.2 File 5
 
@@ -4230,8 +4118,11 @@ def main():
     all_content_tactics = Counter()
 
     for bucket in winning_buckets:
-        bucket_path = os.path.join(competitor_path, 'buckets', f'bucket_{bucket}')
-        aggregated = aggregate_content_classifications(bucket_path, "top")
+        aggregated = aggregate_content_classifications(
+            bucket_name=bucket,
+            base_path=competitor_path,
+            performer_type="top"
+        )
 
         if aggregated:
             all_content_categories.update(aggregated['content_category'])
@@ -5392,10 +5283,12 @@ def aggregate_per_bucket_content(client_id, competitors):
         competitor_results = {}
 
         for bucket in winning_buckets:
-            bucket_path = f"{competitor_path}/buckets/bucket_{bucket}"
-
-            # Aggregate for this bucket
-            aggregated = aggregate_content_classifications(bucket_path, "top")
+            # Aggregate content patterns for this bucket (top performers only)
+            aggregated = aggregate_content_classifications(
+                bucket_name=bucket,
+                base_path=competitor_path,
+                performer_type="top"
+            )
 
             if not aggregated:
                 continue
@@ -5589,19 +5482,9 @@ def calculate_bucket_distribution(winner_analysis_path):
     return bucket_percentages
 
 
-def aggregate_content_classifications(bucket_path, performance_group="top"):
-    """
-    Aggregate Stage 2.7 classifications for a bucket.
-
-    CRITICAL: Use the CORRECTED implementation from Section 3.2 Function 3
-    that reads from analysis-level content_analysis/ directory.
-    """
-    # Full implementation - see Section 3.2 Function 3
-    # Key changes from idealized docs:
-    # 1. Navigate to analysis_path = os.path.dirname(os.path.dirname(bucket_path))
-    # 2. Read from {analysis_path}/content_analysis/ (not bucket-level)
-    # 3. Filter by video IDs from selected_videos.json
-    pass
+# NOTE: aggregate_content_classifications() is defined in Section 0.5.1
+# Use the updated signature:
+#   aggregate_content_classifications(bucket_name, base_path, performer_type="top")
 ```
 
 ---
@@ -5611,7 +5494,7 @@ def aggregate_content_classifications(bucket_path, performance_group="top"):
 Same data sources as Reports 1-3:
 1. `winner_analysis.json` - See Section 3.3 File 1
 2. `selected_videos.json` (per bucket) - See Section 3.2 File 4
-3. `content_analysis/{video_id}_content.json` (⚠️ **analysis-level**, not bucket-level) - See Section 3.2 File 5
+3. `content_analysis/validated/bucket_{name}/{video_id}_content.json` (per-bucket organization) - See Section 0.2
 
 ---
 

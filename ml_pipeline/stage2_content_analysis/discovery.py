@@ -11,7 +11,7 @@ import random
 import logging
 import time
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import anthropic
 
 from .utils import load_json, save_json, construct_path
@@ -25,152 +25,204 @@ logger = logging.getLogger(__name__)
 
 def sample_transcripts_for_discovery(
     manifest_path: str,
-    sample_size: int = 50,
-    validation_cache: Dict[str, Any] = None
+    sample_size: int = 60,
+    validation_cache: Dict[str, Any] = None,
+    random_seed: Optional[int] = None
 ) -> List[Dict[str, Any]]:
     """
-    Sample transcripts stratified evenly across top 3 buckets.
+    Sample valid transcripts with adaptive distribution across top 3 buckets.
 
-    Source: ContentAnalysisCHILDTI.md Section 4.1
-    Updated: 2.6FilterImprovement.md Section "Implementation Part 4"
+    Strategy (ContentAnalysispt2.md Step 3):
+    - Target: 20 per bucket (balanced duration representation)
+    - If bucket has <20 valid: Take all (signal: weak bucket)
+    - Compensate shortfall from buckets with surplus
+    - Never fails: Adapts to available data
+
+    Source: ContentAnalysispt2.md Section "Step 3: Updated Stage 2.6 Sampling (Adaptive)"
+    Updated: Adapted to work with external validation cache from Stage 2.5.1
 
     Args:
         manifest_path: Path to selection_manifest.json from Stage 2.5
-        sample_size: Total transcripts to sample (default: 50, max: 100)
-                    If fewer videos available, uses all available (does not fail)
-        validation_cache: Optional validation cache dict from Stage 2.5.5
-                         If provided, only samples valid transcripts
-                         If None, samples all transcripts (legacy behavior)
+        sample_size: Total transcripts to sample (default: 60)
+        validation_cache: MANDATORY validation cache dict from Stage 2.5.1
+                         Maps video_id -> {is_valid: bool, failure_reason: str}
+        random_seed: Optional seed for reproducible sampling (testing/debugging)
+                     If None, sampling is random (non-reproducible)
 
     Returns:
-        list[dict]: Sampled video IDs with transcript text and bucket assignment
+        list[dict]: Sampled valid transcripts (~20 per bucket, adaptive)
                     Format: [{"video_id": str, "text": str, "bucket": str}, ...]
 
     Raises:
         FileNotFoundError: If manifest_path does not exist
-        ValueError: If manifest missing required fields or insufficient samples
+        ValueError: If manifest missing required fields, no validation cache, or insufficient samples
+
+    Example Scenarios:
+        Scenario 1 (All Healthy): 46, 48, 44 valid → Sample 20, 20, 20 = 60 ✅
+        Scenario 2 (One Weak): 12, 50, 48 valid → Sample 12, 24, 24 = 60 ✅
+        Scenario 3 (Insufficient): 8, 12, 18 valid → Sample 8, 12, 18 = 38 ⚠️
     """
+    # M9 FIX: Set random seed if provided for reproducibility
+    if random_seed is not None:
+        random.seed(random_seed)
+        logger.info(f"🎲 Random seed set to {random_seed} for reproducible sampling")
+
     # Step 1: Load manifest from Stage 2.5
-    # Source: ContentAnalysisCHILD.md Section 2.3.1 lines 131-133
     if not os.path.exists(manifest_path):
         raise FileNotFoundError(f"Manifest not found: {manifest_path}")
 
     manifest = load_json(manifest_path)
 
     # Step 2: Validate manifest structure
-    # Source: ContentAnalysisCHILD.md Section 6.1 (Input Validation)
     required_fields = ['hashtag', 'selected_buckets', 'videos_by_bucket']
     missing = [f for f in required_fields if f not in manifest]
     if missing:
         raise ValueError(f"Manifest missing required fields: {missing}")
 
-    # Step 3: Extract top 3 buckets
-    # Source: ContentAnalysisCHILD.md Section 2.3.1 line 133
-    top_3_buckets = manifest['selected_buckets']  # e.g., ["33-60s", "60-90s", "90-120s"]
-
-    # Step 4: Cap sample_size at 100 (configurable maximum)
-    sample_size = min(sample_size, 100)
-
-    # Step 5: Calculate total available top performers across all buckets
-    total_available = 0
-    for bucket in top_3_buckets:
-        if bucket in manifest['videos_by_bucket']:
-            total_available += len(manifest['videos_by_bucket'][bucket]['top_performers'])
-
-    # Step 6: Adjust sample_size if fewer videos available (don't fail)
-    actual_sample_size = min(sample_size, total_available)
-
-    if actual_sample_size < sample_size:
-        logger.warning(
-            f"Requested {sample_size} samples but only {total_available} top performers available. "
-            f"Using all {actual_sample_size} available videos."
+    # Step 3: Validation cache is MANDATORY (enforced by caller but double-check)
+    if validation_cache is None:
+        raise ValueError(
+            "Validation cache is required. "
+            "Stage 2.5.1 (Transcript Validation) must complete before sampling."
         )
 
-    logger.info(f"Sampling {actual_sample_size} transcripts from top 3 buckets: {top_3_buckets}")
+    # Step 4: Extract top 3 buckets
+    top_3_buckets = manifest['selected_buckets']  # e.g., ["33-60s", "60-90s", "90-120s"]
 
-    # Step 7: Calculate samples per bucket (stratified even sampling)
-    # Source: ContentAnalysisCHILD.md Section 2.3.1 line 136
-    samples_per_bucket = actual_sample_size // 3  # ~17 per bucket for sample_size=50
+    # L18 FIX: 20 samples per bucket = balanced duration representation across 3 buckets
+    target_per_bucket = sample_size // 3  # Default: 60 // 3 = 20 per bucket
 
-    # Step 8: Initialize results container
-    sampled_transcripts = []
+    logger.info(f"Adaptive sampling: Target {target_per_bucket} per bucket from {top_3_buckets}")
 
-    # Step 9: Sample from each bucket
+    # STEP 1: Assess available valid transcripts per bucket
+    bucket_valid_counts = {}
+    bucket_valid_ids = {}
+
     for bucket in top_3_buckets:
-        # Step 9.1: Validate bucket exists in manifest
         if bucket not in manifest['videos_by_bucket']:
             logger.warning(f"Bucket {bucket} not in videos_by_bucket, skipping")
+            bucket_valid_counts[bucket] = 0
+            bucket_valid_ids[bucket] = []
             continue
 
-        # Step 9.2: Extract top performers only
-        # Source: ContentAnalysisCHILD.md Section 2.3.1 line 141
         top_performers = manifest['videos_by_bucket'][bucket]['top_performers']
 
-        # Step 9.2a: FILTER to valid video IDs if validation cache provided
-        # Source: 2.6FilterImprovement.md Section "Implementation Part 4"
-        if validation_cache is not None:
-            valid_video_ids = [
-                vid for vid in top_performers
-                if vid in validation_cache and validation_cache[vid]['is_valid']
-            ]
+        # Filter to valid video IDs only
+        valid_ids = [
+            vid for vid in top_performers
+            if vid in validation_cache and validation_cache[vid]['is_valid']
+        ]
 
-            invalid_rate = (len(top_performers) - len(valid_video_ids)) / len(top_performers) if len(top_performers) > 0 else 0
-            logger.info(
-                f"Bucket {bucket}: {len(valid_video_ids)}/{len(top_performers)} valid transcripts "
-                f"({invalid_rate:.1%} invalid rate)"
+        bucket_valid_counts[bucket] = len(valid_ids)
+        bucket_valid_ids[bucket] = valid_ids
+
+        invalid_rate = (len(top_performers) - len(valid_ids)) / len(top_performers) if len(top_performers) > 0 else 0
+        logger.info(
+            f"  Bucket {bucket}: {len(valid_ids)}/{len(top_performers)} valid top performers "
+            f"({invalid_rate:.1%} invalid rate)"
+        )
+
+    # STEP 2: Determine sampling plan (adaptive distribution)
+    sampling_plan = {}
+    shortfall = 0
+    surplus_buckets = []
+
+    for bucket in top_3_buckets:
+        available = bucket_valid_counts[bucket]
+
+        if available < target_per_bucket:
+            # Weak bucket: take all available
+            sampling_plan[bucket] = available
+            shortfall += (target_per_bucket - available)
+            logger.warning(
+                f"⚠️  Bucket {bucket} has only {available} valid top performers "
+                f"(target: {target_per_bucket}). Taking all {available}."
             )
+        else:
+            # Strong bucket: initially plan for target, may increase later
+            sampling_plan[bucket] = target_per_bucket
+            surplus_buckets.append(bucket)
 
-            # Use filtered valid IDs for sampling
-            top_performers = valid_video_ids
+    # STEP 3: Distribute shortfall among surplus buckets
+    if shortfall > 0 and surplus_buckets:
+        extra_per_surplus = shortfall // len(surplus_buckets)
+        remainder = shortfall % len(surplus_buckets)
 
-        # Step 9.3: Random sample (handle case where bucket has < samples_per_bucket videos)
-        # Source: ContentAnalysisCHILD.md Section 2.3.1 lines 144
-        # Use all available if bucket has fewer than target
-        sample_count = min(samples_per_bucket, len(top_performers))
-        sampled_ids = random.sample(top_performers, sample_count) if len(top_performers) > 0 else []
+        for i, bucket in enumerate(surplus_buckets):
+            extra = extra_per_surplus
+            if i < remainder:  # Distribute remainder to first N buckets
+                extra += 1
 
-        logger.info(f"Bucket {bucket}: Sampling {sample_count} videos from {len(top_performers)} available")
+            # Ensure we don't exceed available
+            max_possible = bucket_valid_counts[bucket]
+            sampling_plan[bucket] = min(sampling_plan[bucket] + extra, max_possible)
 
-        # Step 6.4: Load transcripts for sampled videos
+        logger.info(
+            f"📊 Compensating shortfall of {shortfall} transcripts "
+            f"from {len(surplus_buckets)} surplus buckets"
+        )
+
+    # STEP 4: Sample according to plan
+    sampled_transcripts = []
+    RUMIAI_ROOT = os.environ.get('RUMIAI_ROOT', '/home/jorge/rumiaifinal')
+
+    for bucket in top_3_buckets:
+        sample_count = sampling_plan[bucket]
+        valid_ids = bucket_valid_ids[bucket]
+
+        if sample_count == 0:
+            logger.warning(f"⚠️  Bucket {bucket}: No valid transcripts available, skipping")
+            continue
+
+        # Sample exactly according to plan
+        sampled_ids = random.sample(valid_ids, sample_count)
+
+        # Load transcripts
         for video_id in sampled_ids:
-            # Step 6.4.1: Construct transcript path
-            # Source: ContentAnalysisCHILD.md Section 2.3.1 line 148
-            # Updated: M1 Enhancement - Use RUMIAI_ROOT environment variable
-            RUMIAI_ROOT = os.environ.get('RUMIAI_ROOT', '/home/jorge/rumiaifinal')
             transcript_path = f"{RUMIAI_ROOT}/speech_transcriptions/{video_id}_whisper.json"
 
-            # Step 6.4.2: Load transcript (handle missing files gracefully)
-            # Source: ContentAnalysisCHILD.md Section 2.3.1 Edge Cases table
             try:
                 transcript_data = load_json(transcript_path)
                 text = transcript_data.get('text', '')
 
-                # Step 6.4.3: Include even if empty (may reveal no-speech patterns)
-                # Source: ContentAnalysisCHILD.md Section 2.3.1 Edge Cases row 3
                 sampled_transcripts.append({
                     "video_id": video_id,
                     "text": text,
                     "bucket": bucket
                 })
             except FileNotFoundError:
-                # Step 6.4.4: Log warning and skip video
-                # Source: ContentAnalysisCHILD.md Section 2.3.1 Edge Cases row 2
                 logger.warning(f"Transcript not found: {video_id}, skipping")
                 continue
 
-    # Step 7: Validate we have sufficient samples
-    if len(sampled_transcripts) < 10:
-        raise ValueError(
-            f"Insufficient transcripts sampled: {len(sampled_transcripts)}. "
-            f"Minimum 10 required for pattern discovery."
+        logger.info(
+            f"  ✅ Bucket {bucket}: Sampled {sample_count} from {len(valid_ids)} valid "
+            f"({'balanced' if sample_count == target_per_bucket else 'adapted'})"
         )
 
-    logger.info(f"Successfully sampled {len(sampled_transcripts)} transcripts")
+    # STEP 5: Log summary and validate
+    total_sampled = len(sampled_transcripts)
+    logger.info(
+        f"✅ Total sampled: {total_sampled} transcripts "
+        f"({'balanced' if total_sampled == sample_size else 'adapted distribution'})"
+    )
 
-    # Step 8: Run business rules validation
+    # Warn if we couldn't reach target
+    if total_sampled < sample_size:
+        logger.warning(
+            f"⚠️  Only sampled {total_sampled}/{sample_size} transcripts. "
+            f"Some buckets had very few valid top performers."
+        )
+
+    # Enforce minimum threshold
+    if total_sampled < 10:
+        raise ValueError(
+            f"Insufficient transcripts sampled: {total_sampled}/10 minimum. "
+            f"Cannot proceed with pattern discovery."
+        )
+
+    # Run business rules validation
     validate_business_rules_sampling(sampled_transcripts)
 
-    # Step 9: Return sampled transcripts
     return sampled_transcripts
 
 
@@ -497,12 +549,13 @@ def run_discovery_stage(
     analysis_type: str,
     analysis_mode: str = "top",
     selection_strategy: str = "contrastive",
-    sample_size: int = 100
+    sample_size: int = 60,
+    random_seed: Optional[int] = None
 ) -> Dict[str, Any]:
     """
-    Run complete Stage 2.6 discovery pipeline with error handling.
+    Run complete Stage 2.6 discovery pipeline with adaptive sampling.
 
-    Source: ContentAnalysisCHILDTI.md Section 6.3
+    Source: ContentAnalysispt2.md Step 3 (Adaptive Sampling)
 
     Args:
         client_id: Client identifier (e.g., "acme_corp")
@@ -510,7 +563,8 @@ def run_discovery_stage(
         analysis_type: "hashtag", "competitor", or "creator"
         analysis_mode: "top" or "recent" (default: "top")
         selection_strategy: "contrastive" or "top" (default: "contrastive")
-        sample_size: Number of transcripts to sample (default: 50)
+        sample_size: Number of transcripts to sample (default: 60)
+        random_seed: Optional seed for reproducible sampling (testing/debugging)
 
     Returns:
         dict: Raw discovery JSON with patterns
@@ -542,25 +596,27 @@ def run_discovery_stage(
     validate_discovery_inputs(manifest_path, sample_size)
     logger.info("✓ Input validation passed")
 
-    # Step 2a: Load validation cache if available (Stage 2.5.5)
-    # Source: 2.6FilterImprovement.md Section "Implementation Part 4"
+    # Step 2a: Load validation cache (MANDATORY as of Stage 2.5.1)
+    # Source: ContentAnalysispt2.md Section 3.1.1 - validation cache is now a prerequisite
     logger.info("Step 2/4: Loading transcript validation cache...")
     try:
         validation_cache = load_validation_cache(
             client_id, hashtag, analysis_type, analysis_mode, selection_strategy
         )
-        logger.info("✓ Validation cache loaded - will filter invalid transcripts")
-    except FileNotFoundError:
-        logger.warning(
-            "⚠️  No validation cache found. Sampling without filtering.\n"
-            "   Run Stage 2.5.5 (validate_all_transcripts) first for better results."
-        )
-        validation_cache = None
+        logger.info("✓ Validation cache loaded - filtering invalid transcripts")
+    except FileNotFoundError as e:
+        # MANDATORY: Stage 2.5.1 must complete before Stage 2.6
+        logger.error("❌ Transcript validation cache not found")
+        raise FileNotFoundError(
+            f"Stage 2.5.1 (Transcript Validation) must complete before Stage 2.6.\n"
+            f"Missing cache: {e}\n"
+            f"Run the full pipeline or execute Stage 2.5.1 manually."
+        ) from e
 
-    # Step 3: Sample transcripts
-    logger.info("Step 3/4: Sampling transcripts from top 3 buckets...")
+    # Step 3: Sample transcripts (with adaptive distribution)
+    logger.info("Step 3/4: Sampling transcripts from top 3 buckets (adaptive)...")
     sampled_transcripts = sample_transcripts_for_discovery(
-        manifest_path, sample_size, validation_cache
+        manifest_path, sample_size, validation_cache, random_seed
     )
     logger.info(f"✓ Sampled {len(sampled_transcripts)} transcripts")
 
