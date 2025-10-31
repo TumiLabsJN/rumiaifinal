@@ -413,19 +413,27 @@ def main():
 
     tab_data.append(['', ''])
 
-    # Top 4 engagement drivers
-    for i, (driver, count) in enumerate(all_engagement_drivers.most_common(4), 1):
-        pct = round((count / total_classified) * 100) if total_classified > 0 else 0
-        tab_data.append([f'ENGAGEMENT_DRIVER_{i}', driver.replace('_', ' ').title()])
-        tab_data.append([f'ENGAGEMENT_DRIVER_{i}_PCT', str(pct)])
-
-    tab_data.append(['', ''])
-
     # Top 4 hook strategies
     for i, (hook, count) in enumerate(all_hook_strategies.most_common(4), 1):
         pct = round((count / total_classified) * 100) if total_classified > 0 else 0
         tab_data.append([f'HOOK_STRATEGY_{i}', hook.replace('_', ' ').title()])
         tab_data.append([f'HOOK_STRATEGY_{i}_PCT', str(pct)])
+
+    tab_data.append(['', ''])
+
+    # Top 4 closing strategies
+    for i, (closing, count) in enumerate(all_closing_strategies.most_common(4), 1):
+        pct = round((count / total_classified) * 100) if total_classified > 0 else 0
+        tab_data.append([f'CLOSING_STRATEGY_{i}', closing.replace('_', ' ').title()])
+        tab_data.append([f'CLOSING_STRATEGY_{i}_PCT', str(pct)])
+
+    tab_data.append(['', ''])
+
+    # Top 4 engagement drivers
+    for i, (driver, count) in enumerate(all_engagement_drivers.most_common(4), 1):
+        pct = round((count / total_classified) * 100) if total_classified > 0 else 0
+        tab_data.append([f'ENGAGEMENT_DRIVER_{i}', driver.replace('_', ' ').title()])
+        tab_data.append([f'ENGAGEMENT_DRIVER_{i}_PCT', str(pct)])
 
     tab_data.append(['', ''])
 
@@ -435,9 +443,9 @@ def main():
 
     tab_data.append(['', ''])
 
-    # Top 5 keywords
+    # Top 5 keywords (without # prefix)
     for i, (keyword, count) in enumerate(all_keywords.most_common(5), 1):
-        tab_data.append([f'KEYWORD_{i}', f'#{keyword}'])
+        tab_data.append([f'KEYWORD_{i}', keyword])
 
     # PAGE 3: YOUR CREATIVE REPORTS
     tab_data.append(['', ''])
