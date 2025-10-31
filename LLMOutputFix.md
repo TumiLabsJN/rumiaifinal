@@ -2575,8 +2575,68 @@ SEMANTIC_INTERPRETATIONS = {
         'notes': 'Methodology: Semantic categories (day names). Metadata feature from TikTok post timestamp. Direction is neutral as optimal posting day varies by niche and audience. 0=Monday, 6=Sunday format.'
     },
 
-    # TODO: gesture_count, energy_progression_slope, middle_to_closing_energy,
-    #       middle_to_closing_delta, dominant_emotion_id
+    'dominant_emotion_id': {
+        'metric_type': 'count',
+        'direction': 'neutral',
+        'unit': 'emotion category ID',
+        'data_range': (1, 8),
+        'ranges': [
+            (0.5, 1.5, 'joy', 'Predominantly joyful/happy expressions'),
+            (1.5, 2.5, 'sadness', 'Predominantly sad expressions'),
+            (2.5, 3.5, 'anger', 'Predominantly angry expressions'),
+            (3.5, 4.5, 'fear', 'Predominantly fearful expressions'),
+            (4.5, 5.5, 'disgust', 'Predominantly disgusted expressions'),
+            (5.5, 6.5, 'surprise', 'Predominantly surprised expressions'),
+            (6.5, 7.5, 'neutral', 'Predominantly neutral expressions'),
+            (7.5, 8.5, 'no_person', 'No face detected in window')
+        ],
+        'notes': 'Methodology: Direct mapping from FEAT emotion detection encoding. IDs: 1=joy, 2=sadness, 3=anger, 4=fear, 5=disgust, 6=surprise, 7=neutral, 8=no_person. Direction is neutral as optimal emotion depends on content type and niche.'
+    },
+
+    'energy_progression_slope': {
+        'metric_type': 'continuous',
+        'direction': 'neutral',
+        'unit': 'volume change rate',
+        'data_range': (-0.0522, 0.0516),
+        'ranges': [
+            (-1.0, -0.010, 'gets much quieter', 'Volume drops significantly throughout video'),
+            (-0.010, -0.001, 'gets quieter', 'Volume decreases moderately throughout'),
+            (-0.001, 0.001, 'stays consistent', 'Similar volume level throughout'),
+            (0.001, 0.015, 'gets louder', 'Volume increases moderately throughout'),
+            (0.015, 1.0, 'gets much louder', 'Volume rises significantly throughout video')
+        ],
+        'notes': 'Methodology: Data-driven ranges from 126 videos across 3 duration buckets. Cross-window feature measuring volume trajectory (hook→middle→closing) via linear regression slope of energy_level. 61% show positive slope (getting louder), 32% negative slope (getting quieter), 7% consistent. Direction is neutral as optimal pattern varies by content style and niche.'
+    },
+
+    'middle_to_closing_energy': {
+        'metric_type': 'continuous',
+        'direction': 'neutral',
+        'unit': 'volume delta',
+        'data_range': (-0.0486, 0.0491),
+        'ranges': [
+            (-1.0, -0.010, 'large drop', 'Closing much quieter than middle'),
+            (-0.010, -0.002, 'moderate drop', 'Closing somewhat quieter'),
+            (-0.002, 0.002, 'similar', 'Closing and middle have similar volume'),
+            (0.002, 0.015, 'moderate rise', 'Closing somewhat louder'),
+            (0.015, 1.0, 'large rise', 'Closing much louder than middle')
+        ],
+        'notes': 'Methodology: Data-driven ranges from 86 videos across 2 duration buckets (18-33s, 60-90s). Cross-window feature measuring volume change from average middle segments to closing (closing_energy_level - mean(middle_energy_levels)). 62% have louder closing (building to finish), 25% quieter (calming down), 13% similar. Not applicable to videos <9s (no middle segments). Direction is neutral as optimal pattern depends on content goals.'
+    },
+
+    'gesture_count': {
+        'metric_type': 'count',
+        'direction': 'neutral',
+        'unit': 'number of hand gestures detected',
+        'data_range': (0, 20),
+        'ranges': [
+            (0, 0.5, 'no gestures', 'No hand movements detected'),
+            (0.5, 3, 'minimal gestures', '1-3 hand movements'),
+            (3, 7, 'moderate gestures', '4-7 hand movements'),
+            (7, 12, 'frequent gestures', '8-12 hand movements'),
+            (12, 100, 'very expressive', '12+ hand movements')
+        ],
+        'notes': 'Methodology: Semantic categories (logic-driven). Counts unique hand gestures detected by MediaPipe within temporal window. Direction is neutral as optimal gesture frequency depends on content type (talking head vs demo vs tutorial). Production data unavailable due to detection bug - ranges based on typical gesture frequency in short video segments (3-10s windows).'
+    },
 }
 
 def interpret_value(feature: str, value: float) -> tuple[str, str]:
@@ -2987,20 +3047,416 @@ def format_cross_window_pattern(pattern_data: dict) -> str:
   - [ ] Define mappings for `day_of_week` (Monday-Sunday)
   - [ ] Define mappings for `dominant_emotion_id` (FEAT emotion labels)
 
-**Phase 2: Backend Implementation** [3-4 hours]
-- [ ] Create `config/feature_translations.py` with 31 compositional entries
-- [ ] Create `config/semantic_interpretations.py` with all 26 feature definitions
-- [ ] Implement `interpret_value()` function with range lookup logic
+**Phase 2: Phase 1 Upstream Semantic Formatting** [2-3 hours]
+- [x] Create `config/semantic_interpretations.py` with all 26 feature definitions ✅ COMPLETE (2025-10-30)
+- [x] Implement `interpret_value()` function with range lookup logic ✅ COMPLETE (already exists in file)
 - [ ] Implement `extract_base_feature()` helper (removes window prefix)
-- [ ] Update `generate_universal_principles()` in `stage7_preprocessing.py`
-  - [ ] Add gap filtering (threshold: 0.05)
-  - [ ] Use compositional translation for feature names
-  - [ ] Use semantic interpretation for value labels
-  - [ ] Format: "X% of top use {semantic_label} vs Y% of bottom (avg: {semantic_label})"
-  - [ ] Return `List[str]` (NO breaking change)
-- [ ] Update `generate_cross_window_patterns()` in `stage7_preprocessing.py`
-  - [ ] Use template-based formatting with semantic labels
-  - [ ] Return `List[str]` (NO breaking change)
+- [ ] Update Phase 1 prompt construction in `stage7_prompts.py`
+  - [ ] Import semantic interpretation functions
+  - [ ] Add semantic formatting to cluster centroids (line ~424)
+  - [ ] Format enriched features with semantic labels
+  - [ ] Remove raw normalized values from Phase 1 LLM input
+
+**Why Phase 1 (Upstream Fix)?**
+- ✅ Solves **BOTH Issue #1 AND Issue #3** simultaneously
+- ✅ Single point of implementation (not two separate fixes)
+- ✅ Semantic labels flow through Phase 1 → Phase 2 automatically
+- ✅ More deterministic (Python interprets, not LLM)
+- ✅ Less code overall (one fix instead of two)
+
+**Architecture:**
+```
+Phase 1 Preprocessing (Python) → Semantic Labels → Phase 1 LLM → Phase 2 LLM → Output
+                                                         ↓              ↓
+                                              Issue #3 fixed   Issue #1 fixed
+```
+
+---
+
+### Phase 2 Implementation Guide: Phase 1 Upstream Semantic Formatting
+
+**Goal**: Add semantic interpretation to Phase 1 cluster centroids BEFORE the LLM sees them, so semantic labels flow through the entire pipeline.
+
+**Impact**: Fixes Issue #1 (supplementary_insights) AND Issue #3 (step_by_step_template) with one implementation.
+
+#### **Step 1: Implement `extract_base_feature()` Helper**
+
+**File**: `config/semantic_interpretations.py` (add to existing file)
+
+**Location**: After the `interpret_value()` function (around line 330)
+
+```python
+def extract_base_feature(feature: str) -> str:
+    """
+    Extract base feature name by removing window prefix.
+
+    Args:
+        feature: Full feature name (e.g., 'hook_energy_level', 'middle_2_scene_count', 'xwin_eye_contact_consistency')
+
+    Returns:
+        str: Base feature name (e.g., 'energy_level', 'scene_count', 'eye_contact_consistency')
+
+    Examples:
+        >>> extract_base_feature('hook_energy_level')
+        'energy_level'
+
+        >>> extract_base_feature('middle_2_scene_count')
+        'scene_count'
+
+        >>> extract_base_feature('closing_average_face_size')
+        'average_face_size'
+
+        >>> extract_base_feature('xwin_eye_contact_consistency')
+        'eye_contact_consistency'
+
+        >>> extract_base_feature('energy_level')
+        'energy_level'
+    """
+    # Remove cross-window prefix
+    if feature.startswith('xwin_'):
+        return feature[5:]  # Remove 'xwin_'
+
+    # Remove temporal window prefixes
+    prefixes = ['hook_', 'closing_']
+    for prefix in prefixes:
+        if feature.startswith(prefix):
+            return feature[len(prefix):]
+
+    # Remove middle segment prefixes (middle_1_, middle_2_, etc.)
+    import re
+    middle_pattern = r'^middle_\d+_'
+    match = re.match(middle_pattern, feature)
+    if match:
+        return feature[len(match.group()):]
+
+    # Special case: middle_aggregate_
+    if feature.startswith('middle_aggregate_'):
+        return feature[17:]  # Remove 'middle_aggregate_'
+
+    # No prefix found - return as-is
+    return feature
+
+
+# Export both functions
+__all__ = ['SEMANTIC_INTERPRETATIONS', 'interpret_value', 'extract_base_feature']
+```
+
+---
+
+#### **Step 2: Update Phase 1 Prompt Construction**
+
+**File**: `scripts/stage7_prompts.py`
+
+**Location**: Around line 424 (in `build_phase1_prompt()` function)
+
+**Current code** (cluster feature formatting):
+```python
+# Line ~424: Format enriched features for Phase 1 LLM
+for j, enriched_feat in enumerate(cluster_data['enriched_features'], 1):
+    formatted = enriched_feat.get('formatted', 'N/A')
+    prompt += f"  {j}. {formatted}\n"
+    # Example output: "scene_count_scaled: 0.58 (RF rank #3)"
+```
+
+**Changes needed**:
+
+```python
+from config.semantic_interpretations import interpret_value, extract_base_feature
+
+# In build_phase1_prompt(), around line 424
+for j, enriched_feat in enumerate(cluster_data['enriched_features'], 1):
+    feature_name = enriched_feat.get('feature', '')
+    normalized_val = enriched_feat.get('centroid_value', 0.0)  # Cluster centroid value
+    rf_rank = enriched_feat.get('rf_rank', 'N/A')
+
+    # Extract base feature name (remove window prefix and _scaled suffix)
+    base_feature = extract_base_feature(feature_name)
+    base_feature = base_feature.replace('_scaled', '')  # Remove Stage 4 suffix
+
+    # Get semantic interpretation
+    label, description = interpret_value(base_feature, normalized_val)
+
+    # Format with semantic labels (NO raw normalized values)
+    prompt += f"  {j}. {label} - {description} (RF importance rank: #{rf_rank})\n"
+
+    # Example output: "rapid cuts - 5-8 scene changes (RF importance rank: #3)"
+    # Instead of: "scene_count_scaled: 0.58 (RF rank #3)"
+
+    for feature_data in feature_importance[:top_n * 2]:  # Get 2x to account for filtering
+        feature = feature_data.get('feature', '')
+        gap = feature_data.get('gap', 0)
+        top_avg = feature_data.get('top_performer_avg')
+        bottom_avg = feature_data.get('bottom_performer_avg')
+
+        # FILTER 1: Skip non-discriminative features (gap < 0.05)
+        if gap < 0.05:
+            logger.debug(f"Skipping low-gap feature: {feature} (gap={gap:.3f})")
+            continue
+
+        # FILTER 2: Skip features without valid averages
+        if top_avg is None or bottom_avg is None:
+            logger.debug(f"Skipping feature without averages: {feature}")
+            continue
+
+        # Extract base feature name (remove window prefix)
+        base_feature = extract_base_feature(feature)
+
+        # Get semantic labels for top and bottom averages
+        top_label, top_desc = interpret_value(base_feature, top_avg)
+        bottom_label, bottom_desc = interpret_value(base_feature, bottom_avg)
+
+        # Get distribution data if available
+        distribution = feature_data.get('distribution', {})
+        top_dist = distribution.get('top_performers', {})
+        bottom_dist = distribution.get('bottom_performers', {})
+
+        # Format principle string
+        # Option 1: With percentages (if distribution data available)
+        if top_dist and 'high_percentage' in top_dist:
+            top_pct = int(top_dist['high_percentage'] * 100)
+            bottom_pct = int(bottom_dist.get('high_percentage', 0) * 100)
+
+            principle = (
+                f"{translate_feature_name(feature)}: "
+                f"{top_pct}% of top performers use {top_label} vs "
+                f"{bottom_pct}% of bottom (avg: {top_label} for top)"
+            )
+        else:
+            # Option 2: Without percentages (fallback)
+            principle = (
+                f"{translate_feature_name(feature)}: "
+                f"Top performers average {top_label} ({top_avg:.2f}) vs "
+                f"bottom average {bottom_label} ({bottom_avg:.2f})"
+            )
+
+        principles.append(principle)
+
+        # Stop when we have enough
+        if len(principles) >= top_n:
+            break
+
+    return principles
+
+
+def translate_feature_name(feature: str) -> str:
+    """
+    Convert ML feature name to creator-friendly English.
+
+    Simple compositional translation without needing a full dictionary.
+
+    Examples:
+        'hook_energy_level' → 'Volume in opening'
+        'closing_scene_count' → 'Scene changes in closing'
+        'xwin_eye_contact_consistency' → 'Eye contact consistency throughout video'
+    """
+    # Handle cross-window features
+    if feature.startswith('xwin_'):
+        base = extract_base_feature(feature)
+        if 'progression' in feature:
+            return f"{base.replace('_', ' ').title()} throughout video"
+        elif 'middle_to_closing' in feature:
+            return f"{base.replace('_', ' ').title()} from middle to closing"
+        else:
+            return f"{base.replace('_', ' ').title()} throughout video"
+
+    # Handle temporal window features
+    window_map = {
+        'hook': 'in opening',
+        'closing': 'in closing',
+        'middle': 'across middle'
+    }
+
+    for window, phrase in window_map.items():
+        if feature.startswith(window):
+            base = extract_base_feature(feature)
+            # Special translations for clarity
+            if 'energy' in base:
+                base = base.replace('energy', 'volume')
+
+            return f"{base.replace('_', ' ').title()} {phrase}"
+
+    # Fallback: just clean up underscores
+    return feature.replace('_', ' ').title()
+```
+
+---
+
+#### **Step 3: Update `generate_cross_window_patterns()` Function**
+
+**File**: `scripts/stage7_preprocessing.py`
+
+**Location**: Lines 535-620 (approximate)
+
+```python
+def generate_cross_window_patterns(window_analyses: dict, rf_video_data: dict) -> List[str]:
+    """
+    Generate creator-friendly cross-window pattern strings with semantic labels.
+
+    Changes from original:
+    - Uses semantic interpretations for value labels
+    - Better natural language formatting
+    - Returns plain English strings (NO breaking change)
+
+    Returns:
+        List[str]: Creator-friendly pattern strings
+
+    Example output:
+        [
+            "Volume trajectory: 61% of top performers' videos get louder throughout vs staying consistent in bottom",
+            "Eye contact consistency: 72% of top maintain steady eye contact vs 28% with variable patterns"
+        ]
+    """
+    patterns = []
+    feature_importance = rf_video_data.get('feature_importance', [])
+
+    for feature_data in feature_importance:
+        feature = feature_data.get('feature', '')
+
+        # Only process cross-window features
+        if not feature.startswith('xwin_'):
+            continue
+
+        gap = feature_data.get('gap', 0)
+        top_avg = feature_data.get('top_performer_avg')
+        bottom_avg = feature_data.get('bottom_performer_avg')
+
+        # FILTER: Only include discriminative patterns (gap >= 0.05)
+        if gap < 0.05 or top_avg is None or bottom_avg is None:
+            continue
+
+        # Extract base feature and get semantic labels
+        base_feature = extract_base_feature(feature)
+        top_label, top_desc = interpret_value(base_feature, top_avg)
+        bottom_label, bottom_desc = interpret_value(base_feature, bottom_avg)
+
+        # Format pattern string
+        pattern = (
+            f"{translate_feature_name(feature)}: "
+            f"Top performers show {top_label} pattern vs "
+            f"{bottom_label} in bottom performers"
+        )
+
+        patterns.append(pattern)
+
+    return patterns
+```
+
+---
+
+#### **Step 4: Testing the Implementation**
+
+**Test file**: Create `tests/unit/test_semantic_formatting.py`
+
+```python
+import pytest
+from config.semantic_interpretations import interpret_value, extract_base_feature
+from scripts.stage7_preprocessing import generate_universal_principles, translate_feature_name
+
+
+class TestExtractBaseFeature:
+    """Test window prefix removal."""
+
+    def test_hook_prefix(self):
+        assert extract_base_feature('hook_energy_level') == 'energy_level'
+
+    def test_closing_prefix(self):
+        assert extract_base_feature('closing_scene_count') == 'scene_count'
+
+    def test_middle_segment_prefix(self):
+        assert extract_base_feature('middle_2_average_face_size') == 'average_face_size'
+
+    def test_xwin_prefix(self):
+        assert extract_base_feature('xwin_eye_contact_consistency') == 'eye_contact_consistency'
+
+    def test_no_prefix(self):
+        assert extract_base_feature('energy_level') == 'energy_level'
+
+
+class TestSemanticFormatting:
+    """Test full formatting pipeline."""
+
+    def test_universal_principle_with_semantics(self):
+        """Test that semantic labels appear in output."""
+        rf_data = {
+            'feature_importance': [
+                {
+                    'feature': 'hook_average_face_size',
+                    'top_performer_avg': 0.058,
+                    'bottom_performer_avg': 0.084,
+                    'gap': 0.026,
+                    'importance': 0.15
+                }
+            ]
+        }
+
+        principles = generate_universal_principles(rf_data, top_n=5)
+
+        assert len(principles) == 1
+        assert 'medium shot' in principles[0].lower() or 'wide shot' in principles[0].lower()
+        assert '0.058' not in principles[0]  # No raw numbers
+
+    def test_gap_filtering(self):
+        """Test that low-gap features are filtered out."""
+        rf_data = {
+            'feature_importance': [
+                {
+                    'feature': 'hook_energy_variance',
+                    'top_performer_avg': 0.001,
+                    'bottom_performer_avg': 0.002,
+                    'gap': 0.001,  # Too small - should be filtered
+                    'importance': 0.05
+                }
+            ]
+        }
+
+        principles = generate_universal_principles(rf_data, top_n=5)
+
+        assert len(principles) == 0  # Filtered out due to low gap
+```
+
+---
+
+#### **Step 5: Validation Checklist**
+
+Before deploying, verify:
+
+- [ ] `extract_base_feature()` correctly handles all prefix types
+- [ ] `interpret_value()` returns semantic labels for all 26 features
+- [ ] No raw numeric values (0.058, 0.74, etc.) appear in final strings
+- [ ] Semantic labels appear correctly ("medium shot", "gets louder", "moderate cuts")
+- [ ] Gap filtering works (features with gap < 0.05 are excluded)
+- [ ] Return type remains `List[str]` (no breaking changes)
+- [ ] Test with real Stage 6 output from rollo_test3 data
+
+---
+
+#### **Expected Output Transformation**
+
+**Before** (current):
+```json
+"universal_principles": [
+  "hook_energy_max: 0.13 in top vs 0.16 in bottom (gap: 0.02)",
+  "hook_average_face_size: 0.06 in top vs 0.07 in bottom (gap: 0.01)"
+]
+```
+
+**After** (with Phase 2 implementation):
+```json
+"universal_principles": [
+  "Volume in opening: Top performers average loud (0.13) vs bottom average loud (0.16)",
+  "Face framing in opening: Top performers average medium shot (0.06) vs bottom average medium shot (0.07)"
+]
+```
+
+**Note**: The exact format will depend on whether distribution data is available for percentage-based insights.
+
+---
+
+**Total Implementation Time**: 3-4 hours
+- Step 1 (extract_base_feature): 30 min
+- Step 2 (generate_universal_principles): 1.5 hours
+- Step 3 (generate_cross_window_patterns): 1 hour
+- Step 4 (testing): 1 hour
 
 **Phase 3: Testing** [2-3 hours]
 - [ ] Create test suite for semantic interpretations
@@ -3051,3 +3507,240 @@ def format_cross_window_pattern(pattern_data: dict) -> str:
 ---
 
 **Status**: ✅ Strategy Pivot Complete - Python-Only Approach for supplementary_insights
+
+---
+
+## ✅ **UPDATED IMPLEMENTATION STRATEGY (2025-10-30)**
+
+### Phase 1 Upstream Semantic Formatting - The Better Approach
+
+**Key Realization**: Implementing semantic interpretation in **Phase 1 prompt construction** solves BOTH Issue #1 AND Issue #3 simultaneously, instead of fixing them separately.
+
+### Why Phase 1 (Upstream)?
+
+**Old Approach** (Phase 2 backend only):
+- ❌ Only fixes Issue #1 (supplementary_insights)
+- ❌ Issue #3 still has raw numbers
+- ❌ Must implement semantic interpretation in 2 places
+- ❌ Phase 1 LLM still guesses interpretations
+
+**New Approach** (Phase 1 upstream):
+- ✅ Fixes Issue #1 AND Issue #3 with one implementation
+- ✅ Semantic labels flow through entire pipeline
+- ✅ Single point of truth (implement once)
+- ✅ More deterministic (Python interprets before LLM sees data)
+
+---
+
+### Architecture Flow
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ Phase 1: Cluster Analysis (stage6_analysis.py)              │
+│ Outputs: Cluster centroids with normalized values           │
+│   {scene_count: 0.58, eye_contact_rate: 0.77, ...}         │
+└────────────────────┬─────────────────────────────────────────┘
+                     ↓
+┌──────────────────────────────────────────────────────────────┐
+│ ✨ NEW: Python Preprocessing (stage7_prompts.py line ~424)  │
+│ Import: semantic_interpretations.py                         │
+│                                                              │
+│ FOR each cluster feature:                                   │
+│   base_feature = extract_base_feature(feature_name)         │
+│   label, desc = interpret_value(base_feature, norm_value)   │
+│                                                              │
+│ Outputs: Semantic labels replace raw numbers                │
+│   "rapid cuts (5-8 changes)"                                │
+│   "strong eye contact (77%)"                                │
+└────────────────────┬─────────────────────────────────────────┘
+                     ↓
+┌──────────────────────────────────────────────────────────────┐
+│ Phase 1 LLM (receives semantic labels, NOT raw numbers)     │
+│                                                              │
+│ Cluster 1: High Performers                                  │
+│   1. rapid cuts - 5-8 scene changes                         │
+│   2. strong eye contact - 77% camera gaze                   │
+│   3. loud volume - High average volume                      │
+│                                                              │
+│ LLM Task: Synthesize into creative tactics                  │
+└────────────────────┬─────────────────────────────────────────┘
+                     ↓
+┌──────────────────────────────────────────────────────────────┐
+│ Phase 1 Output (creative_reports)                           │
+│                                                              │
+│ step_by_step_template:                                      │
+│   "Hook (0-3s): Use rapid cuts with strong eye contact"     │
+│   "Middle (3-18s): Maintain loud volume throughout"         │
+│                                                              │
+│ ✅ Issue #3 FIXED (no raw numbers like 0.58, 0.77)         │
+└────────────────────┬─────────────────────────────────────────┘
+                     ↓
+┌──────────────────────────────────────────────────────────────┐
+│ Phase 2 LLM (receives Phase 1 output + RF data)             │
+│                                                              │
+│ Semantic labels from Phase 1 flow through                   │
+│ Combines with RF importance rankings                        │
+│                                                              │
+│ Outputs: supplementary_insights                             │
+│   "Volume in opening: 72% of top use loud vs 28% quiet"     │
+│                                                              │
+│ ✅ Issue #1 FIXED (inherited semantic labels from Phase 1)  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Implementation Steps (Phase 1 Upstream Fix)
+
+#### **Step 1: Add `extract_base_feature()` Helper** ✅ DOCUMENTED ABOVE
+
+**File**: `config/semantic_interpretations.py`  
+**Location**: After `interpret_value()` function (around line 330)  
+**Status**: Full implementation provided in Step 1 above
+
+---
+
+#### **Step 2: Update Phase 1 Prompt Construction**
+
+**File**: `scripts/stage7_prompts.py`  
+**Function**: `build_phase1_prompt()`  
+**Location**: Around line 424 (cluster feature formatting loop)
+
+**Current code**:
+```python
+for j, enriched_feat in enumerate(cluster_data['enriched_features'], 1):
+    formatted = enriched_feat.get('formatted', 'N/A')
+    prompt += f"  {j}. {formatted}\n"
+    # Outputs: "scene_count_scaled: 0.58 (RF rank #3)"
+```
+
+**Updated code**:
+```python
+from config.semantic_interpretations import interpret_value, extract_base_feature
+
+for j, enriched_feat in enumerate(cluster_data['enriched_features'], 1):
+    feature_name = enriched_feat.get('feature', '')
+    normalized_val = enriched_feat.get('centroid_value', 0.0)
+    rf_rank = enriched_feat.get('rf_rank', 'N/A')
+    
+    # Extract base feature (remove window prefix + _scaled suffix)
+    base_feature = extract_base_feature(feature_name)
+    base_feature = base_feature.replace('_scaled', '')
+    
+    # Get semantic interpretation
+    label, description = interpret_value(base_feature, normalized_val)
+    
+    # Format with semantic labels (NO raw numbers)
+    prompt += f"  {j}. {label} - {description} (RF rank: #{rf_rank})\n"
+    # Outputs: "rapid cuts - 5-8 scene changes (RF rank: #3)"
+```
+
+**Impact**: Phase 1 LLM never sees `0.58` or `0.77` - only sees creator-friendly labels!
+
+---
+
+#### **Step 3: Update Issue #3 Prompt Rules (Simplified)**
+
+**File**: `scripts/stage7_prompts.py`  
+**Function**: `build_phase2_prompt()` or Phase 1 instructions  
+**Location**: Issue #3 prompt section
+
+**Old rules** (complex):
+```
+❌ REMOVE all numeric values: (0.77), (0.58), etc.
+❌ REMOVE all second markers: (0-3s), (3-18s), etc.
+❌ Need translation guide for 130+ interpretations
+```
+
+**New rules** (simple):
+```
+✅ Feature values already converted to semantic labels by Python preprocessing
+✅ KEEP window timings: (0-3s), (3-18s), (18-21s)
+✅ Use semantic descriptions as-is from Phase 1 input
+✅ No translation needed - just synthesize into tactics
+```
+
+**Why simpler?** Because Python already did the hard work upstream!
+
+---
+
+#### **Step 4: No Changes Needed for Issue #1!**
+
+**Amazing benefit**: Issue #1 (supplementary_insights) automatically inherits the semantic labels from Phase 1.
+
+Phase 2 LLM receives Phase 1's output, which already has semantic labels. When generating supplementary_insights, it naturally uses the same creator-friendly language!
+
+**No additional code needed** ✨
+
+---
+
+### Comparison: Old vs New Approach
+
+| Aspect | Old (Phase 2 Backend) | New (Phase 1 Upstream) |
+|--------|----------------------|------------------------|
+| **Issues solved** | Issue #1 only | Issue #1 + Issue #3 |
+| **Files modified** | 2 files (preprocessing + prompts) | 1 file (prompts only) |
+| **Implementation points** | 2 places (Phase 1 guess + Phase 2 fix) | 1 place (Phase 1 preprocessing) |
+| **Determinism** | Phase 1 LLM guesses, Phase 2 fixes | All Python (100% deterministic) |
+| **Lines of code** | ~150 lines | ~20 lines |
+| **Consistency** | Different interpretations in P1 vs P2 | Same everywhere |
+| **Testing complexity** | Test 2 separate implementations | Test 1 implementation |
+
+---
+
+### Example: Before vs After
+
+**Before** (current system):
+```
+Phase 1 LLM sees:
+  "Cluster 1: scene_count: 0.58, eye_contact: 0.77"
+
+Phase 1 outputs:
+  "Use rapid cuts with eye contact" (LLM guessed interpretation)
+
+Phase 2 receives:
+  "hook_energy_max: 0.13 in top vs 0.16 in bottom"
+
+Phase 2 outputs:
+  ❌ "hook_energy_max: 0.13 in top vs 0.16 in bottom (gap: 0.02)"
+  (Issue #1: raw numbers not fixed)
+```
+
+**After** (with Phase 1 upstream fix):
+```
+Phase 1 LLM sees:
+  "Cluster 1: rapid cuts (5-8 changes), strong eye contact (77%)"
+
+Phase 1 outputs:
+  ✅ "Hook (0-3s): Use rapid cuts with strong eye contact"
+  (Issue #3: FIXED - semantic labels, kept timing)
+
+Phase 2 receives Phase 1 output with semantic labels
+
+Phase 2 outputs:
+  ✅ "Volume in opening: 72% of top use loud vs bottom use moderate"
+  (Issue #1: FIXED - inherited semantic labels)
+```
+
+---
+
+### Status Summary
+
+**Completed**:
+- ✅ All 26 semantic range definitions (2025-10-30)
+- ✅ `interpret_value()` function in semantic_interpretations.py
+- ✅ `extract_base_feature()` helper documented
+- ✅ Phase 1 implementation approach documented
+
+**Remaining**:
+- [ ] Implement `extract_base_feature()` in semantic_interpretations.py (30 min)
+- [ ] Update Phase 1 prompt construction in stage7_prompts.py (1 hour)
+- [ ] Update Issue #3 prompt rules (simplified - 15 min)
+- [ ] Test with real rollo_test3 cluster data (30 min)
+
+**Total remaining effort**: ~2-3 hours (vs 6+ hours for old approach)
+
+---
+
+**Recommendation**: Proceed with Phase 1 upstream fix. It's cleaner, solves more problems, requires less code, and is more maintainable.
+

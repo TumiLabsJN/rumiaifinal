@@ -236,28 +236,65 @@ If uncertain whether implication is strong enough, do NOT select. Empty arrays `
 
 ## ZONE 2: CAPTION & HASHTAG ANALYSIS
 
-Analyze caption structure and hashtag strategy as a secondary task after completing Zone 1.
+**CRITICAL - String Matching for caption_analysis:** You must copy field values EXACTLY as written below. Do not use synonyms, variations, or values from taxonomy categories.
 
-**Caption Hook Type**: How does the caption open? (first 5-10 words)
-- statement: Declarative ("This changed my life", "Best product ever")
-- question: Interrogative ("Did you know?", "Have you tried?")
-- command: Imperative ("Try this now", "Follow for more")
-- teaser: Creates curiosity ("You won't believe…", "Wait till the end")
+### Correct Output Format ✅
 
-**Call-to-Action**:
-- cta_type: link_in_bio, save_post, comment, follow, share, tag_friend, none
-- brand_mention_present: Does caption mention a brand/product? (true/false)
-- influencer_tag_present: Does caption tag another creator? (true/false)
+{{
+  "caption_analysis": {{
+    "hook_type": "statement",
+    "cta_type": "link_in_bio",
+    "brand_mention_present": true,
+    "influencer_tag_present": false,
+    "emoji_usage": "some",
+    "caption_length": "short",
+    "hashtag_count": 3,
+    "hashtag_placement": "end"
+  }}
+}}
 
-**Caption Metrics** (simplified levels):
-- emoji_usage: none (0), some (1-4), many (5+)
-- caption_length: short (<100 chars), long (100+ chars)
+### Wrong Output Format ❌
 
-**Hashtag Analysis**:
-- hashtag_count: Total number of hashtags (integer)
-- hashtag_placement: end (all at end), mixed (throughout caption), none
+{{
+  "caption_analysis": {{
+    "hook_type": "declarative_statement",  ← WRONG! Use "statement"
+    "cta_type": "bio_link",                ← WRONG! Use "link_in_bio"
+    "emoji_usage": "few"                   ← WRONG! Use "some"
+  }}
+}}
 
-**Note**: Do not attempt to categorize hashtags as broad/niche/branded - this requires view count data not available.
+### Allowed Values (Copy Exactly)
+
+**hook_type** - How caption opens (first 5-10 words):
+- "statement" | "question" | "command" | "teaser"
+
+**cta_type** - Call-to-action in caption:
+- "link_in_bio" | "save_post" | "comment" | "follow" | "share" | "tag_friend" | "none"
+
+**emoji_usage** - Count emojis in caption:
+- "none" | "some" | "many"
+
+**caption_length** - Character count:
+- "short" | "long"
+
+**hashtag_placement** - Where hashtags appear:
+- "end" | "mixed" | "none"
+
+**brand_mention_present** - Caption mentions brand/product:
+- true | false
+
+**influencer_tag_present** - Caption tags another creator:
+- true | false
+
+**hashtag_count** - Total number of hashtags:
+- integer (e.g., 0, 3, 15)
+
+### Field Definitions
+
+- **hook_type**: "statement" (declarative), "question" (interrogative), "command" (imperative), "teaser" (curiosity-building)
+- **emoji_usage**: "none" (0 emojis), "some" (1-4 emojis), "many" (5+ emojis)
+- **caption_length**: "short" (< 100 characters), "long" (≥ 100 characters)
+- **hashtag_placement**: "end" (all hashtags at caption end), "mixed" (hashtags throughout), "none" (no hashtags present)
 
 ---
 
