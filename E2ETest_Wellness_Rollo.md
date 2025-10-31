@@ -3122,7 +3122,7 @@ python rumiai_ml_batch.py \
   --target nutrachampssupplement \
   --analysis-type competitor \
   --selection-strategy top \
-  --video-count 60 \
+  --video-count 100 \
   --date-filter last_270_days \
   --country-code US \
   --report-type single \
