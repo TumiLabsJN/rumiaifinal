@@ -277,7 +277,7 @@ def extract_hashtag_analysis(client_id, competitor_handle, mode='top', strategy=
             for hashtag in hashtags:
                 tag_name = hashtag.get("name", "")
                 if tag_name:
-                    all_hashtags.append(tag_name)
+                    all_hashtags.append(tag_name.lower())
 
     # Calculate statistics
     unique_hashtags = set(all_hashtags)
@@ -406,34 +406,57 @@ def extract_mention_analysis(client_id, competitor_handle, mode='top', strategy=
     }
 
 
-def select_qr_code_videos(bucket_path, performance_group="top"):
+def select_qr_code_videos(bucket_path, performance_group="top", num_videos=2):
     """
-    Select top or bottom performer video for QR code generation.
+    Select top 2 performer videos for QR code generation.
+
+    Args:
+        bucket_path: Path to bucket directory
+        performance_group: "top" or "bottom"
+        num_videos: Number of top videos to select (default 2)
+
+    Returns:
+        List of video dicts with url, views, engagement, etc.
     """
 
     with open(f"{bucket_path}/selected_videos.json") as f:
         data = json.load(f)
 
+    selected_videos = []
+
     if performance_group == "top":
-        # First video in array = highest views
-        video = data["videos"][0]
+        # First N videos in array = highest views
+        top_count = data["top_count"]
+        for i in range(min(num_videos, top_count)):
+            video = data["videos"][i]
+            engagement = calculate_engagement_metrics(video)
+            selected_videos.append({
+                "video_id": video["id"],
+                "url": video["webVideoUrl"],
+                "views": video["playCount"],
+                "engagement": engagement,
+                "duration": video["duration"],
+                "rank": i + 1
+            })
     elif performance_group == "bottom":
-        # Last video among bottom performers
+        # Last N videos among bottom performers
         top_count = data["top_count"]
         bottom_count = data["bottom_count"]
-        video = data["videos"][top_count + bottom_count - 1]
+        for i in range(min(num_videos, bottom_count)):
+            video = data["videos"][top_count + bottom_count - 1 - i]
+            engagement = calculate_engagement_metrics(video)
+            selected_videos.append({
+                "video_id": video["id"],
+                "url": video["webVideoUrl"],
+                "views": video["playCount"],
+                "engagement": engagement,
+                "duration": video["duration"],
+                "rank": i + 1
+            })
     else:
         raise ValueError(f"Invalid performance_group: {performance_group}")
 
-    engagement = calculate_engagement_metrics(video)
-
-    return {
-        "video_id": video["id"],
-        "url": video["webVideoUrl"],
-        "views": video["playCount"],
-        "engagement": engagement,
-        "duration": video["duration"]
-    }
+    return selected_videos
 
 
 def generate_qr_codes(qr_data_list, output_dir):
@@ -719,23 +742,41 @@ def main():
     original_content_pct = calculate_original_content_percentage(mention_analysis['repost_rate'])
 
     # =============================
-    # STEP 7: Select QR Code Video
+    # STEP 7: Select QR Code Videos (Top 2 per Winning Bucket)
     # =============================
-    print("📱 Generating 1 QR code...")
+    num_qr_codes = len(winning_buckets) * 2
+    print(f"📱 Generating {num_qr_codes} QR codes (2 per bucket)...")
 
-    # Get top performer from best bucket
-    best_bucket = ranked_buckets[0]['bucket']
-    best_bucket_path = os.path.join(analysis_base_path, 'buckets', f'bucket_{best_bucket}')
+    # Collect top 2 videos from each winning bucket
+    qr_videos_by_bucket = []
+    for bucket_rank_data in ranked_buckets:
+        bucket_name = bucket_rank_data['bucket']
+        bucket_path = os.path.join(analysis_base_path, 'buckets', f'bucket_{bucket_name}')
 
-    qr_video = select_qr_code_videos(best_bucket_path, "top")
+        # Get top 2 videos from this bucket
+        videos = select_qr_code_videos(bucket_path, "top", num_videos=2)
 
-    # Generate QR code
+        for video in videos:
+            qr_videos_by_bucket.append({
+                'bucket_name': bucket_name,
+                'bucket_rank': bucket_rank_data['rank'],
+                'is_sweet_spot': bucket_rank_data['is_sweet_spot'],
+                'video_rank': video['rank'],
+                'video_data': video
+            })
+
+    # Generate QR codes
     qr_output_dir = os.path.join(reports_base_path, 'qr_codes')
     os.makedirs(qr_output_dir, exist_ok=True)
-    qr_data = [{
-        "filename": f"{args.competitor}_top.png",
-        "url": qr_video['url']
-    }]
+
+    qr_data = []
+    for qr_info in qr_videos_by_bucket:
+        filename = f"{args.competitor}_{qr_info['bucket_name']}_rank{qr_info['video_rank']}.png"
+        qr_data.append({
+            "filename": filename,
+            "url": qr_info['video_data']['url']
+        })
+
     generate_qr_codes(qr_data, qr_output_dir)
 
     # =============================
@@ -922,14 +963,28 @@ def main():
         if i < 3:  # Add empty row between buckets (not after last one)
             tab_data.append(['', ''])
 
-    # QR Code Metadata
+    # QR Code Metadata (2 per bucket, dynamically generated)
     tab_data.append(['', ''])
-    tab_data.append(['QR_CODE_FILE', f"{args.competitor}_top.png"])
-    tab_data.append(['QR_CODE_URL', qr_video['url']])
-    tab_data.append(['QR_CODE_VIEWS', format_views(qr_video['views'])])
-    tab_data.append(['QR_CODE_ENGAGEMENT', str(qr_video['engagement'])])
-    tab_data.append(['QR_CODE_DURATION', f"{qr_video['duration']}s"])
-    tab_data.append(['QR_CODE_BUCKET', best_bucket])
+    for qr_info in qr_videos_by_bucket:
+        bucket_name = qr_info['bucket_name']
+        bucket_rank = qr_info['bucket_rank']
+        video_rank = qr_info['video_rank']
+        video = qr_info['video_data']
+        is_sweet_spot = qr_info['is_sweet_spot']
+
+        # Label: SWEET_SPOT_BUCKET_QR_CODE_1 or BUCKET_2_QR_CODE_1, etc.
+        if is_sweet_spot:
+            label_prefix = 'SWEET_SPOT_BUCKET'
+        else:
+            label_prefix = f'BUCKET_{bucket_rank}'
+
+        tab_data.append([f'{label_prefix}_QR_CODE_{video_rank}_FILE', f"{args.competitor}_{bucket_name}_rank{video_rank}.png"])
+        tab_data.append([f'{label_prefix}_QR_CODE_{video_rank}_URL', video['url']])
+        tab_data.append([f'{label_prefix}_QR_CODE_{video_rank}_VIEWS', format_views(video['views'])])
+        tab_data.append([f'{label_prefix}_QR_CODE_{video_rank}_ENGAGEMENT', str(video['engagement'])])
+        tab_data.append([f'{label_prefix}_QR_CODE_{video_rank}_DURATION', f"{video['duration']}s"])
+        tab_data.append([f'{label_prefix}_QR_CODE_{video_rank}_BUCKET', bucket_name])
+        tab_data.append(['', ''])
 
     # =============================
     # STEP 9: Write Excel File

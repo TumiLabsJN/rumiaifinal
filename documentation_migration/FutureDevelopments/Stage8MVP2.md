@@ -3625,7 +3625,8 @@ def extract_hashtag_analysis(client_id, competitor_handle):
             for hashtag in hashtags:
                 tag_name = hashtag.get("name", "")
                 if tag_name:
-                    all_hashtags.append(tag_name)
+                    # Normalize to lowercase to avoid duplicates (e.g., "GymTok" vs "gymtok")
+                    all_hashtags.append(tag_name.lower())
 
     # Calculate statistics
     unique_hashtags = set(all_hashtags)
@@ -4255,12 +4256,11 @@ def main():
 
     tab_data.append(['', ''])
 
-    # CTA Strategies
+    # CTA Strategies (from closing_strategy field - no descriptions in taxonomy)
     for i, (cta, count) in enumerate(top_4_ctas, 1):
         pct = round((count / total_classified) * 100)
         tab_data.append([f'CTA_STRATEGY_{i}', cta.replace('_', ' ').title()])
         tab_data.append([f'CTA_STRATEGY_{i}_PCT', str(pct)])
-        tab_data.append([f'CTA_STRATEGY_{i}_DESC', 'Description placeholder'])
 
     tab_data.append(['', ''])
 
@@ -4425,7 +4425,7 @@ This section is complete and self-contained for implementation of `extract_compe
 
 **Report Type**: Report 4 from Stage8MVP_Reports.md Section 4
 
-**Deliverable**: 1 Excel file + N QR codes (1 per competitor, 2-5 competitors)
+**Deliverable**: 1 Excel file + (N competitors × 2 QR codes per winning bucket × 3 buckets)
 
 **CLI Usage**:
 ```bash
@@ -4437,9 +4437,16 @@ python extract_multi_competitor_data.py --client acme --competitors drinkpoppi,n
 /data/clients/acme/market_intelligence/multi_competitor/
 ├── market_intelligence_report.xlsx (single tab with all pages)
 └── qr_codes/
-    ├── drinkpoppi_top.png
-    ├── nike_top.png
-    └── vitalproteins_top.png
+    ├── drinkpoppi_18-33s_rank1.png
+    ├── drinkpoppi_18-33s_rank2.png
+    ├── drinkpoppi_13-18s_rank1.png
+    ├── drinkpoppi_13-18s_rank2.png
+    ├── drinkpoppi_33-60s_rank1.png
+    ├── drinkpoppi_33-60s_rank2.png
+    ├── nike_18-33s_rank1.png
+    ├── nike_18-33s_rank2.png
+    ├── [... 6 QR codes per competitor × 3 competitors = 18 total]
+    └── vitalproteins_13-18s_rank2.png
 ```
 
 **Console Output Pattern**:
@@ -4453,12 +4460,12 @@ Building bucket distribution matrix (8 buckets × 3 competitors)...
 Building performance matrix (5 unique winning buckets × 3 competitors)...
 Aggregating per-bucket content intelligence (9 bucket-competitor combinations)...
 Extracting hashtag and mention analysis for 3 competitors...
-Generating 3 QR codes...
+Generating 18 QR codes (2 per bucket × 3 buckets × 3 competitors)...
 
 ✓ Extraction complete
   Excel: /data/clients/acme/market_intelligence/multi_competitor/market_intelligence_report.xlsx
-  QR codes: /data/clients/acme/market_intelligence/multi_competitor/qr_codes/ (3 files)
-  Total fields: 287
+  QR codes: /data/clients/acme/market_intelligence/multi_competitor/qr_codes/ (18 files)
+  Total fields: ~350-400 (varies by competitor count and QR codes)
 ```
 
 ---
@@ -4673,8 +4680,15 @@ fields = [
     # ... similar for all combinations
 
     # --- CTA Strategies (Top 2 per bucket per competitor) ---
-    ('CTA_STRATEGY_COMP_1_BUCKET_18_33S_1', 'Link in Bio'),
-    ('CTA_STRATEGY_COMP_1_BUCKET_18_33S_2', 'Save This Post'),
+    # Note: From closing_strategy field (video ending CTA, not caption)
+    ('CTA_STRATEGY_COMP_1_BUCKET_18_33S_1', 'Declarative Statement'),
+    ('CTA_STRATEGY_COMP_1_BUCKET_18_33S_2', 'Question'),
+    # ... similar for all combinations
+
+    # --- Caption CTA Strategies (Top 2 per bucket per competitor) ---
+    # Note: From caption_cta_type field (written caption call-to-action)
+    ('CAPTION_CTA_STRATEGY_COMP_1_BUCKET_18_33S_1', 'Link in Bio'),
+    ('CAPTION_CTA_STRATEGY_COMP_1_BUCKET_18_33S_2', 'Save This Post'),
     # ... similar for all combinations
 
     # --- Pain Points (Top 3 per bucket per competitor) ---
@@ -4769,17 +4783,17 @@ fields = [
     ('SOURCING_UGC_PCT_COMP_1', '28'),
     ('SOURCING_OWN_PCT_COMP_1', '72'),
     ('SOURCING_UNIQUE_AFFILIATES_COMP_1', '22'),
-    # Top 4 affiliates for Competitor 1
-    ('AFFILIATE_COMP_1_1_HANDLE', '@holistichealth_coach'),
+    # Top 4 affiliates for Competitor 1 (with full brand names extracted from captions)
+    ('AFFILIATE_COMP_1_1_HANDLE', '@holistichealth_coach (Holistic Health Coach)'),
     ('AFFILIATE_COMP_1_1_PCT', '12'),
     ('AFFILIATE_COMP_1_1_COUNT', '36'),
-    ('AFFILIATE_COMP_1_2_HANDLE', '@wellness_collective'),
+    ('AFFILIATE_COMP_1_2_HANDLE', '@wellness_collective (Wellness Collective)'),
     ('AFFILIATE_COMP_1_2_PCT', '8'),
     ('AFFILIATE_COMP_1_2_COUNT', '24'),
-    ('AFFILIATE_COMP_1_3_HANDLE', '@naturalremedies'),
+    ('AFFILIATE_COMP_1_3_HANDLE', '@naturalremedies (Natural Remedies)'),
     ('AFFILIATE_COMP_1_3_PCT', '5'),
     ('AFFILIATE_COMP_1_3_COUNT', '15'),
-    ('AFFILIATE_COMP_1_4_HANDLE', '@ayurveda_lifestyle'),
+    ('AFFILIATE_COMP_1_4_HANDLE', '@ayurveda_lifestyle (Ayurveda Lifestyle)'),
     ('AFFILIATE_COMP_1_4_PCT', '3'),
     ('AFFILIATE_COMP_1_4_COUNT', '9'),
     ('', ''),
@@ -5303,7 +5317,8 @@ def aggregate_per_bucket_content(client_id, competitors):
                 "top_2_categories": [c[0] for c in aggregated["content_category"].most_common(2)],
                 "top_2_drivers": [d[0] for d in aggregated["engagement_drivers"].most_common(2)],
                 "top_2_hooks": [h[0] for h in aggregated["hook_strategy"].most_common(2)],
-                "top_2_ctas": [c[0] for c in aggregated["caption_cta_type"].most_common(2)],
+                "top_2_cta_strategies": [c[0] for c in aggregated["closing_strategy"].most_common(2)],  # Video ending CTA
+                "top_2_caption_ctas": [c[0] for c in aggregated["caption_cta_type"].most_common(2)],  # Caption CTA
                 "top_3_pain_points": [p[0] for p in aggregated["pain_points"].most_common(3)],
                 "top_3_keywords": [k[0] for k in aggregated["keywords"].most_common(3)],
                 "top_2_tactics": [t[0] for t in aggregated["content_tactics"].most_common(2)]
