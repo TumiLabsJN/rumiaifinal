@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import pandas as pd
+import qrcode
 from collections import Counter
 
 
@@ -266,13 +267,17 @@ def main():
     # =============================
     # STEP 2: Build File Paths
     # =============================
-    base_path = f"/home/jorge/rumiaifinal/data/clients/{args.client}/hashtags/{args.hashtag}/{args.mode}_{args.strategy}"
+    analysis_base_path = f"/home/jorge/rumiaifinal/data/clients/{args.client}/hashtags/{args.hashtag}/{args.mode}_{args.strategy}"
 
-    if not os.path.exists(base_path):
-        print(f"❌ Error: Analysis directory not found: {base_path}")
+    if not os.path.exists(analysis_base_path):
+        print(f"❌ Error: Analysis directory not found: {analysis_base_path}")
         return
 
-    winner_analysis_path = os.path.join(base_path, 'winner_analysis.json')
+    # Create reports/client/ directory structure
+    reports_base_path = os.path.join(analysis_base_path, 'reports', 'client')
+    os.makedirs(reports_base_path, exist_ok=True)
+
+    winner_analysis_path = os.path.join(analysis_base_path, 'winner_analysis.json')
 
     # =============================
     # STEP 3: Load Winning Buckets
@@ -312,7 +317,7 @@ def main():
     # STEP 6: Rank Top Buckets by Performance
     # =============================
     print(f"🏆 Ranking top buckets by performance...")
-    ranked_buckets = rank_top_buckets(winner_analysis_path, base_path)
+    ranked_buckets = rank_top_buckets(winner_analysis_path, analysis_base_path)
     sweet_spot = ranked_buckets[0]['bucket'] if ranked_buckets else None
 
     # =============================
@@ -333,7 +338,7 @@ def main():
     all_hashtag_counts = []
 
     for bucket in winning_buckets:
-        aggregated = aggregate_content_classifications(bucket, base_path, performer_type="top")
+        aggregated = aggregate_content_classifications(bucket, analysis_base_path, performer_type="top")
 
         if aggregated:
             all_content_categories.update(aggregated['content_category'])
@@ -358,7 +363,7 @@ def main():
 
     formula_names = []
     for bucket in winning_buckets:
-        bucket_path = os.path.join(base_path, 'buckets', f'bucket_{bucket}')
+        bucket_path = os.path.join(analysis_base_path, 'buckets', f'bucket_{bucket}')
         winning_formulas_path = os.path.join(bucket_path, 'ml_analysis', 'llm', 'winning_formulas.json')
 
         if os.path.exists(winning_formulas_path):
@@ -374,6 +379,106 @@ def main():
                 })
 
     print(f"✓ Found {len(formula_names)} creative formulas")
+
+    # =============================
+    # STEP 8.5: Generate QR Codes (6 total: 2 per winning bucket - top + bottom)
+    # =============================
+    print(f"\n📱 Generating QR codes...")
+
+    qr_output_dir = os.path.join(reports_base_path, 'qr_codes')
+    os.makedirs(qr_output_dir, exist_ok=True)
+
+    qr_data_list = []
+    qr_metadata = {}  # Store metadata for Excel
+
+    for bucket in winning_buckets:
+        bucket_path = os.path.join(analysis_base_path, 'buckets', f'bucket_{bucket}')
+
+        # Select top and bottom performers from this bucket
+        selected_videos_path = os.path.join(bucket_path, 'selected_videos.json')
+        with open(selected_videos_path, 'r') as f:
+            data = json.load(f)
+
+        top_count = data['top_count']
+        bottom_count = data['bottom_count']
+        top_videos = data['videos'][:top_count]
+        bottom_videos = data['videos'][top_count:top_count + bottom_count]
+
+        # Get #1 top performer (highest views)
+        best_top_video = None
+        best_top_views = 0
+
+        for video in top_videos:
+            views = video['playCount']
+            if views > best_top_views:
+                best_top_views = views
+                best_top_video = video
+
+        # Get #1 bottom performer (lowest views)
+        worst_bottom_video = None
+        worst_bottom_views = float('inf')
+
+        for video in bottom_videos:
+            views = video['playCount']
+            if views < worst_bottom_views:
+                worst_bottom_views = views
+                worst_bottom_video = video
+
+        # Store metadata for Excel (top and bottom)
+        qr_metadata[bucket] = {}
+
+        if best_top_video:
+            # Add top QR to generation list
+            qr_data_list.append({
+                'filename': f"{args.hashtag}_{bucket}_top.png",
+                'url': best_top_video['webVideoUrl']
+            })
+
+            # Store top metadata
+            top_engagement = calculate_engagement_metrics(best_top_video)
+            qr_metadata[bucket]['top'] = {
+                'video_id': best_top_video['id'],
+                'url': best_top_video['webVideoUrl'],
+                'views': best_top_video['playCount'],
+                'engagement': top_engagement,
+                'duration': best_top_video['videoMeta']['duration']
+            }
+
+        if worst_bottom_video:
+            # Add bottom QR to generation list
+            qr_data_list.append({
+                'filename': f"{args.hashtag}_{bucket}_bottom.png",
+                'url': worst_bottom_video['webVideoUrl']
+            })
+
+            # Store bottom metadata
+            bottom_engagement = calculate_engagement_metrics(worst_bottom_video)
+            qr_metadata[bucket]['bottom'] = {
+                'video_id': worst_bottom_video['id'],
+                'url': worst_bottom_video['webVideoUrl'],
+                'views': worst_bottom_video['playCount'],
+                'engagement': bottom_engagement,
+                'duration': worst_bottom_video['videoMeta']['duration']
+            }
+
+    # Generate QR codes
+    for qr_data in qr_data_list:
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(qr_data['url'])
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white")
+        output_path = os.path.join(qr_output_dir, qr_data['filename'])
+        img.save(output_path)
+
+        print(f"✓ Generated QR code: {qr_data['filename']}")
+
+    print(f"✓ Generated {len(qr_data_list)} QR codes")
 
     # =============================
     # STEP 9: Build Excel Data Structure
@@ -545,11 +650,42 @@ def main():
         tab_data.append([f'FORMULA_{formula_idx}_NAME', formula['name']])
         formula_idx += 1
 
+    # PAGE 4: VISUAL EXAMPLES (QR CODES)
+    tab_data.append(['', ''])
+    tab_data.append(['PAGE_4_VISUAL_EXAMPLES', ''])
+    tab_data.append(['', ''])
+
+    # Output QR code metadata for each winning bucket (top + bottom)
+    for i, bucket in enumerate(winning_buckets, 1):
+        if bucket in qr_metadata:
+            tab_data.append([f'QR_BUCKET_{i}_NAME', bucket])
+            tab_data.append(['', ''])
+
+            # Top performer QR
+            if 'top' in qr_metadata[bucket]:
+                qr_top = qr_metadata[bucket]['top']
+                tab_data.append([f'QR_BUCKET_{i}_TOP_FILE', f"{args.hashtag}_{bucket}_top.png"])
+                tab_data.append([f'QR_BUCKET_{i}_TOP_URL', qr_top['url']])
+                tab_data.append([f'QR_BUCKET_{i}_TOP_VIEWS', format_views(qr_top['views'])])
+                tab_data.append([f'QR_BUCKET_{i}_TOP_ENGAGEMENT', str(qr_top['engagement'])])
+                tab_data.append([f'QR_BUCKET_{i}_TOP_DURATION', f"{qr_top['duration']}s"])
+                tab_data.append(['', ''])
+
+            # Bottom performer QR
+            if 'bottom' in qr_metadata[bucket]:
+                qr_bottom = qr_metadata[bucket]['bottom']
+                tab_data.append([f'QR_BUCKET_{i}_BOTTOM_FILE', f"{args.hashtag}_{bucket}_bottom.png"])
+                tab_data.append([f'QR_BUCKET_{i}_BOTTOM_URL', qr_bottom['url']])
+                tab_data.append([f'QR_BUCKET_{i}_BOTTOM_VIEWS', format_views(qr_bottom['views'])])
+                tab_data.append([f'QR_BUCKET_{i}_BOTTOM_ENGAGEMENT', str(qr_bottom['engagement'])])
+                tab_data.append([f'QR_BUCKET_{i}_BOTTOM_DURATION', f"{qr_bottom['duration']}s"])
+                tab_data.append(['', ''])
+
     # =============================
     # STEP 10: Write Excel File
     # =============================
     excel_filename = f"{args.hashtag}_client_data.xlsx"
-    excel_path = os.path.join(base_path, excel_filename)
+    excel_path = os.path.join(reports_base_path, excel_filename)
 
     print(f"\n💾 Writing Excel file...")
 
@@ -561,6 +697,7 @@ def main():
     # =============================
     print(f"\n✅ Extraction complete!")
     print(f"  📁 Excel: {excel_path}")
+    print(f"  📁 QR codes: {qr_output_dir} ({len(qr_data_list)} files)")
     print(f"  📊 Total fields: {len(tab_data)}")
     print(f"  🎨 Creative formulas: {len(formula_names)}")
 

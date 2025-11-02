@@ -242,13 +242,17 @@ def main():
     # =============================
     # STEP 2: Build File Paths
     # =============================
-    base_path = f"/home/jorge/rumiaifinal/data/clients/{args.client}/hashtags/{args.hashtag}/{args.mode}_{args.strategy}"
+    analysis_base_path = f"/home/jorge/rumiaifinal/data/clients/{args.client}/hashtags/{args.hashtag}/{args.mode}_{args.strategy}"
 
-    if not os.path.exists(base_path):
-        print(f"❌ Error: Analysis directory not found: {base_path}")
+    if not os.path.exists(analysis_base_path):
+        print(f"❌ Error: Analysis directory not found: {analysis_base_path}")
         return
 
-    winner_analysis_path = os.path.join(base_path, 'winner_analysis.json')
+    # Create reports/creator/ directory structure
+    reports_base_path = os.path.join(analysis_base_path, 'reports', 'creator')
+    os.makedirs(reports_base_path, exist_ok=True)
+
+    winner_analysis_path = os.path.join(analysis_base_path, 'winner_analysis.json')
 
     # =============================
     # STEP 3: Load Winning Buckets
@@ -261,36 +265,34 @@ def main():
     print(f"✓ Winning buckets: {', '.join(winning_buckets)}")
 
     # =============================
-    # STEP 4: Generate QR Codes (6 total: 2 per bucket)
+    # STEP 4: Generate QR Codes (12 total: 4 per bucket - 2 top + 2 bottom)
     # =============================
     print(f"\n📱 Generating QR codes...")
 
-    qr_output_dir = os.path.join(base_path, 'qr_codes')
+    qr_output_dir = os.path.join(reports_base_path, 'qr_codes')
     qr_data_list = []
     qr_metadata = {}  # Store metadata for Excel
 
     for bucket in winning_buckets:
-        bucket_path = os.path.join(base_path, 'buckets', f'bucket_{bucket}')
+        bucket_path = os.path.join(analysis_base_path, 'buckets', f'bucket_{bucket}')
 
-        # Top performer
-        top_videos = select_qr_code_videos(bucket_path, "top", count=1)
-        if top_videos:
-            top_video = top_videos[0]
+        # Top performers (2)
+        top_videos = select_qr_code_videos(bucket_path, "top", count=2)
+        for idx, top_video in enumerate(top_videos, 1):
             qr_data_list.append({
-                'filename': f"{args.hashtag}_{bucket}_top.png",
+                'filename': f"{args.hashtag}_{bucket}_top{idx}.png",
                 'url': top_video['url']
             })
-            qr_metadata[f"{bucket}_top"] = top_video
+            qr_metadata[f"{bucket}_top{idx}"] = top_video
 
-        # Bottom performer
-        bottom_videos = select_qr_code_videos(bucket_path, "bottom", count=1)
-        if bottom_videos:
-            bottom_video = bottom_videos[0]
+        # Bottom performers (2)
+        bottom_videos = select_qr_code_videos(bucket_path, "bottom", count=2)
+        for idx, bottom_video in enumerate(bottom_videos, 1):
             qr_data_list.append({
-                'filename': f"{args.hashtag}_{bucket}_bottom.png",
+                'filename': f"{args.hashtag}_{bucket}_bottom{idx}.png",
                 'url': bottom_video['url']
             })
-            qr_metadata[f"{bucket}_bottom"] = bottom_video
+            qr_metadata[f"{bucket}_bottom{idx}"] = bottom_video
 
     generate_qr_codes(qr_data_list, qr_output_dir)
 
@@ -304,7 +306,7 @@ def main():
     for bucket_idx, bucket in enumerate(winning_buckets, 1):
         print(f"\n  Processing bucket {bucket_idx}/3: {bucket}")
 
-        bucket_path = os.path.join(base_path, 'buckets', f'bucket_{bucket}')
+        bucket_path = os.path.join(analysis_base_path, 'buckets', f'bucket_{bucket}')
 
         # Load selected videos
         selected_videos_path = os.path.join(bucket_path, 'selected_videos.json')
@@ -321,7 +323,7 @@ def main():
         avg_engagement = round(total_engagement / len(top_videos), 1) if top_videos else 0.0
 
         # Aggregate content classifications (top performers only)
-        aggregated = aggregate_content_classifications(bucket, base_path, performer_type="top")
+        aggregated = aggregate_content_classifications(bucket, analysis_base_path, performer_type="top")
 
         if not aggregated:
             print(f"  ⚠️  Skipping {bucket} - no content classifications found")
@@ -340,9 +342,11 @@ def main():
             creative_reports = formulas.get('creative_reports', [])
             supplementary_insights = formulas.get('supplementary_insights', {}).get('universal_principles', [])
 
-        # Get QR code metadata
-        qr_top = qr_metadata.get(f"{bucket}_top", {})
-        qr_bottom = qr_metadata.get(f"{bucket}_bottom", {})
+        # Get QR code metadata (2 top + 2 bottom)
+        qr_top1 = qr_metadata.get(f"{bucket}_top1", {})
+        qr_top2 = qr_metadata.get(f"{bucket}_top2", {})
+        qr_bottom1 = qr_metadata.get(f"{bucket}_bottom1", {})
+        qr_bottom2 = qr_metadata.get(f"{bucket}_bottom2", {})
 
         # =============================
         # BUILD TAB DATA (2-column format)
@@ -359,12 +363,12 @@ def main():
         tab_data.append(['AVG_ENGAGEMENT', str(avg_engagement)])
         tab_data.append(['', ''])
 
-        # Performance comparison (top vs bottom example)
-        if qr_top and qr_bottom:
-            tab_data.append(['TOP_PERFORMER_VIEWS', format_views(qr_top['views'])])
-            tab_data.append(['TOP_PERFORMER_ENGAGEMENT', str(qr_top['engagement'])])
-            tab_data.append(['BOTTOM_PERFORMER_VIEWS', format_views(qr_bottom['views'])])
-            tab_data.append(['BOTTOM_PERFORMER_ENGAGEMENT', str(qr_bottom['engagement'])])
+        # Performance comparison (top vs bottom example - using first of each)
+        if qr_top1 and qr_bottom1:
+            tab_data.append(['TOP_PERFORMER_VIEWS', format_views(qr_top1['views'])])
+            tab_data.append(['TOP_PERFORMER_ENGAGEMENT', str(qr_top1['engagement'])])
+            tab_data.append(['BOTTOM_PERFORMER_VIEWS', format_views(qr_bottom1['views'])])
+            tab_data.append(['BOTTOM_PERFORMER_ENGAGEMENT', str(qr_bottom1['engagement'])])
             tab_data.append(['', ''])
 
         # Top content categories
@@ -424,17 +428,39 @@ def main():
         for i, insight in enumerate(supplementary_insights[:5], 1):
             tab_data.append([f'SUPPLEMENTARY_INSIGHT_{i}', insight])
 
-        # QR code metadata
+        # QR code metadata (2 top + 2 bottom)
         tab_data.append(['', ''])
-        tab_data.append(['QR_TOP_FILE', f"{args.hashtag}_{bucket}_top.png"])
-        tab_data.append(['QR_TOP_URL', qr_top.get('url', '')])
-        tab_data.append(['QR_TOP_VIEWS', format_views(qr_top.get('views', 0))])
-        tab_data.append(['QR_TOP_ENGAGEMENT', str(qr_top.get('engagement', 0))])
-        tab_data.append(['', ''])
-        tab_data.append(['QR_BOTTOM_FILE', f"{args.hashtag}_{bucket}_bottom.png"])
-        tab_data.append(['QR_BOTTOM_URL', qr_bottom.get('url', '')])
-        tab_data.append(['QR_BOTTOM_VIEWS', format_views(qr_bottom.get('views', 0))])
-        tab_data.append(['QR_BOTTOM_ENGAGEMENT', str(qr_bottom.get('engagement', 0))])
+
+        # Top Performer #1
+        if qr_top1:
+            tab_data.append(['QR_TOP1_FILE', f"{args.hashtag}_{bucket}_top1.png"])
+            tab_data.append(['QR_TOP1_URL', qr_top1.get('url', '')])
+            tab_data.append(['QR_TOP1_VIEWS', format_views(qr_top1.get('views', 0))])
+            tab_data.append(['QR_TOP1_ENGAGEMENT', str(qr_top1.get('engagement', 0))])
+            tab_data.append(['', ''])
+
+        # Top Performer #2
+        if qr_top2:
+            tab_data.append(['QR_TOP2_FILE', f"{args.hashtag}_{bucket}_top2.png"])
+            tab_data.append(['QR_TOP2_URL', qr_top2.get('url', '')])
+            tab_data.append(['QR_TOP2_VIEWS', format_views(qr_top2.get('views', 0))])
+            tab_data.append(['QR_TOP2_ENGAGEMENT', str(qr_top2.get('engagement', 0))])
+            tab_data.append(['', ''])
+
+        # Bottom Performer #1
+        if qr_bottom1:
+            tab_data.append(['QR_BOTTOM1_FILE', f"{args.hashtag}_{bucket}_bottom1.png"])
+            tab_data.append(['QR_BOTTOM1_URL', qr_bottom1.get('url', '')])
+            tab_data.append(['QR_BOTTOM1_VIEWS', format_views(qr_bottom1.get('views', 0))])
+            tab_data.append(['QR_BOTTOM1_ENGAGEMENT', str(qr_bottom1.get('engagement', 0))])
+            tab_data.append(['', ''])
+
+        # Bottom Performer #2
+        if qr_bottom2:
+            tab_data.append(['QR_BOTTOM2_FILE', f"{args.hashtag}_{bucket}_bottom2.png"])
+            tab_data.append(['QR_BOTTOM2_URL', qr_bottom2.get('url', '')])
+            tab_data.append(['QR_BOTTOM2_VIEWS', format_views(qr_bottom2.get('views', 0))])
+            tab_data.append(['QR_BOTTOM2_ENGAGEMENT', str(qr_bottom2.get('engagement', 0))])
 
         # Create DataFrame for this bucket
         df = pd.DataFrame(tab_data, columns=['Field Name', 'Value'])
@@ -446,7 +472,7 @@ def main():
     # STEP 6: Write Excel File (3 Tabs)
     # =============================
     excel_filename = f"{args.hashtag}_creator_data.xlsx"
-    excel_path = os.path.join(base_path, excel_filename)
+    excel_path = os.path.join(reports_base_path, excel_filename)
 
     print(f"\n💾 Writing Excel file...")
 

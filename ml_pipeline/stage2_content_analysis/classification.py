@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 import anthropic
 
-from .utils import load_json, save_json, construct_path
+from .utils import load_json, save_json
 from .validation import (
     validate_classification_inputs,
     validate_business_rules_classification,
@@ -483,19 +483,79 @@ Your classifications feed Stage 7 contrastive analysis - accuracy is critical.
     raise RuntimeError("Unexpected retry loop exit")
 
 
-def load_video_data(video_id: str) -> tuple:
+def build_video_data_cache(target_dir) -> Dict[str, Dict[str, Any]]:
+    """
+    Build hash map of caption/hashtag data from selected_videos.json files.
+
+    Called ONCE at start of classification stage for O(1) lookups.
+    Reads directly from selected_videos.json (no extraction needed).
+
+    Args:
+        target_dir: Target directory (Path or str)
+
+    Returns:
+        dict: {video_id: {'caption': str, 'hashtags': list, 'text_language': str}}
+
+    Source: Direct reading solution (replaces Stage 2.6.5 extraction)
+    """
+    from pathlib import Path
+
+    target_dir = Path(target_dir)
+    video_data_map = {}
+
+    # Load winner_analysis.json to get winning buckets
+    winner_analysis_path = target_dir / "winner_analysis.json"
+    try:
+        winner_analysis = load_json(str(winner_analysis_path))
+        winning_buckets = winner_analysis.get('winning_buckets', [])
+    except FileNotFoundError:
+        logger.error(f"winner_analysis.json not found at {winner_analysis_path}")
+        raise
+
+    # Load caption/hashtag data from each winning bucket's selected_videos.json
+    for bucket_name in winning_buckets:
+        selected_videos_path = target_dir / "buckets" / f"bucket_{bucket_name}" / "selected_videos.json"
+
+        try:
+            selected_videos = load_json(str(selected_videos_path))
+
+            # Build hash map from videos array
+            for video in selected_videos.get('videos', []):
+                video_id = video.get('id')
+                if video_id:
+                    video_data_map[video_id] = {
+                        'caption': video.get('text', ''),
+                        'hashtags': video.get('hashtags', []),
+                        'text_language': video.get('textLanguage', 'unknown')
+                    }
+
+        except FileNotFoundError:
+            logger.warning(f"selected_videos.json not found for bucket {bucket_name}")
+            continue
+        except Exception as e:
+            logger.error(f"Error loading selected_videos.json for bucket {bucket_name}: {e}")
+            continue
+
+    logger.info(f"✓ Cached caption/hashtag data for {len(video_data_map)} videos from selected_videos.json")
+    return video_data_map
+
+
+def load_video_data(video_id: str, video_data_cache: Dict[str, Dict[str, Any]] = None) -> tuple:
     """
     Load transcript, caption, and hashtags for a video.
+
+    Args:
+        video_id: Video identifier
+        video_data_cache: Pre-built hash map from build_video_data_cache()
+                         If None, falls back to legacy file reading (backward compat)
 
     Returns:
         tuple: (transcript_dict, caption_str, hashtags_list)
     """
     RUMIAI_ROOT = os.environ.get('RUMIAI_ROOT', '/home/jorge/rumiaifinal')
     transcript_path = f"{RUMIAI_ROOT}/speech_transcriptions/{video_id}_whisper.json"
-    caption_path = f"{RUMIAI_ROOT}/video_captions/{video_id}_caption.json"
-    hashtags_path = f"{RUMIAI_ROOT}/video_hashtags/{video_id}_hashtags.json"
 
-    # Load transcript
+    # Load transcript (unchanged - still from global location)
     try:
         transcript_data = load_json(transcript_path)
         transcript = {
@@ -506,19 +566,31 @@ def load_video_data(video_id: str) -> tuple:
         transcript = {'text': '', 'available': False}
         logger.warning(f"No transcript for {video_id}")
 
-    # Load caption
-    try:
-        caption_data = load_json(caption_path)
-        caption = caption_data.get('text', '')
-    except FileNotFoundError:
-        caption = ''
+    # Load caption and hashtags from cache (O(1)) or fall back to file reading
+    if video_data_cache is not None:
+        # Use cache (direct reading from selected_videos.json)
+        video_data = video_data_cache.get(video_id, {})
+        caption = video_data.get('caption', '')
+        hashtags = video_data.get('hashtags', [])
 
-    # Load hashtags
-    try:
-        hashtags_data = load_json(hashtags_path)
-        hashtags = hashtags_data.get('hashtags', [])
-    except FileNotFoundError:
-        hashtags = []
+        if not caption and not hashtags:
+            logger.warning(f"No caption/hashtags in cache for {video_id}")
+    else:
+        # Legacy fallback: Try to load from extracted files (backward compatibility)
+        caption_path = f"{RUMIAI_ROOT}/video_captions/{video_id}_caption.json"
+        hashtags_path = f"{RUMIAI_ROOT}/video_hashtags/{video_id}_hashtags.json"
+
+        try:
+            caption_data = load_json(caption_path)
+            caption = caption_data.get('text', '')
+        except FileNotFoundError:
+            caption = ''
+
+        try:
+            hashtags_data = load_json(hashtags_path)
+            hashtags = hashtags_data.get('hashtags', [])
+        except FileNotFoundError:
+            hashtags = []
 
     return transcript, caption, hashtags
 
@@ -529,7 +601,8 @@ def classify_single_video_with_save(
     client: anthropic.Anthropic,
     output_dir: str,
     manifest: Optional[Dict[str, Any]] = None,
-    validation_cache: Optional[Dict[str, Any]] = None
+    validation_cache: Optional[Dict[str, Any]] = None,
+    video_data_cache: Optional[Dict[str, Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     """
     Classify video using dual-flow approach (if manifest provided) or legacy single-flow.
@@ -550,6 +623,7 @@ def classify_single_video_with_save(
         output_dir: Directory to save classification result
         manifest: Optional selection_manifest.json (enables dual-flow)
         validation_cache: Optional validation cache for checking transcript validity
+        video_data_cache: Optional pre-built hash map of caption/hashtag data
 
     Returns:
         dict: Classification result
@@ -557,8 +631,8 @@ def classify_single_video_with_save(
     Raises:
         Exception: Any error during classification
     """
-    # Load video data
-    transcript, caption, hashtags = load_video_data(video_id)
+    # Load video data (with cache for O(1) caption/hashtag lookup)
+    transcript, caption, hashtags = load_video_data(video_id, video_data_cache)
 
     # DUAL-FLOW MODE: Route based on transcript validity
     if manifest is not None and validation_cache is not None:
@@ -663,7 +737,8 @@ def classify_all_videos_sequential(
     output_dir: str,
     checkpoint_path: Optional[str] = None,
     manifest: Optional[Dict[str, Any]] = None,
-    validation_cache: Optional[Dict[str, Any]] = None
+    validation_cache: Optional[Dict[str, Any]] = None,
+    video_data_cache: Optional[Dict[str, Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     """
     Classify videos sequentially with checkpoint/resume support.
@@ -680,6 +755,7 @@ def classify_all_videos_sequential(
         checkpoint_path: Optional path to checkpoint file
         manifest: Optional manifest for dual-flow classification
         validation_cache: Optional validation cache for dual-flow classification
+        video_data_cache: Optional pre-built hash map of caption/hashtag data
 
     Returns:
         dict: {"completed": int, "failed": int, "failed_ids": list[str]}
@@ -704,9 +780,9 @@ def classify_all_videos_sequential(
     # Step 2: Process remaining videos
     for i, video_id in enumerate(remaining_videos):
         try:
-            # Classify and save (with optional dual-flow parameters)
+            # Classify and save (with optional dual-flow parameters and cache)
             classify_single_video_with_save(
-                video_id, taxonomy, client, output_dir, manifest, validation_cache
+                video_id, taxonomy, client, output_dir, manifest, validation_cache, video_data_cache
             )
 
             # Update checkpoint (if enabled)
@@ -749,7 +825,8 @@ def classify_all_videos_parallel(
     max_workers: int = 5,
     checkpoint_path: Optional[str] = None,
     manifest: Optional[Dict[str, Any]] = None,
-    validation_cache: Optional[Dict[str, Any]] = None
+    validation_cache: Optional[Dict[str, Any]] = None,
+    video_data_cache: Optional[Dict[str, Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     """
     Classify videos in parallel with checkpoint/resume support.
@@ -767,6 +844,7 @@ def classify_all_videos_parallel(
         checkpoint_path: Optional checkpoint file path
         manifest: Optional manifest for dual-flow classification
         validation_cache: Optional validation cache for dual-flow classification
+        video_data_cache: Optional pre-built hash map of caption/hashtag data
 
     Returns:
         dict: {"completed": int, "failed": int, "failed_ids": list[str]}
@@ -792,11 +870,11 @@ def classify_all_videos_parallel(
 
     # Step 2: Submit all tasks to thread pool
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # Submit all classification tasks (with optional dual-flow parameters)
+        # Submit all classification tasks (with optional dual-flow parameters and cache)
         future_to_video = {
             executor.submit(
                 classify_single_video_with_save,
-                video_id, taxonomy, client, output_dir, manifest, validation_cache
+                video_id, taxonomy, client, output_dir, manifest, validation_cache, video_data_cache
             ): video_id
             for video_id in remaining_videos
         }
@@ -911,6 +989,10 @@ def classify_all_videos(
         os.makedirs(checkpoint_dir, exist_ok=True)
         checkpoint_path = f"{checkpoint_dir}/classification_checkpoint.json"
 
+    # Build video data cache (caption/hashtag data from selected_videos.json)
+    logger.info("Building caption/hashtag cache from selected_videos.json...")
+    video_data_cache = build_video_data_cache(target_dir)
+
     # Execute classification
     start_time = time.time()
 
@@ -918,13 +1000,13 @@ def classify_all_videos(
         logger.info(f"🚀 Starting parallel classification: {len(all_videos)} videos, {max_workers} workers")
         results = classify_all_videos_parallel(
             all_videos, taxonomy, anthropic_client, output_dir, max_workers, checkpoint_path,
-            manifest, validation_cache
+            manifest, validation_cache, video_data_cache
         )
     else:
         logger.info(f"📋 Starting sequential classification: {len(all_videos)} videos")
         results = classify_all_videos_sequential(
             all_videos, taxonomy, anthropic_client, output_dir, checkpoint_path,
-            manifest, validation_cache
+            manifest, validation_cache, video_data_cache
         )
 
     # Calculate summary statistics

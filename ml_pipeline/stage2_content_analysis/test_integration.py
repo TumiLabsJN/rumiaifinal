@@ -19,33 +19,12 @@ from . import (
     validate_discovery_inputs,
     validate_classification_inputs,
     load_json,
-    save_json,
-    construct_path
+    save_json
 )
 
 
 class TestUtilities:
     """Test utility functions"""
-
-    def test_construct_path_base(self):
-        """Test base path construction"""
-        path = construct_path("acme", "nutrition", file_type="base")
-        assert path == "/data/clients/acme/hashtags/nutrition/top_contrastive"
-
-    def test_construct_path_selection_manifest(self):
-        """Test selection manifest path construction"""
-        path = construct_path("acme", "nutrition", file_type="selection_manifest")
-        assert path == "/data/clients/acme/hashtags/nutrition/top_contrastive/selection_manifest.json"
-
-    def test_construct_path_raw_discovery(self):
-        """Test raw discovery path construction"""
-        path = construct_path("acme", "nutrition", file_type="raw_discovery")
-        assert path == "/data/clients/acme/hashtags/nutrition/top_contrastive/content_taxonomies/nutrition_raw_discovery.json"
-
-    def test_construct_path_bucket_content_analysis(self):
-        """Test bucket content analysis path construction"""
-        path = construct_path("acme", "nutrition", bucket="33-60s", file_type="bucket_content_analysis")
-        assert path == "/data/clients/acme/hashtags/nutrition/top_contrastive/buckets/bucket_33-60s/content_analysis"
 
     def test_save_and_load_json(self, tmp_path):
         """Test JSON save and load with atomic writes"""

@@ -1,6 +1,6 @@
 # Stage 2.7 Classification Re-Test Instructions
 
-**Purpose:** Re-run Stage 2.7 (Classification) with the fixed brace-counting code WITHOUT redoing expensive video processing or taxonomy discovery.
+**Purpose:** Re-run Stage 2.7 (Classification) 
 
 **Flow:** rollo_test5/wellnesspt2_test5
 
@@ -10,8 +10,6 @@
 - ✅ Stage 2.6 complete (raw discovery)
 - ✅ Curated taxonomy (wellnesspt2_test5_taxonomy.json)
 - ⚠️ Stage 2.7 complete (BUT with OLD buggy code - 241/300 = 80.3% success)
-
-**Goal:** Re-run ONLY Stage 2.7 with FIXED code to achieve ~95% success rate (285/300)
 
 ---
 
@@ -109,68 +107,6 @@ LOG_FILE=$(ls -t data/logs/rumiai_ml_rollo_test5_wellnesspt2_test5_*.log | head 
 echo "=== ERROR BREAKDOWN ==="
 grep "❌ Failed" $LOG_FILE | sed 's/.*Failed [0-9]*\/[0-9]*: [0-9]* - \(.*\)/\1/' | sed 's/: line.*//' | sort | uniq -c | sort -rn
 ```
-
----
-
-## Expected Results
-
-### BEFORE Fix (Original Run - 80.3% success)
-```
-Completed: 241/300 (80.3%)
-Failed: 59/300 (19.7%)
-
-Error Breakdown:
-  44 Extra data (multiple JSON objects)
-  15 Expecting value (empty responses)
-```
-
-### AFTER Fix (New Run - ~95% success)
-```
-Completed: ~285/300 (95%)
-Failed: ~15/300 (5%)
-
-Error Breakdown:
-   0 Extra data (FIXED by brace-counting)
-  15 Expecting value (still need investigation)
-```
-
----
-
-## What Gets Preserved
-
-✅ **All video processing** (Stage 2 - temporal_windows files)
-✅ **Validation cache** (Stage 2.5.1 - transcript_validation_cache.json)
-✅ **Taxonomy** (Stage 2.6 - curated taxonomy)
-✅ **All checkpoints** (Stage 1, Stage 2)
-✅ **Manifest** (selection_manifest.json)
-
-**Estimated cost savings:** $0 (no re-processing, no re-discovery)
-**Time savings:** ~4-5 hours (skip video processing)
-
----
-
-## What Gets Deleted & Recreated
-
-❌ **Classification checkpoint** (.checkpoints/classification_checkpoint.json)
-❌ **Classification outputs** (content_analysis/validated/)
-
-🆕 **New classification results** (with fixed code)
-
----
-
-## Verification Checklist
-
-After pipeline completes, verify:
-
-- [ ] Classification checkpoint shows ~285/300 completed (not 241/300)
-- [ ] "Extra data" errors reduced from 44 to ~0
-- [ ] "Expecting value" errors remain at ~15 (different issue)
-- [ ] File counts per bucket increased:
-  - bucket_60-90s: 89 → ~97
-  - bucket_18-33s: 82 → ~94
-  - bucket_33-60s: 70 → ~94
-- [ ] Log shows no "Extra data" errors
-- [ ] Success rate improved from 80.3% → ~95%
 
 ---
 

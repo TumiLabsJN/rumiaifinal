@@ -1,4 +1,4 @@
-# Stage 8 MVP: LLM-Optimized Implementation Guide
+# Stage 8 MVP: LLM-Optimized Implementation Guide  
 
 **Purpose**: Consolidated, self-contained implementation specifications for LLM-driven development
 
@@ -4063,12 +4063,16 @@ def main():
         raise FileNotFoundError(f"No analysis directory found for {args.competitor}")
 
     analysis_dir = analysis_dirs[0]
-    competitor_path = f"{base_path}/{analysis_dir}"
+    analysis_base_path = f"{base_path}/{analysis_dir}"
+
+    # Create reports/competitor/ directory structure
+    reports_base_path = os.path.join(analysis_base_path, 'reports', 'competitor')
+    os.makedirs(reports_base_path, exist_ok=True)
 
     # =============================
     # STEP 3: Load Core Data
     # =============================
-    winner_analysis_path = os.path.join(competitor_path, 'winner_analysis.json')
+    winner_analysis_path = os.path.join(analysis_base_path, 'winner_analysis.json')
     with open(winner_analysis_path) as f:
         winner_data = json.load(f)
 
@@ -4077,7 +4081,7 @@ def main():
     # Calculate total videos analyzed
     total_videos = 0
     for bucket in winning_buckets:
-        bucket_path = os.path.join(competitor_path, 'buckets', f'bucket_{bucket}')
+        bucket_path = os.path.join(analysis_base_path, 'buckets', f'bucket_{bucket}')
         with open(f"{bucket_path}/selected_videos.json") as f:
             data = json.load(f)
         total_videos += data['selected_count']
@@ -4162,12 +4166,13 @@ def main():
 
     # Get top performer from best bucket
     best_bucket = ranked_buckets[0]['bucket']
-    best_bucket_path = os.path.join(competitor_path, 'buckets', f'bucket_{best_bucket}')
+    best_bucket_path = os.path.join(analysis_base_path, 'buckets', f'bucket_{best_bucket}')
 
     qr_video = select_qr_code_videos(best_bucket_path, "top")
 
     # Generate QR code
-    qr_output_dir = os.path.join(competitor_path, 'qr_codes')
+    qr_output_dir = os.path.join(reports_base_path, 'qr_codes')
+    os.makedirs(qr_output_dir, exist_ok=True)
     qr_data = [{
         "filename": f"{args.competitor}_top.png",
         "url": qr_video['url']
@@ -4349,7 +4354,7 @@ def main():
     # STEP 9: Write Excel File
     # =============================
     excel_filename = f"{args.competitor}_analysis_data.xlsx"
-    excel_path = os.path.join(competitor_path, excel_filename)
+    excel_path = os.path.join(reports_base_path, excel_filename)
 
     df = pd.DataFrame(tab_data, columns=['Field Name', 'Value'])
     df.to_excel(excel_path, sheet_name='Report_Data', index=False, engine='openpyxl')
@@ -5541,7 +5546,9 @@ def main():
     # =============================
     # STEP 2: Build Output Path
     # =============================
-    output_base = f"/data/clients/{args.client}/market_intelligence/multi_competitor"
+    # Note: This assumes all competitors are analyzed within the same hashtag context
+    # For cross-hashtag analysis, adjust the base path accordingly
+    output_base = f"/data/clients/{args.client}/market_intelligence/multi_competitor/reports/multicompetitor"
     os.makedirs(output_base, exist_ok=True)
 
     # =============================

@@ -38,7 +38,6 @@ from .error_handlers import (
 from .utils import (
     load_json,
     save_json,
-    construct_path,
     get_logger
 )
 
@@ -72,7 +71,6 @@ __all__ = [
     # Utils
     'load_json',
     'save_json',
-    'construct_path',
     'get_logger'
 ]
 

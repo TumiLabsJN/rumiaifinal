@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'ml_pipeline'))
 
 from stage2_content_analysis.classification import run_classification_stage
 from stage2_content_analysis.taxonomy_validation import validate_curated_taxonomy
-from stage2_content_analysis.utils import construct_path
+from foundation.paths import PathBuilder, sanitize_target
 
 
 def setup_logging(verbose=False):
@@ -74,6 +74,13 @@ Environment Variables:
         '--hashtag',
         required=True,
         help='Hashtag name (with or without # prefix)'
+    )
+
+    parser.add_argument(
+        '--analysis-type',
+        required=True,
+        choices=['hashtag', 'competitor', 'creator'],
+        help='Analysis type (hashtag, competitor, or creator)'
     )
 
     parser.add_argument(
@@ -138,21 +145,24 @@ def main():
         print("   Set it with: export ANTHROPIC_API_KEY=your_api_key")
         sys.exit(1)
 
-    # Clean hashtag (remove # if present)
-    hashtag = args.hashtag.lstrip('#')
+    # Sanitize target (remove prefix based on analysis type)
+    target_sanitized = sanitize_target(args.hashtag, args.analysis_type)
 
     # Step 1: Validate taxonomy
     print("\n" + "=" * 80)
     print("STEP 1: VALIDATING TAXONOMY")
     print("=" * 80)
 
-    taxonomy_path = construct_path(
+    # Build taxonomy path using PathBuilder
+    path_builder = PathBuilder()
+    target_dir = path_builder.get_target_dir(
         client_id=args.client,
-        hashtag=hashtag,
+        analysis_type=args.analysis_type,
+        target=args.hashtag,
         analysis_mode=args.analysis_mode,
-        selection_strategy=args.selection_strategy,
-        file_type="taxonomy"
+        selection_strategy=args.selection_strategy
     )
+    taxonomy_path = str(target_dir / "content_taxonomies" / f"{target_sanitized}_taxonomy.json")
 
     try:
         validate_curated_taxonomy(taxonomy_path)
@@ -194,7 +204,8 @@ def main():
     try:
         summary = run_classification_stage(
             client_id=args.client,
-            hashtag=hashtag,
+            hashtag=args.hashtag,
+            analysis_type=args.analysis_type,
             analysis_mode=args.analysis_mode,
             selection_strategy=args.selection_strategy,
             parallel=args.parallel,

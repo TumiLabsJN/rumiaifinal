@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 import anthropic
 
-from .utils import load_json, save_json, construct_path
+from .utils import load_json, save_json
 from .validation import validate_discovery_inputs, validate_business_rules_sampling, validate_discovery_output
 from .error_handlers import handle_graceful_skip
 from .cost_tracking import log_estimated_cost, log_actual_cost
