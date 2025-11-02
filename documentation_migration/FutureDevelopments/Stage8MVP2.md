@@ -297,9 +297,9 @@ fields_per_tab = [
     ('', ''),
     ('PHASE_2_LABEL', '--- Phase 2: Middle (3s to last 3s) ---'),
     ('PHASE_2_TIMING', '3s to last 3s'),
-    ('PHASE_2_KEYWORD_1', '#guthealth'),  # From aggregate_content_classifications() -> keywords
-    ('PHASE_2_KEYWORD_2', '#protein'),
-    ('PHASE_2_KEYWORD_3', '#antiinflammatory'),
+    ('PHASE_2_KEYWORD_1', 'gut health'),  # From aggregate_content_classifications() -> keywords
+    ('PHASE_2_KEYWORD_2', 'protein'),
+    ('PHASE_2_KEYWORD_3', 'anti-inflammatory'),
     ('PHASE_2_TACTIC_1', 'Personal testimony'),  # From aggregate_content_classifications() -> content_tactics
     ('PHASE_2_TACTIC_2', 'Before/after reveal'),
     ('', ''),
@@ -1440,7 +1440,7 @@ def main():
         # Extract top 3 keywords
         top_keywords = [k for k, _ in aggregated['keywords'].most_common(3)] if aggregated.get('keywords') else []
         for i in range(3):
-            keyword = f"#{top_keywords[i]}" if i < len(top_keywords) else ""
+            keyword = top_keywords[i] if i < len(top_keywords) else ""
             tab_data.append([f'PHASE_2_KEYWORD_{i+1}', keyword])
         # Extract top 2 content tactics
         top_tactics = [t for t, _ in aggregated['content_tactics'].most_common(2)] if aggregated.get('content_tactics') else []
@@ -1754,10 +1754,10 @@ fields = [
     ('HOOK_STRATEGY_3_PCT', '23'),
     ('', ''),
 
-    ('KEYWORD_1', '#guthealth'),  # Top 4 keywords
-    ('KEYWORD_2', '#protein'),
-    ('KEYWORD_3', '#antiinflammatory'),
-    ('KEYWORD_4', '#metabolism'),
+    ('KEYWORD_1', 'gut health'),  # Top 4 keywords
+    ('KEYWORD_2', 'protein'),
+    ('KEYWORD_3', 'anti-inflammatory'),
+    ('KEYWORD_4', 'metabolism'),
     ('', ''),
 
     ('PAIN_POINT_1', 'Bloating'),  # Top 3 pain points with %
@@ -2883,7 +2883,7 @@ def main():
 
     # Keywords (no percentage)
     for i, (keyword, count) in enumerate(top_4_keywords, 1):
-        tab_data.append([f'KEYWORD_{i}', f'#{keyword}'])
+        tab_data.append([f'KEYWORD_{i}', keyword])
 
     tab_data.append(['', ''])
 
@@ -3194,11 +3194,11 @@ fields = [
     ('PAIN_POINT_5_PCT', '28'),
     ('', ''),
 
-    ('KEYWORD_1', '#guthealth'),  # Top 5 from Stage 2.7
-    ('KEYWORD_2', '#protein'),
-    ('KEYWORD_3', '#antiinflammatory'),
-    ('KEYWORD_4', '#metabolism'),
-    ('KEYWORD_5', '#fiber'),
+    ('KEYWORD_1', 'gut health'),  # Top 5 from Stage 2.7
+    ('KEYWORD_2', 'protein'),
+    ('KEYWORD_3', 'anti-inflammatory'),
+    ('KEYWORD_4', 'metabolism'),
+    ('KEYWORD_5', 'fiber'),
     ('', ''),
 
     ('CONTENT_TACTIC_1', 'Direct-to-Camera'),  # Top 4 from Stage 2.7
@@ -4274,7 +4274,7 @@ def main():
 
     # Keywords
     for i, (keyword, count) in enumerate(top_5_keywords, 1):
-        tab_data.append([f'KEYWORD_{i}', f'#{keyword}'])
+        tab_data.append([f'KEYWORD_{i}', keyword])
 
     tab_data.append(['', ''])
 
@@ -4684,9 +4684,9 @@ fields = [
     # ... similar for all combinations
 
     # --- Keywords (Top 3 per bucket per competitor) ---
-    ('KEYWORD_COMP_1_BUCKET_18_33S_1', '#guthealth'),
-    ('KEYWORD_COMP_1_BUCKET_18_33S_2', '#protein'),
-    ('KEYWORD_COMP_1_BUCKET_18_33S_3', '#fiber'),
+    ('KEYWORD_COMP_1_BUCKET_18_33S_1', 'gut health'),
+    ('KEYWORD_COMP_1_BUCKET_18_33S_2', 'protein'),
+    ('KEYWORD_COMP_1_BUCKET_18_33S_3', 'fiber'),
     # ... similar for all combinations
 
     # --- Content Tactics (Top 2 per bucket per competitor) ---
@@ -5771,7 +5771,7 @@ def main():
 
             # Keywords (top 3)
             for j, keyword in enumerate(bucket_data["top_3_keywords"], 1):
-                tab_data.append([f'KEYWORD_COMP_{i}_BUCKET_{bucket_key}_{j}', f'#{keyword}'])
+                tab_data.append([f'KEYWORD_COMP_{i}_BUCKET_{bucket_key}_{j}', keyword])
 
             # Content tactics (top 2)
             for j, tactic in enumerate(bucket_data["top_2_tactics"], 1):

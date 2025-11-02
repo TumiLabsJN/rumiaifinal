@@ -124,8 +124,8 @@ rm -rf buckets/bucket_*/analysis/models/
 rm -f buckets/bucket_*/checkpoints/stage_6_checkpoint.json
 rm -rf buckets/bucket_*/analysis/contrastive_analysis/
 
-# Delete Stage 7 outputs (no checkpoint file)
-rm -f buckets/bucket_*/analysis/complete_analysis_*.json
+ # Delete Stage 7 outputs (no checkpoint file - both Phase 1 and Phase 2)
+  rm -rf buckets/bucket_*/ml_analysis/llm/
 
 echo "✓ Cleaned Stages 3-7"
 ```
@@ -205,7 +205,7 @@ rm -f buckets/bucket_*/checkpoints/stage_6_checkpoint.json
 rm -rf buckets/bucket_*/analysis/contrastive_analysis/
 
 # Delete Stage 7 outputs (no checkpoint file)
-rm -f buckets/bucket_*/analysis/complete_analysis_*.json
+rm -f buckets/bucket_*/ml_analysis/llm/complete_analysis_*.json
 
 echo "✓ Cleaned Stages 4-7"
 ```
@@ -266,7 +266,7 @@ rm -f buckets/bucket_*/checkpoints/stage_6_checkpoint.json
 rm -rf buckets/bucket_*/analysis/contrastive_analysis/
 
 # Delete Stage 7 outputs (no checkpoint file)
-rm -f buckets/bucket_*/analysis/complete_analysis_*.json
+rm -f buckets/bucket_*/ml_analysis/llm/complete_analysis_*.json
 
 echo "✓ Cleaned Stages 5-7"
 ```
@@ -323,7 +323,7 @@ rm -f buckets/bucket_*/checkpoints/stage_6_checkpoint.json
 rm -rf buckets/bucket_*/analysis/contrastive_analysis/
 
 # Delete Stage 7 outputs (no checkpoint file)
-rm -f buckets/bucket_*/analysis/complete_analysis_*.json
+rm -f buckets/bucket_*/ml_analysis/llm/complete_analysis_*.json
 
 echo "✓ Cleaned Stages 6-7"
 ```
@@ -377,7 +377,7 @@ cd /home/jorge/rumiaifinal/data/clients/{CLIENT_ID}/{ANALYSIS_TYPE}s/{TARGET}/{A
 
 ```bash
 # Delete Stage 7 outputs (no checkpoint file)
-rm -f buckets/bucket_*/analysis/complete_analysis_*.json
+rm -f buckets/bucket_*/ml_analysis/llm/complete_analysis_*.json
 
 echo "✓ Cleaned Stage 7"
 ```
@@ -482,7 +482,7 @@ After pipeline completes, verify:
 tail -50 data/logs/rumiai_ml_{CLIENT_ID}_{TARGET}_*.log | grep "COMPLETE"
 
 # Verify final outputs exist
-ls -la buckets/bucket_*/analysis/complete_analysis_*.json
+ls -la buckets/bucket_*/ml_analysis/llm/complete_analysis_*.json
 
 # Should see 3 files (one per bucket)
 ```

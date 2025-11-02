@@ -304,6 +304,49 @@ def main():
     generate_qr_codes(qr_data_list, qr_output_dir)
 
     # =============================
+    # STEP 4.5: Calculate Performance Metrics for ALL Winning Buckets
+    # =============================
+    print(f"\n📊 Calculating performance metrics for all winning buckets...")
+
+    bucket_metrics = {}  # Store metrics for all 3 buckets
+    for bucket in winning_buckets:
+        bucket_path = os.path.join(analysis_base_path, 'buckets', f'bucket_{bucket}')
+        selected_videos_path = os.path.join(bucket_path, 'selected_videos.json')
+
+        with open(selected_videos_path, 'r') as f:
+            data = json.load(f)
+
+        top_count = data['top_count']
+        top_videos = data['videos'][:top_count]
+
+        # Calculate average views and engagement for top performers
+        avg_views = int(sum(v['playCount'] for v in top_videos) / len(top_videos)) if top_videos else 0
+        avg_engagement = round(sum(calculate_engagement_metrics(v) for v in top_videos) / len(top_videos), 1) if top_videos else 0.0
+
+        bucket_metrics[bucket] = {
+            'avg_views': avg_views,
+            'avg_engagement': avg_engagement
+        }
+
+    # Rank buckets by engagement (primary), then views (secondary)
+    ranked_buckets = sorted(
+        bucket_metrics.items(),
+        key=lambda x: (x[1]['avg_engagement'], x[1]['avg_views']),
+        reverse=True
+    )
+
+    # Assign star ratings and labels
+    star_ratings = {
+        ranked_buckets[0][0]: '⭐⭐⭐⭐⭐',
+        ranked_buckets[1][0]: '⭐⭐⭐⭐',
+        ranked_buckets[2][0]: '⭐⭐⭐'
+    }
+    best_bucket = ranked_buckets[0][0]
+
+    # Calculate coverage percentage
+    coverage_pct = sum(bucket_distribution.get(b, 0) for b in winning_buckets)
+
+    # =============================
     # STEP 5: Extract Data Per Bucket (3 Tabs)
     # =============================
     print(f"\n📊 Extracting data for {len(winning_buckets)} buckets...")
@@ -321,13 +364,32 @@ def main():
             selected_data = json.load(f)
 
         top_count = selected_data['top_count']
+        bottom_count = selected_data['bottom_count']
         top_videos = selected_data['videos'][:top_count]
+        bottom_videos = selected_data['videos'][top_count:top_count + bottom_count]
 
         # Calculate performance metrics
         total_views = sum(v['playCount'] for v in top_videos)
         total_engagement = sum(calculate_engagement_metrics(v) for v in top_videos)
         avg_views = int(total_views / len(top_videos)) if top_videos else 0
         avg_engagement = round(total_engagement / len(top_videos), 1) if top_videos else 0.0
+
+        # Calculate "THE PROOF" metrics for this bucket
+        # Top Cluster: videos ranked #5-#25 (indices 4-24, = 21 videos)
+        top_cluster_videos = top_videos[4:25] if len(top_videos) >= 25 else top_videos[4:]
+        top_cluster_avg_views = int(sum(v['playCount'] for v in top_cluster_videos) / len(top_cluster_videos)) if top_cluster_videos else 0
+        top_cluster_avg_engagement = round(sum(calculate_engagement_metrics(v) for v in top_cluster_videos) / len(top_cluster_videos), 1) if top_cluster_videos else 0.0
+
+        # Bottom Cluster: bottom 20 videos
+        bottom_cluster_videos = bottom_videos[:20] if len(bottom_videos) >= 20 else bottom_videos
+        bottom_cluster_avg_views = int(sum(v['playCount'] for v in bottom_cluster_videos) / len(bottom_cluster_videos)) if bottom_cluster_videos else 0
+        bottom_cluster_avg_engagement = round(sum(calculate_engagement_metrics(v) for v in bottom_cluster_videos) / len(bottom_cluster_videos), 1) if bottom_cluster_videos else 0.0
+
+        # Calculate multipliers and percentage increases
+        view_multiplier = round(top_cluster_avg_views / bottom_cluster_avg_views, 1) if bottom_cluster_avg_views > 0 else 0
+        engagement_multiplier = round(top_cluster_avg_engagement / bottom_cluster_avg_engagement, 1) if bottom_cluster_avg_engagement > 0 else 0
+        view_pct_increase = int(((top_cluster_avg_views - bottom_cluster_avg_views) / bottom_cluster_avg_views) * 100) if bottom_cluster_avg_views > 0 else 0
+        engagement_pct_increase = int(((top_cluster_avg_engagement - bottom_cluster_avg_engagement) / bottom_cluster_avg_engagement) * 100) if bottom_cluster_avg_engagement > 0 else 0
 
         # Aggregate content classifications (top performers only)
         aggregated = aggregate_content_classifications(bucket, analysis_base_path, performer_type="top")
@@ -370,13 +432,30 @@ def main():
         tab_data.append(['AVG_ENGAGEMENT', str(avg_engagement)])
         tab_data.append(['', ''])
 
-        # Performance comparison (top vs bottom example - using first of each)
-        if qr_top1 and qr_bottom1:
-            tab_data.append(['TOP_PERFORMER_VIEWS', format_views(qr_top1['views'])])
-            tab_data.append(['TOP_PERFORMER_ENGAGEMENT', str(qr_top1['engagement'])])
-            tab_data.append(['BOTTOM_PERFORMER_VIEWS', format_views(qr_bottom1['views'])])
-            tab_data.append(['BOTTOM_PERFORMER_ENGAGEMENT', str(qr_bottom1['engagement'])])
+        # Hashtag top 3 Performing Durations comparison table
+        for i, winning_bucket in enumerate(winning_buckets, 1):
+            metrics = bucket_metrics[winning_bucket]
+            tab_data.append([f'BUCKET_{i}_DURATION', winning_bucket])
+            tab_data.append([f'BUCKET_{i}_AVG_VIEWS', format_views(metrics['avg_views'])])
+            tab_data.append([f'BUCKET_{i}_AVG_ENGAGEMENT', str(metrics['avg_engagement'])])
+            tab_data.append([f'BUCKET_{i}_RATING', star_ratings[winning_bucket]])
+            tab_data.append([f'BUCKET_{i}_LABEL', '← BEST' if winning_bucket == best_bucket else ''])
             tab_data.append(['', ''])
+
+        tab_data.append(['COVERAGE_PERCENTAGE', f"{coverage_pct}%"])
+        tab_data.append(['', ''])
+
+        # THE PROOF - Performance Comparison (bucket-specific)
+        tab_data.append(['TOP_CLUSTER_AVG_VIEWS', format_views(top_cluster_avg_views)])
+        tab_data.append(['TOP_CLUSTER_AVG_ENGAGEMENT', str(top_cluster_avg_engagement)])
+        tab_data.append(['BOTTOM_CLUSTER_AVG_VIEWS', format_views(bottom_cluster_avg_views)])
+        tab_data.append(['BOTTOM_CLUSTER_AVG_ENGAGEMENT', str(bottom_cluster_avg_engagement)])
+        tab_data.append(['', ''])
+        tab_data.append(['VIEW_MULTIPLIER', f"{view_multiplier}x"])
+        tab_data.append(['ENGAGEMENT_MULTIPLIER', f"{engagement_multiplier}x"])
+        tab_data.append(['VIEW_PERCENTAGE_INCREASE', f"{view_pct_increase}%"])
+        tab_data.append(['ENGAGEMENT_PERCENTAGE_INCREASE', f"{engagement_pct_increase}%"])
+        tab_data.append(['', ''])
 
         # Top content categories
         for i, (category, count) in enumerate(aggregated['content_category'].most_common(5), 1):
@@ -410,7 +489,21 @@ def main():
 
         # Top keywords
         for i, (keyword, count) in enumerate(aggregated['keywords'].most_common(5), 1):
-            tab_data.append([f'KEYWORD_{i}', f'#{keyword}'])
+            tab_data.append([f'KEYWORD_{i}', keyword])
+
+        tab_data.append(['', ''])
+
+        # Top content tactics
+        for i, (tactic, count) in enumerate(aggregated['content_tactics'].most_common(4), 1):
+            pct = round((count / len(top_videos)) * 100)
+            tab_data.append([f'CONTENT_TACTIC_{i}', tactic.replace('_', ' ').title()])
+            tab_data.append([f'CONTENT_TACTIC_{i}_PCT', str(pct)])
+
+        tab_data.append(['', ''])
+
+        # Supplementary insights (top 5) - RIGHT AFTER content tactics
+        for i, insight in enumerate(supplementary_insights[:5], 1):
+            tab_data.append([f'SUPPLEMENTARY_INSIGHT_{i}', insight])
 
         # PAGE 2: HOW TO EXECUTE
         tab_data.append(['', ''])
@@ -420,8 +513,6 @@ def main():
         # Creative formulas (up to 3)
         for i, report in enumerate(creative_reports[:3], 1):
             tab_data.append([f'FORMULA_{i}_NAME', report['formula_name']])
-            tab_data.append([f'FORMULA_{i}_FREQUENCY', str(report['percentage']) + '%'])
-            tab_data.append([f'FORMULA_{i}_CONFIDENCE', report['confidence_level']])
             tab_data.append([f'FORMULA_{i}_STRATEGY', report['strategy_description']])
             tab_data.append([f'FORMULA_{i}_WHEN_TO_USE', report['when_to_use']])
 
@@ -430,10 +521,6 @@ def main():
                 tab_data.append([f'FORMULA_{i}_STEP_{j}', step])
 
             tab_data.append(['', ''])
-
-        # Supplementary insights (top 5)
-        for i, insight in enumerate(supplementary_insights[:5], 1):
-            tab_data.append([f'SUPPLEMENTARY_INSIGHT_{i}', insight])
 
         # QR code metadata (2 top + 2 bottom)
         tab_data.append(['', ''])
