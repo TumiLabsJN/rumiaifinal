@@ -381,7 +381,7 @@ def main():
     print(f"✓ Found {len(formula_names)} creative formulas")
 
     # =============================
-    # STEP 8.5: Generate QR Codes (6 total: 2 per winning bucket - top + bottom)
+    # STEP 8.5: Generate QR Codes (6 total: 2 TOP per winning bucket - NO bottom)
     # =============================
     print(f"\n📱 Generating QR codes...")
 
@@ -394,71 +394,52 @@ def main():
     for bucket in winning_buckets:
         bucket_path = os.path.join(analysis_base_path, 'buckets', f'bucket_{bucket}')
 
-        # Select top and bottom performers from this bucket
+        # Select top performers from this bucket
         selected_videos_path = os.path.join(bucket_path, 'selected_videos.json')
         with open(selected_videos_path, 'r') as f:
             data = json.load(f)
 
         top_count = data['top_count']
-        bottom_count = data['bottom_count']
         top_videos = data['videos'][:top_count]
-        bottom_videos = data['videos'][top_count:top_count + bottom_count]
 
-        # Get #1 top performer (highest views)
-        best_top_video = None
-        best_top_views = 0
+        # Sort top videos by views (highest first) and select top 2
+        sorted_top_videos = sorted(top_videos, key=lambda v: v['playCount'], reverse=True)
 
-        for video in top_videos:
-            views = video['playCount']
-            if views > best_top_views:
-                best_top_views = views
-                best_top_video = video
-
-        # Get #1 bottom performer (lowest views)
-        worst_bottom_video = None
-        worst_bottom_views = float('inf')
-
-        for video in bottom_videos:
-            views = video['playCount']
-            if views < worst_bottom_views:
-                worst_bottom_views = views
-                worst_bottom_video = video
-
-        # Store metadata for Excel (top and bottom)
+        # Store metadata for Excel (2 top performers)
         qr_metadata[bucket] = {}
 
-        if best_top_video:
-            # Add top QR to generation list
+        # Top Performer #1 (highest views)
+        if len(sorted_top_videos) > 0:
+            top1_video = sorted_top_videos[0]
             qr_data_list.append({
-                'filename': f"{args.hashtag}_{bucket}_top.png",
-                'url': best_top_video['webVideoUrl']
+                'filename': f"{args.hashtag}_{bucket}_top1.png",
+                'url': top1_video['webVideoUrl']
             })
 
-            # Store top metadata
-            top_engagement = calculate_engagement_metrics(best_top_video)
-            qr_metadata[bucket]['top'] = {
-                'video_id': best_top_video['id'],
-                'url': best_top_video['webVideoUrl'],
-                'views': best_top_video['playCount'],
-                'engagement': top_engagement,
-                'duration': best_top_video['videoMeta']['duration']
+            top1_engagement = calculate_engagement_metrics(top1_video)
+            qr_metadata[bucket]['top1'] = {
+                'video_id': top1_video['id'],
+                'url': top1_video['webVideoUrl'],
+                'views': top1_video['playCount'],
+                'engagement': top1_engagement,
+                'duration': top1_video['videoMeta']['duration']
             }
 
-        if worst_bottom_video:
-            # Add bottom QR to generation list
+        # Top Performer #2 (second highest views)
+        if len(sorted_top_videos) > 1:
+            top2_video = sorted_top_videos[1]
             qr_data_list.append({
-                'filename': f"{args.hashtag}_{bucket}_bottom.png",
-                'url': worst_bottom_video['webVideoUrl']
+                'filename': f"{args.hashtag}_{bucket}_top2.png",
+                'url': top2_video['webVideoUrl']
             })
 
-            # Store bottom metadata
-            bottom_engagement = calculate_engagement_metrics(worst_bottom_video)
-            qr_metadata[bucket]['bottom'] = {
-                'video_id': worst_bottom_video['id'],
-                'url': worst_bottom_video['webVideoUrl'],
-                'views': worst_bottom_video['playCount'],
-                'engagement': bottom_engagement,
-                'duration': worst_bottom_video['videoMeta']['duration']
+            top2_engagement = calculate_engagement_metrics(top2_video)
+            qr_metadata[bucket]['top2'] = {
+                'video_id': top2_video['id'],
+                'url': top2_video['webVideoUrl'],
+                'views': top2_video['playCount'],
+                'engagement': top2_engagement,
+                'duration': top2_video['videoMeta']['duration']
             }
 
     # Generate QR codes
@@ -655,30 +636,30 @@ def main():
     tab_data.append(['PAGE_4_VISUAL_EXAMPLES', ''])
     tab_data.append(['', ''])
 
-    # Output QR code metadata for each winning bucket (top + bottom)
+    # Output QR code metadata for each winning bucket (2 top performers only)
     for i, bucket in enumerate(winning_buckets, 1):
         if bucket in qr_metadata:
             tab_data.append([f'QR_BUCKET_{i}_NAME', bucket])
             tab_data.append(['', ''])
 
-            # Top performer QR
-            if 'top' in qr_metadata[bucket]:
-                qr_top = qr_metadata[bucket]['top']
-                tab_data.append([f'QR_BUCKET_{i}_TOP_FILE', f"{args.hashtag}_{bucket}_top.png"])
-                tab_data.append([f'QR_BUCKET_{i}_TOP_URL', qr_top['url']])
-                tab_data.append([f'QR_BUCKET_{i}_TOP_VIEWS', format_views(qr_top['views'])])
-                tab_data.append([f'QR_BUCKET_{i}_TOP_ENGAGEMENT', str(qr_top['engagement'])])
-                tab_data.append([f'QR_BUCKET_{i}_TOP_DURATION', f"{qr_top['duration']}s"])
+            # Top Performer #1
+            if 'top1' in qr_metadata[bucket]:
+                qr_top1 = qr_metadata[bucket]['top1']
+                tab_data.append([f'QR_BUCKET_{i}_TOP1_FILE', f"{args.hashtag}_{bucket}_top1.png"])
+                tab_data.append([f'QR_BUCKET_{i}_TOP1_URL', qr_top1['url']])
+                tab_data.append([f'QR_BUCKET_{i}_TOP1_VIEWS', format_views(qr_top1['views'])])
+                tab_data.append([f'QR_BUCKET_{i}_TOP1_ENGAGEMENT', str(qr_top1['engagement'])])
+                tab_data.append([f'QR_BUCKET_{i}_TOP1_DURATION', f"{qr_top1['duration']}s"])
                 tab_data.append(['', ''])
 
-            # Bottom performer QR
-            if 'bottom' in qr_metadata[bucket]:
-                qr_bottom = qr_metadata[bucket]['bottom']
-                tab_data.append([f'QR_BUCKET_{i}_BOTTOM_FILE', f"{args.hashtag}_{bucket}_bottom.png"])
-                tab_data.append([f'QR_BUCKET_{i}_BOTTOM_URL', qr_bottom['url']])
-                tab_data.append([f'QR_BUCKET_{i}_BOTTOM_VIEWS', format_views(qr_bottom['views'])])
-                tab_data.append([f'QR_BUCKET_{i}_BOTTOM_ENGAGEMENT', str(qr_bottom['engagement'])])
-                tab_data.append([f'QR_BUCKET_{i}_BOTTOM_DURATION', f"{qr_bottom['duration']}s"])
+            # Top Performer #2
+            if 'top2' in qr_metadata[bucket]:
+                qr_top2 = qr_metadata[bucket]['top2']
+                tab_data.append([f'QR_BUCKET_{i}_TOP2_FILE', f"{args.hashtag}_{bucket}_top2.png"])
+                tab_data.append([f'QR_BUCKET_{i}_TOP2_URL', qr_top2['url']])
+                tab_data.append([f'QR_BUCKET_{i}_TOP2_VIEWS', format_views(qr_top2['views'])])
+                tab_data.append([f'QR_BUCKET_{i}_TOP2_ENGAGEMENT', str(qr_top2['engagement'])])
+                tab_data.append([f'QR_BUCKET_{i}_TOP2_DURATION', f"{qr_top2['duration']}s"])
                 tab_data.append(['', ''])
 
     # =============================

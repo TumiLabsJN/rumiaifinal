@@ -255,12 +255,19 @@ def main():
     winner_analysis_path = os.path.join(analysis_base_path, 'winner_analysis.json')
 
     # =============================
-    # STEP 3: Load Winning Buckets
+    # STEP 3: Load Winning Buckets & Total Scraped Videos
     # =============================
     with open(winner_analysis_path, 'r') as f:
         winner_data = json.load(f)
 
     winning_buckets = winner_data['top_3_buckets']
+    bucket_distribution = winner_data['top_100_distribution']  # Percentages per bucket
+
+    # Load total scraped videos from cluster_analytics
+    cluster_analytics_path = f"/home/jorge/rumiaifinal/data/clients/{args.client}/hashtag/{args.hashtag}/cluster_analytics.json"
+    with open(cluster_analytics_path, 'r') as f:
+        cluster_data = json.load(f)
+    total_scraped_videos = cluster_data['scrape_summary']['total_scraped_videos']
 
     print(f"✓ Winning buckets: {', '.join(winning_buckets)}")
 
@@ -358,7 +365,7 @@ def main():
         tab_data.append(['', ''])
 
         tab_data.append(['BUCKET', bucket])
-        tab_data.append(['VIDEOS_ANALYZED', str(len(top_videos))])
+        tab_data.append(['VIDEOS_ANALYZED', str(total_scraped_videos)])
         tab_data.append(['AVG_VIEWS', format_views(avg_views)])
         tab_data.append(['AVG_ENGAGEMENT', str(avg_engagement)])
         tab_data.append(['', ''])

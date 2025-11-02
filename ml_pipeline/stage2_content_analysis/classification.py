@@ -507,7 +507,7 @@ def build_video_data_cache(target_dir) -> Dict[str, Dict[str, Any]]:
     winner_analysis_path = target_dir / "winner_analysis.json"
     try:
         winner_analysis = load_json(str(winner_analysis_path))
-        winning_buckets = winner_analysis.get('winning_buckets', [])
+        winning_buckets = winner_analysis.get('top_3_buckets', [])
     except FileNotFoundError:
         logger.error(f"winner_analysis.json not found at {winner_analysis_path}")
         raise
