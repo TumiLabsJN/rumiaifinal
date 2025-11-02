@@ -888,24 +888,44 @@ def validate_business_rules(bucket: str, windows: List[str], config: dict) -> No
 
 def validate_stage_output(bucket: str, windows: List[str], bucket_base: str) -> None:
     """
-    Validate output after processing.
+    Validate output after processing (mode-aware).
 
     Source: MLModelTrainingCHILDTI.md Section 5.3
     """
-    # ===== VALIDATION 1: All model files exist =====
-    required_models = [
-        os.path.join(bucket_base, f'models/rf_video_{bucket}.pkl'),
-    ]
+    # ===== VALIDATION 1: Load model_metrics.json first to determine mode =====
+    metrics_path = os.path.join(bucket_base, 'models/model_metrics.json')
 
+    if not os.path.exists(metrics_path):
+        raise ValidationError(f"model_metrics.json missing: {metrics_path}")
+
+    with open(metrics_path, 'r') as f:
+        metrics = json.load(f)
+
+    # Check if RF was trained
+    rf_trained = metrics.get('video_level_rf', {}).get('trained', True)
+
+    # ===== VALIDATION 2: Check RF files conditionally =====
+    required_models = []
+
+    if rf_trained:
+        # CONTRASTIVE mode - require RF files
+        required_models.append(os.path.join(bucket_base, f'models/rf_video_{bucket}.pkl'))
+        for window in windows:
+            required_models.append(os.path.join(bucket_base, f'models/rf_{window}_{bucket}.pkl'))
+        logger.info(f"Stage 5 validation: RF models required (trained=True)")
+    else:
+        # TOP mode - skip RF files
+        logger.info(f"Stage 5 validation: RF models NOT required (trained=False - TOP mode)")
+
+    # K-Means models (always required)
     for window in windows:
         required_models.extend([
-            os.path.join(bucket_base, f'models/rf_{window}_{bucket}.pkl'),
             os.path.join(bucket_base, f'models/{window}_kmeans_{bucket}.pkl'),
             os.path.join(bucket_base, f'models/{window}_X_data_{bucket}.pkl'),
             os.path.join(bucket_base, f'models/{window}_scalers_{bucket}.pkl'),
         ])
 
-    required_models.append(os.path.join(bucket_base, 'models/model_metrics.json'))
+    required_models.append(metrics_path)  # Already checked above, but include for completeness
 
     for model_path in required_models:
         if not os.path.exists(model_path):
@@ -913,10 +933,7 @@ def validate_stage_output(bucket: str, windows: List[str], bucket_base: str) -> 
                 f"Expected output missing: {model_path}. Training incomplete."
             )
 
-    # ===== VALIDATION 2: model_metrics.json schema =====
-    metrics_path = os.path.join(bucket_base, 'models/model_metrics.json')
-    with open(metrics_path, 'r') as f:
-        metrics = json.load(f)
+    # ===== VALIDATION 3: model_metrics.json schema =====
 
     if 'bucket' not in metrics:
         raise ValidationError("model_metrics.json missing 'bucket' field")

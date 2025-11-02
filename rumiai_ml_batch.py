@@ -182,6 +182,8 @@ def validate_stage_6_prerequisites(bucket_path: str) -> None:
     Raises:
         FileNotFoundError: If required upstream output missing
     """
+    logger = logging.getLogger(__name__)
+
     # Get bucket name from path
     bucket_name = Path(bucket_path).name.replace('bucket_', '')
 
@@ -201,11 +203,43 @@ def validate_stage_6_prerequisites(bucket_path: str) -> None:
         required_files.append(bucket_path_obj / "ml_analysis" / f"{window}_rf_transformed.csv")
         required_files.append(bucket_path_obj / "ml_analysis" / f"{window}_km_transformed.csv")
 
-    # Stage 5 outputs (2 + 4×N files)
-    required_files.append(bucket_path_obj / "models" / f"rf_video_{bucket_name}.pkl")
-    required_files.append(bucket_path_obj / "models" / "model_metrics.json")
+    # Stage 5 outputs (mode-aware RF validation)
+    metrics_path = bucket_path_obj / "models" / "model_metrics.json"
+    required_files.append(metrics_path)
+
+    # Check if RF was trained by reading model_metrics.json
+    if metrics_path.exists():
+        with open(metrics_path) as f:
+            metrics = json.load(f)
+        rf_trained = metrics.get('video_level_rf', {}).get('trained', True)
+
+        # Cross-validate with file existence
+        rf_video_path = bucket_path_obj / "models" / f"rf_video_{bucket_name}.pkl"
+        rf_video_exists = rf_video_path.exists()
+
+        if rf_trained and not rf_video_exists:
+            raise ValueError(
+                f"Stage 5 incomplete: model_metrics.json says RF trained, "
+                f"but rf_video_{bucket_name}.pkl missing. Re-run Stage 5."
+            )
+        elif not rf_trained and rf_video_exists:
+            logger.warning(
+                f"⚠️ Stale RF model files detected from previous run. "
+                f"model_metrics.json says trained=False (TOP mode), ignoring stale files."
+            )
+
+        if rf_trained:
+            # CONTRASTIVE mode - require RF files
+            required_files.append(bucket_path_obj / "models" / f"rf_video_{bucket_name}.pkl")
+            for window in windows:
+                required_files.append(bucket_path_obj / "models" / f"rf_{window}_{bucket_name}.pkl")
+            logger.info(f"Stage 6 validation: RF models required for bucket {bucket_name}")
+        else:
+            # TOP mode - skip RF files
+            logger.info(f"Stage 6 validation: RF models NOT required (TOP mode) for bucket {bucket_name}")
+
+    # K-Means models (always required)
     for window in windows:
-        required_files.append(bucket_path_obj / "models" / f"rf_{window}_{bucket_name}.pkl")
         required_files.append(bucket_path_obj / "models" / f"{window}_kmeans_{bucket_name}.pkl")
         required_files.append(bucket_path_obj / "models" / f"{window}_scalers_{bucket_name}.pkl")
         required_files.append(bucket_path_obj / "models" / f"{window}_X_data_{bucket_name}.pkl")
@@ -223,7 +257,11 @@ def validate_stage_6_prerequisites(bucket_path: str) -> None:
 
 def validate_stage_6_outputs(bucket_path: str) -> None:
     """
-    Validate Stage 6 outputs created correctly.
+    Validate Stage 6 outputs created correctly (mode-aware).
+
+    Supports both CONTRASTIVE mode (RF + K-Means) and TOP mode (K-Means only).
+    Mode is auto-detected by checking if RF files exist.
+
     Source: MLAnalysisGenerationCHILDTI.md Section 5 (validate_stage_output)
 
     Raises:
@@ -240,36 +278,46 @@ def validate_stage_6_outputs(bucket_path: str) -> None:
     assert ml_analysis_dir.exists(), \
         f"Stage 6 output directory missing: {ml_analysis_dir}"
 
-    # Validate video-level RF JSON
+    # Detect mode by checking if RF video file exists
     video_rf_json = ml_analysis_dir / "rf_video_analysis.json"
-    assert video_rf_json.exists(), \
-        f"Stage 6 video RF JSON missing: {video_rf_json}"
+    rf_mode = video_rf_json.exists()
 
-    # Validate video RF JSON structure
-    with open(video_rf_json) as f:
-        video_rf_data = json.load(f)
+    if rf_mode:
+        # CONTRASTIVE mode - validate RF files
+        print("  Detected CONTRASTIVE mode - validating RF + K-Means files")
 
-    assert "bucket" in video_rf_data, "Video RF JSON missing 'bucket' field"
-    assert "feature_importance" in video_rf_data, "Video RF JSON missing 'feature_importance' field"
-    assert isinstance(video_rf_data["feature_importance"], list), \
-        "Video RF 'feature_importance' must be a list"
-    assert len(video_rf_data["feature_importance"]) <= 10, \
-        f"Video RF has {len(video_rf_data['feature_importance'])} features (max 10)"
+        # Validate video-level RF JSON
+        assert video_rf_json.exists(), \
+            f"Stage 6 video RF JSON missing: {video_rf_json}"
 
-    # Validate window-level JSONs (2 per window)
+        # Validate video RF JSON structure
+        with open(video_rf_json) as f:
+            video_rf_data = json.load(f)
+
+        assert "bucket" in video_rf_data, "Video RF JSON missing 'bucket' field"
+        assert "feature_importance" in video_rf_data, "Video RF JSON missing 'feature_importance' field"
+        assert isinstance(video_rf_data["feature_importance"], list), \
+            "Video RF 'feature_importance' must be a list"
+        assert len(video_rf_data["feature_importance"]) <= 10, \
+            f"Video RF has {len(video_rf_data['feature_importance'])} features (max 10)"
+
+        # Validate window-level RF JSONs
+        for window in windows:
+            window_rf_json = ml_analysis_dir / f"{window}_rf_analysis.json"
+            assert window_rf_json.exists(), \
+                f"Stage 6 window RF JSON missing: {window_rf_json}"
+
+            with open(window_rf_json) as f:
+                window_rf_data = json.load(f)
+
+            assert window_rf_data.get("window_type") == window, \
+                f"Window RF JSON has wrong window_type: {window_rf_data.get('window_type')} (expected {window})"
+    else:
+        # TOP mode - skip RF validation
+        print("  Detected TOP mode - validating K-Means files only (RF skipped)")
+
+    # Validate K-Means JSONs (always required in both modes)
     for window in windows:
-        # Validate window RF JSON
-        window_rf_json = ml_analysis_dir / f"{window}_rf_analysis.json"
-        assert window_rf_json.exists(), \
-            f"Stage 6 window RF JSON missing: {window_rf_json}"
-
-        with open(window_rf_json) as f:
-            window_rf_data = json.load(f)
-
-        assert window_rf_data.get("window_type") == window, \
-            f"Window RF JSON has wrong window_type: {window_rf_data.get('window_type')} (expected {window})"
-
-        # Validate K-Means JSON
         window_km_json = ml_analysis_dir / f"{window}_kmeans_analysis.json"
         assert window_km_json.exists(), \
             f"Stage 6 K-Means JSON missing: {window_km_json}"
@@ -281,8 +329,13 @@ def validate_stage_6_outputs(bucket_path: str) -> None:
         assert len(window_km_data["clusters"]) == 3, \
             f"K-Means has {len(window_km_data['clusters'])} clusters (expected 3)"
 
-    # All validations passed
-    print(f"  ✓ Output validation passed: {1 + len(windows)*2} JSON files")
+    # All validations passed - report file count based on mode
+    if rf_mode:
+        file_count = 1 + len(windows) * 2  # 1 video RF + N window RF + N K-Means
+        print(f"  ✓ Output validation passed: {file_count} JSON files (CONTRASTIVE mode)")
+    else:
+        file_count = len(windows)  # N K-Means only
+        print(f"  ✓ Output validation passed: {file_count} JSON files (TOP mode - K-Means only)")
 
 
 def validate_stage7_prerequisites(bucket_path: str, bucket: str) -> None:
@@ -298,6 +351,8 @@ def validate_stage7_prerequisites(bucket_path: str, bucket: str) -> None:
     Raises:
         FileNotFoundError: If required upstream output missing
     """
+    logger = logging.getLogger(__name__)
+
     ml_analysis_dir = os.path.join(bucket_path, "ml_analysis")
 
     # BUCKET_WINDOWS already imported at top
@@ -306,15 +361,26 @@ def validate_stage7_prerequisites(bucket_path: str, bucket: str) -> None:
     if not window_types:
         raise ValueError(f"Invalid bucket: {bucket}")
 
-    required_files = [
-        # Video-level RF (cross-window features)
-        os.path.join(ml_analysis_dir, "rf_video_analysis.json"),
-    ]
+    required_files = []
 
-    # Window-level files (RF + K-Means for each window)
+    # Video-level RF (optional - check if exists)
+    rf_video_path = os.path.join(ml_analysis_dir, "rf_video_analysis.json")
+    if os.path.exists(rf_video_path):
+        required_files.append(rf_video_path)
+        logger.info(f"Stage 7: RF video analysis found (CONTRASTIVE mode) for bucket {bucket}")
+    else:
+        logger.info(f"Stage 7: RF video analysis NOT found (TOP mode - K-Means only) for bucket {bucket}")
+
+    # Window-level files (RF optional, K-Means required)
     for window in window_types:
-        required_files.append(os.path.join(ml_analysis_dir, f"{window}_rf_analysis.json"))
-        required_files.append(os.path.join(ml_analysis_dir, f"{window}_kmeans_analysis.json"))
+        # RF analysis (optional)
+        rf_path = os.path.join(ml_analysis_dir, f"{window}_rf_analysis.json")
+        if os.path.exists(rf_path):
+            required_files.append(rf_path)
+
+        # K-Means analysis (required)
+        km_path = os.path.join(ml_analysis_dir, f"{window}_kmeans_analysis.json")
+        required_files.append(km_path)
 
     missing = [f for f in required_files if not os.path.exists(f)]
 
@@ -1634,9 +1700,10 @@ def main():
                 validate_stage_6_outputs(str(bucket_path))
 
                 # Count generated JSON files for checkpoint
-                # Expected: 1 video RF + N window RF + N window K-Means = 1 + (2 × N)
+                # Expected: CONTRASTIVE: 1+2N files | TOP: N files (K-Means only)
                 # Note: Only count Stage 6 JSONs (rf_video, *_rf_analysis, *_kmeans_analysis)
                 # Exclude other JSONs like aggregation_summary.json, transformation_summary.json
+                # Line 1697 filters to existing files, making this mode-agnostic
                 ml_analysis_dir = bucket_path / "ml_analysis"
 
                 # Collect Stage 6-specific JSON files

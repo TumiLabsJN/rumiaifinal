@@ -13,6 +13,7 @@
 
 ### Competitor Tests
 - [CompetitorTest: @nutrachampssupplement](#competitortest-nutrachampssupplement) - Single creator analysis, top 60 per bucket, 270-day window
+- [CompetitorTest: @vitalproteins](#competitortest-vitalproteins) - Vital Proteins collagen brand analysis, top 80 per bucket, 270-day window
 
 ---
 
@@ -3494,8 +3495,48 @@ python rumiai_ml_batch.py --client Rollo --target nutrachampssupplement --analys
 
 ---
 
-**CompetitorTest Added:** 2025-10-28  
-**Author:** RumiAI Testing Team  
+**CompetitorTest Added:** 2025-10-28
+**Author:** RumiAI Testing Team
 **Status:** Ready for execution
+
+---
+---
+---
+
+## Vital Proteins Test
+
+### Test Configuration
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| `--client` | Rollo_test7 | Test client identifier |
+| `--target` | vitalproteins | TikTok handle (without @) |
+| `--analysis-type` | competitor | Handle-based analysis |
+| `--selection-strategy` | top | Top performers only (no contrastive) |
+| `--video-count` | 80 | Videos per winning bucket |
+| `--date-filter` | last_270_days | 9-month window |
+| `--country-code` | US | Geographic filter |
+| `--report-type` | single | Single creator analysis |
+| `--report-audience` | client | Report format for brand/client |
+
+---
+---
+---
+
+## drinkolipop
+
+### Test Configuration
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| `--client` | Rollo_test8 | Test client identifier |
+| `--target` | drinkolipop | TikTok handle (without @) |
+| `--analysis-type` | competitor | Handle-based analysis |
+| `--selection-strategy` | top | Top performers only (no contrastive) |
+| `--video-count` | 80 | Videos per winning bucket |
+| `--date-filter` | last_270_days | 9-month window |
+| `--country-code` | US | Geographic filter |
+| `--report-type` | single | Single creator analysis |
+| `--report-audience` | client | Report format for brand/client |
 
 

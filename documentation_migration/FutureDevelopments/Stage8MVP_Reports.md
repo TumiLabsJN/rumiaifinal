@@ -822,11 +822,11 @@ Top Hook Strategies:
 3. Direct Statement (18% of videos) - Bold claim or fact
 4. Curiosity Gap (9% of videos) - Creates mystery or intrigue
 
-Top CTA Strategies:
-1. Link in Bio (38% of videos) - Directs viewers to profile link
-2. Follow for More (32% of videos) - Encourages account following
-3. Save This Post (21% of videos) - Prompts content bookmarking
-4. Tag a Friend (9% of videos) - Drives viral sharing
+Top CTA Strategies
+1.
+2.
+3.
+4.
 
 Pain Points Addressed:
 • Bloating/Digestive Issues (48% of videos)
@@ -835,14 +835,21 @@ Pain Points Addressed:
 • Inflammation (32% of videos)
 • Gut Health (28% of videos)
 
-Top Keywords:
-#guthealth, #protein, #antiinflammatory, #metabolism, #fiber
-
 Content Tactics:
 • Direct-to-Camera (52% of videos)
 • Voiceover + B-roll (31% of videos)
 • Text-Heavy Overlays (24% of videos)
 • Product Demonstration (18% of videos)
+
+Top Caption CTA Strategies:
+1. Link in Bio (38% of videos) - Directs viewers to profile link
+2. Follow for More (32% of videos) - Encourages account following
+3. Save This Post (21% of videos) - Prompts content bookmarking
+4. Tag a Friend (9% of videos) - Drives viral sharing
+
+Top Keywords:
+#guthealth, #protein, #antiinflammatory, #metabolism, #fiber
+
 ```
 
 **Dynamic Fields**:
