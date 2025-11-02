@@ -75,6 +75,11 @@ def aggregate_content_classifications(bucket_name, base_path, performer_type="to
     engagement_drivers = Counter()
     content_tactics = Counter()
 
+    # Caption analysis fields
+    caption_hook_types = Counter()
+    caption_cta_types = Counter()
+    hashtag_counts = []
+
     # Aggregate from all videos in this bucket with matching performer_type
     files_processed = 0
     for filename in os.listdir(content_dir):
@@ -117,6 +122,15 @@ def aggregate_content_classifications(bucket_name, base_path, performer_type="to
             if tactic:
                 content_tactics[tactic] += 1
 
+        # Aggregate caption_analysis fields
+        caption_analysis = data.get('caption_analysis', {})
+        if caption_analysis.get('hook_type'):
+            caption_hook_types[caption_analysis['hook_type']] += 1
+        if caption_analysis.get('cta_type'):
+            caption_cta_types[caption_analysis['cta_type']] += 1
+        if 'hashtag_count' in caption_analysis:
+            hashtag_counts.append(caption_analysis['hashtag_count'])
+
     if files_processed == 0:
         return None
 
@@ -127,7 +141,10 @@ def aggregate_content_classifications(bucket_name, base_path, performer_type="to
         'pain_points': pain_points,
         'keywords': keywords,
         'engagement_drivers': engagement_drivers,
-        'content_tactics': content_tactics
+        'content_tactics': content_tactics,
+        'caption_hook_type': caption_hook_types,
+        'caption_cta_type': caption_cta_types,
+        'hashtag_counts': hashtag_counts
     }
 
 
@@ -311,6 +328,9 @@ def main():
     all_keywords = Counter()
     all_engagement_drivers = Counter()
     all_content_tactics = Counter()
+    all_caption_hook_types = Counter()
+    all_caption_cta_types = Counter()
+    all_hashtag_counts = []
 
     for bucket in winning_buckets:
         aggregated = aggregate_content_classifications(bucket, base_path, performer_type="top")
@@ -323,6 +343,9 @@ def main():
             all_keywords.update(aggregated['keywords'])
             all_engagement_drivers.update(aggregated['engagement_drivers'])
             all_content_tactics.update(aggregated['content_tactics'])
+            all_caption_hook_types.update(aggregated['caption_hook_type'])
+            all_caption_cta_types.update(aggregated['caption_cta_type'])
+            all_hashtag_counts.extend(aggregated['hashtag_counts'])
 
     total_classified = sum(all_content_categories.values())
 
@@ -446,6 +469,69 @@ def main():
     # Top 5 keywords (without # prefix)
     for i, (keyword, count) in enumerate(all_keywords.most_common(5), 1):
         tab_data.append([f'KEYWORD_{i}', keyword])
+
+    # Caption Analysis Section
+    tab_data.append(['', ''])
+
+    total_videos_with_caption = sum(all_caption_cta_types.values())
+
+    if total_videos_with_caption > 0:
+        # Caption Hook Type (most common)
+        if all_caption_hook_types:
+            top_caption_hook, hook_count = all_caption_hook_types.most_common(1)[0]
+            caption_hook_pct = round((hook_count / total_videos_with_caption) * 100)
+            tab_data.append(['CAPTION_HOOK_TYPE', top_caption_hook.replace('_', ' ').title()])
+            tab_data.append(['CAPTION_HOOK_TYPE_PCT', str(caption_hook_pct)])
+        else:
+            tab_data.append(['CAPTION_HOOK_TYPE', ''])
+            tab_data.append(['CAPTION_HOOK_TYPE_PCT', '0'])
+
+        tab_data.append(['', ''])
+
+        # Calculate NO_CTA percentage
+        videos_with_no_cta = all_caption_cta_types.get('none', 0)
+        no_cta_pct = round((videos_with_no_cta / total_videos_with_caption) * 100)
+
+        # Get top 3 CTAs (excluding "none")
+        cta_without_none = Counter({k: v for k, v in all_caption_cta_types.items() if k != 'none'})
+        top_3_ctas = list(cta_without_none.most_common(3))
+
+        # Pad to ensure we always have 3 entries
+        while len(top_3_ctas) < 3:
+            top_3_ctas.append(('', 0))
+
+        # Output top 3 CTAs
+        for i, (cta, count) in enumerate(top_3_ctas, 1):
+            cta_pct = round((count / total_videos_with_caption) * 100) if count > 0 else 0
+            cta_display = cta.replace('_', ' ').title() if cta else ''
+            tab_data.append([f'TOP_CTA_{i}', cta_display])
+            tab_data.append([f'TOP_CTA_{i}_PCT', str(cta_pct)])
+
+        tab_data.append(['NO_CTA_PCT', str(no_cta_pct)])
+
+    else:
+        # No caption analysis data - output zeros
+        tab_data.append(['CAPTION_HOOK_TYPE', ''])
+        tab_data.append(['CAPTION_HOOK_TYPE_PCT', '0'])
+        tab_data.append(['', ''])
+        for i in range(1, 4):
+            tab_data.append([f'TOP_CTA_{i}', ''])
+            tab_data.append([f'TOP_CTA_{i}_PCT', '0'])
+        tab_data.append(['NO_CTA_PCT', '0'])
+
+    # Hashtag Statistics
+    tab_data.append(['', ''])
+
+    # Calculate NO_HASHTAGS percentage
+    hashtag_zeros = all_hashtag_counts.count(0)
+    no_hashtags_pct = round((hashtag_zeros / len(all_hashtag_counts)) * 100) if all_hashtag_counts else 0
+
+    # Calculate optimal hashtag count (excluding zeros)
+    non_zero_hashtags = [h for h in all_hashtag_counts if h > 0]
+    optimal_hashtag_count = round(sum(non_zero_hashtags) / len(non_zero_hashtags)) if non_zero_hashtags else 0
+
+    tab_data.append(['NO_HASHTAGS_PCT', str(no_hashtags_pct)])
+    tab_data.append(['OPTIMAL_HASHTAG_COUNT', str(optimal_hashtag_count)])
 
     # PAGE 3: YOUR CREATIVE REPORTS
     tab_data.append(['', ''])

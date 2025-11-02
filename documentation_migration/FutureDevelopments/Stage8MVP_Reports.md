@@ -154,10 +154,10 @@ Your 9 creative reports focus exclusively on these high-opportunity durations.
 
 ---
 
-#### Section 3: Creator Profile Priorities (Where to Focus Hiring)
-
+#### ~~Section 3: Creator Profile Priorities (Where to Focus Hiring)~~
 ```
-TIER 1 (Immediate Sourcing):
+
+TIER 1 (Immediate Sourcing)
 • 13-18s Creators (highest performance: 520K avg views)
 • 18-33s Creators (strong performance + volume: 490K avg views)
 • 33-60s Creators (proven success: 310K avg views)
@@ -193,14 +193,16 @@ What Hooks Capture Attention:
 • Question Hook (35% of winning videos)
 • Direct Statement (23% of winning videos)
 
-What Topics Resonate:
-Top Keywords: #guthealth, #protein, #antiinflammatory, #metabolism
-Pain Points Addressed: Bloating (48%), Low Energy (42%), Inflammation (38%)
+What Closings Capture Attention:
 
 What Drives Engagement:
 • Before/After Reveal (45% of top performers use this)
 • Personal Testimony (38% of top performers)
 • Specific Metrics Mentioned (52% of top performers)
+
+What Topics Resonate:
+Pain Points Addressed: Bloating (48%), Low Energy (42%), Inflammation (38%)
+Top Keywords: #guthealth, #protein, #antiinflammatory, #metabolism
 
 Caption Strategy That Works:
 • Optimal Hashtag Count: 7 hashtags
