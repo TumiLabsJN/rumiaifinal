@@ -2,8 +2,10 @@
 
 
 Gestures:
-- Protobuf
+- Protobuf (Tensorflow?)
 
 Mediapipe:
-- Protobuf
+- Protobuf (Tensorflow?)
 
+
+tf-keras depends on protobuf/tensorflow

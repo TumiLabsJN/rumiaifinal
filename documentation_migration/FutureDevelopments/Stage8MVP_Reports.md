@@ -154,10 +154,10 @@ Your 9 creative reports focus exclusively on these high-opportunity durations.
 
 ---
 
-#### ~~Section 3: Creator Profile Priorities (Where to Focus Hiring)~~
-```
+#### Section 3: Creator Profile Priorities (Where to Focus Hiring)
 
-TIER 1 (Immediate Sourcing)
+```
+TIER 1 (Immediate Sourcing):
 • 13-18s Creators (highest performance: 520K avg views)
 • 18-33s Creators (strong performance + volume: 490K avg views)
 • 33-60s Creators (proven success: 310K avg views)
@@ -193,16 +193,17 @@ What Hooks Capture Attention:
 • Question Hook (35% of winning videos)
 • Direct Statement (23% of winning videos)
 
-What Closings Capture Attention:
+CTA Strategies
 
 What Drives Engagement:
 • Before/After Reveal (45% of top performers use this)
 • Personal Testimony (38% of top performers)
 • Specific Metrics Mentioned (52% of top performers)
 
+
 What Topics Resonate:
-Pain Points Addressed: Bloating (48%), Low Energy (42%), Inflammation (38%)
 Top Keywords: #guthealth, #protein, #antiinflammatory, #metabolism
+Pain Points Addressed: Bloating (48%), Low Energy (42%), Inflammation (38%)
 
 Caption Strategy That Works:
 • Optimal Hashtag Count: 7 hashtags
@@ -760,6 +761,7 @@ These 3 durations represent 72% of @drinkpoppi's content output.
 ```
 POSTING ACTIVITY:
 @drinkpoppi posts 14 videos per week on average
+NEW ADDITION: Videos with speech vs videos without speech
 ```
 
 **Dynamic Fields**:
@@ -822,11 +824,11 @@ Top Hook Strategies:
 3. Direct Statement (18% of videos) - Bold claim or fact
 4. Curiosity Gap (9% of videos) - Creates mystery or intrigue
 
-Top CTA Strategies
-1.
-2.
-3.
-4.
+Top CTA Strategies:
+1. Link in Bio (38% of videos) - Directs viewers to profile link
+2. Follow for More (32% of videos) - Encourages account following
+3. Save This Post (21% of videos) - Prompts content bookmarking
+4. Tag a Friend (9% of videos) - Drives viral sharing
 
 Pain Points Addressed:
 • Bloating/Digestive Issues (48% of videos)
@@ -835,21 +837,14 @@ Pain Points Addressed:
 • Inflammation (32% of videos)
 • Gut Health (28% of videos)
 
+Top Keywords:
+#guthealth, #protein, #antiinflammatory, #metabolism, #fiber
+
 Content Tactics:
 • Direct-to-Camera (52% of videos)
 • Voiceover + B-roll (31% of videos)
 • Text-Heavy Overlays (24% of videos)
 • Product Demonstration (18% of videos)
-
-Top Caption CTA Strategies:
-1. Link in Bio (38% of videos) - Directs viewers to profile link
-2. Follow for More (32% of videos) - Encourages account following
-3. Save This Post (21% of videos) - Prompts content bookmarking
-4. Tag a Friend (9% of videos) - Drives viral sharing
-
-Top Keywords:
-#guthealth, #protein, #antiinflammatory, #metabolism, #fiber
-
 ```
 
 **Dynamic Fields**:
@@ -1125,26 +1120,11 @@ Market Leader: @wellness_pro (580K avg views, 1.4% engagement, highest posting f
 #### Analysis Scope
 
 ```
-ANALYSIS SCOPE PER COMPETITOR:
-
-@wellness_pro:
-• Videos Analyzed: 145
-• Duration Range: 0-120 seconds (8 buckets)
-• Content Elements Tracked: 60+ features per video
-
-@rival_brand:
-• Videos Analyzed: 127
-• Duration Range: 0-120 seconds (8 buckets)
-• Content Elements Tracked: 60+ features per video
-
-@fitness_guru:
-• Videos Analyzed: 98
-• Duration Range: 0-120 seconds (8 buckets)
-• Content Elements Tracked: 60+ features per video
-
 Analysis Method:
 Multi-dimensional machine learning and AI content analysis applied to each
 competitor's content to identify patterns, strategies, and creative formulas.
+• Duration Range: 0-120 seconds (8 buckets)
+• Content Elements Tracked: 60+ features per video
 ```
 
 **Dynamic Fields**:
@@ -1225,10 +1205,6 @@ Note: Each competitor analyzed independently - only their top 3 performing bucke
 | Best performer (per bucket) | Calculated | Per bucket: Collect all competitors who have this bucket in `top_3_buckets` → for each, get avg views (Function 10) and avg engagement (Function 11) → calculate composite score: `(views / max_views × 100) + engagement` → return competitor with highest score. Tie-breaking: If composite tied, winner determined by engagement. Display includes tie notation if needed. Uses `calculate_bucket_best_performer(client_id, competitors, bucket_name)` (Stage8MVP.md Function 12) | String per bucket | "@wellness_pro", "@rival_brand (engagement wins tie)", "—" | ✅ **This session** |
 | Competitor winning bucket lists (3 per competitor) | Stage 1 (All Comp) | Per competitor: Get list of top 3 winning buckets. Uses `get_competitor_winning_buckets(client_id, competitor_handle)` (Stage8MVP.md Function 14) → returns `top_3_buckets` array from `winner_analysis.json`. Display format: Comma-separated list (e.g., "9-13s, 13-18s, 18-33s") or bullet list per competitor | String (array per competitor) | ["9-13s", "13-18s", "18-33s"] | ✅ **This session** |
 
-**Field Removed**:
-- ~~**Performance insights (4 items)**~~: Removed due to same issues as "Key Insights" in Performance Rankings section - requires natural language generation, assumes consensus patterns exist, may fail with diverse competitor strategies. All relevant data is already visible in the Performance by Duration table above.
-
-**Option B Implementation Note**: Each competitor is analyzed independently and has their own top 3 winning buckets. The table shows the UNION of all winning buckets (typically 3-6 unique buckets), with "—" for competitors who don't have a particular bucket in their winning 3.
 
 ---
 
@@ -1243,6 +1219,8 @@ Competitor        | Posting Freq
 @rival_brand      | 14/week
 @fitness_guru     | 11/week
 
+NEW ADDITION: Videos with speech vs videos without speech
+
 MARKET AVERAGE:
 • Market average: 13.7 videos/week
 ```
@@ -1253,10 +1231,6 @@ MARKET AVERAGE:
 | Posting freq (per competitor) | Winner Analysis + Config (All Comp) | Per competitor: Sum `top_100_distribution.values()` from `winner_analysis.json` → divide by weeks from `config.json → date_filter`. Uses `calculate_posting_frequency(client_id, competitor_handle)` (Stage8MVP.md Function 2 - updated with dynamic path discovery) | Float | 16, 14, 11 | ✅ **This session** |
 | Market average | Calculated | Calculate mean of all competitor posting frequencies: `sum(frequencies) / len(competitors)`. **Inline logic** (no function needed - simple average calculation). Example: (16 + 14 + 11) / 3 = 13.7 | Float | 13.7 | ✅ **This session** |
 
-**Fields Removed**:
-- ~~**Consistency (per competitor)**~~: Removed - requires weekly variance analysis of video timestamps which adds complexity without significant value. Posting frequency already provides sufficient insight into competitor activity levels.
-- ~~**Recent velocity (per competitor)**~~: Removed - requires parsing individual video timestamps to filter last 30 days. The Trend field already captures whether activity is accelerating/stable/declining without needing the exact velocity number.
-- ~~**Trend (per competitor)**~~: Removed - depends on recent velocity field (which was removed). Calculating trend requires comparing different time windows which needs timestamp parsing. Posting frequency provides sufficient activity insight without trend analysis.
 
 ---
 
@@ -1267,210 +1241,26 @@ Purpose: Show winning content patterns and execution tactics per bucket
 
 #### Section 1: Content DNA (What They Make)
 
-Purpose: Show winning content types, engagement drivers, and production tactics by bucket
-
-TOP CONTENT CATEGORIES
-```
-@wellness_pro
-
-  📊 33-60s Bucket (620K avg views)
-  1. Content Category 1
-  2. Content Category 2
-
-  📊 60-90s Bucket (580K avg views)
-  1. Content Category 1
-  2. Content Category 2
-
-  📊 90-120s Bucket (540K avg views)
-  1. Content Category 1
-  2. Content Category 2
-
-@rival_brand:
-
-  📊 33-60s Bucket (550K avg views)
-  1. Content Category 1
-  2. Content Category 2
-
-  📊 60-90s Bucket (520K avg views)
-  1. Content Category 1
-  2. Content Category 2
-
-  📊 90-120s Bucket (490K avg views)
-  1. Content Category 1
-  2. Content Category 2
-
-@fitness_guru:
-
-  📊 33-60s Bucket (510K avg views)
-  1. Content Category 1
-  2. Content Category 2
-
-  📊 60-90s Bucket (480K avg views)
-  1. Content Category 1
-  2. Content Category 2
-
-  📊 90-120s Bucket (450K avg views)
-  1. Content Category 1
-  2. Content Category 2
-```
-
-TOP ENGAGEMENT DRIVERS
-```
-@wellness_pro
-
-  📊 33-60s Bucket
-  1. Engagement Driver 1
-  2. Engagement Driver 2
-
-  📊 60-90s Bucket
-  1. Engagement Driver 1
-  2. Engagement Driver 2
-
-  📊 90-120s Bucket
-  1. Engagement Driver 1
-  2. Engagement Driver 2
-
-@rival_brand:
-
-  📊 33-60s Bucket
-  1. Engagement Driver 1
-  2. Engagement Driver 2
-
-  📊 60-90s Bucket
-  1. Engagement Driver 1
-  2. Engagement Driver 2
-
-  📊 90-120s Bucket
-  1. Engagement Driver 1
-  2. Engagement Driver 2
-
-@fitness_guru:
-
-  📊 33-60s Bucket
-  1. Engagement Driver 1
-  2. Engagement Driver 2
-
-  📊 60-90s Bucket
-  1. Engagement Driver 1
-  2. Engagement Driver 2
-
-  📊 90-120s Bucket
-  1. Engagement Driver 1
-  2. Engagement Driver 2
-```
-
-
-**Dynamic Fields**:
-| Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
-|----------------|--------|------------------------|-----------|---------|-----------|
-| Competitor handles | Config | CLI parameter `--competitors` | Array[String] | ["@wellness_pro", "@rival_brand", "@fitness_guru"] | ✅ **Page 1 Header Section** |
-| Winning buckets (per competitor) | Winner Analysis | Per competitor: `/data/clients/{client}/competitors/{target}/{mode}_{strategy}/winner_analysis.json` → `top_100_distribution` keys sorted by video count (top 3 buckets) | Array[String] per competitor | ["33-60s", "60-90s", "90-120s"] | ⚠️ **NOT VERIFIED** |
-| Avg views (per bucket, per competitor) | Selected Videos | Per competitor, per bucket: Calculate average of `selected_videos.json → videos[0:top_count].playCount`. Path: `/data/clients/{client}/competitors/{target}/{mode}_{strategy}/buckets/bucket_{name}/selected_videos.json` | Integer (K/M formatted) per bucket | 620K, 580K, 540K | ⚠️ **NOT VERIFIED** |
-| Top 2 Content Categories (per bucket, per competitor) | Stage 2.7 | Per competitor, per bucket: **Base Function**: `aggregate_content_classifications(bucket_path, "top")` (Section 0.5.1) → **Wrapper**: `get_top_n_from_field(bucket_path, "content_category", n=2, "top")` (Section 0.5.1.1) → Path: `/data/clients/{client}/competitors/{target}/{mode}_{strategy}/buckets/bucket_{name}/` | Array[String] per bucket | ["recipe_tutorial", "wellness_practice"] | ⚠️ **FUNCTION READY, AWAITING STAGE 2.7 DATA** (Section 0.5.1.1) |
-| Top 2 Engagement Drivers (per bucket, per competitor) | Stage 2.7 | Per competitor, per bucket: **Base Function**: `aggregate_content_classifications(bucket_path, "top")` (Section 0.5.1) → **Wrapper**: `get_top_n_from_field(bucket_path, "engagement_drivers", n=2, "top")` (Section 0.5.1.1) → Returns snake_case → **Display**: Convert to title case | Array[String] per bucket | ["personal_testimony", "before_after_reveal"] → Display: ["Personal Testimony", "Before/After Reveal"] | ⚠️ **FUNCTION READY, AWAITING STAGE 2.7 DATA** (Section 0.5.1.1) |
-
-
-**Aggregation Note**: Unlike Report 2 (which aggregates across all buckets and shows same Top N in each bucket report), Report 4 calls aggregation functions **per winning bucket** (3 buckets × N competitors) to show bucket-specific competitive patterns for each competitor.
-
----
-
-#### Section 2: Execution Playbook (How They Make It)
-
 **Purpose**: Show hook strategies, CTAs, pain points addressed, and keywords per bucket
-HOOK STRATEGIES
+
+**CONTENT CATEGORIES**
 ```
 @wellness_pro
 
   📊 33-60s Bucket
-  1. Hook Strategy 1
-  2. Hook Strategy 2
+  1. Content Tactic 1
+  2. Content Tactic 2
 
   📊 60-90s Bucket
-  1. Hook Strategy 1
-  2. Hook Strategy 2
+  1. Content Tactic 1
+  2. Content Tactic 2
 
   📊 90-120s Bucket
-  1. Hook Strategy 1
-  2. Hook Strategy 2
-
-@rival_brand:
-
-  📊 33-60s Bucket
-  1. Hook Strategy 1
-  2. Hook Strategy 2
-
-  📊 60-90s Bucket
-  1. Hook Strategy 1
-  2. Hook Strategy 2
-
-  📊 90-120s Bucket
-  1. Hook Strategy 1
-  2. Hook Strategy 2
-
-@fitness_guru:
-
-  📊 33-60s Bucket
-  1. Hook Strategy 1
-  2. Hook Strategy 2
-
-  📊 60-90s Bucket
-  1. Hook Strategy 1
-  2. Hook Strategy 2
-
-  📊 90-120s Bucket
-  1. Hook Strategy 1
-  2. Hook Strategy 2
+  1. Content Tactic 1
+  2. Content Tactic 2
 ```
-
-CTA STRATEGIES
+**ENGAGEMENT DRIVERS**
 ```
-
-@wellness_pro
-
-  📊 33-60s Bucket
-  1. CTA Strategy 1
-  2. CTA Strategy 2
-
-  📊 60-90s Bucket
-  1. CTA Strategy 1
-  2. CTA Strategy 2
-
-  📊 90-120s Bucket
-  1. CTA Strategy 1
-  2. CTA Strategy 2
-
-@rival_brand:
-
-  📊 33-60s Bucket
-  1. CTA Strategy 1
-  2. CTA Strategy 2
-
-  📊 60-90s Bucket
-  1. CTA Strategy 1
-  2. CTA Strategy 2
-
-  📊 90-120s Bucket
-  1. CTA Strategy 1
-  2. CTA Strategy 2
-
-@fitness_guru:
-
-  📊 33-60s Bucket
-  1. CTA Strategy 1
-  2. CTA Strategy 2
-
-  📊 60-90s Bucket
-  1. CTA Strategy 1
-  2. CTA Strategy 2
-
-  📊 90-120s Bucket
-  1. CTA Strategy 1
-  2. CTA Strategy 2
-```
-
-PAIN POINTS
-```
-
 @wellness_pro
 
   📊 33-60s Bucket
@@ -1487,43 +1277,77 @@ PAIN POINTS
   1. Pain Point 1
   2. Pain Point 2
   3. Pain Point 3
-
-@rival_brand:
-
-  📊 33-60s Bucket
-  1. Pain Point 1
-  2. Pain Point 2
-  3. Pain Point 3
-
-  📊 60-90s Bucket
-  1. Pain Point 1
-  2. Pain Point 2
-  3. Pain Point 3
-
-  📊 90-120s Bucket
-  1. Pain Point 1
-  2. Pain Point 2
-  3. Pain Point 3
-
-@fitness_guru:
-
-  📊 33-60s Bucket
-  1. Pain Point 1
-  2. Pain Point 2
-  3. Pain Point 3
-
-  📊 60-90s Bucket
-  1. Pain Point 1
-  2. Pain Point 2
-  3. Pain Point 3
-
-  📊 90-120s Bucket
-  1. Pain Point 1
-  2. Pain Point 2
-  3. Pain Point 3
 ```
 
-KEYWORDS
+**HOOK STRATEGIES**
+```
+@wellness_pro
+
+  📊 33-60s Bucket
+  1. Hook Strategy 1
+  2. Hook Strategy 2
+
+  📊 60-90s Bucket
+  1. Hook Strategy 1
+  2. Hook Strategy 2
+
+  📊 90-120s Bucket
+  1. Hook Strategy 1
+  2. Hook Strategy 2
+```
+
+**CTA STRATEGIES**
+```
+@wellness_pro
+
+  📊 33-60s Bucket
+  1. CTA Strategy 1
+  2. CTA Strategy 2
+
+  📊 60-90s Bucket
+  1. CTA Strategy 1
+  2. CTA Strategy 2
+
+  📊 90-120s Bucket
+  1. CTA Strategy 1
+  2. CTA Strategy 2
+```
+
+**CONTENT TACTIC**
+```
+@wellness_pro
+
+  📊 33-60s Bucket
+  1. Content Tactic 1
+  2. Content Tactic 2
+
+  📊 60-90s Bucket
+  1. Content Tactic 1
+  2. Content Tactic 2
+
+  📊 90-120s Bucket
+  1. Content Tactic 1
+  2. Content Tactic 2
+```
+
+**CAPTION CTA STRATEGY**
+```
+@wellness_pro
+
+  📊 33-60s Bucket
+  1. Content Tactic 1
+  2. Content Tactic 2
+
+  📊 60-90s Bucket
+  1. Content Tactic 1
+  2. Content Tactic 2
+
+  📊 90-120s Bucket
+  1. Content Tactic 1
+  2. Content Tactic 2
+```
+
+**KEYWORDS**
 ```
 @wellness_pro
 
@@ -1541,86 +1365,28 @@ KEYWORDS
   1. Keyword 1
   2. Keyword 2
   3. Keyword 3
-
-@rival_brand:
-
-  📊 33-60s Bucket
-  1. Keyword 1
-  2. Keyword 2
-  3. Keyword 3
-
-  📊 60-90s Bucket
-  1. Keyword 1
-  2. Keyword 2
-  3. Keyword 3
-
-  📊 90-120s Bucket
-  1. Keyword 1
-  2. Keyword 2
-  3. Keyword 3
-
-@fitness_guru:
-
-  📊 33-60s Bucket
-  1. Keyword 1
-  2. Keyword 2
-  3. Keyword 3
-
-  📊 60-90s Bucket
-  1. Keyword 1
-  2. Keyword 2
-  3. Keyword 3
-
-  📊 90-120s Bucket
-  1. Keyword 1
-  2. Keyword 2
-  3. Keyword 3
 ```
 
-CONTENT TACTICS
+**PAIN POINTS**
 ```
 @wellness_pro
 
   📊 33-60s Bucket
-  1. Content Tactic 1
-  2. Content Tactic 2
+  1. Pain Point 1
+  2. Pain Point 2
+  3. Pain Point 3
 
   📊 60-90s Bucket
-  1. Content Tactic 1
-  2. Content Tactic 2
+  1. Pain Point 1
+  2. Pain Point 2
+  3. Pain Point 3
 
   📊 90-120s Bucket
-  1. Content Tactic 1
-  2. Content Tactic 2
-
-@rival_brand:
-
-  📊 33-60s Bucket
-  1. Content Tactic 1
-  2. Content Tactic 2
-
-  📊 60-90s Bucket
-  1. Content Tactic 1
-  2. Content Tactic 2
-
-  📊 90-120s Bucket
-  1. Content Tactic 1
-  2. Content Tactic 2
-
-@fitness_guru:
-
-  📊 33-60s Bucket
-  1. Content Tactic 1
-  2. Content Tactic 2
-
-  📊 60-90s Bucket
-  1. Content Tactic 1
-  2. Content Tactic 2
-
-  📊 90-120s Bucket
-  1. Content Tactic 1
-  2. Content Tactic 2
+  1. Pain Point 1
+  2. Pain Point 2
+  3. Pain Point 3
 ```
+
 
 **Dynamic Fields**:
 | Template Field | Source | JSON Field/Calculation | Data Type | Example | Validated |
@@ -1779,6 +1545,7 @@ Top Affiliate Contributors:
 
 **Implementation**: See Stage8MVP.md Section 0.5.4 for `extract_mention_analysis()` function
 
+---
 
 #### Section 5: Top Things To Do (Quantitative)
 ---

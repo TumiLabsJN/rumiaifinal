@@ -1,0 +1,159 @@
+{
+  "creative_reports": [
+    {
+      "report_id": 1,
+      "type": "path_based",
+      "path": [
+        2,
+        1,
+        1,
+        2,
+        1,
+        1
+      ],
+      "frequency": 27,
+      "percentage": 27.0,
+      "confidence_level": "very_high",
+      "formula_name": "The Silent Visual to Flash-Cut Formula",
+      "structure": {
+        "hook": "Silent Visual Hook (Cluster 2)",
+        "middle": "Transitions from flash-cut energy bursts to consistent volume delivery, maintaining energetic visual presence throughout",
+        "closing": "Minimal Quick-Cut Closer (Cluster 1)"
+      },
+      "temporal_progressions": [
+        {
+          "feature": "scene_duration_variance",
+          "progression": "Starts very consistent (hook) \u2192 maintains through flash-cuts \u2192 returns to consistent rhythm (closing)",
+          "insight": "Steady pacing creates predictable viewing experience while allowing for dynamic moments"
+        },
+        {
+          "feature": "energy_variance",
+          "progression": "Begins with varied gaze movement \u2192 builds to loud sustained energy \u2192 ends with quick-cut rhythm",
+          "insight": "Audio energy builds throughout video to maintain engagement without overwhelming"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [
+          "scene_duration_variance",
+          "energy_level"
+        ],
+        "alignment_insight": "Path strongly aligns with top RF predictors for visual pacing and audio engagement"
+      },
+      "strategy_description": "Start with silent visual storytelling using steady pacing, transition through high-energy flash cuts, maintain energetic visual presence, and close with rapid-fire rhythm for strong retention.",
+      "when_to_use": "Product showcases, transformation reveals, visual tutorials, before/after content, aesthetic wellness content.",
+      "step_by_step_template": [
+        "Hook: Use silent visual storytelling with consistent scene pacing and dynamic gaze movement",
+        "Middle: Transition from flash-cut energy bursts with shortest scenes to sustained loud energy with close-up framing",
+        "Closing: Deploy minimal quick-cut rhythm with consistent pacing for strong finish"
+      ]
+    },
+    {
+      "report_id": 2,
+      "type": "path_based",
+      "path": [
+        0,
+        1,
+        1,
+        2,
+        1,
+        1
+      ],
+      "frequency": 13,
+      "percentage": 13.0,
+      "confidence_level": "moderate",
+      "formula_name": "The Energetic Storyteller to Flash-Cut Formula",
+      "structure": {
+        "hook": "Energetic Storyteller Hook (Cluster 0)",
+        "middle": "Maintains flash-cut energy approach transitioning to consistent volume delivery with sustained energetic visual presence",
+        "closing": "Minimal Quick-Cut Closer (Cluster 1)"
+      },
+      "temporal_progressions": [
+        {
+          "feature": "energy_variance",
+          "progression": "Starts highly varied (hook) \u2192 maintains through flash-cuts \u2192 sustains loud energy \u2192 ends with quick rhythm",
+          "insight": "Dynamic audio engagement creates compelling narrative arc from varied to sustained energy"
+        },
+        {
+          "feature": "scene_duration_variance",
+          "progression": "Begins very consistent \u2192 maintains through flash-cuts \u2192 returns to consistent rhythm",
+          "insight": "Consistent pacing provides stable foundation for energy variations"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [
+          "energy_variance",
+          "scene_duration_variance"
+        ],
+        "alignment_insight": "Path aligns with top RF predictors for audio dynamics and visual pacing consistency"
+      },
+      "strategy_description": "Open with energetic storytelling using dynamic volume shifts, maintain flash-cut intensity, build to sustained high energy with close-up presence, and finish with rapid-cut rhythm.",
+      "when_to_use": "Educational wellness content, personal transformation stories, motivational content, workout demonstrations, nutrition explanations.",
+      "step_by_step_template": [
+        "Hook: Establish energetic storytelling with highly varied volume shifts and consistent scene pacing",
+        "Middle: Maintain flash-cut energy with shortest scenes and loud audio, transitioning to sustained energetic visual presence",
+        "Closing: Use minimal quick-cut approach with consistent rhythm for memorable finish"
+      ]
+    },
+    {
+      "report_id": 3,
+      "type": "feature_based",
+      "path": null,
+      "frequency": null,
+      "percentage": null,
+      "confidence_level": "moderate",
+      "formula_name": "The Visual Storytelling Formula",
+      "structure": null,
+      "temporal_progressions": [
+        {
+          "feature": "scene_count",
+          "progression": "Dynamic visual elements throughout video",
+          "insight": "Visual variety maintains attention in short-form content"
+        },
+        {
+          "feature": "overlay_unique_count",
+          "progression": "Strategic visual enhancements for key moments",
+          "insight": "Visual cues reinforce messaging and aid retention"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [],
+        "alignment_insight": "Visual engagement features align with top 0 RF predictors for sustained attention"
+      },
+      "strategy_description": "Visual engagement formula emphasizing dynamic scene transitions and visual variety.",
+      "when_to_use": "Product demonstrations, educational content, transformation videos, before/after content, visual tutorials.",
+      "step_by_step_template": [
+        "Hook: Use multiple visual angles or dynamic elements to create immediate visual interest",
+        "Middle: Maintain visual variety with strategic scene transitions and visual enhancements",
+        "Closing: Return to primary visual focus while maintaining dynamic elements"
+      ]
+    }
+  ],
+  "supplementary_insights": {
+    "universal_principles": [
+      "Moderate hold in middle: Top performers use moderate hold vs bottom use moderate hold",
+      "Very consistent in opening: Top performers use very consistent vs bottom use very consistent",
+      "Occasional eye contact in middle: Top performers use occasional eye contact vs bottom use moderate eye contact",
+      "Moderate rise in middle: Top performers use moderate rise vs bottom use moderate rise",
+      "Consistent in middle: Top performers use consistent vs bottom use consistent",
+      "Standard cut in middle: Top performers use standard cut vs bottom use slow cut",
+      "xwin_hook_to_middle_energy: 0.01 in top vs 0.02 in bottom (gap: 0.01)"
+    ],
+    "cross_window_patterns": [
+      "xwin_middle_to_closing_energy: Increases from 0.00 (bottom) to 0.01 (top)",
+      "xwin_hook_to_middle_energy: Decreases from 0.02 (bottom) to 0.01 (top)"
+    ]
+  },
+  "path_statistics": {
+    "total_unique_paths": 34,
+    "paths_above_threshold": 2,
+    "needs_fallback": true
+  },
+  "bucket": "18-33s",
+  "hashtag": "wellnesspt2_test5",
+  "total_videos": 100,
+  "analysis_metadata": {
+    "llm_model": "claude-sonnet-4-20250514",
+    "timestamp": "2025-11-02T22:49:45.525638",
+    "phase": "phase2_synthesis"
+  }
+}

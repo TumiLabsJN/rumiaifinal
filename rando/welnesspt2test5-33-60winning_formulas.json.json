@@ -1,0 +1,128 @@
+{
+  "creative_reports": [
+    {
+      "report_id": 1,
+      "type": "feature_based",
+      "path": null,
+      "frequency": null,
+      "percentage": null,
+      "confidence_level": "moderate",
+      "formula_name": "The Visual Storytelling Formula",
+      "structure": null,
+      "temporal_progressions": [
+        {
+          "feature": "scene_count",
+          "progression": "Dynamic visual elements throughout video",
+          "insight": "Visual variety maintains attention in short-form content"
+        },
+        {
+          "feature": "overlay_unique_count",
+          "progression": "Strategic visual enhancements for key moments",
+          "insight": "Visual cues reinforce messaging and aid retention"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [],
+        "alignment_insight": "Visual engagement features align with top 0 RF predictors for sustained attention"
+      },
+      "strategy_description": "Visual engagement formula emphasizing dynamic scene transitions and visual variety.",
+      "when_to_use": "Product demonstrations, educational content, transformation videos, before/after content, visual tutorials.",
+      "step_by_step_template": [
+        "Hook: Use multiple visual angles or dynamic elements to create immediate visual interest",
+        "Middle: Maintain visual variety with strategic scene transitions and visual enhancements",
+        "Closing: Return to primary visual focus while maintaining dynamic elements"
+      ]
+    },
+    {
+      "report_id": 2,
+      "type": "feature_based",
+      "path": null,
+      "frequency": null,
+      "percentage": null,
+      "confidence_level": "moderate",
+      "formula_name": "The Vocal Variety Formula",
+      "structure": null,
+      "temporal_progressions": [
+        {
+          "feature": "speech_coverage",
+          "progression": "Strategic audio pacing throughout content delivery",
+          "insight": "Optimal speech coverage allows for processing time while maintaining momentum"
+        },
+        {
+          "feature": "word_count",
+          "progression": "Balanced information density across segments",
+          "insight": "Word density variation prevents monotony and maintains engagement"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [],
+        "alignment_insight": "Audio features correlate with 0 top RF predictors for engagement and retention"
+      },
+      "strategy_description": "Audio engagement formula emphasizing speech pacing and vocal variety.",
+      "when_to_use": "Educational content, storytelling, product explanations, testimonials, voice-driven content.",
+      "step_by_step_template": [
+        "Hook: Establish vocal tone with clear articulation and moderate pacing",
+        "Middle: Use strategic pauses and vocal variety for emphasis and engagement",
+        "Closing: Maintain vocal energy while delivering clear call-to-action"
+      ]
+    },
+    {
+      "report_id": 3,
+      "type": "feature_based",
+      "path": null,
+      "frequency": null,
+      "percentage": null,
+      "confidence_level": "moderate",
+      "formula_name": "The Authentic Connection Formula",
+      "structure": null,
+      "temporal_progressions": [
+        {
+          "feature": "gesture_count",
+          "progression": "Natural physical expression throughout delivery",
+          "insight": "Authentic gestures enhance message delivery and relatability"
+        },
+        {
+          "feature": "emotion_consistency",
+          "progression": "Stable emotional tone across video journey",
+          "insight": "Emotional consistency builds credibility and trust with viewers"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [],
+        "alignment_insight": "Behavioral features align with 0 top RF predictors for authentic personal connection"
+      },
+      "strategy_description": "Authentic connection formula emphasizing natural gestures and emotional consistency.",
+      "when_to_use": "Personal testimonials, expert advice, product reviews, educational content requiring trust, motivational content.",
+      "step_by_step_template": [
+        "Hook: Establish authentic emotional tone with natural physical expression",
+        "Middle: Maintain consistent emotional delivery with genuine gestures and expressions",
+        "Closing: Reinforce connection with sustained authenticity and stable energy"
+      ]
+    }
+  ],
+  "supplementary_insights": {
+    "universal_principles": [
+      "Very stable in middle: Top performers use very stable vs bottom use stable",
+      "Quiet in middle: Top performers use quiet vs bottom use quiet",
+      "Very stable in opening: Top performers use very stable vs bottom use stable",
+      "Very stable in middle: Top performers use very stable vs bottom use stable",
+      "Quiet in opening: Top performers use quiet vs bottom use quiet",
+      "Moderate cuts in middle: Top performers use moderate cuts vs bottom use moderate cuts",
+      "Soft peak in middle: Top performers use soft peak vs bottom use soft peak"
+    ],
+    "cross_window_patterns": []
+  },
+  "path_statistics": {
+    "total_unique_paths": 88,
+    "paths_above_threshold": 0,
+    "needs_fallback": true
+  },
+  "bucket": "33-60s",
+  "hashtag": "wellnesspt2_test5",
+  "total_videos": 100,
+  "analysis_metadata": {
+    "llm_model": "claude-sonnet-4-20250514",
+    "timestamp": "2025-11-02T22:52:31.907236",
+    "phase": "phase2_synthesis"
+  }
+}

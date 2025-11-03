@@ -1,0 +1,153 @@
+{
+  "creative_reports": [
+    {
+      "report_id": 1,
+      "type": "path_based",
+      "path": [
+        2,
+        2,
+        2
+      ],
+      "frequency": 4,
+      "percentage": 14.8,
+      "confidence_level": "moderate",
+      "formula_name": "The Dynamic Verbal Consistency Journey",
+      "structure": {
+        "hook": "Dynamic Verbal Hook (Cluster 2)",
+        "middle": "Maintains high-energy multi-person interaction with active gestures throughout",
+        "closing": "Interactive Personal Close (Cluster 2)"
+      },
+      "temporal_progressions": [
+        {
+          "feature": "word_count",
+          "progression": "High verbal content (hook) \u2192 sustained engagement (middle) \u2192 brief verbal closing",
+          "insight": "Consistent verbal energy maintains audience attention"
+        },
+        {
+          "feature": "gesture_count",
+          "progression": "Active hand movement (hook) \u2192 group interaction (middle) \u2192 personal gestures (closing)",
+          "insight": "Physical engagement creates connection throughout video"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [
+          "word_count",
+          "gesture_count"
+        ],
+        "alignment_insight": "Path aligns with verbal and physical engagement patterns"
+      },
+      "strategy_description": "Maintain consistent high-energy verbal and physical engagement from start to finish, using dynamic gestures and multi-person interactions to sustain attention.",
+      "when_to_use": "Group challenges, product demonstrations with multiple people, energetic lifestyle content.",
+      "step_by_step_template": [
+        "Hook: Use higher verbal content with active hand movements for immediate engagement",
+        "Middle: Maintain group dynamic with multiple people and active interaction gestures",
+        "Closing: Deliver brief verbal closing with active hand movement for personal connection"
+      ]
+    },
+    {
+      "report_id": 2,
+      "type": "path_based",
+      "path": [
+        1,
+        1,
+        1
+      ],
+      "frequency": 3,
+      "percentage": 11.1,
+      "confidence_level": "moderate",
+      "formula_name": "The Person-Product Showcase Consistency",
+      "structure": {
+        "hook": "Person-Product Showcase Hook (Cluster 1)",
+        "middle": "Maintains gesture-driven minimal strategy with single person focus",
+        "closing": "Clean Visual Finish (Cluster 1)"
+      },
+      "temporal_progressions": [
+        {
+          "feature": "person_count",
+          "progression": "Single person presence (hook) \u2192 maintained focus (middle) \u2192 no visible presenter (closing)",
+          "insight": "Transitions from personal connection to product focus"
+        },
+        {
+          "feature": "object_count",
+          "progression": "Product integration (hook) \u2192 prop-free approach (middle) \u2192 clean finish",
+          "insight": "Strategic product placement followed by distraction-free content"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [
+          "person_count",
+          "object_count"
+        ],
+        "alignment_insight": "Path aligns with strategic person-to-product transition patterns"
+      },
+      "strategy_description": "Start with clear person-product connection, maintain minimal distraction approach in middle, finish with clean visual focus on key message.",
+      "when_to_use": "Product reviews, supplement showcases, before/after transformations.",
+      "step_by_step_template": [
+        "Hook: Feature single person with product integration for credible introduction",
+        "Middle: Use strategic single gesture emphasis with completely prop-free approach",
+        "Closing: Implement silent closing approach with no visible presenter for clean finish"
+      ]
+    },
+    {
+      "report_id": 3,
+      "type": "path_based",
+      "path": [
+        1,
+        0,
+        0
+      ],
+      "frequency": 3,
+      "percentage": 11.1,
+      "confidence_level": "moderate",
+      "formula_name": "The Showcase-to-Text Transition Strategy",
+      "structure": {
+        "hook": "Person-Product Showcase Hook (Cluster 1)",
+        "middle": "Transitions to multi-scene text-heavy strategy with rapid visual transitions",
+        "closing": "Text-Enhanced Personal Close (Cluster 0)"
+      },
+      "temporal_progressions": [
+        {
+          "feature": "scene_count",
+          "progression": "Moderate pacing (hook) \u2192 rapid transitions (middle) \u2192 focused scenes (closing)",
+          "insight": "Builds visual momentum then focuses for key message delivery"
+        },
+        {
+          "feature": "overlay_unique_count",
+          "progression": "Minimal text (hook) \u2192 heavy text messaging (middle) \u2192 dual text overlay (closing)",
+          "insight": "Progressive text integration supports message reinforcement"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [
+          "scene_count",
+          "overlay_unique_count"
+        ],
+        "alignment_insight": "Path aligns with progressive visual and text complexity patterns"
+      },
+      "strategy_description": "Begin with personal product showcase, build momentum with rapid scene changes and heavy text overlays, conclude with focused personal message supported by strategic text.",
+      "when_to_use": "Educational content with key takeaways, product explanations with multiple benefits, transformation stories.",
+      "step_by_step_template": [
+        "Hook: Present single person with product integration for authentic introduction",
+        "Middle: Implement rapid visual transitions with heavy text-based messaging for information delivery",
+        "Closing: Return to visible presenter strategy with dual text overlay approach for reinforcement"
+      ]
+    }
+  ],
+  "supplementary_insights": {
+    "universal_principles": "Note: RF analysis not available (TOP mode). Focus on K-Means cluster patterns.",
+    "cross_window_patterns": "Note: Cross-window RF patterns not available (TOP mode). Analyze cluster paths only."
+  },
+  "path_statistics": {
+    "total_unique_paths": 13,
+    "paths_above_threshold": 4,
+    "needs_fallback": false
+  },
+  "bucket": "9-13s",
+  "hashtag": "@gnclivewell",
+  "total_videos": 27,
+  "analysis_metadata": {
+    "llm_model": "claude-sonnet-4-20250514",
+    "timestamp": "2025-11-02T22:25:12.583037",
+    "phase": "phase2_synthesis"
+  }
+}

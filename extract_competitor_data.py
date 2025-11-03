@@ -499,7 +499,11 @@ def format_views(view_count):
 
 
 def calculate_posting_frequency(client_id, competitor_handle, mode='top', strategy='contrastive'):
-    """Calculate videos per week from winner_analysis.json."""
+    """
+    Calculate videos per week from winner_analysis.json.
+
+    Uses actual date_filter from config.json to calculate accurate posting frequency.
+    """
 
     base_path = f"/home/jorge/rumiaifinal/data/clients/{client_id}/competitors/{competitor_handle}"
 
@@ -511,12 +515,57 @@ def calculate_posting_frequency(client_id, competitor_handle, mode='top', strate
 
     total_videos = sum(data["top_100_distribution"].values())
 
-    # Assume 90 days analysis period
-    weeks = 90 / 7  # ~13 weeks
+    # Extract actual date filter from config.json
+    date_filter = extract_date_filter_from_config(client_id, competitor_handle, mode, strategy)
+
+    # Extract number of days from date_filter (e.g., "last_90_days" → 90)
+    try:
+        if date_filter.startswith('last_') and date_filter.endswith('_days'):
+            days = int(date_filter.replace('last_', '').replace('_days', ''))
+        else:
+            days = 90  # Fallback to 90 days
+    except:
+        days = 90  # Fallback to 90 days
+
+    weeks = days / 7
 
     posting_freq = round(total_videos / weeks, 1)
 
     return posting_freq
+
+
+def extract_transcript_quality(client_id, competitor_handle, mode='top', strategy='contrastive'):
+    """
+    Extract transcript validation statistics from validation cache.
+
+    Returns:
+        dict: {
+            "with_speech": 48,
+            "speech_pct": 36
+        }
+        or None if cache doesn't exist
+    """
+    base_path = f"/home/jorge/rumiaifinal/data/clients/{client_id}/competitors/{competitor_handle}"
+    analysis_dir = f"{mode}_{strategy}"
+    cache_path = f"{base_path}/{analysis_dir}/content_taxonomies/transcript_validation_cache.json"
+
+    if not os.path.exists(cache_path):
+        return None
+
+    try:
+        with open(cache_path, 'r') as f:
+            data = json.load(f)
+
+        total_videos = data['stats']['total']
+        valid_count = data['stats']['valid']
+
+        return {
+            'with_speech': valid_count,
+            'speech_pct': round((valid_count / total_videos) * 100) if total_videos > 0 else 0
+        }
+    except Exception as e:
+        print(f"⚠️  Warning: Could not read transcript quality for {competitor_handle}: {e}")
+        return None
 
 
 def determine_hashtag_strategy_type(total_unique_hashtags):
@@ -527,6 +576,52 @@ def determine_hashtag_strategy_type(total_unique_hashtags):
 def calculate_original_content_percentage(repost_rate):
     """Calculate original content percentage (inverse of repost rate)."""
     return 100 - int(repost_rate)
+
+
+def extract_date_filter_from_config(client_id, competitor_handle, mode='top', strategy='contrastive'):
+    """
+    Extract date_filter from competitor's config.json.
+
+    Returns:
+        str: date_filter value (e.g., "last_90_days") or "last_90_days" as fallback
+    """
+    config_path = f"/home/jorge/rumiaifinal/data/clients/{client_id}/competitors/{competitor_handle}/{mode}_{strategy}/config.json"
+
+    try:
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+            return config.get('date_filter', 'last_90_days')
+    except Exception as e:
+        print(f"⚠️  Warning: Could not read date_filter from config for {competitor_handle}: {e}")
+        return 'last_90_days'
+
+
+def format_date_filter(date_filter):
+    """
+    Convert date_filter to human-readable format.
+
+    Examples:
+        "last_90_days" → "Last 90 days"
+        "last_30_days" → "Last 30 days"
+        "last_180_days" → "Last 180 days"
+
+    Returns:
+        str: Formatted date filter for display
+    """
+    if not date_filter or date_filter == 'none':
+        return "All time"
+
+    # Handle "last_N_days" format
+    if date_filter.startswith('last_') and date_filter.endswith('_days'):
+        # Extract number from "last_90_days"
+        try:
+            days = date_filter.replace('last_', '').replace('_days', '')
+            return f"Last {days} days"
+        except:
+            return "Last 90 days"
+
+    # Fallback
+    return "Last 90 days"
 
 
 def load_taxonomy_descriptions(client_id, competitor_handle, mode='top', strategy='top'):
@@ -789,7 +884,12 @@ def main():
     tab_data.append(['', ''])
 
     tab_data.append(['COMPETITOR_HANDLE', f'@{args.competitor}'])
-    tab_data.append(['ANALYSIS_PERIOD', 'Last 90 days'])
+
+    # Extract date_filter from config.json
+    date_filter_raw = extract_date_filter_from_config(args.client, args.competitor, args.mode, args.strategy)
+    analysis_period = format_date_filter(date_filter_raw)
+    tab_data.append(['ANALYSIS_PERIOD', analysis_period])
+
     tab_data.append(['VIDEOS_ANALYZED', str(total_videos)])
 
     # PAGE 2: CONTENT STRATEGY ANALYSIS
@@ -824,6 +924,17 @@ def main():
     tab_data.append(['', ''])
     tab_data.append(['POSTING_FREQUENCY', str(posting_freq)])
     tab_data.append(['POSTING_ACTIVITY_LABEL', f'@{args.competitor} posts {posting_freq} videos per week on average'])
+
+    # Transcript Quality (Speech Data)
+    tab_data.append(['', ''])
+    transcript_quality = extract_transcript_quality(args.client, args.competitor, args.mode, args.strategy)
+
+    if transcript_quality:
+        tab_data.append(['WITH_SPEECH', str(transcript_quality['with_speech'])])
+        tab_data.append(['SPEECH_PCT', str(transcript_quality['speech_pct'])])
+    else:
+        tab_data.append(['WITH_SPEECH', 'N/A'])
+        tab_data.append(['SPEECH_PCT', 'N/A'])
 
     # PAGE 3: CREATIVE INTELLIGENCE
     tab_data.append(['', ''])

@@ -2296,62 +2296,6 @@ bucket_18-33s/
 
 ---
 
-### 5.6: Model Metrics Summary
-
-```json
-{
-  "bucket": "18-33s",
-  "total_videos": 100,
-
-  "video_level_rf": {
-    "model_type": "random_forest",
-    "input_features": 190,
-    "accuracy": 0.87,
-    "precision": 0.89,
-    "recall": 0.84,
-    "f1_score": 0.86,
-    "top_feature": "hook_eye_contact_rate",
-    "top_feature_importance": 0.22,
-    "purpose": "Cross-window pattern detection"
-  },
-
-  "window_level_rf": {
-    "hook": {
-      "model_type": "random_forest",
-      "input_features": 21,
-      "accuracy": 0.82,
-      "precision": 0.85,
-      "recall": 0.78,
-      "top_feature": "eye_contact_rate",
-      "top_feature_importance": 0.35
-    },
-    "middle_1": {...},
-    "middle_2": {...},
-    "middle_3": {...},
-    "middle_4": {...},
-    "closing": {...}
-  },
-
-  "window_level_kmeans": {
-    "hook": {
-      "model_type": "kmeans",
-      "input_features": 30,
-      "n_clusters": 3,
-      "inertia": 12.5,
-      "silhouette_score": 0.68,
-      "cluster_sizes": [35, 42, 23]
-    },
-    "middle_1": {...},
-    "middle_2": {...},
-    "middle_3": {...},
-    "middle_4": {...},
-    "closing": {...}
-  }
-}
-```
-
----
-
 ### 5.7: Architectural Summary
 
 **Why Dual RF + Window-Level K-Means?**:
@@ -2408,150 +2352,6 @@ bucket_18-33s/
 - `ml_analysis/aggregated_features.csv` (includes xwin features + is_top_performer from **Stage 3 Section 3.3.1-3.3.2**)
 
 **S7B2 Note**: Cross-window features (xwin_*) are available in aggregated_features.csv for distribution analysis. These features (created in **Stage 3 Section 3.3.1**) enable Stage 6 to compute distribution percentiles for temporal patterns across video sections.
-
-**Process**:
-
-### 6.1: Video-Level Random Forest Analysis JSON
-```python
-# Extract feature importance and video-level predictions
-# Load data for distribution analysis
-top_videos = aggregated_features[aggregated_features['is_top_performer'] == 1]
-bottom_videos = aggregated_features[aggregated_features['is_top_performer'] == 0]
-
-rf_analysis = {
-    "analysis_type": "random_forest",
-    "bucket": bucket,
-    "hashtag": hashtag,
-    "video_count": N,
-    "input_features": 147,  # Video-Level RF: 135 Stage 3 features + 12 Stage 4 transformations (S7B2 Fix)
-                            # Includes xwin features from Stage 3, passed through Stage 4
-
-    "feature_importance": [
-        {
-            "feature": "hook_eye_contact_rate",
-            "importance": 0.22,
-            "top_performer_avg": 0.88,
-            "bottom_performer_avg": 0.45,
-            "gap": 0.43,
-
-            # NEW: Distribution percentages for actionable insights
-            "distribution": {
-                "thresholds": {
-                    "high": 0.6,    # Determined by 66th percentile or domain knowledge
-                    "low": 0.4      # Determined by 33rd percentile
-                },
-                "top_performers": {
-                    "high_percentage": 0.70,    # 70% of top have >= 0.6
-                    "medium_percentage": 0.25,  # 25% have 0.4-0.6
-                    "low_percentage": 0.05      # 5% have < 0.4
-                },
-                "bottom_performers": {
-                    "high_percentage": 0.05,    # 5% of bottom have >= 0.6
-                    "medium_percentage": 0.15,  # 15% have 0.4-0.6
-                    "low_percentage": 0.80      # 80% have < 0.4
-                }
-            }
-        },
-        {
-            "feature": "xwin_energy_progression_slope",  # Cross-window feature from Stage 3 Section 3.3.1
-            "importance": 0.15,
-            "top_performer_avg": 0.12,
-            "bottom_performer_avg": -0.05,
-            "gap": 0.17,
-
-            "distribution": {
-                "thresholds": {
-                    "high": 0.08,
-                    "low": -0.02
-                },
-                "top_performers": {
-                    "high_percentage": 0.65,    # 65% show positive energy build
-                    "medium_percentage": 0.25,
-                    "low_percentage": 0.10
-                },
-                "bottom_performers": {
-                    "high_percentage": 0.15,
-                    "medium_percentage": 0.30,
-                    "low_percentage": 0.55      # 55% show negative/flat energy
-                }
-            }
-        },
-        # ... remaining features in top 10
-    ],
-
-    "videos": [
-        {
-            "video_id": "123",
-            "is_top_performer": 1,
-            "prediction_confidence": 0.92,
-            "features": {
-                "hook_scene_count": 3,
-                "middle_avg_word_count": 55,
-                # ... all features
-            }
-        },
-        # ... all N videos
-    ]
-}
-
-save("ml_analysis/random_forest_analysis.json", rf_analysis)
-```
-
-**Distribution Computation Logic**:
-```python
-def compute_feature_distribution(feature_name, top_videos, bottom_videos):
-    """
-    Compute distribution percentages for top and bottom performers.
-
-    Returns thresholds and percentage breakdowns (high/medium/low).
-    """
-    # Combine all videos to determine global thresholds
-    all_values = pd.concat([top_videos[feature_name], bottom_videos[feature_name]])
-
-    # Determine thresholds (66th and 33rd percentile)
-    threshold_high = all_values.quantile(0.66)
-    threshold_low = all_values.quantile(0.33)
-
-    # Compute percentages for top performers
-    top_high = len(top_videos[top_videos[feature_name] >= threshold_high]) / len(top_videos)
-    top_medium = len(top_videos[(top_videos[feature_name] >= threshold_low) &
-                                 (top_videos[feature_name] < threshold_high)]) / len(top_videos)
-    top_low = len(top_videos[top_videos[feature_name] < threshold_low]) / len(top_videos)
-
-    # Compute percentages for bottom performers
-    bottom_high = len(bottom_videos[bottom_videos[feature_name] >= threshold_high]) / len(bottom_videos)
-    bottom_medium = len(bottom_videos[(bottom_videos[feature_name] >= threshold_low) &
-                                       (bottom_videos[feature_name] < threshold_high)]) / len(bottom_videos)
-    bottom_low = len(bottom_videos[bottom_videos[feature_name] < threshold_low]) / len(bottom_videos)
-
-    return {
-        "thresholds": {"high": threshold_high, "low": threshold_low},
-        "top_performers": {
-            "high_percentage": top_high,
-            "medium_percentage": top_medium,
-            "low_percentage": top_low
-        },
-        "bottom_performers": {
-            "high_percentage": bottom_high,
-            "medium_percentage": bottom_medium,
-            "low_percentage": bottom_low
-        }
-    }
-
-# Apply to top 10 features
-for feature_data in feature_importance_list[:10]:
-    feature_name = feature_data['feature']
-    feature_data['distribution'] = compute_feature_distribution(
-        feature_name, top_videos, bottom_videos
-    )
-```
-
-**Output**: `ml_analysis/rf_video_analysis.json` (~30KB)
-
-**What It Contains**: Feature importance rankings including cross-window features (xwin_*, 0-5 features from **Stage 3 Section 3.3.1**) with pattern type labels
-
-**S7B2 Note**: Cross-window features (xwin_hook_to_middle_energy, xwin_middle_to_closing_energy, xwin_eye_contact_consistency, xwin_word_density_std, xwin_energy_progression_slope) are created in **Stage 3 Section 3.3.1**, passed through Stage 4, and analyzed here for distribution patterns.
-
 ---
 
 ### 6.2: Window-Level Random Forest Analysis JSONs
@@ -2581,59 +2381,6 @@ from config.bucket_definitions import BUCKET_WINDOWS
 
 **Note**: Stage 4 (FeatureTransformationCHILD.md Section 4.2) also imports from this shared config.
 
-**Bucket 18-33s Example** (6 window types):
-
-```python
-# CORRECT: Bucket-aware iteration (works for ALL 8 bucket types)
-bucket = "18-33s"  # Example bucket
-for window_type in BUCKET_WINDOWS[bucket]:
-    # Load trained window-level RF model
-    rf_window = joblib.load(f'models/rf_{window_type}_18-33s.pkl')
-
-    # Load window-level transformed data
-    X = pd.read_csv(f'ml_analysis/{window_type}_rf_transformed.csv')
-    y = X['is_top_performer']
-    X = X.drop(['is_top_performer'], axis=1)
-
-    # Extract feature importance
-    feature_importance = pd.DataFrame({
-        'feature': X.columns,
-        'importance': rf_window.feature_importances_
-    }).sort_values('importance', ascending=False)
-
-    # Calculate top/bottom performer averages
-    top_videos = X[y == 1]
-    bottom_videos = X[y == 0]
-
-    # Build analysis JSON
-    window_rf_analysis = {
-        "model_type": "window_level_rf",
-        "window_type": window_type,
-        "bucket": "18-33s",
-        "total_videos": len(X),
-        "input_features": len(X.columns),
-        "model_performance": {
-            "accuracy": accuracy_score(y, rf_window.predict(X)),
-            "precision": precision_score(y, rf_window.predict(X)),
-            "recall": recall_score(y, rf_window.predict(X))
-        },
-        "feature_importance": [
-            {
-                "feature": row['feature'],
-                "importance": row['importance'],
-                "top_performer_avg": top_videos[row['feature']].mean(),
-                "bottom_performer_avg": bottom_videos[row['feature']].mean(),
-                "gap": top_videos[row['feature']].mean() - bottom_videos[row['feature']].mean(),
-                "rank": idx + 1
-            }
-            for idx, row in feature_importance.head(10).iterrows()
-        ]
-    }
-
-    # Save per-window RF analysis
-    with open(f'ml_analysis/{window_type}_rf_analysis.json', 'w') as f:
-        json.dump(window_rf_analysis, f, indent=2)
-```
 
 **Outputs** (for bucket 18-33s):
 - `ml_analysis/hook_rf_analysis.json` (~5KB)
@@ -2652,64 +2399,6 @@ for window_type in BUCKET_WINDOWS[bucket]:
 ### 6.3: Window-Level K-Means Analysis JSONs
 
 **Purpose**: Generate cluster centroids and assignments per window (21 features = LLM-friendly)
-
-**Bucket 18-33s Example** (6 window types):
-
-```python
-# CORRECT: Bucket-aware iteration (uses BUCKET_WINDOWS config from Section 6.2)
-bucket = "18-33s"  # Example bucket
-for window_type in BUCKET_WINDOWS[bucket]:
-    # Load trained K-Means model and scalers
-    kmeans = joblib.load(f'models/{window_type}_kmeans_18-33s.pkl')
-    scalers = joblib.load(f'models/{window_type}_scalers_18-33s.pkl')
-
-    # Load window-specific transformed data
-    X = pd.read_csv(f'ml_analysis/{window_type}_km_transformed.csv')
-
-    # Apply scaling
-    X_scaled = pd.DataFrame({
-        col: scalers[col].transform(X[[col]]).flatten()
-        for col in X.columns
-    })
-
-    # Get cluster assignments
-    labels = kmeans.predict(X_scaled)
-    centroids = kmeans.cluster_centers_  # Shape: (3 clusters, ~30 features)
-
-    # Calculate distances to centroids
-    from sklearn.metrics import euclidean_distances
-    distances = euclidean_distances(X_scaled, centroids)
-
-    # Build analysis JSON
-    kmeans_analysis = {
-        "window_type": window_type,
-        "bucket": "18-33s",
-        "total_videos": len(X),
-        "n_clusters": 3,
-        "clusters": []
-    }
-
-    for cluster_id in range(3):
-        cluster_videos = X[labels == cluster_id]
-        cluster_indices = np.where(labels == cluster_id)[0]
-
-        kmeans_analysis['clusters'].append({
-            "cluster_id": cluster_id,
-            "size": len(cluster_videos),
-            "centroid": dict(zip(X.columns, centroids[cluster_id])),  # All 21-30 features
-            "videos": [
-                {
-                    "video_id": f"video_{idx}",
-                    "distance_to_centroid": float(distances[idx, cluster_id])
-                }
-                for idx in cluster_indices
-            ]
-        })
-
-    # Save per-window K-Means analysis
-    with open(f'ml_analysis/{window_type}_kmeans_analysis.json', 'w') as f:
-        json.dump(kmeans_analysis, f, indent=2)
-```
 
 **Outputs** (for bucket 18-33s):
 - `ml_analysis/hook_kmeans_analysis.json` (~5KB)
@@ -2736,30 +2425,6 @@ for window_type in BUCKET_WINDOWS[bucket]:
 ### 6.3.1: Special Case - middle_aggregate Window (Buckets 9-13s, 13-18s)
 
 For short-duration buckets (9-13s, 13-18s), middle segments are aggregated into a single `middle_aggregate` window. This window receives the same JSON structure as other windows:
-
-**Example Output**: `ml_analysis/middle_aggregate_rf_analysis.json`
-
-```json
-{
-  "model_type": "window_level_rf",
-  "window_type": "middle_aggregate",
-  "bucket": "9-13s",
-  "total_videos": 100,
-  "input_features": 21,
-  "feature_importance": [
-    {
-      "feature": "scene_count",
-      "importance": 0.22,
-      "top_performer_avg": 5.2,
-      "bottom_performer_avg": 3.1,
-      "gap": 2.1,
-      "rank": 1
-    },
-    ...
-  ],
-  "note": "Aggregated from 3 short middle segments (1-4s each) to ensure reliable feature measurements"
-}
-```
 
 **Rationale**: Individual 1-4s middle segments produce unreliable measurements for scene_count, speech_coverage, and word_count. Aggregation creates 4.5-9.3s windows where all 21 features are reliable. See FeatureAggregationCHILD.md Decision 7 (lines 1137-1165) for full justification.
 
@@ -2806,23 +2471,6 @@ bucket_18-33s/ml_analysis/
 - **Direct Validation**: Window-level RF validates K-Means cluster defining features (same granularity)
 - **Actionable Insights**: Per-section strategies ("Use this hook type") vs abstract patterns
 - **Complete Pattern Coverage**: Video-level RF + Window-level RF + Window-level K-Means = no blind spots
-
-**Trade-offs**:
-- More files to manage (13 vs 2)
-- Slightly more complex Stage 7 LLM integration
-- But: **Better insights, higher actionability, complete pattern coverage**
-
-**Child Documents**:
-- ML_LLMData.md (JSON format strategy, schema specifications)
-- ML_LLMDataTI.md (JSON generation technical specs)
-- KmeansClusteringStage6.md (dual RF + window-level K-Means architecture rationale)
-
-**Future TI Document**:
-- MLAnalysisGenerationTI.md (JSON generation code, schema validation)
-
-**Related Future Features**:
-- Phase 2: LLM Data Strategy (Stage 6 core feature)
-
 ---
 
 ## Stage 7: LLM Analysis - Hybrid Two-Phase Approach
@@ -2845,240 +2493,6 @@ bucket_18-33s/ml_analysis/
 
 **Execution**: 6-7 parallel API calls (one per window: hook, middle_1-4, closing)
 
-**Input per Window** (Example: Hook):
-1. K-Means: `hook_kmeans_analysis.json` - 3 clusters × 21 features = 63 numbers
-2. Window-Level RF: `hook_rf_analysis.json` - Top 10 features × 5 metrics = 50 numbers
-3. **Combined Context**: 113 numbers total (small, focused)
-
-**LLM Prompt Template** (Phase 1):
-```python
-def analyze_window(window_type: str, kmeans_data: dict, rf_data: dict, bucket: str, hashtag: str) -> dict:
-    """
-    Analyze one window type's K-Means clusters with RF validation.
-
-    Returns: Phase 1 analysis JSON
-    """
-    prompt = f"""
-You are analyzing {window_type} segments from 100 viral videos in the {bucket} duration bucket for #{hashtag}.
-
-Context:
-- These are all TOP-PERFORMING videos (high engagement)
-- You are identifying DIFFERENT STRATEGIES that all lead to success
-- Focus on what makes each cluster DISTINCT from the others
-
-K-Means clustering has identified 3 distinct {window_type} patterns:
-
-CLUSTER 0 ({kmeans_data['clusters'][0]['size']} videos):
-{format_centroid_features(kmeans_data['clusters'][0]['centroid'])}
-
-CLUSTER 1 ({kmeans_data['clusters'][1]['size']} videos):
-{format_centroid_features(kmeans_data['clusters'][1]['centroid'])}
-
-CLUSTER 2 ({kmeans_data['clusters'][2]['size']} videos):
-{format_centroid_features(kmeans_data['clusters'][2]['centroid'])}
-
-Random Forest Feature Importance ({window_type}-specific predictive power):
-
-The features that BEST PREDICT viral success within {window_type} segments:
-
-1. {rf_data['feature_importance'][0]['feature']}
-   - RF Importance: {rf_data['feature_importance'][0]['importance']} (rank #{rf_data['feature_importance'][0]['rank']})
-   - Top performers: avg {rf_data['feature_importance'][0]['top_performer_avg']} ({rf_data['feature_importance'][0]['distribution']['top_performers']['high_percentage']*100:.0f}% have ≥{rf_data['feature_importance'][0]['distribution']['thresholds']['high']})
-   - Bottom performers: avg {rf_data['feature_importance'][0]['bottom_performer_avg']} (only {rf_data['feature_importance'][0]['distribution']['bottom_performers']['high_percentage']*100:.0f}% reach {rf_data['feature_importance'][0]['distribution']['thresholds']['high']})
-   - Gap: {rf_data['feature_importance'][0]['gap']}
-
-2. {rf_data['feature_importance'][1]['feature']}
-   - RF Importance: {rf_data['feature_importance'][1]['importance']} (rank #{rf_data['feature_importance'][1]['rank']})
-   - Top performers: avg {rf_data['feature_importance'][1]['top_performer_avg']} ({rf_data['feature_importance'][1]['distribution']['top_performers']['high_percentage']*100:.0f}% have ≥{rf_data['feature_importance'][1]['distribution']['thresholds']['high']})
-   - Bottom performers: avg {rf_data['feature_importance'][1]['bottom_performer_avg']} (only {rf_data['feature_importance'][1]['distribution']['bottom_performers']['high_percentage']*100:.0f}% reach {rf_data['feature_importance'][1]['distribution']['thresholds']['high']})
-   - Gap: {rf_data['feature_importance'][1]['gap']}
-
-... (top 10 features, each formatted with distribution data)
-
-Your task:
-1. **Name each cluster** with a memorable, creator-friendly label (e.g., "The Direct Eye Contact Hook")
-2. **Identify 3-5 defining features** per cluster that differentiate it from the others
-   - PRIORITIZE features with high RF importance scores (these are most predictive of viral success)
-   - Emphasize features with large top/bottom gaps (biggest performance differentiators)
-   - **NOTICE distribution patterns**: If top performers show bimodal patterns (e.g., "40% high, 60% low"), this indicates MULTIPLE successful strategies for this feature
-3. **Describe the strategy** each cluster represents (what creative approach does it use?)
-4. **Generate actionable recommendations** - what should creators DO to replicate this pattern?
-   - Focus on high-importance RF features first
-   - Include target values based on top_performer_avg from RF data
-   - **For bimodal features**: Present both strategies as viable options (e.g., "Use either brief hooks (10-15 words) OR dense hooks (80-90 words) - both work")
-
-Output format: JSON
-{{
-  "window_type": "{window_type}",
-  "clusters": [
-    {{
-      "cluster_id": 0,
-      "name": "Creative strategy name",
-      "defining_features": [
-        "feature_name: value (interpretation)"
-      ],
-      "rf_validation": {{
-        "top_predictive_features_in_cluster": [...],
-        "insight": "How this cluster uses RF-validated features"
-      }},
-      "strategy_description": "What makes this cluster unique",
-      "creator_recommendations": [
-        "PRIORITY: Specific actionable step with RF targets",
-        "Specific actionable step 2",
-        "Specific actionable step 3"
-      ]
-    }},
-    // ... clusters 1 and 2
-  ]
-}}
-
-Important:
-- Be specific and concrete (not generic advice)
-- Focus on DIFFERENCES between clusters (not universal best practices)
-- Recommendations should be replicable creative techniques
-"""
-
-    client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=4000,
-        temperature=0.3,  # Lower temperature for consistency
-        messages=[{"role": "user", "content": prompt}]
-    )
-
-    analysis = json.loads(response.content[0].text)
-    analysis['analysis_metadata'] = {
-        'llm_model': 'claude-sonnet-4',
-        'timestamp': datetime.now().isoformat(),
-        'api_latency_seconds': response.usage.total_time_seconds
-    }
-
-    return analysis
-
-
-def run_phase1_parallel(bucket: str, hashtag: str, window_types: list) -> dict:
-    """
-    Run Phase 1 analysis for all windows in parallel.
-
-    Args:
-        bucket: '18-33s'
-        hashtag: '#nutrition'
-        window_types: ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']
-
-    Returns: {window_type: analysis_json} for all windows
-    """
-    window_analyses = {}
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
-        futures = {}
-        for window_type in window_types:
-            # Load K-Means and RF data for this window
-            kmeans_data = load_json(f'ml_analysis/{window_type}_kmeans_analysis.json')
-            rf_data = load_json(f'ml_analysis/{window_type}_rf_analysis.json')
-
-            # Submit analysis task
-            future = executor.submit(
-                analyze_window,
-                window_type=window_type,
-                kmeans_data=kmeans_data,
-                rf_data=rf_data,
-                bucket=bucket,
-                hashtag=hashtag
-            )
-            futures[window_type] = future
-
-        # Collect results
-        for window_type, future in futures.items():
-            try:
-                analysis = future.result(timeout=60)
-                window_analyses[window_type] = analysis
-                save_json(f'ml_analysis/llm/{window_type}_analysis.json', analysis)
-            except Exception as e:
-                logging.error(f"Phase 1 failed for {window_type}: {e}")
-
-    return window_analyses
-```
-
-**Phase 1 Output Example** (`hook_analysis.json`):
-```json
-{
-  "window_type": "hook",
-  "bucket": "18-33s",
-  "hashtag": "#nutrition",
-  "total_videos": 100,
-  "clusters": [
-    {
-      "cluster_id": 0,
-      "size": 35,
-      "name": "The Direct Eye Contact Hook",
-      "defining_features": [
-        "eye_contact_rate: 0.87 (RF rank #1, importance 0.35, gap 0.43 - HIGHEST PREDICTOR)",
-        "word_count: 14 (RF rank #3, importance 0.18, low count strategy)",
-        "energy_level: 0.55 (RF rank #2, importance 0.22, moderate-calm approach)"
-      ],
-      "rf_validation": {
-        "top_predictive_features_in_cluster": [
-          "eye_contact_rate: Cluster value 0.87 matches top performer avg 0.88 (RF validated)"
-        ],
-        "insight": "This cluster leverages the #1 most predictive hook feature at optimal levels."
-      },
-      "strategy_description": "Creator looks directly at camera with minimal speech, establishing immediate connection through eye contact rather than information density.",
-      "creator_recommendations": [
-        "PRIORITY: Maintain 85-90% eye contact (RF #1 predictor, importance 0.35, gap 0.43)",
-        "Keep opening statement under 15 words (RF #3 predictor)",
-        "Target moderate energy 0.55-0.60 (RF #2 predictor)"
-      ]
-    },
-    {
-      "cluster_id": 1,
-      "size": 42,
-      "name": "The Text Overlay Hook",
-      "defining_features": [
-        "overlay_unique_count: 3.5 (high - multiple text overlays)",
-        "eye_contact_rate: 0.28 (low - looking away or at product)",
-        "word_count: 48 (very high - talking while showing text)"
-      ],
-      "strategy_description": "Fast-paced, text-heavy opening with multiple scene cuts.",
-      "creator_recommendations": [
-        "Add 2-3 text overlays in first 3 seconds",
-        "Use dynamic cuts (3-4 scenes in hook)",
-        "Speak quickly - aim for 45-50 words in 3 seconds"
-      ]
-    },
-    {
-      "cluster_id": 2,
-      "size": 23,
-      "name": "The Action-Driven Hook",
-      "defining_features": [
-        "object_count: 4.8 (high - multiple props/products visible)",
-        "gesture_count: 7.5 (very high - active hand movements)",
-        "energy_level: 0.75 (high - dynamic movement)"
-      ],
-      "strategy_description": "Single continuous shot with high-energy physical action.",
-      "creator_recommendations": [
-        "Film in one continuous take - avoid cuts in first 3 seconds",
-        "Use 6-8 hand gestures (pointing, grabbing, showing products)",
-        "Show 4-5 different objects/products early"
-      ]
-    }
-  ]
-}
-```
-
-**Phase 1 Outputs** (per bucket):
-- `ml_analysis/llm/hook_analysis.json`
-- `ml_analysis/llm/middle_1_analysis.json`
-- `ml_analysis/llm/middle_2_analysis.json`
-- `ml_analysis/llm/middle_3_analysis.json`
-- `ml_analysis/llm/middle_4_analysis.json`
-- `ml_analysis/llm/closing_analysis.json`
-
-**Phase 1 Execution Time**: ~5-10 seconds wall-clock (all 6 calls run in parallel)
-
-**LLM Calls per Bucket (Phase 1)**: 6 parallel calls
-
----
-
 ### 7.2: Phase 2 - Cross-Window Synthesis (Single Call)
 
 **Purpose**: Synthesize cross-window patterns and identify "Winning Formulas" with video-level RF validation
@@ -3087,501 +2501,6 @@ def run_phase1_parallel(bucket: str, hashtag: str, window_types: list) -> dict:
 1. All Phase 1 window analyses (6 JSONs)
 2. Video cluster paths across windows (extracted from K-Means outputs)
 3. Video-Level RF cross-window feature importance (`rf_video_analysis.json`)
-
-**Extract Video Cluster Paths**:
-```python
-def extract_cluster_paths(window_analyses: dict, kmeans_outputs: dict) -> list:
-    """
-    Extract each video's cluster assignment across all windows.
-
-    Returns:
-        [
-            {'video_id': 'video_001', 'path': [0, 1, 0, 1, 2, 0],
-             'path_str': 'Hook-0 → M1-1 → M2-0 → M3-1 → M4-2 → Closing-0'},
-            ...
-        ]
-    """
-    video_paths = []
-    for video_id in all_video_ids:
-        path = []
-        for window_type in window_types:
-            cluster_id = get_video_cluster(video_id, window_type, kmeans_outputs)
-            path.append(cluster_id)
-
-        path_str = format_path(path, window_types)
-        video_paths.append({
-            'video_id': video_id,
-            'path': path,
-            'path_str': path_str
-        })
-
-    return video_paths
-
-
-def analyze_path_frequencies(video_paths: list) -> list:
-    """
-    Identify most common cluster path combinations.
-
-    Returns top 10 most common paths with frequencies.
-    """
-    path_counts = Counter([tuple(vp['path']) for vp in video_paths])
-
-    top_paths = []
-    for path, count in path_counts.most_common(10):
-        top_paths.append({
-            'path': list(path),
-            'frequency': count,
-            'percentage': round(count / len(video_paths) * 100, 1),
-            'path_str': format_path(path, window_types)
-        })
-
-    return top_paths
-```
-
-**Video-Level RF Cross-Window Patterns** (Example features):
-```json
-{
-  "feature_importance": [
-    {
-      "feature": "hook_eye_contact_rate",
-      "importance": 0.22,
-      "top_performer_avg": 0.88,
-      "bottom_performer_avg": 0.45,
-      "gap": 0.43,
-      "rank": 1
-    },
-    {
-      "feature": "xwin_hook_to_middle_energy",
-      "importance": 0.12,
-      "interpretation": "Energy change from hook to middle average",
-      "top_performer_avg": 0.15,
-      "bottom_performer_avg": -0.08,
-      "gap": 0.23,
-      "rank": 4,
-      "pattern_type": "cross_window"
-    },
-    {
-      "feature": "xwin_middle_to_closing_energy",
-      "importance": 0.10,
-      "interpretation": "Energy gap between middle avg and closing peak",
-      "top_performer_avg": 0.28,
-      "bottom_performer_avg": 0.05,
-      "gap": 0.23,
-      "rank": 5,
-      "pattern_type": "cross_window"
-    },
-    {
-      "feature": "xwin_eye_contact_consistency",
-      "importance": 0.08,
-      "interpretation": "Std deviation of eye contact across all windows",
-      "top_performer_avg": 0.12,
-      "bottom_performer_avg": 0.35,
-      "gap": 0.23,
-      "rank": 6,
-      "pattern_type": "cross_window"
-    }
-  ]
-}
-```
-
-**LLM Prompt Template** (Phase 2):
-```python
-def run_phase2_synthesis(
-    window_analyses: dict,
-    kmeans_outputs: dict,
-    rf_video_data: dict,
-    bucket: str,
-    hashtag: str
-) -> dict:
-    """
-    Synthesize cross-window patterns from Phase 1 analyses.
-
-    Returns: Phase 2 synthesis JSON (winning formulas)
-    """
-    # Extract video cluster paths
-    video_paths = extract_cluster_paths(window_analyses, kmeans_outputs)
-    top_paths = analyze_path_frequencies(video_paths)
-
-    prompt = f"""
-You are synthesizing creative insights for viral videos in the {bucket} duration bucket for #{hashtag}.
-
-You have analyzed 100 viral videos across 6 temporal windows. Each window has been clustered into 3 distinct strategies.
-
-## Per-Window Cluster Analyses
-
-### Hook Analysis:
-{json.dumps(window_analyses['hook'], indent=2)}
-
-### Middle_1 Analysis:
-{json.dumps(window_analyses['middle_1'], indent=2)}
-
-### Middle_2 Analysis:
-{json.dumps(window_analyses['middle_2'], indent=2)}
-
-### Middle_3 Analysis:
-{json.dumps(window_analyses['middle_3'], indent=2)}
-
-### Middle_4 Analysis:
-{json.dumps(window_analyses['middle_4'], indent=2)}
-
-### Closing Analysis:
-{json.dumps(window_analyses['closing'], indent=2)}
-
-## Most Common Cluster Paths (Video Journey Patterns)
-
-The 10 most common combinations of window strategies:
-
-{format_top_paths(top_paths)}
-
-## Video-Level Random Forest (Cross-Window Pattern Detection)
-
-The features that BEST PREDICT viral success across the ENTIRE VIDEO JOURNEY:
-
-Top Single-Window Features:
-{format_single_window_features(rf_video_data)}
-
-Top Cross-Window Features (these only exist at video-level):
-{format_cross_window_features(rf_video_data)}
-
-Key Cross-Window Insights from RF (xwin_ features from Stage 3):
-- xwin_hook_to_middle_energy: Building from hook → middle (delta +0.15) predicts virality
-- xwin_middle_to_closing_energy: Large energy gap between middle avg and closing peak (0.28) predicts virality
-- xwin_eye_contact_consistency: Low variance in eye_contact across windows (std 0.12) predicts virality
-
-## Your Task
-
-Generate exactly 3 creative reports using a frequency-based approach with feature-based fallback.
-
-### STEP 1: Filter Paths by 10% Frequency Threshold
-
-**CRITICAL RULE**: Only consider cluster paths with ≥10% frequency (minimum 10 videos out of 100).
-
-**Why 10% Threshold**:
-- Ensures formulas are proven patterns, not statistical noise
-- 10% = "1 in 10 videos use this pattern" = reliable for creator replication
-- Below 10% = too rare, might not replicate, wastes creator time
-
-**Examples**:
-- 22 videos (22%) → INCLUDE ✅ (very high confidence)
-- 18 videos (18%) → INCLUDE ✅ (high confidence)
-- 12 videos (12%) → INCLUDE ✅ (moderate confidence)
-- 8 videos (8%) → EXCLUDE ❌ (below threshold - statistical noise)
-
-**Action**: Count how many paths meet ≥10% threshold from the cluster path data provided above.
-
----
-
-### STEP 2: Determine Report Mix (Path vs Feature-Based)
-
-Based on number of paths above 10% threshold:
-
-**Scenario A**: 3 or more paths ≥10%
-- Generate 3 path-based reports (take top 3 by frequency, ordered descending)
-
-**Scenario B**: Exactly 2 paths ≥10%
-- Generate 2 path-based reports (for the 2 paths above threshold)
-- Generate 1 feature-based report (using top RF features from video-level analysis)
-
-**Scenario C**: Exactly 1 path ≥10%
-- Generate 1 path-based report (for the 1 path above threshold)
-- Generate 2 feature-based reports (using top RF features)
-
-**Scenario D**: 0 paths ≥10% (high fragmentation)
-- Generate 3 feature-based reports (all based on top RF features)
-- Log: "High fragmentation detected: No paths meet 10% threshold. Using feature-based approach."
-
-**ALWAYS output exactly 3 reports total** (never 4, never 2).
-
----
-
-### STEP 3: Generate Path-Based Reports (for paths ≥10%)
-
-For each cluster path above 10% threshold:
-
-1. **Name**: Creative, memorable name (e.g., "The Educator's Arc")
-2. **Structure**: Which cluster combination
-   - Hook: Cluster name from Phase 1 (e.g., "The Direct Eye Contact Hook")
-   - Middle pattern: Progression description
-   - Closing: Cluster name from Phase 1
-3. **Frequency & Confidence**:
-   - frequency: Video count (e.g., 22)
-   - percentage: Frequency percentage (e.g., 22.0)
-   - confidence_level: Based on percentage:
-     - ≥20%: "very_high" (1 in 5 videos - dominant pattern)
-     - 15-19.9%: "high" (1 in 6-7 videos - strong pattern)
-     - 10-14.9%: "moderate" (1 in 10 videos - proven pattern)
-4. **Temporal Progression**: How key features evolve across windows
-   - Show actual values per window (hook: 0.55, middle_avg: 0.65, closing: 0.85)
-   - Calculate deltas (xwin_hook_to_middle_energy, xwin_middle_to_closing_energy)
-   - Describe pattern in words
-5. **RF Cross-Window Validation**: How formula matches video-level RF patterns
-   - Compare formula's deltas to RF top_performer_avg
-   - List matches (e.g., "xwin_hook_to_middle_energy: 0.16 matches RF avg 0.15")
-   - Provide rf_validation_score (e.g., "9/10" if 3/3 patterns match)
-6. **Strategy Description**: Overall creative approach
-7. **When to Use**: Content types and creator profiles that fit this formula
-8. **Step-by-Step Template**: Concrete replication steps
-   - Include window-specific actions (Hook: do X, Middle: do Y)
-   - Include cross-window targets (Energy delta: +0.16, Contrast: 0.27)
-   - Reference RF-validated features
-
----
-
-### STEP 4: Generate Feature-Based Reports (fallback when needed)
-
-If fewer than 3 paths meet 10% threshold, generate feature-based reports to reach exactly 3 total.
-
-**Feature-Based Report Structure**:
-- **No cluster path** (not based on specific path combination)
-- Uses top features from video-level RF analysis
-- Focus on universal principles applicable to all videos
-- Always classified as "moderate" confidence (not frequency-based)
-
-**How to Create Feature-Based Reports**:
-1. Select top RF features (choose from video-level RF feature_importance)
-2. Group related features (e.g., eye_contact_rate + eye_contact_consistency = "Eye Contact Strategy")
-3. Use top_performer_avg as target values
-4. Provide actionable recommendations for each feature group
-
-**Example Feature-Based Report**:
-{{
-  "report_id": 3,
-  "type": "feature_based",
-  "frequency": null,
-  "percentage": null,
-  "confidence_level": "moderate",
-  "formula_name": "The High Eye Contact Strategy",
-  "strategy_description": "Maintain consistent direct eye contact throughout video journey",
-  "key_features": [
-    "eye_contact_rate: 0.88 (RF rank #1, importance 0.35, gap 0.43)",
-    "eye_contact_consistency: 0.12 std dev (RF rank #6, importance 0.08)"
-  ],
-  "rf_validation": {{
-    "insight": "Leverages #1 and #6 most predictive features across entire video"
-  }},
-  "when_to_use": "Universal strategy applicable when cluster paths are fragmented. Focus on proven principles.",
-  "creator_recommendations": [
-    "PRIORITY: Maintain 85-90% eye contact throughout video (RF #1 predictor)",
-    "Keep eye contact variance low (<0.15 std dev) across all windows",
-    "Use direct-to-camera framing in hook and closing windows"
-  ]
-}}
-
-**Feature-Based Report Categories** (use these groupings):
-1. **Eye Contact & Engagement**: eye_contact_rate, eye_contact_consistency
-2. **Energy & Pacing**: energy_level, hook_to_middle_energy_delta, middle_to_closing_contrast
-3. **Speech & Density**: word_count, speech_coverage, word_density
-4. **Visual Variety**: scene_count, object_count, overlay_unique_count
-
----
-
-### STEP 5: Generate Supplementary Insights (for all creators)
-
-In addition to the 3 creative reports, provide supplementary insights that apply broadly:
-
-**A. Universal Principles** (5-7 insights):
-- Extract from video-level RF feature_importance (top 5-7 features)
-- Format: "Feature X (top avg vs bottom avg) - applies to Y% of videos"
-- Example: "High eye contact rate (88% vs 45% for top vs bottom) - applies to 78% of videos"
-- Purpose: Guidance for creators whose style doesn't match specific path formulas
-
-**B. Cross-Window Patterns** (3-5 insights):
-- Extract from video-level RF cross-window features
-- Format: Percentage-based insights about temporal evolution
-- Example: "78% of high-performing videos use 'bookend' eye contact pattern (high in hook/closing, lower in middle)"
-- Purpose: Understanding how features evolve across video journey
-
----
-
-## Output Format: JSON
-
-{{
-  "bucket": "{bucket}",
-  "hashtag": "{hashtag or None}",
-  "total_videos": 100,
-  "total_unique_paths": 45,
-  "paths_above_threshold": 5,
-
-  "creative_reports": [
-    {{
-      "report_id": 1,
-      "type": "path_based",  // or "feature_based"
-      "path": [0, 1, 1, 1, 2, 0],  // Only for path_based (null for feature_based)
-      "frequency": 22,  // Only for path_based (null for feature_based)
-      "percentage": 22.0,  // Only for path_based (null for feature_based)
-      "confidence_level": "very_high",  // very_high, high, or moderate
-      "formula_name": "The Educator's Arc",
-      "structure": {{  // Only for path_based
-        "hook": "The Direct Eye Contact Hook (Cluster 0)",
-        "middle_pattern": "Information Dense Middle (Cluster 1 → 1 → 1 → 2)",
-        "closing": "High Energy CTA (Cluster 0)"
-      }},
-      "temporal_progressions": [  // Only for path_based
-        {{
-          "feature": "energy_level",
-          "hook": 0.55,
-          "middle_1": 0.60,
-          "middle_2": 0.62,
-          "middle_3": 0.68,
-          "middle_4": 0.75,
-          "closing": 0.85,
-          "pattern": "Steady build from moderate to high",
-          "hook_to_middle_delta": 0.16,
-          "middle_to_closing_contrast": 0.27
-        }}
-      ],
-      "rf_cross_window_validation": {{
-        "matches_top_patterns": [
-          "hook_to_middle_energy_delta: 0.16 (RF top performer avg: 0.15, RF rank #4)",
-          "middle_to_closing_contrast: 0.27 (RF top performer avg: 0.28, RF rank #5)"
-        ],
-        "insight": "This formula exhibits 2 of 3 major cross-window patterns identified by video-level RF.",
-        "rf_validation_score": "8/10"
-      }},
-      "strategy_description": "Start with intimate eye contact to build trust, deliver dense educational content in middle segments, return to direct eye contact for high-energy call-to-action.",
-      "when_to_use": "Educational nutrition content, product explanations, how-to videos.",
-      "creator_recommendations": [
-        "Hook (0-3s): Direct eye contact (0.87), minimal words (14), moderate energy (0.55)",
-        "Middle_1 (3-8s): Shift to product view, increase talking speed (50+ words), build energy to 0.60",
-        "Middle_2-4 (8-23s): Continue information delivery, steady energy progression",
-        "Closing (23-26s): Return to direct eye contact (0.82), peak energy (0.85), clear CTA",
-        "CROSS-WINDOW TARGETS (RF validated):",
-        "  - Energy delta hook→middle: +0.16 (RF target: +0.15)",
-        "  - Energy contrast middle→closing: 0.27 gap (RF target: 0.28)"
-      ]
-    }},
-    // Report 2
-    // Report 3
-  ],
-
-  "supplementary_insights": {{
-    "universal_principles": [
-      "High eye contact rate (88% vs 45% for top vs bottom performers) - applies to 78% of videos",
-      "Consistent energy maintenance across windows (std dev ≤0.15) - found in 65% of top performers",
-      "Clear CTA in closing window - present in 92% of high-performing videos",
-      "Text overlays within first 3 seconds - found in 60% of top performers",
-      "Energy builds from hook to closing - 65% of videos use this pattern"
-    ],
-    "cross_window_patterns": [
-      "78% of high-performing videos use 'bookend' eye contact pattern (high in hook/closing, lower in middle)",
-      "Energy progression: 65% build energy, 12% maintain consistent energy, 23% variable",
-      "Closing energy should match or exceed middle average (85% of top performers follow this)",
-      "Videos with energy delta >0.3 from hook to closing had 2x engagement"
-    ]
-  }},
-
-  "path_statistics": {{
-    "total_unique_paths": 45,
-    "paths_above_threshold": 5,
-    "needs_fallback": false
-  }},
-
-  "analysis_metadata": {{
-    "llm_model": "claude-sonnet-4-20250514",
-    "timestamp": "2025-10-16T...",
-    "phase": "phase2_synthesis"
-  }}
-}}
-
----
-
-## Important Reminders:
-
-1. **Always output exactly 3 creative reports** (never more, never less)
-2. **Apply 10% threshold strictly** (8% paths are excluded)
-3. **Classify confidence levels accurately**:
-   - very_high: ≥20%
-   - high: 15-19.9%
-   - moderate: 10-14.9%
-   - Feature-based reports: always moderate
-4. **Use feature-based fallback when needed** (<3 paths above 10%)
-5. **Include supplementary_insights** (universal principles + cross-window patterns)
-6. **Focus on actionability**: Concrete steps creators can replicate
-7. **Validate against RF data**: Cross-window patterns should match video-level RF features
-"""
-
-    client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=8000,
-        temperature=0.4,
-        messages=[{"role": "user", "content": prompt}]
-    )
-
-    synthesis = json.loads(response.content[0].text)
-    synthesis['bucket'] = bucket
-    synthesis['hashtag'] = hashtag
-    synthesis['total_videos'] = len(video_paths)
-    synthesis['analysis_metadata'] = {
-        'llm_model': 'claude-sonnet-4',
-        'timestamp': datetime.now().isoformat(),
-        'api_latency_seconds': response.usage.total_time_seconds
-    }
-
-    save_json('ml_analysis/llm/winning_formulas.json', synthesis)
-
-    return synthesis
-```
-
-**Phase 2 Output Example** (`winning_formulas.json`):
-```json
-{
-  "bucket": "18-33s",
-  "hashtag": "#nutrition",
-  "total_videos": 100,
-  "winning_formulas": [
-    {
-      "name": "The Educator's Arc",
-      "structure": {
-        "hook": "The Direct Eye Contact Hook (Cluster 0)",
-        "middle_pattern": "Information Dense Middle (Cluster 1 → 1 → 1 → 2)",
-        "closing": "High Energy CTA (Cluster 0)"
-      },
-      "cluster_path": [0, 1, 0, 1, 2, 0],
-      "frequency": 18,
-      "percentage": 18.0,
-      "temporal_progressions": [
-        {
-          "feature": "energy_level",
-          "hook": 0.55,
-          "middle_1": 0.60,
-          "middle_2": 0.62,
-          "middle_3": 0.68,
-          "middle_4": 0.75,
-          "closing": 0.85,
-          "pattern": "Steady build from moderate (0.55) to high (0.85)",
-          "hook_to_middle_delta": 0.16,
-          "middle_to_closing_contrast": 0.27
-        }
-      ],
-      "rf_cross_window_validation": {
-        "matches_top_patterns": [
-          "hook_to_middle_energy_delta: 0.16 (matches RF top performer avg 0.15, RF rank #4)",
-          "middle_to_closing_contrast: 0.27 (matches RF top performer avg 0.28, RF rank #5)"
-        ],
-        "insight": "This formula exhibits ALL THREE major cross-window patterns identified by video-level RF.",
-        "rf_validation_score": "9/10"
-      },
-      "strategy_description": "Start with intimate eye contact to build trust, deliver dense educational content in middle segments, return to direct eye contact for high-energy call-to-action.",
-      "when_to_use": "Educational nutrition content, product explanations, how-to videos.",
-      "step_by_step_template": [
-        "Hook (0-3s): Direct eye contact (0.87), minimal words (14), moderate energy (0.55)",
-        "Middle_1 (3-8s): Shift to product view, increase talking speed (50+ words), build energy to 0.60",
-        "Middle_2-4 (8-23s): Continue information delivery, steady energy progression",
-        "Closing (23-26s): Return to direct eye contact (0.82), peak energy (0.85), clear CTA",
-        "CROSS-WINDOW TARGETS (RF validated):",
-        "  - Energy delta hook→middle: +0.16 (RF target: +0.15)",
-        "  - Energy contrast middle→closing: 0.27 gap (RF target: 0.28)"
-      ]
-    }
-  ],
-  "cross_window_insights": [
-    "78% of high-performing videos use 'bookend' eye contact pattern (high in hook/closing, lower in middle)",
-    "Energy builds are common (65% of videos), but 12% succeed with consistent energy",
-    "Closing energy should match or exceed middle average (85% of top performers follow this)"
-  ]
-}
-```
 
 **Phase 2 Output**:
 - `ml_analysis/llm/winning_formulas.json`
@@ -3592,153 +2511,157 @@ In addition to the 3 creative reports, provide supplementary insights that apply
 
 ---
 
-### 7.3: Complete Stage 7 Pipeline
+## Stage 8: Report Data Generation
 
-**Orchestration Code**:
-```python
-def run_stage7_llm_analysis(bucket: str, hashtag: str) -> dict:
-    """
-    Complete Stage 7 pipeline: Phase 1 + Phase 2.
+**Status**: ✅ **COMPLETE** (2025-11-02) - Production-ready
 
-    Returns: Complete creative analysis with window insights + winning formulas
-    """
-    logger.info(f"Starting Stage 7 LLM Analysis for {bucket} / {hashtag}")
+**Purpose**: Extract and consolidate data from Stages 1-7 outputs into Excel files for downstream report generation (4 report types)
 
-    # Determine window types for this bucket
-    window_types = get_window_types_for_bucket(bucket)
-    # e.g., ['hook', 'middle_1', 'middle_2', 'middle_3', 'middle_4', 'closing']
+**Input Dependencies**:
+- Stage 1: `winner_analysis.json`, `selection_manifest.json`, `selected_videos.json`
+- Stage 2.7: Content classification JSONs (per-bucket validated)
+- Stage 7: `winning_formulas.json` per bucket (Report 2 only)
 
-    # Phase 1: Analyze each window in parallel
-    logger.info("Phase 1: Analyzing each window type...")
-    start_time = time.time()
+**Outputs**: 4 extraction scripts generating Excel + QR codes:
+1. **Client Dashboard** (Report 1): Hashtag intelligence for executives
+2. **Creator Formulas** (Report 2): 3 creative strategies from winning buckets
+3. **Single Competitor** (Report 3): Competitor analysis data
+4. **Multi-Competitor** (Report 4): Comparative competitor analysis
 
-    window_analyses = run_phase1_parallel(
-        bucket=bucket,
-        hashtag=hashtag,
-        window_types=window_types
-    )
+---
 
-    phase1_time = time.time() - start_time
-    logger.info(f"Phase 1 completed in {phase1_time:.1f}s ({len(window_types)} windows in parallel)")
+### 8.1: Report 1 - Client Dashboard (`extract_client_data.py`)
 
-    # Validate Phase 1 outputs
-    if len(window_analyses) != len(window_types):
-        logger.warning(f"Phase 1 incomplete: {len(window_analyses)}/{len(window_types)} windows analyzed")
+**Purpose**: Generate hashtag intelligence dashboard for client executives
 
-    # Phase 2: Synthesize cross-window patterns
-    logger.info("Phase 2: Synthesizing winning formulas...")
-    start_time = time.time()
+**Input**:
+- `winner_analysis.json` (top 3 buckets identification)
+- `content_analysis/validated/bucket_*/` (content classifications)
+- `selection_manifest.json` (video selection metadata)
 
-    # Load K-Means outputs for cluster path extraction
-    kmeans_outputs = load_kmeans_outputs(bucket, window_types)
+**Output**:
+```
+/data/clients/{client}/hashtags/{target}/{mode}_{strategy}/
+└── {target}_client_data.xlsx
+```
 
-    # Load video-level RF for cross-window validation
-    rf_video_data = load_json('ml_analysis/rf_video_analysis.json')
+**What It Contains**:
+- Market intelligence metrics
+- Content taxonomy breakdown
+- Winning bucket analysis
+- Top/bottom performer comparisons
 
-    synthesis = run_phase2_synthesis(
-        window_analyses=window_analyses,
-        kmeans_outputs=kmeans_outputs,
-        rf_video_data=rf_video_data,
-        bucket=bucket,
-        hashtag=hashtag
-    )
+---
 
-    phase2_time = time.time() - start_time
-    logger.info(f"Phase 2 completed in {phase2_time:.1f}s")
+### 8.2: Report 2 - Creator Formulas (`extract_creator_data.py`)
 
-    # Combine Phase 1 + Phase 2 into final output
-    complete_analysis = {
-        'bucket': bucket,
-        'hashtag': hashtag,
-        'window_analyses': window_analyses,
-        'winning_formulas': synthesis['winning_formulas'],
-        'cross_window_insights': synthesis['cross_window_insights'],
-        'execution_metrics': {
-            'phase1_time_seconds': phase1_time,
-            'phase2_time_seconds': phase2_time,
-            'total_time_seconds': phase1_time + phase2_time,
-            'api_calls': len(window_types) + 1
-        }
-    }
+**Purpose**: Extract 3 creative formulas (one per winning bucket) for content creators
 
-    # Save complete analysis
-    save_json(f'ml_analysis/llm/complete_analysis_{bucket}.json', complete_analysis)
+**Input**:
+- Stage 7: `buckets/bucket_*/ml_analysis/llm/winning_formulas.json` (3 buckets)
+- `winner_analysis.json` (winning bucket identification)
+- `content_analysis/validated/bucket_*/` (video classifications)
 
-    logger.info(f"Stage 7 complete. Total time: {phase1_time + phase2_time:.1f}s")
+**Output**:
+```
+/data/clients/{client}/hashtags/{target}/{mode}_{strategy}/
+├── {target}_creator_data.xlsx (3 tabs - one per bucket)
+└── qr_codes/
+    ├── {target}_{bucket1}_top.png
+    ├── {target}_{bucket1}_bottom.png
+    ├── {target}_{bucket2}_top.png
+    ├── {target}_{bucket2}_bottom.png
+    ├── {target}_{bucket3}_top.png
+    └── {target}_{bucket3}_bottom.png
+```
 
-    return complete_analysis
+**What It Contains**:
+- 3 creative formulas (from Stage 7 Phase 2)
+- QR codes linking to video examples (top/bottom performers)
+- Actionable creator recommendations per duration bucket
+
+**Critical Dependency**: Requires Stage 7 `winning_formulas.json` completion
+
+---
+
+### 8.3: Report 3 - Single Competitor (`extract_competitor_data.py`)
+
+**Purpose**: Generate competitor analysis data for single @handle
+
+**Input**:
+- `content_analysis/validated/bucket_*/` (competitor's content)
+- `selection_manifest.json` (video metadata)
+
+**Output**:
+```
+/data/clients/{client}/competitors/{competitor}/{mode}_{strategy}/
+├── {competitor}_analysis_data.xlsx
+└── qr_codes/
+    └── {competitor}_top.png
+```
+
+**Note**: Does NOT require Stage 7 (no winning formulas for competitor analysis)
+
+---
+
+### 8.4: Report 4 - Multi-Competitor (`extract_multi_competitor_data.py`)
+
+**Purpose**: Generate comparative analysis across multiple competitor @handles
+
+**Input**:
+- Multiple competitor analysis directories
+- Content classifications from each competitor
+- Selection manifests from each competitor run
+
+**Output**:
+```
+/data/clients/{client}/reports/
+└── multi_competitor_{timestamp}.xlsx
+```
+
+**Usage Pattern**: Aggregates data from multiple single competitor runs (Report 3)
+
+---
+
+### 8.5: Complete Outputs Summary
+
+**Per Analysis Type**:
+
+| Report Type | Excel Files | QR Codes | Dependencies | Total Size |
+|-------------|-------------|----------|--------------|------------|
+| **Client Dashboard** | 1 | 0 | Stages 1, 2.7 | ~50KB |
+| **Creator Formulas** | 1 (3 tabs) | 6 images | Stages 1, 2.7, 7 | ~100KB + 6 PNGs |
+| **Single Competitor** | 1 | 1 image | Stages 1, 2.7 | ~40KB + 1 PNG |
+| **Multi-Competitor** | 1 | 0 | Multiple Report 3 runs | ~80KB |
+
+**File Locations**:
+```
+# Hashtag Analysis
+/data/clients/{client}/hashtags/{target}/{mode}_{strategy}/
+├── {target}_client_data.xlsx        # Report 1
+├── {target}_creator_data.xlsx       # Report 2
+└── qr_codes/*.png                   # Report 2 QR codes
+
+# Competitor Analysis
+/data/clients/{client}/competitors/{handle}/{mode}_{strategy}/
+├── {handle}_analysis_data.xlsx      # Report 3
+└── qr_codes/{handle}_top.png        # Report 3 QR code
+
+# Multi-Competitor
+/data/clients/{client}/reports/
+└── multi_competitor_{timestamp}.xlsx  # Report 4
 ```
 
 ---
 
-### Stage 7 Summary
+### 8.6: Implementation Notes
 
-**Output File Structure** (per bucket):
-```
-bucket_18-33s/
-└── ml_analysis/
-    └── llm/
-        ├── hook_analysis.json              # Phase 1 (3 clusters, named strategies)
-        ├── middle_1_analysis.json          # Phase 1
-        ├── middle_2_analysis.json          # Phase 1
-        ├── middle_3_analysis.json          # Phase 1
-        ├── middle_4_analysis.json          # Phase 1
-        ├── closing_analysis.json           # Phase 1
-        ├── winning_formulas.json           # Phase 2 (3-5 formulas)
-        └── complete_analysis_18-33s.json   # Combined Phase 1 + Phase 2
-```
+**Architecture**: Stage 8 consists of 4 independent extraction scripts (not a unified pipeline stage)
 
-**LLM Calls per Bucket** (e.g., 18-33s with 6 windows):
-- Phase 1: 6 calls (parallel)
-- Phase 2: 1 call
-- **Total**: 7 calls per bucket
+**Execution**: Scripts run on-demand after Stages 1-7 complete, not automatically triggered
 
-**LLM Calls per Hashtag** (3 qualified buckets):
-- Assuming top 3 buckets: 18-33s (6 windows), 33-60s (7 windows), 60-90s (7 windows)
-- Phase 1 calls: 6 + 7 + 7 = 20 calls
-- Phase 2 calls: 1 + 1 + 1 = 3 calls
-- **Total**: 23 calls per hashtag
+**Key Design Decision**: Excel files contain **raw data only** - actual PDF report generation happens in separate reporting pipeline (not part of Stage 8)
 
-**Cost Estimate**:
-- Per bucket (6 windows): ~$0.26
-- Per hashtag (3 buckets): ~$0.78
-
-**Duration Estimate**:
-- Phase 1: ~5-10s wall-clock (parallel execution)
-- Phase 2: ~15-20s per bucket
-- **Total per bucket**: ~25-30s
-- **Total per hashtag**: ~90s (if buckets run sequentially), ~30s (if buckets run in parallel)
-
-**Advantages of Dual RF Hybrid Approach**:
-
-| Metric | Dual RF Hybrid (Approved) | Single Call (Old) |
-|--------|---------------------------|-------------------|
-| **Context per call** | Phase 1: 113 numbers | 1000+ numbers |
-| **Hallucination risk** | Low (focused prompts) | Higher (overwhelming) |
-| **Parallelization** | Yes (6-7 calls Phase 1) | No |
-| **Fault tolerance** | High (window failures don't block others) | Low |
-| **Cross-window patterns** | ✅ Video-level RF in Phase 2 | ❌ Limited |
-| **Within-window validation** | ✅ Window-level RF in Phase 1 | ❌ Not available |
-| **Pattern coverage** | Complete (no blind spots) | Incomplete |
-| **API calls** | 7 per bucket | 3 per bucket |
-| **Cost** | ~$0.26 per bucket | ~$0.45 per bucket |
-| **Total time** | ~25-30s | ~8-12 minutes |
-
-**Key Insights**:
-- **Dual RF validation**: Both within-window (Phase 1) AND cross-window (Phase 2) pattern detection
-- **Window-level granularity**: Each window analyzed independently with focused context (113 numbers vs 1000+)
-- **Winning formulas**: Explicit video journey patterns with RF validation (e.g., "Hook-0 → Middle-1 → Closing-0")
-- **Temporal progression**: Track feature evolution across windows (energy builds, eye contact bookends, etc.)
-- **Error handling**: Graceful degradation - one window failure doesn't block entire analysis
-- **Schema consistency (2025-10-27 update)**: All creative reports (path-based AND feature-based) use identical 13-field schema, ensuring downstream Stage 8 PDF generation compatibility
-
-**Child Documents**:
-- LLMAnalysis7.md (complete Stage 7 architecture with dual RF integration)
-
-**Future TI Document**:
-- LLMAnalysisTI.md (LLM integration code, prompt templates, Phase 1/2 orchestration)
-
-**Related Future Features**:
-- Phase 1: Creative Report Output (Stage 7 core feature)
+**Detailed Specifications**: See `Stage8MVP2.md` for complete field lists, data schemas, and implementation patterns
 
 ---

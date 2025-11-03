@@ -1,0 +1,144 @@
+{
+  "creative_reports": [
+    {
+      "report_id": 1,
+      "type": "path_based",
+      "path": [
+        0,
+        2
+      ],
+      "frequency": 18,
+      "percentage": 20.5,
+      "confidence_level": "very_high",
+      "formula_name": "The Text-to-Personal Connection Bridge",
+      "structure": {
+        "hook": "Text-Only Visual Hook (Cluster 0)",
+        "closing": "Personal Gesture Close (Cluster 2)"
+      },
+      "temporal_progressions": [
+        {
+          "feature": "person_count",
+          "progression": "Starts at 0 (text-only) \u2192 transitions to 1 (personal presence)",
+          "insight": "Creates intrigue with anonymous content, then builds trust with human connection"
+        },
+        {
+          "feature": "overlay_unique_count",
+          "progression": "Moderate text density (3) \u2192 reduced for personal focus",
+          "insight": "Text carries the hook, then steps back for human connection"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [
+          "person_count",
+          "overlay_unique_count"
+        ],
+        "alignment_insight": "Path creates optimal text-to-human progression for engagement"
+      },
+      "strategy_description": "Begin with compelling text-only visuals to capture attention without human distraction, then transition to personal presence with gestures to build connection and trust.",
+      "when_to_use": "Educational content, before/after reveals, product demonstrations, wellness tips where credibility matters.",
+      "step_by_step_template": [
+        "Hook: Use text-only graphics or overlays with moderate density to create curiosity without human presence",
+        "Closing: Introduce yourself with strategic gestures to build personal connection and deliver final message"
+      ]
+    },
+    {
+      "report_id": 2,
+      "type": "path_based",
+      "path": [
+        1,
+        2
+      ],
+      "frequency": 18,
+      "percentage": 20.5,
+      "confidence_level": "very_high",
+      "formula_name": "The Gesture-to-Gesture Amplification",
+      "structure": {
+        "hook": "Personal Gesture Hook (Cluster 1)",
+        "closing": "Personal Gesture Close (Cluster 2)"
+      },
+      "temporal_progressions": [
+        {
+          "feature": "person_count",
+          "progression": "Maintains 1 person throughout for consistent personal connection",
+          "insight": "Sustained human presence builds familiarity and trust"
+        },
+        {
+          "feature": "gesture_count",
+          "progression": "Strategic gesture (1) \u2192 amplified gesture engagement",
+          "insight": "Escalating physical engagement maintains attention and emphasizes key points"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [
+          "person_count",
+          "gesture_count"
+        ],
+        "alignment_insight": "Path maximizes human connection through consistent presence and escalating gestures"
+      },
+      "strategy_description": "Maintain consistent on-camera presence throughout while strategically escalating gesture usage to build engagement and emphasize key wellness messages.",
+      "when_to_use": "Personal testimonials, workout demonstrations, cooking tutorials, motivational wellness content.",
+      "step_by_step_template": [
+        "Hook: Establish single-person presence with one strategic gesture to capture attention",
+        "Closing: Amplify gesture usage while maintaining personal presence for strong final impact"
+      ]
+    },
+    {
+      "report_id": 3,
+      "type": "path_based",
+      "path": [
+        2,
+        1
+      ],
+      "frequency": 16,
+      "percentage": 18.2,
+      "confidence_level": "high",
+      "formula_name": "The Dynamic-to-Focused Transition",
+      "structure": {
+        "hook": "Multi-Scene Text Hook (Cluster 2)",
+        "closing": "Dynamic Multi-Scene Close (Cluster 1)"
+      },
+      "temporal_progressions": [
+        {
+          "feature": "scene_count",
+          "progression": "High scene transitions (2) \u2192 maintained dynamic pacing",
+          "insight": "Consistent visual variety maintains attention throughout short-form content"
+        },
+        {
+          "feature": "overlay_unique_count",
+          "progression": "High text density (5) \u2192 reduced to moderate for balanced delivery",
+          "insight": "Text-heavy hook transitions to balanced audio-visual closing"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [
+          "scene_count",
+          "overlay_unique_count"
+        ],
+        "alignment_insight": "Path optimizes visual variety while balancing text and verbal content"
+      },
+      "strategy_description": "Start with high-energy multi-scene visuals and dense text overlays to grab attention, then transition to dynamic pacing with balanced verbal and visual elements for message delivery.",
+      "when_to_use": "Quick tips, ingredient showcases, transformation reveals, fast-paced educational content.",
+      "step_by_step_template": [
+        "Hook: Use dynamic scene transitions with high-density text overlays for maximum visual stimulation",
+        "Closing: Maintain visual variety while balancing text with moderate verbal content for clear message delivery"
+      ]
+    }
+  ],
+  "supplementary_insights": {
+    "universal_principles": "Note: RF analysis not available (TOP mode). Focus on K-Means cluster patterns.",
+    "cross_window_patterns": "Note: Cross-window RF patterns not available (TOP mode). Analyze cluster paths only."
+  },
+  "path_statistics": {
+    "total_unique_paths": 9,
+    "paths_above_threshold": 5,
+    "needs_fallback": false
+  },
+  "bucket": "3-9s",
+  "hashtag": "@gnclivewell",
+  "total_videos": 88,
+  "analysis_metadata": {
+    "llm_model": "claude-sonnet-4-20250514",
+    "timestamp": "2025-11-02T22:23:49.384682",
+    "phase": "phase2_synthesis"
+  }
+}

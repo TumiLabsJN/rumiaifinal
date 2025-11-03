@@ -1,0 +1,165 @@
+{
+  "creative_reports": [
+    {
+      "report_id": 1,
+      "type": "path_based",
+      "path": [
+        1,
+        0,
+        1,
+        2,
+        1,
+        2
+      ],
+      "frequency": 4,
+      "percentage": 22.2,
+      "confidence_level": "very_high",
+      "formula_name": "The Dynamic Product-to-Personal Journey",
+      "structure": {
+        "hook": "Fast-Cut Product Focus Hook (Cluster 1)",
+        "middle": "Transitions from multi-scene verbal engagement through high-density content delivery to text-heavy visual strategy",
+        "closing": "Single-Take Gesture Focus (Cluster 2)"
+      },
+      "temporal_progressions": [
+        {
+          "feature": "scene_count",
+          "progression": "Starts high (4 scenes) \u2192 moderate (4 scenes) \u2192 low (1 scene)",
+          "insight": "Visual pacing slows down to focus attention on final message"
+        },
+        {
+          "feature": "word_count",
+          "progression": "Silent \u2192 moderate (14 words) \u2192 high (23 words) \u2192 minimal (1 word)",
+          "insight": "Verbal content peaks in middle for information delivery"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [
+          "scene_count",
+          "word_count",
+          "overlay_unique_count"
+        ],
+        "alignment_insight": "Path demonstrates strategic pacing control and content density management"
+      },
+      "strategy_description": "Begin with rapid product-focused visuals to capture attention, build through verbal content delivery with heavy text support, conclude with intimate gesture-focused messaging.",
+      "when_to_use": "Product demonstrations, supplement explanations, before/after transformations, educational wellness content.",
+      "step_by_step_template": [
+        "Hook: Use rapid scene transitions with product focus and no on-camera talent",
+        "Middle: Transition through multi-scene verbal engagement, building to high-density content delivery, then shift to text-heavy visual strategy with minimal verbal content",
+        "Closing: Switch to single continuous take with active hand movement for personal connection"
+      ]
+    },
+    {
+      "report_id": 2,
+      "type": "path_based",
+      "path": [
+        0,
+        1,
+        0,
+        0,
+        2,
+        0
+      ],
+      "frequency": 3,
+      "percentage": 16.7,
+      "confidence_level": "high",
+      "formula_name": "The Text-Driven Authority Pattern",
+      "structure": {
+        "hook": "Text-Driven Presence Hook (Cluster 0)",
+        "middle": "Moves from silent visual focus through sustained verbal engagement to duo dynamic strategy",
+        "closing": "Multi-Scene Social Proof (Cluster 0)"
+      },
+      "temporal_progressions": [
+        {
+          "feature": "overlay_unique_count",
+          "progression": "Starts high (3 overlays) \u2192 low (1 overlay) \u2192 high (5 overlays) \u2192 moderate",
+          "insight": "Text overlay strategy creates emphasis waves throughout video"
+        },
+        {
+          "feature": "person_count",
+          "progression": "Solo \u2192 maintained \u2192 solo \u2192 solo \u2192 duo \u2192 duo",
+          "insight": "Strategic introduction of second person for social proof and credibility"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [
+          "overlay_unique_count",
+          "person_count",
+          "word_count"
+        ],
+        "alignment_insight": "Path leverages text-heavy strategy with strategic social proof timing"
+      },
+      "strategy_description": "Establish authority through text-heavy presence, maintain engagement through strategic silence and verbal content, conclude with social proof through multiple people.",
+      "when_to_use": "Expert advice content, testimonial-style videos, authority-building wellness tips, credibility-focused nutrition guidance.",
+      "step_by_step_template": [
+        "Hook: Establish strong text overlay presence with moderate scene pacing",
+        "Middle: Transition through silent visual storytelling, build to sustained verbal engagement, then introduce duo dynamic for enhanced credibility",
+        "Closing: Return to multi-scene format with social proof through multiple people presence"
+      ]
+    },
+    {
+      "report_id": 3,
+      "type": "path_based",
+      "path": [
+        2,
+        0,
+        2,
+        1,
+        0,
+        0
+      ],
+      "frequency": 2,
+      "percentage": 11.1,
+      "confidence_level": "moderate",
+      "formula_name": "The Interactive-to-Authority Transition",
+      "structure": {
+        "hook": "Interactive Presence Hook (Cluster 2)",
+        "middle": "Alternates between silent multi-person visuals and visual-first overlay strategy, concluding with verbal engagement",
+        "closing": "Multi-Scene Social Proof (Cluster 0)"
+      },
+      "temporal_progressions": [
+        {
+          "feature": "gesture_count",
+          "progression": "Starts high (1 gesture) \u2192 maintained \u2192 high \u2192 low \u2192 moderate (2 gestures)",
+          "insight": "Strategic gesture usage creates engagement peaks at key moments"
+        },
+        {
+          "feature": "word_count",
+          "progression": "Moderate \u2192 silent \u2192 silent \u2192 silent \u2192 moderate \u2192 silent",
+          "insight": "Minimal verbal content with strategic verbal moments for emphasis"
+        }
+      ],
+      "rf_cross_window_validation": {
+        "video_level_features_matched": [
+          "gesture_count",
+          "word_count",
+          "person_count"
+        ],
+        "alignment_insight": "Path balances interactive elements with authority-building visual storytelling"
+      },
+      "strategy_description": "Start with interactive gestures and text support, maintain engagement through strategic silence and visual storytelling, build authority through social proof.",
+      "when_to_use": "Community-focused content, group challenges, social wellness initiatives, peer-to-peer recommendations.",
+      "step_by_step_template": [
+        "Hook: Use strategic hand movement with strong text overlay support for interactive engagement",
+        "Middle: Alternate between silent multi-person visuals and visual-first overlay strategy, building to verbal engagement moments",
+        "Closing: Establish authority through multi-scene social proof with multiple people presence"
+      ]
+    }
+  ],
+  "supplementary_insights": {
+    "universal_principles": "Note: RF analysis not available (TOP mode). Focus on K-Means cluster patterns.",
+    "cross_window_patterns": "Note: Cross-window RF patterns not available (TOP mode). Analyze cluster paths only."
+  },
+  "path_statistics": {
+    "total_unique_paths": 12,
+    "paths_above_threshold": 3,
+    "needs_fallback": false
+  },
+  "bucket": "18-33s",
+  "hashtag": "@gnclivewell",
+  "total_videos": 18,
+  "analysis_metadata": {
+    "llm_model": "claude-sonnet-4-20250514",
+    "timestamp": "2025-11-02T22:27:44.854806",
+    "phase": "phase2_synthesis"
+  }
+}
