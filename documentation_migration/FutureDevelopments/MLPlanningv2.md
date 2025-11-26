@@ -1655,7 +1655,7 @@ total_scene_count = hook_scene_count + middle_1_scene_count + ... + closing_scen
 - FeatureAggregationTI.md (extraction logic, bucket-specific handling, validation)
 
 ---
-
+    
 ## Stage 3.5: Review CSV Generation
 
 **Purpose**: Generate video_review.csv for manual outlier investigation in Excel
