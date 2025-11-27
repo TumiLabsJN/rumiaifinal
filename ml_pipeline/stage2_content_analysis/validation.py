@@ -60,10 +60,15 @@ def validate_discovery_inputs(manifest_path: str, sample_size: int):
             raise ValueError(f"Bucket {bucket} missing from videos_by_bucket")
 
         top_performers = manifest['videos_by_bucket'][bucket].get('top_performers', [])
-        if len(top_performers) < 10:
+        if len(top_performers) < 1:
             raise ValueError(
-                f"Bucket {bucket} has only {len(top_performers)} top performers. "
-                f"Need at least 10 for sampling."
+                f"Bucket {bucket} has no top performers. "
+                f"Cannot proceed with empty bucket."
+            )
+        if len(top_performers) < 10:
+            logger.warning(
+                f"⚠️  Bucket {bucket} has only {len(top_performers)} top performers "
+                f"(recommended: 10+). Proceeding with limited sample - taxonomy quality may be reduced."
             )
 
     # Validation 5: Check sample size is reasonable

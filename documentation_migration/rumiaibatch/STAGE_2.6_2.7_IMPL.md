@@ -883,8 +883,10 @@ def validate_all_transcripts(...) -> str:
 
 **run_transcript_validation_stage()** (line 409-491)
 - Entry point for Stage 2.5.1
-- Enforces minimum 30 valid transcripts
+- Warns if valid transcript count is very low (<5) but does not block pipeline
 - Returns summary with invalid breakdown
+
+**Note**: The minimum 30 valid transcript threshold was removed (2025-11-26) to allow pipeline to proceed with limited spoken content datasets. A warning is logged if <5 valid transcripts are found.
 
 ---
 

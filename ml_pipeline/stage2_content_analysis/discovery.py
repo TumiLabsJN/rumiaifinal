@@ -213,11 +213,16 @@ def sample_transcripts_for_discovery(
             f"Some buckets had very few valid top performers."
         )
 
-    # Enforce minimum threshold
-    if total_sampled < 10:
+    # Enforce minimum threshold (lowered from 10 to 3 for small datasets)
+    if total_sampled < 3:
         raise ValueError(
-            f"Insufficient transcripts sampled: {total_sampled}/10 minimum. "
+            f"Insufficient transcripts sampled: {total_sampled}/3 minimum. "
             f"Cannot proceed with pattern discovery."
+        )
+    if total_sampled < 10:
+        logger.warning(
+            f"⚠️  Low transcript count: {total_sampled} (recommended: 10+). "
+            f"Taxonomy discovery will proceed but quality may be limited."
         )
 
     # Run business rules validation

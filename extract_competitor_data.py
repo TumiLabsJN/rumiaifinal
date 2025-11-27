@@ -932,9 +932,16 @@ def main():
     if transcript_quality:
         tab_data.append(['WITH_SPEECH', str(transcript_quality['with_speech'])])
         tab_data.append(['SPEECH_PCT', str(transcript_quality['speech_pct'])])
+        # Calculate WITHOUT_SPEECH metrics
+        without_speech = total_videos - transcript_quality['with_speech']
+        without_speech_pct = 100 - transcript_quality['speech_pct']
+        tab_data.append(['WITHOUT_SPEECH', str(without_speech)])
+        tab_data.append(['WITHOUT_SPEECH_PCT', str(without_speech_pct)])
     else:
         tab_data.append(['WITH_SPEECH', 'N/A'])
         tab_data.append(['SPEECH_PCT', 'N/A'])
+        tab_data.append(['WITHOUT_SPEECH', 'N/A'])
+        tab_data.append(['WITHOUT_SPEECH_PCT', 'N/A'])
 
     # PAGE 3: CREATIVE INTELLIGENCE
     tab_data.append(['', ''])
@@ -1022,12 +1029,12 @@ def main():
 
     tab_data.append(['', ''])
     tab_data.append(['TOTAL_UNIQUE_HASHTAGS', str(hashtag_analysis['total_unique_hashtags'])])
-    tab_data.append(['AVG_HASHTAGS_PER_VIDEO', str(int(hashtag_analysis['avg_hashtags_per_video']))])
+    tab_data.append(['AVG_HASHTAGS_PER_VIDEO', str(round(hashtag_analysis['avg_hashtags_per_video']))])
     tab_data.append(['STRATEGY_TYPE', strategy_type])
 
     # Caption Strategy
     tab_data.append(['', ''])
-    tab_data.append(['AVG_HASHTAG_COUNT', str(int(hashtag_analysis['avg_hashtags_per_video']))])
+    tab_data.append(['AVG_HASHTAG_COUNT', str(round(hashtag_analysis['avg_hashtags_per_video']))])
 
     if all_caption_cta_types:
         top_caption_cta, top_caption_cta_count = all_caption_cta_types.most_common(1)[0]
@@ -1065,11 +1072,11 @@ def main():
 
                 for j in range(min(3, len(creative_reports))):
                     formula_name = creative_reports[j].get('formula_name', '')
-                    tab_data.append([f'BUCKET_{i}_FORMULA_{j+1}_NAME', formula_name])
+                    tab_data.append([f'BUCKET_{i}_FORMULA_{j+1}_NAME', formula_name if formula_name else 'Insufficient data'])
         else:
             # Add placeholder formulas if file doesn't exist
             for j in range(3):
-                tab_data.append([f'BUCKET_{i}_FORMULA_{j+1}_NAME', ''])
+                tab_data.append([f'BUCKET_{i}_FORMULA_{j+1}_NAME', 'Insufficient data'])
 
         if i < 3:  # Add empty row between buckets (not after last one)
             tab_data.append(['', ''])

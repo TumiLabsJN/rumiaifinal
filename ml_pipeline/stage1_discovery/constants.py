@@ -50,8 +50,8 @@ CLOCK_SKEW_TOLERANCE_HOURS = 24
 
 # ===== WINNER ANALYSIS CONFIGURATION =====
 
-MIN_VIDEOS_FOR_ANALYSIS = 10
-# Absolute minimum videos needed
+MIN_VIDEOS_FOR_ANALYSIS = 1
+# Absolute minimum videos needed (lowered from 10 for small competitor accounts)
 
 TOP_PERFORMERS_FOR_ANALYSIS = 100
 # Analyze top N to identify winning buckets
