@@ -45,12 +45,18 @@ def validate_discovery_inputs(manifest_path: str, sample_size: int):
     if missing:
         raise ValueError(f"Manifest missing required fields: {missing}")
 
-    # Validation 3: Check we have 3 buckets
-    # Source: ContentAnalysisCHILD.md Section 6.1 lines 803-808
-    if len(manifest['selected_buckets']) != 3:
+    # Validation 3: Check we have at least 1 bucket (allow 1-3 for small datasets)
+    # Modified: Original required exactly 3, relaxed for small competitor accounts
+    # See: /home/jorge/rumiaifinal/UpgradeBucketz.md for full rationale
+    if len(manifest['selected_buckets']) < 1:
         raise ValueError(
-            f"Expected 3 selected buckets, found {len(manifest['selected_buckets'])}. "
+            f"Expected at least 1 selected bucket, found {len(manifest['selected_buckets'])}. "
             "Stage 2.5 may have failed."
+        )
+    if len(manifest['selected_buckets']) < 3:
+        logger.warning(
+            f"Only {len(manifest['selected_buckets'])} bucket(s) selected (typically 3). "
+            f"Small dataset - proceeding with limited buckets."
         )
 
     # Validation 4: Check each bucket has videos

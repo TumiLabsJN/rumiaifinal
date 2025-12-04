@@ -89,8 +89,11 @@ def sample_transcripts_for_discovery(
     # Step 4: Extract top 3 buckets
     top_3_buckets = manifest['selected_buckets']  # e.g., ["33-60s", "60-90s", "90-120s"]
 
-    # L18 FIX: 20 samples per bucket = balanced duration representation across 3 buckets
-    target_per_bucket = sample_size // 3  # Default: 60 // 3 = 20 per bucket
+    # Distribute samples evenly across actual bucket count (1-3 buckets)
+    # Modified: Original hardcoded // 3, now dynamic for small datasets
+    # See: /home/jorge/rumiaifinal/UpgradeBucketz.md for full rationale
+    num_buckets = len(top_3_buckets)
+    target_per_bucket = sample_size // num_buckets  # e.g., 60 // 2 = 30 per bucket
 
     logger.info(f"Adaptive sampling: Target {target_per_bucket} per bucket from {top_3_buckets}")
 

@@ -1058,8 +1058,8 @@ def main():
     # =============================
     # STEP 8: Generate QR Codes
     # =============================
-    total_qr_codes = len(competitor_list) * 3 * 2  # N competitors × 3 buckets × 2 QR codes
-    print(f"Generating {total_qr_codes} QR codes (2 per bucket × 3 buckets × {len(competitor_list)} competitors)...")
+    # QR code count varies based on each competitor's bucket count (1-3 buckets)
+    print(f"Generating QR codes (2 per bucket × {len(competitor_list)} competitors)...")
 
     all_qr_data = []
     all_qr_info = []  # For Excel output

@@ -91,9 +91,9 @@ class TestStep3AdaptiveSampling:
         discovery_file = self.project_root / "ml_pipeline/stage2_content_analysis/discovery.py"
         content = discovery_file.read_text()
 
-        # Test 2a: Target per bucket calculation (sample_size // 3)
-        has_target_calc = "target_per_bucket = sample_size // 3" in content
-        self.assert_true(has_target_calc, "Target per bucket calculated (sample_size // 3)")
+        # Test 2a: Target per bucket calculation (sample_size // num_buckets)
+        has_target_calc = "target_per_bucket = sample_size // num_buckets" in content
+        self.assert_true(has_target_calc, "Target per bucket calculated dynamically")
 
         # Test 2b: Shortfall tracking
         has_shortfall = "shortfall" in content

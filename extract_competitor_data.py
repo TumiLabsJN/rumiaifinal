@@ -1078,7 +1078,7 @@ def main():
             for j in range(3):
                 tab_data.append([f'BUCKET_{i}_FORMULA_{j+1}_NAME', 'Insufficient data'])
 
-        if i < 3:  # Add empty row between buckets (not after last one)
+        if i < len(winner_data['top_3_buckets']):  # Add empty row between buckets (not after last one)
             tab_data.append(['', ''])
 
     # QR Code Metadata (2 per bucket, dynamically generated)

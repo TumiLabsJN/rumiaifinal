@@ -624,7 +624,7 @@ def main():
     tab_data.append(['PAGE_3_YOUR_CREATIVE_REPORTS', ''])
     tab_data.append(['', ''])
 
-    # Formula names (9 total: 3 per bucket × 3 buckets)
+    # Formula names (3 per bucket × N buckets where N=1-3)
     formula_idx = 1
     for formula in formula_names:
         tab_data.append([f'FORMULA_{formula_idx}_BUCKET', formula['bucket']])
