@@ -1210,7 +1210,16 @@ def normalize_classification_schema(
         # Flow 1: Use all LLM fields, just add hashtag_count
         normalized = llm_output.copy()
         normalized['caption_analysis']['hashtag_count'] = hashtag_count
-        
+
+        # Normalize list field values to snake_case for consistent aggregation
+        # Handles LLM inconsistency: "explaining scientific mechanisms" vs "explaining_scientific_mechanisms"
+        for field in ['pain_points', 'keywords', 'engagement_drivers', 'content_tactics']:
+            if field in normalized and isinstance(normalized[field], list):
+                normalized[field] = [
+                    v.strip().lower().replace(' ', '_') if v else v
+                    for v in normalized[field]
+                ]
+
     else:  # caption_only
         # Flow 2: Construct full schema with defaults
         normalized = {

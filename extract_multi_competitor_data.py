@@ -20,6 +20,19 @@ import qrcode
 from datetime import datetime, timedelta
 
 
+def normalize_classification_key(value: str) -> str:
+    """
+    Normalize classification values to snake_case for consistent aggregation.
+
+    Handles LLM output inconsistency where the same category appears as both:
+    - "explaining scientific mechanisms" (space-separated)
+    - "explaining_scientific_mechanisms" (snake_case)
+    """
+    if not value:
+        return value
+    return value.strip().lower().replace(' ', '_')
+
+
 # =============================
 # HELPER FUNCTIONS (from Report 3)
 # =============================
@@ -169,22 +182,22 @@ def aggregate_content_classifications(bucket_name, base_path, performer_type="to
         # Pain points (array)
         for pain in data.get('pain_points', []):
             if pain and pain != 'none':
-                pain_points[pain] += 1
+                pain_points[normalize_classification_key(pain)] += 1
 
         # Keywords (array)
         for keyword in data.get('keywords', []):
             if keyword:
-                keywords[keyword] += 1
+                keywords[normalize_classification_key(keyword)] += 1
 
         # Engagement drivers (array)
         for driver in data.get('engagement_drivers', []):
             if driver:
-                engagement_drivers[driver] += 1
+                engagement_drivers[normalize_classification_key(driver)] += 1
 
         # Content tactics (array)
         for tactic in data.get('content_tactics', []):
             if tactic:
-                content_tactics[tactic] += 1
+                content_tactics[normalize_classification_key(tactic)] += 1
 
         # Caption CTA type
         caption_data = data.get('caption_analysis', {})
